@@ -45,7 +45,8 @@ public class GeoJsonDescribeOutputFormat extends WFSDescribeFeatureTypeOutputFor
     protected void write(FeatureTypeInfo[] featureTypeInfos, OutputStream output,
             Operation describeFeatureType) throws IOException {
 
-        final boolean jsonp = JSONType.isJsonpMimeType(getMimeType(featureTypeInfos, describeFeatureType));
+        final boolean jsonp = JSONType.isJsonpMimeType(getMimeType(featureTypeInfos,
+                describeFeatureType));
 
         // prepare to write out
         Writer outWriter = new BufferedWriter(new OutputStreamWriter(output, gs.getSettings()
@@ -103,14 +104,14 @@ public class GeoJsonDescribeOutputFormat extends WFSDescribeFeatureTypeOutputFor
 
     private String getCallbackFunction() {
         Request request = Dispatcher.REQUEST.get();
-        if(request == null) {
+        if (request == null) {
             return JSONType.CALLBACK_FUNCTION;
-        } else if(!(request.getKvp().get("FORMAT_OPTIONS") instanceof Map)) {
-        	return JSONType.CALLBACK_FUNCTION;
+        } else if (!(request.getKvp().get("FORMAT_OPTIONS") instanceof Map)) {
+            return JSONType.CALLBACK_FUNCTION;
         }
-        
+
         return JSONType.getCallbackFunction(request.getKvp());
-        
+
     }
 
     private static void describeProperty(String name, AttributeDescriptor ad, GeoJSONBuilder jw) {
