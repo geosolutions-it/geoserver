@@ -4,12 +4,10 @@
  */
 package org.geoserver.wms.describelayer;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import javax.xml.transform.TransformerException;
-
+import org.apache.commons.io.IOUtils;
 import org.geoserver.ows.Response;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.ServiceException;
@@ -21,61 +19,87 @@ import org.springframework.util.Assert;
  * Executes a <code>DescribeLayer</code> WMS request.
  * 
  * <p>
- * Receives a <code>DescribeLayerRequest</code> object holding the references to the requested
- * layers and utilizes a transformer based on the org.geotools.xml.transform framework to encode the
- * response.
+ * Receives a <code>DescribeLayerRequest</code> object holding the references to the requested layers and utilizes a transformer based on the
+ * org.geotools.xml.transform framework to encode the response.
  * </p>
  * 
  * @author Gabriel Roldan
+ * @author Carlo Cancellieri - GeoSolutions
  * @version $Id$
  */
-public class DescribeLayerResponse extends Response {
+public abstract class DescribeLayerResponse extends Response {
 
-    public static final String DESCLAYER_MIME_TYPE = "application/vnd.ogc.wms_xml";
+    private final String type;
 
-    public DescribeLayerResponse() {
-        super(DescribeLayerTransformer.class);
+    /**
+     * Creates a new GetMapResponse object.
+     */
+    public DescribeLayerResponse(String format) {
+        super(DescribeLayerModel.class, format);
+        this.type = format;
     }
 
     /**
-     * @return {@code "application/vnd.ogc.wms_xml"}
-     * @see org.geoserver.ows.Response#getMimeType(java.lang.Object,
-     *      org.geoserver.platform.Operation)
+     * Evaluates if this DescribeLayer producer can generate the format specified by <code>format</code>, where <code>format</code> is the MIME type
+     * of the requested response.
+     * 
+     * @param format the MIME type of the required output format, might be {@code null}
+     * 
+     * @return true if class can produce a DescribeLayer in the passed format
+     */
+    public boolean canProduce(String format) {
+        return type.equalsIgnoreCase(format);
+    }
+
+    public String getContentType() {
+        return type;
+    }
+
+    /**
+     * @see org.geoserver.ows.Response#getMimeType(java.lang.Object, org.geoserver.platform.Operation)
      */
     @Override
     public String getMimeType(Object value, Operation operation) throws ServiceException {
-        return DESCLAYER_MIME_TYPE;
+
+        Object op = operation.getParameters()[0];
+        if (op instanceof DescribeLayerRequest) {
+            DescribeLayerRequest dlr = (DescribeLayerRequest) op;
+            return dlr.getOutputFormat();
+        }
+        throw new ServiceException("Unable to parse incoming operation");
     }
 
     /**
-     * @param value
-     *            {@link DescribeLayerTransformer}
-     * @param output
-     *            where to write the response
-     * @param operation
-     *            {@link DescribeLayer} operation that originated the {@code value} response
-     * @see org.geoserver.ows.Response#write(java.lang.Object, java.io.OutputStream,
-     *      org.geoserver.platform.Operation)
+     * @param value {@link DescribeLayerTransformer}
+     * @param output where to write the response
+     * @param operation {@link DescribeLayer} operation that originated the {@code value} response
+     * @see org.geoserver.ows.Response#write(java.lang.Object, java.io.OutputStream, org.geoserver.platform.Operation)
      */
     @Override
     public void write(Object value, OutputStream output, Operation operation) throws IOException,
             ServiceException {
 
-        Assert.isTrue(value instanceof DescribeLayerTransformer);
         Assert.notNull(operation.getParameters());
         Assert.isTrue(operation.getParameters()[0] instanceof DescribeLayerRequest);
+        final DescribeLayerRequest request = (DescribeLayerRequest) operation.getParameters()[0];
 
-        DescribeLayerTransformer transformer = (DescribeLayerTransformer) value;
-        DescribeLayerRequest request = (DescribeLayerRequest) operation.getParameters()[0];
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Assert.isTrue(value instanceof DescribeLayerModel);
+        final DescribeLayerModel results = (DescribeLayerModel) value;
         try {
-            transformer.transform(request, out);
-            out.flush();
-        } catch (TransformerException e) {
-            throw new ServiceException(e);
+            write(results, request, output);
+        } finally {
+            if (output != null) {
+                try {
+                    output.flush();
+                } catch (IOException ioe) {
+                }
+                IOUtils.closeQuietly(output);
+            }
         }
-        output.write(out.toByteArray());
-        output.flush();
+
     }
+
+    public abstract void write(DescribeLayerModel description, DescribeLayerRequest output,
+            OutputStream operation) throws IOException, ServiceException;
 
 }
