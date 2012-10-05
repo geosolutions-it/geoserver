@@ -360,6 +360,56 @@ public class WMSRequests {
         if (req.getViewParams() != null && !req.getViewParams().isEmpty()) {
             params.put("viewParams", encodeFormatOptions(req.getViewParams()));
         }
+        
+        Map<String,String> kvpMap=req.getRawKvp();
+        String propertyName=kvpMap.get("propertyName");
+        if (propertyName != null && !propertyName.isEmpty()) {
+            params.put("propertyName", propertyName);
+        }
+        
+        if (req.getSld() != null) {
+            params.put("sld", req.getSld().toString());
+        }
+        
+        if (req.getSldBody() != null) {
+            params.put("sld_body", req.getSldBody());
+        }
+        
+        if (req.getEnv() != null && !req.getEnv().isEmpty()) {
+            params.put("env", encodeFormatOptions(req.getEnv()));
+        }
+        
+        String tilesOrigin=kvpMap.get("tilesorigin");
+        if (tilesOrigin != null && !tilesOrigin.isEmpty()) {
+            params.put("tilesorigin", tilesOrigin);
+        }
+        
+        if (req.isTiled()) {
+            params.put("tiled", req.isTiled()?"true":"false");
+        }
+        
+        String palette=kvpMap.get("palette");
+        if (palette!= null && !palette.isEmpty()) {
+            params.put("palette", palette);
+        }
+        
+        String kmscore=(String) req.getFormatOptions().get("kmscore");
+        if (kmscore != null && !kmscore.isEmpty()) {
+            params.put("kmscore", kmscore);
+        }
+        
+        String kmattr=(String) req.getFormatOptions().get("kmattr");
+        if (kmattr != null && !kmattr.isEmpty()) {
+            params.put("kmattr", kmattr);
+        }
+        
+        if (req.getBuffer()>0){
+            params.put("buffer", Integer.toString(req.getBuffer()));
+        }
+        
+        if (Double.compare(req.getAngle(),0.0)!=0){
+            params.put("angle", Double.toString(req.getAngle()));
+        }
 
         // overrides / additions
         for (int i = 0; (kvp != null) && (i < kvp.length); i += 2) {
