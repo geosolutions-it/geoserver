@@ -822,7 +822,7 @@ public class WMS implements ApplicationContextAware {
                     fixedElevations, "ELEVATION", "Elevation");
         }
 
-        if (layerFilter != null) {
+        if (layerFilter != null && readParameters != null) {
             // test for default [empty is replaced with INCLUDE filter] ]filter
             for (int i = 0; i < readParameters.length; i++) {
 
