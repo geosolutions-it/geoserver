@@ -412,6 +412,10 @@
 	<!--  
 		GetLegendGraphic output formats
 	 -->
+	<bean id="wmsJSONLegendOutputFormat" class="org.geoserver.wms.legendgraphic.JSONLegendOutputFormat">
+		<constructor-arg ref="wms" />
+		<constructor-arg value="application/json" />
+	</bean>
 	<bean id="wmsGIFLegendOutputFormat" 
 		class="org.geoserver.wms.legendgraphic.GIFLegendOutputFormat">
 	</bean>
