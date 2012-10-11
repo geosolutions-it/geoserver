@@ -8,6 +8,7 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.measure.unit.Unit;
 
@@ -27,9 +28,14 @@ import org.geotools.styling.Rule;
 import org.geotools.styling.Stroke;
 import org.geotools.styling.Symbolizer;
 import org.geotools.styling.TextSymbolizer;
+import org.opengis.filter.And;
 import org.opengis.filter.BinaryComparisonOperator;
+import org.opengis.filter.BinaryLogicOperator;
 import org.opengis.filter.Filter;
+import org.opengis.filter.Id;
 import org.opengis.filter.MultiValuedFilter.MatchAction;
+import org.opengis.filter.Not;
+import org.opengis.filter.Or;
 import org.opengis.filter.PropertyIsBetween;
 import org.opengis.filter.PropertyIsEqualTo;
 import org.opengis.filter.PropertyIsGreaterThan;
@@ -37,10 +43,27 @@ import org.opengis.filter.PropertyIsGreaterThanOrEqualTo;
 import org.opengis.filter.PropertyIsLessThan;
 import org.opengis.filter.PropertyIsLessThanOrEqualTo;
 import org.opengis.filter.PropertyIsLike;
+import org.opengis.filter.PropertyIsNil;
 import org.opengis.filter.PropertyIsNotEqualTo;
+import org.opengis.filter.PropertyIsNull;
 import org.opengis.filter.expression.Expression;
+import org.opengis.filter.identity.Identifier;
 import org.opengis.filter.spatial.SpatialOperator;
+import org.opengis.filter.temporal.After;
+import org.opengis.filter.temporal.AnyInteracts;
+import org.opengis.filter.temporal.Before;
+import org.opengis.filter.temporal.Begins;
+import org.opengis.filter.temporal.BegunBy;
 import org.opengis.filter.temporal.BinaryTemporalOperator;
+import org.opengis.filter.temporal.During;
+import org.opengis.filter.temporal.EndedBy;
+import org.opengis.filter.temporal.Ends;
+import org.opengis.filter.temporal.Meets;
+import org.opengis.filter.temporal.MetBy;
+import org.opengis.filter.temporal.OverlappedBy;
+import org.opengis.filter.temporal.TContains;
+import org.opengis.filter.temporal.TEquals;
+import org.opengis.filter.temporal.TOverlaps;
 import org.opengis.style.ExtensionSymbolizer;
 import org.opengis.style.Graphic;
 import org.opengis.style.GraphicalSymbol;
@@ -94,7 +117,7 @@ public class JSONLegendGraphicBuilder {
             }
             json.key("name").value(applicableRules[i].getName());
             Filter filter = applicableRules[i].getFilter();
-            writeFilter(filter, json);
+            writeFilter(filter, json, true);
 
             json.key("symbolyzers");
             json.array();
@@ -119,14 +142,14 @@ public class JSONLegendGraphicBuilder {
                     json.object();
 
                     writeColorMap(rSymbolizer.getColorMap(), json);
-//                     TODO rSymbolizer.getChannelSelection();
+                    // TODO rSymbolizer.getChannelSelection();
 
                     json.endObject();
                 } else if (symbolizer instanceof PolygonSymbolizer) {
                     PolygonSymbolizer pSymbolizer = ((PolygonSymbolizer) symbolizer);
                     json.key("Polygon");
                     json.object();
-                    
+
                     writeFill(pSymbolizer.getFill(), json);
 
                     Expression po = pSymbolizer.getPerpendicularOffset();
@@ -170,14 +193,14 @@ public class JSONLegendGraphicBuilder {
                     writeStroke(stroke, json);
 
                     json.endObject();
-                    
+
                 } else if (symbolizer instanceof PointSymbolizer) {
                     PointSymbolizer pSymbolizer = ((PointSymbolizer) symbolizer);
                     json.key("Point");
                     json.object();
                     writeGraphic(pSymbolizer.getGraphic(), json, null);
                     json.endObject();
-                    
+
                 } else if (symbolizer instanceof ExtensionSymbolizer) {
                     ExtensionSymbolizer eSymbolizer = ((ExtensionSymbolizer) symbolizer);
                     json.key("Extension");
@@ -302,10 +325,10 @@ public class JSONLegendGraphicBuilder {
                 json.key("label").value(c.getLabel());
                 Expression o = c.getOpacity();
                 if (o != null)
-                    json.key("opacity").value(Double.parseDouble(o.toString()));
+                    json.key("opacity").value(getMatchingType(o));
                 Expression q = c.getQuantity();
                 if (q != null)
-                    json.key("quantity").value(Integer.parseInt(q.toString()));
+                    json.key("quantity").value(getMatchingType(q));
                 json.key("color").value(c.getColor());
                 json.endObject();
             }
@@ -337,17 +360,104 @@ public class JSONLegendGraphicBuilder {
      * @param filter
      * @param json
      */
-    private static void writeFilter(Filter filter, JSONBuilder json) {
+    private static void writeFilter(Filter filter, JSONBuilder json, boolean withKey) {
         if (filter != null) {
             // json.key("filter").value(filter.toString());
-            json.key("filter");
+            if (withKey){
+                json.key("filter");
+            }
             json.object();
             Class<? extends Filter> filterClass = filter.getClass();
-            if (BinaryTemporalOperator.class.isAssignableFrom(filterClass)) {
+            if (Not.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Logical.NOT = !;
+                json.key("type").value("!");
+                Not not = (Not) filter;
+                writeFilter(not.getFilter(), json, true);
+
+            } else if (Id.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Logical.FeatureId = FID;
+                json.key("type").value("FID");
+                Id id = (Id) filter;
+                Set<Identifier> sIds = id.getIdentifiers();
+                if (sIds != null) {
+                    json.key("identifiers");
+                    json.array();
+                    for (Identifier i : sIds) {
+                        json.value(i.getID());
+                    }
+                    json.endArray();
+                }
+
+            } else if (PropertyIsNil.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Logical....
+                json.key("type").value("isNil");
+                PropertyIsNil nil = (PropertyIsNil) filter;
+                json.key("property").value(nil.getExpression());
+                json.key("reason").value(nil.getNilReason());
+
+            } else if (PropertyIsNull.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Logical....
+                json.key("type").value("isNull");
+                PropertyIsNull nu11 = (PropertyIsNull) filter;
+                json.key("property").value(nu11.getExpression());
+
+            } else if (BinaryLogicOperator.class.isAssignableFrom(filterClass)) {
+
+                BinaryLogicOperator b = (BinaryLogicOperator) filter;
+                if (And.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Locical.AND = &&;
+                    json.key("type").value("&&");
+                } else if (Or.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Logical.OR = ||;
+                    json.key("type").value("||");
+                }
+                json.key("filters");
+                json.array();
+                List<Filter> filters = b.getChildren();
+                if (filters != null) {
+                    for (Filter cildren : filters) {
+                        writeFilter(cildren, json, false);
+                    }
+                }
+                json.endArray();
+            } else if (BinaryTemporalOperator.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Logical....
+                if (After.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("After");
+                } else if (AnyInteracts.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("AnyInteracts");
+                } else if (Before.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("Before");
+                } else if (Begins.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("Begins");
+                } else if (BegunBy.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("BegunBy");
+                } else if (During.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("During");
+                } else if (EndedBy.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("EndedBy");
+                } else if (Ends.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("Ends");
+                } else if (Meets.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("Meets");
+                } else if (MetBy.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("MetBy");
+                } else if (OverlappedBy.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("OverlappedBy");
+                } else if (TContains.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("TContains");
+                } else if (TEquals.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("TEquals");
+                } else if (TOverlaps.class.isAssignableFrom(filterClass)) {
+                    json.key("type").value("TOverlaps");
+                    // } else {
+                    // TODO Throw exception UnrecognizedFilter
+                }
                 BinaryTemporalOperator b = (BinaryTemporalOperator) filter;
-                MatchAction ma = b.getMatchAction();
-                b.getExpression1();
-                b.getExpression2();
+                json.key("matchAction").value(b.getMatchAction());
+                json.key("start").value(b.getExpression1());
+                json.key("end").value(b.getExpression2());
+
             } else if (PropertyIsBetween.class.isAssignableFrom(filterClass)) {
                 // OpenLayers.Filter.Comparison.BETWEEN = ..;
                 json.key("type").value("..");
@@ -366,7 +476,11 @@ public class JSONLegendGraphicBuilder {
                 json.key("value").value(b.getLiteral());
                 json.key("matchAction").value(b.getMatchAction());
             } else if (SpatialOperator.class.isAssignableFrom(filterClass)) {
-
+                // OpenLayers.Filter.Spatial.BBOX = BBOX;
+                // OpenLayers.Filter.Spatial.INTERSECTS = INTERSECTS;
+                // OpenLayers.Filter.Spatial.DWITHIN = DWITHIN;
+                // OpenLayers.Filter.Spatial.WITHIN = WITHIN;
+                // OpenLayers.Filter.Spatial.CONTAINS = CONTAINS;
                 SpatialOperator b = (SpatialOperator) filter;
                 json.key("matchAction").value(b.getMatchAction());
                 // TODO subtypes
@@ -408,7 +522,9 @@ public class JSONLegendGraphicBuilder {
                 json.key("matchCase").value(b.isMatchingCase());
 
             }
-            json.endObject();
+//            if (withKey){
+                json.endObject();
+//            }
         }
     }
 
