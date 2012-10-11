@@ -349,7 +349,7 @@ public class JSONLegendGraphicBuilder {
                 b.getExpression1();
                 b.getExpression2();
             } else if (PropertyIsBetween.class.isAssignableFrom(filterClass)) {
-                // OpenLayers.Filter.Comparison.BETWEEN = “..”;
+                // OpenLayers.Filter.Comparison.BETWEEN = ..;
                 json.key("type").value("..");
                 PropertyIsBetween b = (PropertyIsBetween) filter;
                 json.key("property").value(b.getExpression());
@@ -358,7 +358,7 @@ public class JSONLegendGraphicBuilder {
                 json.key("matchAction").value(b.getMatchAction());
 
             } else if (PropertyIsLike.class.isAssignableFrom(filterClass)) {
-                // OpenLayers.Filter.Comparison.LIKE = “~”;
+                // OpenLayers.Filter.Comparison.LIKE = ~;
                 json.key("type").value("~");
                 PropertyIsLike b = (PropertyIsLike) filter;
                 json.key("property").value(b.getExpression());
@@ -373,25 +373,25 @@ public class JSONLegendGraphicBuilder {
 
             } else if (BinaryComparisonOperator.class.isAssignableFrom(filterClass)) {
                 if (PropertyIsEqualTo.class.isAssignableFrom(filterClass)) {
-                    // OpenLayers.Filter.Comparison.EQUAL_TO = “==”;
+                    // OpenLayers.Filter.Comparison.EQUAL_TO = ==;
                     json.key("type").value("==");
                 } else if (PropertyIsGreaterThan.class.isAssignableFrom(filterClass)) {
-                    // OpenLayers.Filter.Comparison.GREATER_THAN = “>”;
+                    // OpenLayers.Filter.Comparison.GREATER_THAN = >;
                     json.key("type").value(">");
                 } else if (PropertyIsGreaterThanOrEqualTo.class.isAssignableFrom(filterClass)) {
-                    // OpenLayers.Filter.Comparison.GREATER_THAN_OR_EQUAL_TO = “>=”;
+                    // OpenLayers.Filter.Comparison.GREATER_THAN_OR_EQUAL_TO = >=;
                     json.key("type").value(">=");
                 } else if (PropertyIsNotEqualTo.class.isAssignableFrom(filterClass)) {
-                    // OpenLayers.Filter.Comparison.NOT_EQUAL_TO = “!=”;
+                    // OpenLayers.Filter.Comparison.NOT_EQUAL_TO = !=;
                     json.key("type").value("!=");
                 } else if (PropertyIsLessThan.class.isAssignableFrom(filterClass)) {
-                    // OpenLayers.Filter.Comparison.LESS_THAN = “<”;
+                    // OpenLayers.Filter.Comparison.LESS_THAN = <;
                     json.key("type").value("<");
                 } else if (PropertyIsLessThanOrEqualTo.class.isAssignableFrom(filterClass)) {
-                    // OpenLayers.Filter.Comparison.LESS_THAN_OR_EQUAL_TO = “<=”;
+                    // OpenLayers.Filter.Comparison.LESS_THAN_OR_EQUAL_TO = <=;
                     json.key("type").value("<=");
                     // } else if (BetweenFilter.class.isAssignableFrom(filterClass)) {
-                    // //OpenLayers.Filter.Comparison.BETWEEN = “..”;
+                    // //OpenLayers.Filter.Comparison.BETWEEN = ..;
                     // json.key("type").value("..");
                     // PropertyIsBetween b = (PropertyIsBetween) filter;
                     // json.key("property").value(b.getExpression());
