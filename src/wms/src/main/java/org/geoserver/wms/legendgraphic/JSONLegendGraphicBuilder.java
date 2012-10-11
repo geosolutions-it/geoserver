@@ -4,128 +4,54 @@
  */
 package org.geoserver.wms.legendgraphic;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
-import java.awt.image.RenderedImage;
 import java.io.Writer;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.measure.unit.Unit;
 
+import net.sf.json.JSONNull;
 import net.sf.json.util.JSONBuilder;
 
 import org.geoserver.platform.ServiceException;
-import org.geoserver.wms.GetLegendGraphicRequest;
-import org.geoserver.wms.map.ImageUtils;
-import org.geotools.data.DataUtilities;
-import org.geotools.feature.SchemaException;
-import org.geotools.feature.simple.SimpleFeatureBuilder;
-import org.geotools.geometry.jts.LiteShape2;
-import org.geotools.renderer.lite.RendererUtilities;
-import org.geotools.renderer.lite.StyledShapePainter;
 import org.geotools.styling.ColorMap;
 import org.geotools.styling.ColorMapEntry;
 import org.geotools.styling.Description;
-import org.geotools.styling.FeatureTypeStyle;
 import org.geotools.styling.Fill;
-import org.geotools.styling.Graphic;
 import org.geotools.styling.Halo;
 import org.geotools.styling.LineSymbolizer;
-import org.geotools.styling.PointSymbolizer;
 import org.geotools.styling.PolygonSymbolizer;
 import org.geotools.styling.RasterSymbolizer;
 import org.geotools.styling.Rule;
 import org.geotools.styling.Stroke;
-import org.geotools.styling.Style;
 import org.geotools.styling.Symbolizer;
 import org.geotools.styling.TextSymbolizer;
-import org.geotools.styling.visitor.UomRescaleStyleVisitor;
-import org.opengis.feature.Feature;
-import org.opengis.feature.IllegalAttributeException;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.FeatureType;
 import org.opengis.filter.BinaryComparisonOperator;
 import org.opengis.filter.Filter;
 import org.opengis.filter.MultiValuedFilter.MatchAction;
 import org.opengis.filter.PropertyIsBetween;
+import org.opengis.filter.PropertyIsEqualTo;
+import org.opengis.filter.PropertyIsGreaterThan;
+import org.opengis.filter.PropertyIsGreaterThanOrEqualTo;
 import org.opengis.filter.PropertyIsLessThan;
+import org.opengis.filter.PropertyIsLessThanOrEqualTo;
 import org.opengis.filter.PropertyIsLike;
+import org.opengis.filter.PropertyIsNotEqualTo;
+import org.opengis.filter.expression.Expression;
 import org.opengis.filter.spatial.SpatialOperator;
 import org.opengis.filter.temporal.BinaryTemporalOperator;
+import org.opengis.style.ExtensionSymbolizer;
+import org.opengis.style.Graphic;
 import org.opengis.style.GraphicalSymbol;
-import org.opengis.util.InternationalString;
-
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.LinearRing;
-import com.vividsolutions.jts.geom.Polygon;
+import org.opengis.style.PointSymbolizer;
 
 /**
- * Template {@linkPlain org.vfny.geoserver.responses.wms.GetLegendGraphicProducer} based on GeoTools' {@link GeoTools' {@link http
- * ://svn.geotools.org/geotools/trunk/gt/module/main/src/org/geotools /renderer/lite/StyledShapePainter.java StyledShapePainter} that produces a
- * BufferedImage with the appropiate legend graphic for a given GetLegendGraphic WMS request.
- * 
- * <p>
- * It should be enough for a subclass to implement {@linkPlain org.vfny.geoserver.responses.wms.GetLegendGraphicProducer#writeTo(OutputStream)} and
- * <code>getContentType()</code> in order to encode the BufferedImage produced by this class to the appropiate output format.
- * </p>
- * 
- * <p>
- * This class takes literally the fact that the arguments <code>WIDTH</code> and <code>HEIGHT</code> are just <i>hints</i> about the desired
- * dimensions of the produced graphic, and the need to produce a legend graphic representative enough of the SLD style for which it is being
- * generated. Thus, if no <code>RULE</code> parameter was passed and the style has more than one applicable Rule for the actual scale factor, there
- * will be generated a legend graphic of the specified width, but with as many stacked graphics as applicable rules were found, providing by this way
- * a representative enough legend.
- * </p>
  * 
  * @author Carlo Cancellieri, GeoSolutions SAS
  * @version $Id$
  */
 public class JSONLegendGraphicBuilder {
-
-    /** Tolerance used to compare doubles for equality */
-    public static final double TOLERANCE = 1e-6;
-
-    /**
-     * Singleton shape painter to serve all legend requests. We can use a single shape painter instance as long as it remains thread safe.
-     */
-    private static final StyledShapePainter shapePainter = new StyledShapePainter();
-
-    /**
-     * used to create sample point shapes with LiteShape (not lines nor polygons)
-     */
-    private static final GeometryFactory geomFac = new GeometryFactory();
-
-    /**
-     * set to <code>true</code> when <code>abort()</code> gets called, indicates that the rendering of the legend graphic should stop gracefully as
-     * soon as possible
-     */
-    private boolean renderingStopRequested;
-
-    /**
-     * Just a holder to avoid creating many polygon shapes from inside <code>getSampleShape()</code>
-     */
-    private LiteShape2 sampleRect;
-
-    /**
-     * Just a holder to avoid creating many line shapes from inside <code>getSampleShape()</code>
-     */
-    private LiteShape2 sampleLine;
-
-    /**
-     * Just a holder to avoid creating many point shapes from inside <code>getSampleShape()</code>
-     */
-    private LiteShape2 samplePoint;
 
     /**
      * Default constructor. Subclasses may provide its own with a String parameter to establish its desired output format, if they support more than
@@ -133,11 +59,6 @@ public class JSONLegendGraphicBuilder {
      */
     public JSONLegendGraphicBuilder() {
         super();
-    }
-
-    public static LegendGraphicModel buildLegendGraphic(GetLegendGraphicRequest request)
-            throws ServiceException {
-        return new LegendGraphicModel(request);
     }
 
     /**
@@ -153,81 +74,12 @@ public class JSONLegendGraphicBuilder {
     public static void buildLegendGraphic(Writer w, LegendGraphicModel model)
             throws ServiceException {
 
-        GetLegendGraphicRequest request = model.getRequest();
-        // the style we have to build a legend for
-        Style gt2Style = request.getStyle();
-        if (gt2Style == null) {
-            throw new NullPointerException("request.getStyle()");
-        }
-
-        // // width and height, we might have to rescale those in case of DPI usage
-        // int w = request.getWidth();
-        // int h = request.getHeight();
-        //
-        // // apply dpi rescale
-        // double dpi = RendererUtilities.getDpi(request.getLegendOptions());
-        // double standardDpi = RendererUtilities.getDpi(Collections.emptyMap());
-        // if(dpi != standardDpi) {
-        // double scaleFactor = dpi / standardDpi;
-        // w = (int) Math.round(w * scaleFactor);
-        // h = (int) Math.round(h * scaleFactor);
-        // RescaleStyleVisitor dpiVisitor = new RescaleStyleVisitor(scaleFactor);
-        // dpiVisitor.visit(gt2Style);
-        // gt2Style = (Style) dpiVisitor.getCopy();
-        // }
-        // apply UOM rescaling if we have a scale
-        if (request.getScale() > 0) {
-            double pixelsPerMeters = RendererUtilities.calculatePixelsPerMeterRatio(
-                    request.getScale(), request.getLegendOptions());
-            UomRescaleStyleVisitor rescaleVisitor = new UomRescaleStyleVisitor(pixelsPerMeters);
-            rescaleVisitor.visit(gt2Style);
-            gt2Style = (Style) rescaleVisitor.getCopy();
-        }
-
-        final FeatureType layer = request.getLayer();
-        boolean strict = request.isStrict();
-        final boolean buildRasterLegend = (!strict && layer == null && LegendUtils
-                .checkRasterSymbolizer(gt2Style)) || LegendUtils.checkGridLayer(layer);
-        // if (buildRasterLegend) {
-        // final RasterLayerLegendHelper rasterLegendHelper = new RasterLayerLegendHelper(request);
-        // final BufferedImage image = rasterLegendHelper.getLegend();
-        // return image;
-        // }
-
-        // final SimpleFeature sampleFeature;
-        final Feature sampleFeature;
-        if (layer == null) {
-            sampleFeature = createSampleFeature();
-        } else {
-            sampleFeature = createSampleFeature(layer);
-        }
-        final FeatureTypeStyle[] ftStyles = gt2Style.featureTypeStyles().toArray(
-                new FeatureTypeStyle[0]);
-        final double scaleDenominator = request.getScale();
-
-        final Rule[] applicableRules;
-        String ruleName = request.getRule();
-        if (ruleName != null) {
-            Rule rule = LegendUtils.getRule(ftStyles, ruleName);
-            if (rule == null) {
-                throw new ServiceException("Specified style does not contains a rule named "
-                        + ruleName);
-            }
-            applicableRules = new Rule[] { rule };
-        } else {
-            applicableRules = LegendUtils.getApplicableRules(ftStyles, scaleDenominator);
-        }
-
-        // final NumberRange<Double> scaleRange = NumberRange.create(scaleDenominator,
-        // scaleDenominator);
-
+        Rule[] applicableRules = LegendGraphicModel.buildApplicableRules(model.getRequest());
         /**
          * A legend graphic is produced for each applicable rule. They're being held here until the process is done and then painted on a "stack" like
          * legend.
          */
         JSONBuilder json = new JSONBuilder(w);
-
-        // final SLDStyleFactory styleFactory = new SLDStyleFactory();
 
         json.object().key("getLegendGraphic");
         json.array();
@@ -242,11 +94,8 @@ public class JSONLegendGraphicBuilder {
             }
             json.key("name").value(applicableRules[i].getName());
             Filter filter = applicableRules[i].getFilter();
-            writeFilter(filter,json);
+            writeFilter(filter, json);
 
-            // json.key("").value(applicableRules[i].)
-            // json.key("").value(applicableRules[i].)
-            // json.key("").value(applicableRules[i].)
             json.key("symbolyzers");
             json.array();
 
@@ -266,41 +115,26 @@ public class JSONLegendGraphicBuilder {
 
                 if (symbolizer instanceof RasterSymbolizer) {
                     RasterSymbolizer rSymbolizer = ((RasterSymbolizer) symbolizer);
-                    json.key("type").value("Raster");
+                    json.key("Raster");
+                    json.object();
 
-                    ColorMap colormap = rSymbolizer.getColorMap();
-                    if (colormap != null) {
-                        json.key("colorMap");
-                        json.array();
-                        for (ColorMapEntry c : colormap.getColorMapEntries()) {
-                            json.object();
-                            json.key("label").value(c.getLabel());
-                            json.key("opacity").value(c.getOpacity());
-                            json.key("quantity").value(c.getQuantity());
-                            json.key("color").value(c.getColor());
-                            json.endObject();
-                        }
-                        json.endArray();
+                    writeColorMap(rSymbolizer.getColorMap(), json);
+//                     TODO rSymbolizer.getChannelSelection();
 
-                        // Function function=colormap.getFunction();
-                        // if (function!=null){
-                        // json.object();
-                        // json.key("functionName").value(colormap.getFunction().getName());
-                        // json.endObject();
-                        // }
-                    }
-                    // rSymbolizer.getChannelSelection()
-
+                    json.endObject();
                 } else if (symbolizer instanceof PolygonSymbolizer) {
                     PolygonSymbolizer pSymbolizer = ((PolygonSymbolizer) symbolizer);
                     json.key("Polygon");
                     json.object();
-                    Fill fill = pSymbolizer.getFill();
-                    writeFill(fill, json);
+                    
+                    writeFill(pSymbolizer.getFill(), json);
 
-                    json.key("perpendicularOffset").value(pSymbolizer.getPerpendicularOffset());
-                    Stroke stroke = pSymbolizer.getStroke();
-                    writeStroke(stroke, json);
+                    Expression po = pSymbolizer.getPerpendicularOffset();
+                    if (po != null)
+                        json.key("perpendicularOffset").value(Integer.parseInt(po.toString()));
+
+                    writeStroke(pSymbolizer.getStroke(), json);
+
                     json.endObject();
                 } else if (symbolizer instanceof TextSymbolizer) {
                     TextSymbolizer tSymbolizer = ((TextSymbolizer) symbolizer);
@@ -320,32 +154,52 @@ public class JSONLegendGraphicBuilder {
                         json.key("haloRadius").value(halo.getRadius());
 
                     }
+
+                    writeFont(tSymbolizer.getFont(), json, "font");
+
                     json.endObject();
                 } else if (symbolizer instanceof LineSymbolizer) {
                     LineSymbolizer lSymbolizer = ((LineSymbolizer) symbolizer);
                     json.key("Line");
                     json.object();
-                    json.key("perpendicularOffset").value(lSymbolizer.getPerpendicularOffset());
+                    Expression po = lSymbolizer.getPerpendicularOffset();
+                    if (po != null)
+                        json.key("perpendicularOffset").value(Integer.parseInt(po.toString()));
 
                     Stroke stroke = lSymbolizer.getStroke();
-                    if (stroke != null) {
-                        json.key("stroke").value(true);
-                        json.key("strokeColor").value(stroke.getColor());
-
-                        writeGraphic(stroke.getGraphicFill(), json, "fill");
-
-                        writeGraphic(stroke.getGraphicStroke(), json, "stroke");
-
-                        json.key("dashArray").value(Arrays.toString(stroke.getDashArray()));
-
-                        // TODO continue
-                    }
+                    writeStroke(stroke, json);
 
                     json.endObject();
+                    
+                } else if (symbolizer instanceof PointSymbolizer) {
+                    PointSymbolizer pSymbolizer = ((PointSymbolizer) symbolizer);
+                    json.key("Point");
+                    json.object();
+                    writeGraphic(pSymbolizer.getGraphic(), json, null);
+                    json.endObject();
+                    
+                } else if (symbolizer instanceof ExtensionSymbolizer) {
+                    ExtensionSymbolizer eSymbolizer = ((ExtensionSymbolizer) symbolizer);
+                    json.key("Extension");
+                    json.object();
+                    json.key("name").value(eSymbolizer.getExtensionName());
+
+                    Map<String, Expression> params = eSymbolizer.getParameters();
+                    if (params != null) {
+                        json.key("parameters");
+                        json.object();
+                        for (Map.Entry<String, Expression> e : params.entrySet()) {
+                            json.key(e.getKey()).value(getMatchingType(e.getValue()));
+                        }
+                        json.endObject();
+                    }
+                    json.endObject();
+
                 } else {
-
-                    json.key("type").value(symbolizer.getClass().getSimpleName());
-
+                    // TODO log problem
+                    json.key(symbolizer.getClass().getSimpleName());
+                    json.object();
+                    json.endObject();
                 }
 
                 json.key("geometry").value(symbolizer.getGeometry());
@@ -359,40 +213,63 @@ public class JSONLegendGraphicBuilder {
             }
             json.endArray();
             json.endObject();
-            // legendsStack.add(image);
-            // graphics.dispose();
         }
         json.endArray();
         json.endObject();
-        // JD: changed legend behavior, see GEOS-812
-        // this.legendGraphic = scaleImage(mergeLegends(legendsStack), request);
-        // BufferedImage image = mergeLegends(legendsStack, applicableRules, request);
     }
 
-    private static void writeGraphic(Graphic gFill, JSONBuilder json, String prefix) {
-        if (gFill != null) {
-            json.object();
-            json.key(prefix + "Size").value(gFill.getSize());
-            json.key(prefix + "Rotation").value(gFill.getRotation());
-            json.key(prefix + "Opacity").value(gFill.getOpacity());
-            List<GraphicalSymbol> gSymbols = gFill.graphicalSymbols();
+    private static void writeFont(org.opengis.style.Font font, JSONBuilder json, String prefix) {
+        if (font != null) {
+
+            json.key(prefix != null ? prefix + "Family" : "family").value(font.getFamily().get(0));
+            json.key(prefix != null ? prefix + "Bold" : "Style").value(font.getStyle());
+            json.key(prefix != null ? prefix + "Weight" : "weight").value(font.getWeight());
+            Expression size = font.getSize();
+            if (size != null)
+                json.key(prefix != null ? prefix + "Size" : "size").value(
+                        Integer.parseInt(size.toString()));
+        }
+    }
+
+    private static void writeGraphic(org.opengis.style.Graphic graphic, JSONBuilder json,
+            String prefix) {
+        if (graphic != null) {
+
+            Expression e = graphic.getSize();
+            if (e != null && !e.equals(Expression.NIL)) {
+                json.key(prefix != null ? prefix + "Size" : "size").value(getMatchingType(e));
+            }
+            Expression r = graphic.getRotation();
+            if (r != null)
+                json.key(prefix != null ? prefix + "Rotation" : "rotation").value(
+                        Double.parseDouble(r.toString()));
+
+            Expression o = graphic.getOpacity();
+            if (o != null)
+                json.key(prefix != null ? prefix + "Opacity" : "opacity").value(
+                        Double.parseDouble(o.toString()));
+
+            List<GraphicalSymbol> gSymbols = graphic.graphicalSymbols();
             if (gSymbols != null) {
-                json.key(prefix + "GraphicalSymbols");
+                json.key(prefix != null ? prefix + "GraphicalSymbols" : "graphicalSymbols");
                 json.array();
                 for (GraphicalSymbol gs : gSymbols) {
-                    json.key("GraphicalSymbol").value(gs.toString());
+                    json.value(gs.toString());
                 }
                 json.endArray();
             }
-            json.endObject();
         }
     }
 
     private static void writeFill(Fill fill, JSONBuilder json) {
         if (fill != null) {
             json.key("fill").value(true);
+            Expression o = fill.getOpacity();
+            if (o != null)
+                json.key("opacity").value(Double.parseDouble(o.toString()));
+
             json.key("fillColor").value(fill.getColor());
-            json.key("fillOpacity").value(fill.getOpacity());
+
             Graphic gFill = fill.getGraphicFill();
             writeGraphic(gFill, json, "fill");
         }
@@ -407,326 +284,132 @@ public class JSONLegendGraphicBuilder {
             writeGraphic(stroke.getGraphicStroke(), json, "strokeGraphic");
 
             json.key("strokeDashArray").value(Arrays.toString(stroke.getDashArray()));
-            json.key("strokeDashOffset").value(stroke.getDashOffset());
+
+            Expression dashOff = stroke.getDashOffset();
+            if (dashOff != null)
+                json.key("strokeDashOffset").value(Integer.parseInt(dashOff.toString()));
 
             // TODO continue
         }
     }
-    
+
+    private static void writeColorMap(ColorMap colormap, JSONBuilder json) {
+        if (colormap != null) {
+            json.key("colorMap");
+            json.array();
+            for (ColorMapEntry c : colormap.getColorMapEntries()) {
+                json.object();
+                json.key("label").value(c.getLabel());
+                Expression o = c.getOpacity();
+                if (o != null)
+                    json.key("opacity").value(Double.parseDouble(o.toString()));
+                Expression q = c.getQuantity();
+                if (q != null)
+                    json.key("quantity").value(Integer.parseInt(q.toString()));
+                json.key("color").value(c.getColor());
+                json.endObject();
+            }
+            json.endArray();
+        }
+    }
+
+    private static Object getMatchingType(Expression q) {
+        if (q == null) {
+            return JSONNull.getInstance();
+        }
+        String value = q.toString();
+        if (value.isEmpty()) {
+            return JSONNull.getInstance();
+        }
+        try {
+            return Double.valueOf(value);
+        } catch (NumberFormatException nfe) {
+            return value;
+        }
+    }
+
+    /**
+     * 
+     * 
+     * 
+     * 
+     * 
+     * @param filter
+     * @param json
+     */
     private static void writeFilter(Filter filter, JSONBuilder json) {
         if (filter != null) {
-//            json.key("filter").value(filter.toString());
+            // json.key("filter").value(filter.toString());
             json.key("filter");
             json.object();
-            if (BinaryComparisonOperator.class.isAssignableFrom(filter.getClass())){
-                BinaryComparisonOperator b=(BinaryComparisonOperator)filter;
-                b.getMatchAction();
+            Class<? extends Filter> filterClass = filter.getClass();
+            if (BinaryTemporalOperator.class.isAssignableFrom(filterClass)) {
+                BinaryTemporalOperator b = (BinaryTemporalOperator) filter;
+                MatchAction ma = b.getMatchAction();
                 b.getExpression1();
                 b.getExpression2();
-                b.isMatchingCase();
-            } else if (BinaryTemporalOperator.class.isAssignableFrom(filter.getClass())){
-                BinaryTemporalOperator b=(BinaryTemporalOperator)filter;
-                b.getMatchAction();
-                b.getExpression1();
-                b.getExpression2();
-            } else if (PropertyIsBetween.class.isAssignableFrom(filter.getClass())){
-                PropertyIsBetween b=(PropertyIsBetween)filter;
-                b.getMatchAction();
-                b.getLowerBoundary();
-                b.getUpperBoundary();
-            } else if (PropertyIsLike.class.isAssignableFrom(filter.getClass())){
-                PropertyIsLike b=(PropertyIsLike)filter;
-                b.getMatchAction();
-                b.getEscape();
-                b.getLiteral();
-                MatchAction ma=b.getMatchAction();
-            } else if (SpatialOperator.class.isAssignableFrom(filter.getClass())){
+            } else if (PropertyIsBetween.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Comparison.BETWEEN = “..”;
+                json.key("type").value("..");
+                PropertyIsBetween b = (PropertyIsBetween) filter;
+                json.key("property").value(b.getExpression());
+                json.key("lowerBoundary").value(getMatchingType(b.getLowerBoundary()));
+                json.key("upperBoundary").value(getMatchingType(b.getUpperBoundary()));
+                json.key("matchAction").value(b.getMatchAction());
+
+            } else if (PropertyIsLike.class.isAssignableFrom(filterClass)) {
+                // OpenLayers.Filter.Comparison.LIKE = “~”;
+                json.key("type").value("~");
+                PropertyIsLike b = (PropertyIsLike) filter;
+                json.key("property").value(b.getExpression());
+                json.key("escape").value(b.getEscape());
+                json.key("value").value(b.getLiteral());
+                json.key("matchAction").value(b.getMatchAction());
+            } else if (SpatialOperator.class.isAssignableFrom(filterClass)) {
+
+                SpatialOperator b = (SpatialOperator) filter;
+                json.key("matchAction").value(b.getMatchAction());
                 // TODO subtypes
-                SpatialOperator b=(SpatialOperator)filter;
-                b.getMatchAction();
-//                b.getEscape();
-//                MatchAction ma=b.getMatchAction();
-            } else if (PropertyIsLike.class.isAssignableFrom(filter.getClass())){
-                PropertyIsLike b=(PropertyIsLike)filter;
-                b.getMatchAction();
-                b.getEscape();
-                b.getLiteral();
-                MatchAction ma=b.getMatchAction();
+
+            } else if (BinaryComparisonOperator.class.isAssignableFrom(filterClass)) {
+                if (PropertyIsEqualTo.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Comparison.EQUAL_TO = “==”;
+                    json.key("type").value("==");
+                } else if (PropertyIsGreaterThan.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Comparison.GREATER_THAN = “>”;
+                    json.key("type").value(">");
+                } else if (PropertyIsGreaterThanOrEqualTo.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Comparison.GREATER_THAN_OR_EQUAL_TO = “>=”;
+                    json.key("type").value(">=");
+                } else if (PropertyIsNotEqualTo.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Comparison.NOT_EQUAL_TO = “!=”;
+                    json.key("type").value("!=");
+                } else if (PropertyIsLessThan.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Comparison.LESS_THAN = “<”;
+                    json.key("type").value("<");
+                } else if (PropertyIsLessThanOrEqualTo.class.isAssignableFrom(filterClass)) {
+                    // OpenLayers.Filter.Comparison.LESS_THAN_OR_EQUAL_TO = “<=”;
+                    json.key("type").value("<=");
+                    // } else if (BetweenFilter.class.isAssignableFrom(filterClass)) {
+                    // //OpenLayers.Filter.Comparison.BETWEEN = “..”;
+                    // json.key("type").value("..");
+                    // PropertyIsBetween b = (PropertyIsBetween) filter;
+                    // json.key("property").value(b.getExpression());
+                    // json.key("lowerBoundary").value(getMatchingType(b.getLowerBoundary()));
+                    // json.key("upperBoundary").value(getMatchingType(b.getUpperBoundary()));
+                    // json.key("matchAction").value(b.getMatchAction());
+                    // json.endObject();
+                    // return;
+                }
+
+                BinaryComparisonOperator b = (BinaryComparisonOperator) filter;
+                json.key("property").value(b.getExpression1());
+                json.key("value").value(getMatchingType(b.getExpression2()));
+                json.key("matchCase").value(b.isMatchingCase());
+
             }
             json.endObject();
         }
-    }
-
-    /**
-     * Recieves a list of <code>BufferedImages</code> and produces a new one which holds all the images in <code>imageStack</code> one above the
-     * other.
-     * 
-     * @param imageStack the list of BufferedImages, one for each applicable Rule
-     * @param rules The applicable rules, one for each image in the stack
-     * @param request The request.
-     * 
-     * @return the stack image with all the images on the argument list.
-     * 
-     * @throws IllegalArgumentException if the list is empty
-     */
-    private static BufferedImage mergeLegends(List<RenderedImage> imageStack, Rule[] rules,
-            GetLegendGraphicRequest req) {
-
-        Font labelFont = LegendUtils.getLabelFont(req);
-        boolean useAA = LegendUtils.isFontAntiAliasing(req);
-
-        boolean forceLabelsOn = false;
-        boolean forceLabelsOff = false;
-        if (req.getLegendOptions().get("forceLabels") instanceof String) {
-            String forceLabelsOpt = (String) req.getLegendOptions().get("forceLabels");
-            if (forceLabelsOpt.equalsIgnoreCase("on")) {
-                forceLabelsOn = true;
-            } else if (forceLabelsOpt.equalsIgnoreCase("off")) {
-                forceLabelsOff = true;
-            }
-        }
-
-        if (imageStack.size() == 0) {
-            throw new IllegalArgumentException("No legend graphics passed");
-        }
-
-        final BufferedImage finalLegend;
-
-        if (imageStack.size() == 1 && !forceLabelsOn) {
-            finalLegend = (BufferedImage) imageStack.get(0);
-        } else {
-            final int imgCount = imageStack.size();
-            final String[] labels = new String[imgCount];
-
-            BufferedImage img = ((BufferedImage) imageStack.get(0));
-
-            int totalHeight = 0;
-            int totalWidth = 0;
-            int[] rowHeights = new int[imgCount];
-            BufferedImage labelsGraphics[] = new BufferedImage[imgCount];
-            for (int i = 0; i < imgCount; i++) {
-                img = (BufferedImage) imageStack.get(i);
-
-                if (forceLabelsOff) {
-                    totalWidth = (int) Math.ceil(Math.max(img.getWidth(), totalWidth));
-                    rowHeights[i] = img.getHeight();
-                    totalHeight += img.getHeight();
-                } else {
-
-                    Rule rule = rules[i];
-
-                    // What's the label on this rule? We prefer to use
-                    // the 'title' if it's available, but fall-back to 'name'
-                    final Description description = rule.getDescription();
-                    if (description != null && description.getTitle() != null) {
-                        final InternationalString title = description.getTitle();
-                        labels[i] = title.toString();
-                    } else if (rule.getName() != null) {
-                        labels[i] = rule.getName();
-                    } else {
-                        labels[i] = "";
-                    }
-
-                    Graphics2D g = img.createGraphics();
-                    g.setFont(labelFont);
-
-                    if (useAA) {
-                        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                    } else {
-                        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                                RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-                    }
-
-                    if (labels[i] != null && labels[i].length() > 0) {
-                        final BufferedImage renderedLabel = LegendUtils.renderLabel(labels[i], g,
-                                req);
-                        labelsGraphics[i] = renderedLabel;
-                        final Rectangle2D bounds = new Rectangle2D.Double(0, 0,
-                                renderedLabel.getWidth(), renderedLabel.getHeight());
-
-                        totalWidth = (int) Math.ceil(Math.max(img.getWidth() + bounds.getWidth(),
-                                totalWidth));
-                        rowHeights[i] = (int) Math.ceil(Math.max(img.getHeight(),
-                                bounds.getHeight()));
-                    } else {
-                        totalWidth = (int) Math.ceil(Math.max(img.getWidth(), totalWidth));
-                        rowHeights[i] = (int) Math.ceil(img.getHeight());
-                        labelsGraphics[i] = null;
-                    }
-
-                    totalHeight += rowHeights[i];
-
-                }
-            }
-
-            // buffer the width a bit
-            totalWidth += 2;
-
-            final boolean transparent = req.isTransparent();
-            final Color backgroundColor = LegendUtils.getBackgroundColor(req);
-            final Map<RenderingHints.Key, Object> hintsMap = new HashMap<RenderingHints.Key, Object>();
-            // create the final image
-            finalLegend = ImageUtils.createImage(totalWidth, totalHeight, (IndexColorModel) null,
-                    transparent);
-            Graphics2D finalGraphics = ImageUtils.prepareTransparency(transparent, backgroundColor,
-                    finalLegend, hintsMap);
-
-            int topOfRow = 0;
-
-            for (int i = 0; i < imgCount; i++) {
-                img = (BufferedImage) imageStack.get(i);
-
-                // draw the image
-                int y = topOfRow;
-
-                if (img.getHeight() < rowHeights[i]) {
-                    // move the image to the center of the row
-                    y += (int) ((rowHeights[i] - img.getHeight()) / 2d);
-                }
-
-                finalGraphics.drawImage(img, 0, y, null);
-                if (forceLabelsOff) {
-                    topOfRow += rowHeights[i];
-                    continue;
-                }
-
-                finalGraphics.setFont(labelFont);
-
-                if (useAA) {
-                    finalGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                            RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                } else {
-                    finalGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
-                            RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-                }
-
-                // draw the label
-                if (labels[i] != null && labels[i].length() > 0) {
-                    // first create the actual overall label image.
-                    final BufferedImage renderedLabel = labelsGraphics[i];
-
-                    y = topOfRow;
-
-                    if (renderedLabel.getHeight() < rowHeights[i]) {
-                        y += (int) ((rowHeights[i] - renderedLabel.getHeight()) / 2d);
-                    }
-
-                    finalGraphics.drawImage(renderedLabel, img.getWidth(), y, null);
-                    // cleanup
-                    renderedLabel.flush();
-                    labelsGraphics[i] = null;
-                }
-
-                topOfRow += rowHeights[i];
-            }
-
-            finalGraphics.dispose();
-        }
-        return finalLegend;
-    }
-
-    /**
-     * Returns a <code>java.awt.Shape</code> appropiate to render a legend graphic given the symbolizer type and the legend dimensions.
-     * 
-     * @param symbolizer the Symbolizer for whose type a sample shape will be created
-     * @param legendWidth the requested width, in output units, of the legend graphic
-     * @param legendHeight the requested height, in output units, of the legend graphic
-     * 
-     * @return an appropiate Line2D, Rectangle2D or LiteShape(Point) for the symbolizer, wether it is a LineSymbolizer, a PolygonSymbolizer, or a
-     *         Point ot Text Symbolizer
-     * 
-     * @throws IllegalArgumentException if an unknown symbolizer impl was passed in.
-     */
-    private LiteShape2 getSampleShape(Symbolizer symbolizer, int legendWidth, int legendHeight) {
-        LiteShape2 sampleShape;
-        final float hpad = (legendWidth * LegendUtils.hpaddingFactor);
-        final float vpad = (legendHeight * LegendUtils.vpaddingFactor);
-
-        if (symbolizer instanceof LineSymbolizer) {
-            if (this.sampleLine == null) {
-                Coordinate[] coords = { new Coordinate(hpad, legendHeight - vpad - 1),
-                        new Coordinate(legendWidth - hpad - 1, vpad) };
-                LineString geom = geomFac.createLineString(coords);
-
-                try {
-                    this.sampleLine = new LiteShape2(geom, null, null, false);
-                } catch (Exception e) {
-                    this.sampleLine = null;
-                }
-            }
-
-            sampleShape = this.sampleLine;
-        } else if ((symbolizer instanceof PolygonSymbolizer)
-                || (symbolizer instanceof RasterSymbolizer)) {
-            if (this.sampleRect == null) {
-                final float w = legendWidth - (2 * hpad) - 1;
-                final float h = legendHeight - (2 * vpad) - 1;
-
-                Coordinate[] coords = { new Coordinate(hpad, vpad), new Coordinate(hpad, vpad + h),
-                        new Coordinate(hpad + w, vpad + h), new Coordinate(hpad + w, vpad),
-                        new Coordinate(hpad, vpad) };
-                LinearRing shell = geomFac.createLinearRing(coords);
-                Polygon geom = geomFac.createPolygon(shell, null);
-
-                try {
-                    this.sampleRect = new LiteShape2(geom, null, null, false);
-                } catch (Exception e) {
-                    this.sampleRect = null;
-                }
-            }
-
-            sampleShape = this.sampleRect;
-        } else if (symbolizer instanceof PointSymbolizer || symbolizer instanceof TextSymbolizer) {
-            if (this.samplePoint == null) {
-                Coordinate coord = new Coordinate(legendWidth / 2, legendHeight / 2);
-
-                try {
-                    this.samplePoint = new LiteShape2(geomFac.createPoint(coord), null, null, false);
-                } catch (Exception e) {
-                    this.samplePoint = null;
-                }
-            }
-
-            sampleShape = this.samplePoint;
-        } else {
-            throw new IllegalArgumentException("Unknown symbolizer: " + symbolizer);
-        }
-
-        return sampleShape;
-    }
-
-    private static SimpleFeature createSampleFeature() {
-        SimpleFeatureType type;
-        try {
-            type = DataUtilities.createType("Sample", "the_geom:Geometry");
-        } catch (SchemaException e) {
-            throw new RuntimeException(e);
-        }
-        return SimpleFeatureBuilder.template((SimpleFeatureType) type, null);
-    }
-
-    /**
-     * Creates a sample Feature instance in the hope that it can be used in the rendering of the legend graphic.
-     * 
-     * @param schema the schema for which to create a sample Feature instance
-     * 
-     * @return
-     * 
-     * @throws ServiceException
-     */
-    private static Feature createSampleFeature(FeatureType schema) throws ServiceException {
-        Feature sampleFeature;
-        try {
-            if (schema instanceof SimpleFeatureType) {
-                sampleFeature = SimpleFeatureBuilder.template((SimpleFeatureType) schema, null);
-            } else {
-                sampleFeature = DataUtilities.templateFeature(schema);
-            }
-        } catch (IllegalAttributeException e) {
-            throw new ServiceException(e);
-        }
-        return sampleFeature;
     }
 
 }

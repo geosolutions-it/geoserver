@@ -71,13 +71,12 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
     @Override
     public void write(Object value, OutputStream output, org.geoserver.platform.Operation operation)
             throws IOException, ServiceException {
-
         
         Assert.notNull(operation.getParameters());
         Assert.isTrue(operation.getParameters()[0] instanceof GetLegendGraphicRequest);
         
         final GetLegendGraphicRequest request = (GetLegendGraphicRequest) operation.getParameters()[0];
-//        
+
         Assert.isTrue(value instanceof LegendGraphicModel);
         final LegendGraphicModel model = (LegendGraphicModel) value;
         try {
@@ -91,7 +90,6 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
                 IOUtils.closeQuietly(output);
             }
         }
-        
     }
 
     public void write(LegendGraphicModel model, GetLegendGraphicRequest output, OutputStream operation) throws IOException,
@@ -108,12 +106,11 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
                 IOUtils.closeQuietly(outWriter);
             }
         }
-        
     }
 
     @Override
     public Object produceLegendGraphic(GetLegendGraphicRequest request) throws ServiceException {
-        return JSONLegendGraphicBuilder.buildLegendGraphic(request);
+        return new LegendGraphicModel(request);
     }
  
  
