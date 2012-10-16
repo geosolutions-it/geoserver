@@ -98,10 +98,7 @@ public class JSONLegendGraphicBuilder {
             throws ServiceException {
 
         Rule[] applicableRules = LegendGraphicModel.buildApplicableRules(model.getRequest());
-        /**
-         * A legend graphic is produced for each applicable rule. They're being held here until the process is done and then painted on a "stack" like
-         * legend.
-         */
+        
         JSONBuilder json = new JSONBuilder(w);
 
         json.object().key("getLegendGraphic");
@@ -245,7 +242,7 @@ public class JSONLegendGraphicBuilder {
         if (font != null) {
 
             json.key(prefix != null ? prefix + "Family" : "family").value(font.getFamily().get(0));
-            json.key(prefix != null ? prefix + "Bold" : "Style").value(font.getStyle());
+            json.key(prefix != null ? prefix + "Style" : "style").value(font.getStyle());
             json.key(prefix != null ? prefix + "Weight" : "weight").value(font.getWeight());
             Expression size = font.getSize();
             if (size != null)
