@@ -14,11 +14,14 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
 
 import junit.framework.Test;
 
@@ -326,7 +329,7 @@ public class KMLTransformerTest extends WMSTestSupport {
         assertTrue(href.getFirstChild().getNodeValue()
                 .contains("&sld=http%3A%2F%2Fmy.external%2Fdynamic%2FsldService"));
     }
-
+    
     public void testRasterPlacemarkTrue() throws Exception {
         doTestRasterPlacemark(true);
     }

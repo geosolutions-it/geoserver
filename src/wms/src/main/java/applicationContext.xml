@@ -221,6 +221,7 @@
  	<bean id="heightKvpParser" class="org.geoserver.ows.kvp.IntegerKvpParser">
 		<constructor-arg value="height"/>
  	</bean>
+ 	<bean id="wmsFormatOptionKvpParser" class="org.geoserver.ows.kvp.FormatOptionKvpParser"/>
  	<bean id="wmsFormatOptionsKvpParser" class="org.geoserver.ows.kvp.FormatOptionsKvpParser"/>
  	<bean id="wmsEnviromentKvpParser" class="org.geoserver.ows.kvp.FormatOptionsKvpParser">
  		<constructor-arg index="0" value="env"/>

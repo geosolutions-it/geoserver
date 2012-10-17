@@ -4,11 +4,9 @@
  */
 package org.geoserver.wms;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -17,10 +15,11 @@ import java.util.Map;
 
 import org.geoserver.config.GeoServer;
 import org.geoserver.ows.URLMangler.URLType;
+import org.geoserver.ows.kvp.FormatOptionKvpParser;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.ows.util.ResponseUtils;
-import org.geoserver.platform.ServiceException;
 import org.geotools.map.Layer;
+import org.geotools.map.MapLayer;
 import org.geotools.styling.Style;
 import org.vfny.geoserver.util.Requests;
 
@@ -392,17 +391,7 @@ public class WMSRequests {
         if (palette!= null && !palette.isEmpty()) {
             params.put("palette", palette);
         }
-        
-        String kmscore=(String) req.getFormatOptions().get("kmscore");
-        if (kmscore != null && !kmscore.isEmpty()) {
-            params.put("kmscore", kmscore);
-        }
-        
-        String kmattr=(String) req.getFormatOptions().get("kmattr");
-        if (kmattr != null && !kmattr.isEmpty()) {
-            params.put("kmattr", kmattr);
-        }
-        
+
         if (req.getBuffer()>0){
             params.put("buffer", Integer.toString(req.getBuffer()));
         }
@@ -417,6 +406,28 @@ public class WMSRequests {
         }
 
         return params;
+    }
+
+
+    /**
+     * Copy the Entry matching the key from the kvp map and put it into the formatOptions map. If a parameter is already present in formatOption map
+     * its value will be preserved.
+     * 
+     * @param kvp
+     * @param formatOptions
+     * @param key the key to parse
+     * @throws Exception - In the event of an unsuccesful parse.
+     */
+    public static void mergeEntry(Map<String, String> kvp, Map<String, Object> formatOptions,
+            String key) throws Exception {
+        FormatOptionKvpParser parser=new FormatOptionKvpParser();
+        String val=null;
+        if ((val=kvp.get(key))!=null) {
+            Object kmscore = formatOptions.get(key);
+            if (kmscore == null) {
+                formatOptions.put(key,parser.parse(key,val));
+            }
+        }
     }
 
     /**
