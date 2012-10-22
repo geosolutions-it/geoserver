@@ -25,7 +25,7 @@ import org.geoserver.wfs.json.JSONType;
  * 
  * @author Justin Deoliveira, The Open Planning Project
  * @author Carlo Cancellieri - GeoSolutions
- * 
+ *
  */
 public class WfsExceptionHandler extends OWS10ServiceExceptionHandler {
 
@@ -67,15 +67,14 @@ public class WfsExceptionHandler extends OWS10ServiceExceptionHandler {
         if (JSONType.isJsonMimeType(exceptions)) {
             // use Json format
             JSONType.handleJsonException(LOGGER, exception, request, charset, verbose, false);
-        } else if (JSONType.isJsonpMimeType(exceptions)) {
+        } else if (JSONType.useJsonp(exceptions)) {
             // use JsonP format
             JSONType.handleJsonException(LOGGER, exception, request, charset, verbose, true);
         } else {
             handleDefault(exception, request, charset, verbose);
         }
-
     }
-
+    
     private void handleDefault(ServiceException exception, Request request, String charset,
             boolean verbose) {
         if ("1.0.0".equals(request.getVersion())) {

@@ -13,7 +13,7 @@ import org.geoserver.wfs.json.JSONType;
 import org.geoserver.wms.WMSTestSupport;
 
 /**
- * Unit test suite for {@link GeoJSONDescribeLayerResponse}
+ * Unit test suite for {@link JSONDescribeLayerResponse}
  * 
  * @author Carlo Cancellieri - GeoSolutions
  * @version $Id$
@@ -29,7 +29,7 @@ public class DescribeLayerJsonTest extends WMSTestSupport {
 
     public void testBuild() throws Exception {
         try {
-            new GeoJSONDescribeLayerResponse(getWMS(), "fail");
+            new JSONDescribeLayerResponse(getWMS(), "fail");
             fail("Should fails");
         } catch (Exception e) {
         }
@@ -41,13 +41,16 @@ public class DescribeLayerJsonTest extends WMSTestSupport {
      * @throws Exception
      */
     public void testCustomJSONP() throws Exception {
+
         String layer = MockData.FORESTS.getPrefix() + ":" + MockData.FORESTS.getLocalPart();
         String request = "wms?version=1.1.1" + "&request=DescribeLayer" + "&layers=" + layer
                 + "&query_layers=" + layer + "&width=20&height=20" + "&outputFormat="
                 + JSONType.jsonp + "&format_options=" + JSONType.CALLBACK_FUNCTION_KEY
                 + ":DescribeLayer";
 
+        JSONType.setJsonpEnabled(true);
         String result = getAsString(request);
+        JSONType.setJsonpEnabled(false);
 
         checkJSONPDescribeLayer(result, layer);
     }
@@ -101,64 +104,35 @@ public class DescribeLayerJsonTest extends WMSTestSupport {
         checkJSONDescribeLayerGroup(result, layer);
     }
 
-    /**
-     * @param body accepts:<br>
-     *        {"WMS_DescribeLayerResponse": {<br>
-     *        "version": "1.1.1",<br>
-     *        "LayerDescription": {<br>
-     *        "name": "cite:Forests",<br>
-     *        "owsURL": "",<br>
-     *        "owsType": "WFS"<br>
-     *        }<br>
-     *        }}<br>
-     */
     private void checkJSONDescribeLayer(String body, String layer) {
         assertNotNull(body);
 
         JSONObject rootObject = JSONObject.fromObject(body);
-        JSONObject subObject = rootObject.getJSONObject("WMS_DescribeLayerResponse");
-        assertEquals(subObject.get("version"), "1.1.1");
+        // JSONObject subObject = rootObject.getJSONObject("WMS_DescribeLayerResponse");
+        JSONArray layerDescs = rootObject.getJSONArray("layerDescriptions");
 
-        JSONObject layerDesc = subObject.getJSONObject("LayerDescription");
+        JSONObject layerDesc = layerDescs.getJSONObject(0);
 
-        assertEquals(layerDesc.get("name"), layer);
+        assertEquals(layerDesc.get("layerName"), layer);
         // assertEquals(layerDesc.get("owsUrl"), "WFS");
         assertEquals(layerDesc.get("owsType"), "WFS");
     }
 
-    /**
-     * @param body accepts:<br>
-     *        {"WMS_DescribeLayerResponse": {<br>
-     *        "version": "1.1.1",<br>
-     *        "LayerDescription": {<br>
-     *        "name": "cite:Lakes",<br>
-     *        "owsURL": "http://localhost:8080/geoserver/wfs/WfsDispatcher?",<br>
-     *        "owsType": "WFS"<br>
-     *        },<br>
-     *        "LayerDescription": {<br>
-     *        "name": "cite:Forests",<br>
-     *        "owsURL": "http://localhost:8080/geoserver/wfs/WfsDispatcher?",<br>
-     *        "owsType": "WFS"<br>
-     *        }<br>
-     *        }}<br>
-     */
     private void checkJSONDescribeLayerGroup(String body, String layer) {
         assertNotNull(body);
 
         JSONObject rootObject = JSONObject.fromObject(body);
-        JSONObject subObject = rootObject.getJSONObject("WMS_DescribeLayerResponse");
-        assertEquals(subObject.get("version"), "1.1.1");
 
-        JSONArray layerDescs = subObject.getJSONArray("LayerDescription");
+        JSONArray layerDescs = rootObject.getJSONArray("layerDescriptions");
         JSONObject layerDesc = layerDescs.getJSONObject(0);
-        assertEquals(layerDesc.get("name"),
+        assertEquals(layerDesc.get("layerName"),
                 MockData.LAKES.getPrefix() + ":" + MockData.LAKES.getLocalPart());
         assertTrue(layerDesc.get("owsURL").toString().endsWith("geoserver/wfs/WfsDispatcher?"));
         assertEquals(layerDesc.get("owsType"), "WFS");
 
         layerDesc = layerDescs.getJSONObject(1);
-        assertEquals(layerDesc.get("name"),
-                MockData.FORESTS.getPrefix() + ":" + MockData.FORESTS.getLocalPart());
+        assertEquals(layerDesc.get("layerName"), MockData.FORESTS.getPrefix() + ":"
+                + MockData.FORESTS.getLocalPart());
         assertTrue(layerDesc.get("owsURL").toString().endsWith("geoserver/wfs/WfsDispatcher?"));
         assertEquals(layerDesc.get("owsType"), "WFS");
 

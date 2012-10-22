@@ -5,6 +5,7 @@
 package org.geoserver.wfs;
 
 import junit.framework.Test;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.geoserver.wfs.json.JSONType;
@@ -28,14 +29,17 @@ public class WFSServiceExceptionTest extends WFSTestSupport {
         return new OneTimeTestSetup(new WFSServiceExceptionTest());
     }
 
-    public void testJsonException() throws Exception {
+    public void testJsonpException() throws Exception {
 
         String path = "wfs/?service=wfs" + "&version=1.1.0" + "&request=DescribeFeatureType"
-                + "&typeName=foobar" + "&format_options=callback:myMethod";
+                + "&typeName=foobar" + "&format_options=" + JSONType.CALLBACK_FUNCTION_KEY
+                + ":myMethod";
 
         // JSONP
+        JSONType.setJsonpEnabled(true);
         MockHttpServletResponse response = getAsServletResponse(path + "&EXCEPTIONS="
                 + JSONType.jsonp);
+        JSONType.setJsonpEnabled(false);
 
         // MimeType
         assertEquals(JSONType.jsonp, response.getContentType());
@@ -72,23 +76,21 @@ public class WFSServiceExceptionTest extends WFSTestSupport {
      * @param path
      * @throws Exception
      * 
-     *         Matches: {"ExceptionReport": { "@version": "1.1.0", "Exception": { "@exceptionCode": "noApplicableCode", "@exceptionLocator":
-     *         "noLocator", "ExceptionText": "Could not type name foobar" } }}
      */
     private static void testJson(String content) {
 
-        JSONObject rootObject = JSONObject.fromObject(content);
-
-        JSONObject subObject = rootObject.getJSONObject("ExceptionReport");
-        assertEquals(subObject.getString("@version"), "1.1.0");
-        JSONObject exception = subObject.getJSONObject("Exception");
+        JSONObject jsonException = JSONObject.fromObject(content);
+        assertEquals(jsonException.getString("version"), "1.1.0");
+        JSONArray exceptions = jsonException.getJSONArray("exceptions");
+        JSONObject exception = exceptions.getJSONObject(0);
         assertNotNull(exception);
-        assertNotNull(exception.getString("@exceptionCode"));
-        assertNotNull(exception.getString("@exceptionLocator"));
-        String exceptionText = exception.getString("ExceptionText");
+        assertNotNull(exception.getString("code"));
+        assertNotNull(exception.getString("locator"));
+        String exceptionText = exception.getString("text");
         assertNotNull(exceptionText);
         assertEquals(exceptionText, "Could not find type name foobar");
 
     }
+
 
 }

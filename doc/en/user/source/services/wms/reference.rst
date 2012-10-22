@@ -32,6 +32,8 @@ WMS requests can perform the following operations:
 
    * - **Operation**
      - **Description**
+   * - ``Exceptions``
+     - If an exception occur
    * - ``GetCapabilities``
      - Retrieves metadata about the service, including supported operations and parameters, and a list of the available layers
    * - ``GetMap``
@@ -43,6 +45,32 @@ WMS requests can perform the following operations:
    * - ``GetLegendGraphic`` (optional)
      - Retrieves a generated legend for a map 
 
+Exceptions
+----------
+
+Formats in which WMS can report exceptions. The supported values for exceptions are:
+
+.. list-table::
+   :widths: 15 35 50
+   
+   * - **Format**
+     - **Syntax**
+     - **Notes**
+   * - XML
+     - ``EXCEPTIONS=application/vnd.ogc.se_xml``
+     - Xml output. (The default format)
+   * - PNG
+     - ``EXCEPTIONS=application/vnd.ogc.inimage``
+     - Generates an image
+   * - Blank
+     - ``EXCEPTIONS=application/vnd.ogc.se_blank``
+     - Generates a blank image
+   * - JSON
+     - ``EXCEPTIONS=application/json``
+     - Simple Json representation.
+   * - JSONP
+     - ``EXCEPTIONS=text/javascript``
+     - Return a JsonP in the form: paddingOutput(...jsonp...). See :ref:`wms_vendor_parameters` to change the callback name. Note that this format is disabled by default (See :ref:`wms_global_variables`).
 
 .. _wms_getcap:
 
@@ -104,7 +132,7 @@ It contains three main sections:
 .. _wms_getmap:
 
 GetMap
--------------------
+------
 
 The **GetMap** operation requests that the server generate a map.  
 The core parameters specify one or more layers and styles to appear on the map,
@@ -178,7 +206,6 @@ The standard parameters for the GetMap operation are:
      - No
      - Format in which to report exceptions.
        Default value is ``application/vnd.ogc.se_xml``. 
-       Other valid values are ``application/vnd.ogc.inimage`` and ``application/vnd.ogc.se_blank``.
 
        
 GeoServer provides a number of useful vendor-specific parameters, which are documented in the :ref:`wms_vendor_parameters` section.
@@ -271,24 +298,6 @@ The standard parameters for the GetFeatureInfo operation are:
      - Format in which to report exceptions.
        The default value is ``application/vnd.ogc.se_xml``.
 
-The supported values for exceptions are:
-
-.. list-table::
-   :widths: 15 35 50
-   
-   * - **Format**
-     - **Syntax**
-     - **Notes**
-   * - XML
-     - ``EXCEPTIONS=application/vnd.ogc.se_xml``
-     - Xml output. (The default format)
-   * - JSON
-     - ``EXCEPTIONS=application/json``
-     - Simple Json representation.
-   * - JSONP
-     - ``EXCEPTIONS=text/javascript``
-     - Return a JsonP in the form: paddingOutput(...jsonp...). See :ref:`wms_vendor_parameters` to change the callback name.
-
 Geoserver supports a number of output formats for the ``GetFeatureInfo`` response.
 Server-styled HTML is the most commonly-used format. 
 For maximum control and customisation the client should use GML3 and style the raw data itself.
@@ -317,7 +326,7 @@ The supported formats are:
      - Simple Json representation.
    * - JSONP
      - ``info_format=text/javascript``
-     - Return a JsonP in the form: paddingOutput(...jsonp...). See :ref:`wms_vendor_parameters` to change the callback name.
+     - Returns a JsonP in the form: ``parseResponse(...json...)``. See :ref:`wms_vendor_parameters` to change the callback name. Note that this format is disabled by default (See :ref:`wms_global_variables`).
 
 GeoServer provides a number of useful vendor-specific parameters
 for this operation, including ``buffer``, ``cql_filter``, ``filter`` and ``propertyName``.
@@ -345,12 +354,12 @@ An example request for feature information in HTML format is:
    &y=145
    &exceptions=application%2Fvnd.ogc.se_xml
 
-An example request for feature information in JSONP format is:
+An example request for feature information in GeoJSON format is:
 
 .. code-block:: xml
 
    http://localhost:8080/geoserver/wms?
-   &INFO_FORMAT=text/javascript
+   &INFO_FORMAT=application/json
    &REQUEST=GetFeatureInfo
    &EXCEPTIONS=application/vnd.ogc.se_xml
    &SERVICE=WMS
@@ -359,13 +368,12 @@ An example request for feature information in JSONP format is:
    &LAYERS=COUNTRYPROFILES:grp_administrative_map
    &QUERY_LAYERS=COUNTRYPROFILES:grp_administrative_map
    &TYPENAME=COUNTRYPROFILES:grp_administrative_map
-   &format_options=callback:getLayerFeatures
 
 The result will be:
 
 .. code-block:: xml
    
-   getLayerFeatures({
+   {
    "type":"FeatureCollection",
    "features":[
       {
@@ -417,7 +425,7 @@ The result will be:
       XXXX,
       XXXX
    ]
-   })
+   }
 
 
 .. _wms_describelayer:
@@ -429,7 +437,7 @@ The **DescribeLayer** operation is used primarily by clients that understand SLD
 In order to make an SLD one needs to know the structure of the data.  
 WMS and WFS both have operations to do this, so the **DescribeLayer** operation just routes the client to the appropriate service.
 
-The standard parameters for the GetFeatureInfo operation are:
+The standard parameters for the DescribeLayer operation are:
 
 .. list-table::
    :widths: 20 10 70
@@ -454,27 +462,8 @@ The standard parameters for the GetFeatureInfo operation are:
      - Format in which to report exceptions.
        The default value is ``application/vnd.ogc.se_xml``.
 
-The supported values for exceptions are:
-
-.. list-table::
-   :widths: 15 35 50
-   
-   * - **Format**
-     - **Syntax**
-     - **Notes**
-   * - XML
-     - ``EXCEPTIONS=application/vnd.ogc.se_xml``
-     - Xml output. (The default format)
-   * - JSON
-     - ``EXCEPTIONS=application/json``
-     - Simple Json representation.
-   * - JSONP
-     - ``EXCEPTIONS=text/javascript``
-     - Return a JsonP in the form: paddingOutput(...jsonp...). See :ref:`wms_vendor_parameters` to change the callback name.
-
 Geoserver supports a number of output formats for the ``DescribeLayer`` response.
 Server-styled HTML is the most commonly-used format. 
-For maximum control and customisation the client should use GML3 and style the raw data itself.
 The supported formats are:
 
 .. list-table::
@@ -494,7 +483,7 @@ The supported formats are:
      - Simple Json representation.
    * - JSONP
      - ``output_format=text/javascript``
-     - Return a JsonP in the form: paddingOutput(...jsonp...). See :ref:`wms_vendor_parameters` to change the callback name.
+     - Return a JsonP in the form: paddingOutput(...jsonp...). See :ref:`wms_vendor_parameters` to change the callback name.  Note that this format is disabled by default (See :ref:`wms_global_variables`).
      
 
 An example request in XML (default) format on a layer is:
@@ -516,29 +505,44 @@ An example request in XML (default) format on a layer is:
       </LayerDescription>
    </WMS_DescribeLayerResponse>
 
-An example request for feature description in JSONP format on a layer group is:
+An example request for feature description in JSON format on a layer group is:
 
 .. code-block:: xml
 
    http://localhost:8080/geoserver/wms?service=WMS
    &version=1.1.1
    &request=DescribeLayer
-   &layers=topp:group
-   &outputFormat=text/javascript
-   &format_options=callback:DescribeLayer
-
+   &layers=sf:roads,topp:tasmania_roads,nurc:mosaic
+   &outputFormat=application/json
+   
 
 The result will be:
 
 .. code-block:: xml
 
-   DescribeLayer({"WMS_DescribeLayerResponse": {
-      "version": "1.1.1",
-      "LayerDescription": { "name": "topp:coverage", "owsURL": "http://localhost:8080/geoserver/wcs?", "owsType": "WCS" },
-      "LayerDescription": { "name": "topp:features", "owsURL": "http://localhost:8080/geoserver/wfs/WfsDispatcher?", "owsType": "WFS" }
-   }})
-
-
+   {
+   version: "1.1.1",
+   layerDescriptions: [
+   {
+      layerName: "sf:roads",
+      owsURL: "http://localhost:8080/geoserver/wfs/WfsDispatcher?",
+      owsType: "WFS",
+      typeName: "sf:roads"
+   },
+   {
+      layerName: "topp:tasmania_roads",
+      owsURL: "http://localhost:8080/geoserver/wfs/WfsDispatcher?",
+      owsType: "WFS",
+      typeName: "topp:tasmania_roads"
+   },
+   {
+      layerName: "nurc:mosaic",
+      owsURL: "http://localhost:8080/geoserver/wcs?",
+      owsType: "WCS",
+      typeName: "nurc:mosaic"
+   }
+   ]
+   }
 
 
 .. _wms_getlegendgraphic:

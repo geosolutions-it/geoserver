@@ -1,9 +1,14 @@
-package org.geoserver.wfs.response;
+/*
+ * Copyright (c) 2001 - 2010 TOPP - www.openplans.org.  All rights reserved.
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
+
+package org.geoserver.wfs.json;
 
 import java.io.File;
 
 import junit.framework.Test;
-import junit.textui.TestRunner;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONNull;
 import net.sf.json.JSONObject;
@@ -15,6 +20,11 @@ import org.geoserver.wfs.WFSTestSupport;
 
 import com.mockrunner.mock.web.MockHttpServletResponse;
 
+/**
+ * 
+ * @author carlo cancellieri - GeoSolutions
+ *
+ */
 public class GeoJSONTest extends WFSTestSupport {
 
     /**
@@ -51,7 +61,8 @@ public class GeoJSONTest extends WFSTestSupport {
         try {
             gs.save(wfs);
 
-            String out = getAsString("wfs?request=GetFeature&version=1.0.0&typename=sf:AggregateGeoFeature&maxfeatures=3&outputformat=json");
+            String out = getAsString("wfs?request=GetFeature&version=1.0.0&typename=sf:AggregateGeoFeature&maxfeatures=3&outputformat="
+                    + JSONType.json);
             JSONObject rootObject = JSONObject.fromObject(out);
 
             JSONObject bbox = rootObject.getJSONObject("bbox");
@@ -62,19 +73,18 @@ public class GeoJSONTest extends WFSTestSupport {
         }
 
     }
-
-    public void testGet() throws Exception {
-        String out = getAsString("wfs?request=GetFeature&version=1.0.0&typename=sf:PrimitiveGeoFeature&maxfeatures=1&outputformat=json");
-
-        JSONObject rootObject = JSONObject.fromObject(out);
-        assertEquals(rootObject.get("type"), "FeatureCollection");
-        JSONArray featureCol = rootObject.getJSONArray("features");
-        JSONObject aFeature = featureCol.getJSONObject(0);
-        assertEquals(aFeature.getString("geometry_name"), "surfaceProperty");
+    public void testGet() throws Exception {	
+    	String out = getAsString("wfs?request=GetFeature&version=1.0.0&typename=sf:PrimitiveGeoFeature&maxfeatures=1&outputformat="+JSONType.json);
+    	
+    	JSONObject rootObject = JSONObject.fromObject( out );
+    	assertEquals(rootObject.get("type"),"FeatureCollection");
+    	JSONArray featureCol = rootObject.getJSONArray("features");
+    	JSONObject aFeature = featureCol.getJSONObject(0);
+    	assertEquals(aFeature.getString("geometry_name"),"surfaceProperty");
     }
 
     public void testPost() throws Exception {
-        String xml = "<wfs:GetFeature " + "service=\"WFS\" " + "outputFormat=\"json\" "
+        String xml = "<wfs:GetFeature " + "service=\"WFS\" " + "outputFormat=\""+JSONType.json+"\" "
                 + "version=\"1.0.0\" " + "xmlns:cdf=\"http://www.opengis.net/cite/data\" "
                 + "xmlns:ogc=\"http://www.opengis.net/ogc\" "
                 + "xmlns:wfs=\"http://www.opengis.net/wfs\" " + "> "
@@ -91,22 +101,22 @@ public class GeoJSONTest extends WFSTestSupport {
     }
 
     public void testGeometryCollection() throws Exception {
-        String out = getAsString("wfs?request=GetFeature&version=1.0.0&typename=sf:AggregateGeoFeature&maxfeatures=3&outputformat=json");
-
-        JSONObject rootObject = JSONObject.fromObject(out);
-        assertEquals(rootObject.get("type"), "FeatureCollection");
-        JSONArray featureCol = rootObject.getJSONArray("features");
-        JSONObject aFeature = featureCol.getJSONObject(1);
-        JSONObject aGeometry = aFeature.getJSONObject("geometry");
-        assertEquals(aGeometry.getString("type"), "MultiLineString");
-        JSONArray geomArray = aGeometry.getJSONArray("coordinates");
-        geomArray = geomArray.getJSONArray(0);
-        geomArray = geomArray.getJSONArray(0);
-        assertEquals(geomArray.getString(0), "55.174");
+    	String out = getAsString("wfs?request=GetFeature&version=1.0.0&typename=sf:AggregateGeoFeature&maxfeatures=3&outputformat="+JSONType.json);
+    	
+    	JSONObject rootObject = JSONObject.fromObject( out );
+    	assertEquals(rootObject.get("type"),"FeatureCollection");
+    	JSONArray featureCol = rootObject.getJSONArray("features");
+    	JSONObject aFeature = featureCol.getJSONObject(1);
+    	JSONObject aGeometry = aFeature.getJSONObject("geometry");
+    	assertEquals(aGeometry.getString("type"),"MultiLineString");
+    	JSONArray geomArray = aGeometry.getJSONArray("coordinates");
+    	geomArray = geomArray.getJSONArray(0);
+    	geomArray = geomArray.getJSONArray(0);
+    	assertEquals(geomArray.getString(0), "55.174");
     }
 
     public void testMixedCollection() throws Exception {
-        String xml = "<wfs:GetFeature " + "service=\"WFS\" " + "outputFormat=\"json\" "
+        String xml = "<wfs:GetFeature " + "service=\"WFS\" " + "outputFormat=\""+JSONType.json+"\" "
                 + "version=\"1.0.0\" " + "xmlns:cdf=\"http://www.opengis.net/cite/data\" "
                 + "xmlns:ogc=\"http://www.opengis.net/ogc\" "
                 + "xmlns:wfs=\"http://www.opengis.net/wfs\" " + "> "
@@ -137,12 +147,14 @@ public class GeoJSONTest extends WFSTestSupport {
         // System.out.println(aGeometry.getString("type"));
         assertEquals(aGeometry.getString("type"), "MultiLineString");
     }
-
     public void testCallbackFunction() throws Exception {
-        MockHttpServletResponse resp = getAsServletResponse("wfs?request=GetFeature&version=1.0.0&typename=sf:PrimitiveGeoFeature&maxfeatures=1&outputformat=json&format_options=callback:myFunc");
+        JSONType.setJsonpEnabled(true);
+        MockHttpServletResponse resp = getAsServletResponse("wfs?request=GetFeature&version=1.0.0&typename=sf:PrimitiveGeoFeature&maxfeatures=1&outputformat="
+                + JSONType.jsonp + "&format_options=" + JSONType.CALLBACK_FUNCTION_KEY + ":myFunc");
+        JSONType.setJsonpEnabled(false);
         String out = resp.getOutputStreamContent();
 
-        assertEquals("text/javascript", resp.getContentType());
+        assertEquals(JSONType.jsonp, resp.getContentType());
         assertTrue(out.startsWith("myFunc("));
         assertTrue(out.endsWith(")"));
 
@@ -153,10 +165,5 @@ public class GeoJSONTest extends WFSTestSupport {
         JSONArray featureCol = rootObject.getJSONArray("features");
         JSONObject aFeature = featureCol.getJSONObject(0);
         assertEquals(aFeature.getString("geometry_name"), "surfaceProperty");
-    }
-
-    public static void main(String[] args) {
-        TestRunner runner = new TestRunner();
-        runner.run(GeoJSONTest.class);
     }
 }
