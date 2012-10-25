@@ -4,11 +4,15 @@
  */
 package org.geoserver.wms.legendgraphic;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
 
 import org.apache.commons.io.IOUtils;
+import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.Request;
 import org.geoserver.ows.Response;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wfs.json.JSONType;
@@ -18,15 +22,12 @@ import org.geoserver.wms.WMS;
 import org.springframework.util.Assert;
 
 /**
- * OWS {@link Response} that encodes a {@link BufferedImageLegendGraphic} to the image/jpeg MIME
- * Type
+ * OWS {@link Response} that encodes a {@link BufferedImageLegendGraphic} to the image/jpeg MIME Type
  * 
  * @author Carlo Cancellieri - GeoSolutions
  * @version $Id$
  */
-public class JSONLegendOutputFormat extends Response implements GetLegendGraphicOutputFormat{
-
-
+public class JSONLegendOutputFormat extends Response implements GetLegendGraphicOutputFormat {
 
     /**
      * The MIME type of the format this response produces, supported formats see {@link JSONType}
@@ -36,7 +37,7 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
     protected final WMS wms;
 
     public JSONLegendOutputFormat(final WMS wms, final String format) {
-        super(LegendGraphicModel.class,format);
+        super(LegendGraphicModel.class, format);
         this.wms = wms;
         this.type = JSONType.getJSONType(format);
         if (type == null)
@@ -44,12 +45,10 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
     }
 
     /**
-     * Evaluates if this DescribeLayer producer can generate the format specified by
-     * <code>format</code>, where <code>format</code> is the MIME type of the requested
-     * response.
+     * Evaluates if this DescribeLayer producer can generate the format specified by <code>format</code>, where <code>format</code> is the MIME type
+     * of the requested response.
      * 
-     * @param format
-     *            the MIME type of the required output format, might be {@code null}
+     * @param format the MIME type of the required output format, might be {@code null}
      * 
      * @return true if class can produce a DescribeLayer in the passed format
      */
@@ -71,40 +70,48 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
     @Override
     public void write(Object value, OutputStream output, org.geoserver.platform.Operation operation)
             throws IOException, ServiceException {
-        
+
         Assert.notNull(operation.getParameters());
         Assert.isTrue(operation.getParameters()[0] instanceof GetLegendGraphicRequest);
-        
-        final GetLegendGraphicRequest request = (GetLegendGraphicRequest) operation.getParameters()[0];
 
         Assert.isTrue(value instanceof LegendGraphicModel);
         final LegendGraphicModel model = (LegendGraphicModel) value;
-        try {
-            write(model, request, output);
-        } finally {
-            if (output != null) {
-                try {
-                    output.flush();
-                } catch (IOException ioe) {
-                }
-                IOUtils.closeQuietly(output);
+        switch (type) {
+        case JSON:
+            OutputStreamWriter osw = null;
+            Writer outWriter = null;
+            try {
+                osw = new OutputStreamWriter(output, "UTF-8");
+                outWriter = new BufferedWriter(osw);
+
+                JSONLegendGraphicBuilder.buildLegendGraphic(outWriter, model);
+            } finally {
+                IOUtils.closeQuietly(outWriter);
+                IOUtils.closeQuietly(osw);
             }
+        case JSONP:
+            writeJSONP(output, model);
         }
     }
 
-    public void write(LegendGraphicModel model, GetLegendGraphicRequest output, OutputStream operation) throws IOException,
-    ServiceException{
-        OutputStreamWriter outWriter=null;
-        try {
-            outWriter = new OutputStreamWriter(operation, wms.getGeoServer().getSettings()
-                    .getCharset());
-            JSONLegendGraphicBuilder.buildLegendGraphic(outWriter, model);
-        } finally {
+    private void writeJSONP(OutputStream out, LegendGraphicModel model) throws IOException {
 
-            if (outWriter != null) {
-                outWriter.flush();
-                IOUtils.closeQuietly(outWriter);
-            }
+        // prepare to write out
+        OutputStreamWriter osw = null;
+        Writer outWriter = null;
+        try {
+            osw = new OutputStreamWriter(out, wms.getGeoServer().getSettings().getCharset());
+            outWriter = new BufferedWriter(osw);
+
+            outWriter.write(getCallbackFunction() + "(");
+
+            JSONLegendGraphicBuilder.buildLegendGraphic(outWriter, model);
+
+            outWriter.write(")");
+            outWriter.flush();
+        } finally {
+            IOUtils.closeQuietly(outWriter);
+            IOUtils.closeQuietly(osw);
         }
     }
 
@@ -112,6 +119,14 @@ public class JSONLegendOutputFormat extends Response implements GetLegendGraphic
     public Object produceLegendGraphic(GetLegendGraphicRequest request) throws ServiceException {
         return new LegendGraphicModel(request);
     }
- 
- 
+
+    private static String getCallbackFunction() {
+        Request request = Dispatcher.REQUEST.get();
+        if (request == null) {
+            return JSONType.CALLBACK_FUNCTION;
+        } else {
+            return JSONType.getCallbackFunction(request.getKvp());
+        }
+    }
+
 }
