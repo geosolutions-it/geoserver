@@ -1246,6 +1246,7 @@
        <prefix>build</prefix>
        <failOnNoGitDirectory>false</failOnNoGitDirectory>
        <skipPoms>false</skipPoms>
+       <verbose>false</verbose>
      </configuration>
    </plugin>
 
