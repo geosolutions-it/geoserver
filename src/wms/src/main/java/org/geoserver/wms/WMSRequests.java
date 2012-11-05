@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.geoserver.config.GeoServer;
+import org.geoserver.ows.KvpParser;
 import org.geoserver.ows.URLMangler.URLType;
-import org.geoserver.ows.kvp.FormatOptionKvpParser;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geotools.map.Layer;
 import org.geotools.map.MapLayer;
 import org.geotools.styling.Style;
@@ -419,13 +420,28 @@ public class WMSRequests {
      * @throws Exception - In the event of an unsuccesful parse.
      */
     public static void mergeEntry(Map<String, String> kvp, Map<String, Object> formatOptions,
-            String key) throws Exception {
-        FormatOptionKvpParser parser=new FormatOptionKvpParser();
-        String val=null;
-        if ((val=kvp.get(key))!=null) {
-            Object kmscore = formatOptions.get(key);
-            if (kmscore == null) {
-                formatOptions.put(key,parser.parse(key,val));
+            final String key) throws Exception {
+        // look up parser objects
+        List<KvpParser> parsers = GeoServerExtensions.extensions(KvpParser.class);
+
+        // strip out parsers which do not match current service/request/version
+        String service = (String) kvp.get("service");
+        String version = (String) kvp.get("version");
+        String request = (String) kvp.get("request");
+
+        KvpUtils.purgeParsers(parsers, service, version, request);
+
+        String val = null;
+        if ((val = kvp.get(key)) != null) {
+            Object foValue = formatOptions.get(key);
+            // if not found in format option
+            if (foValue == null) {
+                Object parsed = KvpUtils.parseKey(key, val, service, request, version, parsers);
+                if (parsed != null) {
+                    formatOptions.put(key, parsed);
+                } else {
+                    formatOptions.put(key, val);
+                }
             }
         }
     }
