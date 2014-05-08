@@ -160,8 +160,9 @@ public class CoverageInfoImpl extends ResourceInfoImpl implements CoverageInfo {
                 hints.putAll(crsHints);
             else
                 hints=crsHints;
-        }           
-        return catalog.getResourcePool().getGridCoverageReader(getStore(), nativeCoverageName, hints);
+        }
+        return catalog.getResourcePool().getGridCoverageReader(this, nativeCoverageName, hints);
+//        return catalog.getResourcePool().getGridCoverageReader(getStore(), nativeCoverageName, hints);
     }
     
     public void setSupportedFormats(List<String> supportedFormats) {

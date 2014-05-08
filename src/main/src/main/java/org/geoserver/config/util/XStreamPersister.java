@@ -46,6 +46,8 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.VirtualCoverage;
+import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
 import org.geoserver.catalog.WMSLayerInfo;
 import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
@@ -306,6 +308,7 @@ public class XStreamPersister {
         xs.alias( "coverage", CoverageInfo.class);
         xs.alias( "wmsLayer", WMSLayerInfo.class);
         xs.alias( "coverageDimension", CoverageDimensionInfo.class);
+        xs.alias( "coverageBand", VirtualCoverageBand.class);
         xs.alias( "metadataLink", MetadataLinkInfo.class);
         xs.alias( "attribute", AttributeTypeInfo.class );
         xs.alias( "layer", LayerInfo.class);
@@ -317,6 +320,7 @@ public class XStreamPersister {
         xs.aliasField("abstract", ResourceInfoImpl.class, "_abstract" );
         xs.alias("AuthorityURL", AuthorityURLInfo.class);
         xs.alias("Identifier", LayerIdentifierInfo.class);
+        xs.alias("band", LayerIdentifierInfo.class);
         
         // GeoServerInfo
         xs.omitField(impl(GeoServerInfo.class), "clientProperties");
@@ -432,10 +436,14 @@ public class XStreamPersister {
         xs.registerConverter(new GridGeometry2DConverter());
         xs.registerConverter(new ProxyCollectionConverter( xs.getMapper() ) );
         xs.registerConverter(new VirtualTableConverter());
+//        xs.registerConverter(new VirtualCoverageConverter());
         xs.registerConverter(new KeywordInfoConverter());
 
-        // register VirtulaTable handling
+        // register Virtual structure handling
         registerBreifMapComplexType("virtualTable", VirtualTable.class);
+        registerBreifMapComplexType("virtualCoverage", VirtualCoverage.class);
+//        registerBreifMapComplexType("virtualCoverageBands", VirtualCoverageBands.class);
+//        registerBreifMapComplexType("virtualCoverageBand", VirtualCoverageBand.class);
         registerBreifMapComplexType("dimensionInfo", DimensionInfoImpl.class);
         
         callback = new Callback();
@@ -2011,6 +2019,88 @@ public class XStreamPersister {
         
     }
 
+//    class VirtualCoverageConverter implements Converter {
+//
+//        public void marshal(Object source, HierarchicalStreamWriter writer,
+//                MarshallingContext context) {
+//            VirtualCoverage vc = (VirtualCoverage) source;
+//            writer.startNode("name");
+//            writer.setValue(vc.getName());
+//            writer.endNode();
+//            //TODO: More marshalling
+//            
+////            writer.startNode("sql");
+////            writer.setValue(vc.getSql());
+////            writer.endNode();
+////            writer.startNode("escapeSql");
+////            writer.setValue(Boolean.toString(vc.isEscapeSql()));
+////            writer.endNode();
+//        }
+//
+//        public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
+//            String name = readValue("name", String.class, reader);
+//            String sql = readValue("sql", String.class, reader);
+//                
+//            VirtualTable vt = new VirtualTable(name, sql, false);
+//            List<String> primaryKeys = new ArrayList<String>();
+//            while(reader.hasMoreChildren()) {
+//                reader.moveDown();
+//                if(reader.getNodeName().equals("keyColumn")) {
+//                    primaryKeys.add(reader.getValue());
+//                } else if(reader.getNodeName().equals("geometry")) {
+//                    String geomName = readValue("name", String.class, reader);
+//                    Geometries geomType = Geometries.getForName(readValue("type", String.class, reader));
+//                    Class type = geomType == null ? Geometry.class : geomType.getBinding();
+//                    int srid = readValue("srid", Integer.class, reader);
+//                    vt.addGeometryMetadatata(geomName, type, srid);
+//                } else if(reader.getNodeName().equals("parameter")) {
+//                    String pname = readValue("name", String.class, reader);
+//                    String defaultValue = null;
+//                    Validator validator = null;
+//                    while(reader.hasMoreChildren()) {
+//                        reader.moveDown();
+//                        if(reader.getNodeName().equals("defaultValue")) {
+//                            defaultValue = reader.getValue();
+//                        } else if(reader.getNodeName().equals("regexpValidator")) {
+//                            validator = new RegexpValidator(reader.getValue());
+//                        }
+//                        reader.moveUp();
+//                    }
+//                    
+//                    vt.addParameter(new VirtualTableParameter(pname, defaultValue, validator));
+//                } else if(reader.getNodeName().equals("escapeSql")) {
+//                        vt.setEscapeSql(Boolean.valueOf(reader.getValue()));
+//                }
+//                reader.moveUp();
+//            }
+//            vt.setPrimaryKeyColumns(primaryKeys);
+//            
+//            return vt;
+//        }
+//        
+//        <T> T readValue(String name, Class<T> type, HierarchicalStreamReader reader) {
+//           if(!reader.hasMoreChildren()) {
+//                throw new IllegalArgumentException("Expected element " + name + " but could not find it");
+//           }
+//           reader.moveDown();
+//           try {
+//               if(!name.equals(reader.getNodeName())) {
+//                   throw new IllegalArgumentException("Expected element " + name + " but found " + reader.getNodeName() + " instead");
+//               }
+//               String value = reader.getValue();
+//               return Converters.convert(value, type);
+//           } finally {
+//               reader.moveUp();
+//           }
+//           
+//        }
+//
+//        public boolean canConvert(Class type) {
+//            return VirtualCoverage.class.isAssignableFrom(type);
+//        }
+//        
+//    }
+    
     static class KeywordInfoConverter extends AbstractSingleValueConverter {
 
         static Pattern RE = Pattern.compile(

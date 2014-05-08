@@ -65,6 +65,7 @@ public class NewLayerPage extends GeoServerSecuredPage {
     private Label storeName;
     private WebMarkupContainer createTypeContainer;
     private WebMarkupContainer createSQLViewContainer;
+    private WebMarkupContainer createVirtualCoverageContainer;
     private WebMarkupContainer createWMSLayerImportContainer;
     
     public NewLayerPage() {
@@ -144,6 +145,11 @@ public class NewLayerPage extends GeoServerSecuredPage {
         createSQLViewContainer.add(newSQLViewLink());
         selectLayersContainer.add(createSQLViewContainer);
         
+        createVirtualCoverageContainer = new WebMarkupContainer("createVirtualCoverageContainer");
+        createVirtualCoverageContainer.setVisible(false);
+        createVirtualCoverageContainer.add(newVirtualCoverageLink());
+        selectLayersContainer.add(createVirtualCoverageContainer);
+
         createWMSLayerImportContainer = new WebMarkupContainer("createWMSLayerImportContainer");
         createWMSLayerImportContainer.setVisible(false);
         createWMSLayerImportContainer.add(newWMSImportLink());
@@ -176,6 +182,18 @@ public class NewLayerPage extends GeoServerSecuredPage {
                 DataStoreInfo ds = getCatalog().getStore(storeId, DataStoreInfo.class);
                 PageParameters pp = new PageParameters("wsName=" + ds.getWorkspace().getName() + ",storeName=" + ds.getName());
                 setResponsePage(SQLViewNewPage.class, pp);
+            }
+        };
+    }
+    
+    Component newVirtualCoverageLink() {
+        return new AjaxLink("createVirtualCoverage") {
+            
+            @Override
+            public void onClick(AjaxRequestTarget target) {
+                CoverageStoreInfo cs = getCatalog().getStore(storeId, CoverageStoreInfo.class);
+                PageParameters pp = new PageParameters("wsName=" + cs.getWorkspace().getName() + ",storeName=" + cs.getName());
+                setResponsePage(VirtualCoveragePage.class, pp);
             }
         };
     }
@@ -264,6 +282,10 @@ public class NewLayerPage extends GeoServerSecuredPage {
             } catch (IOException e) {
                 LOGGER.log(Level.FINEST, e.getMessage());
             }
+        }
+        createVirtualCoverageContainer.setVisible(false);
+        if (store instanceof CoverageStoreInfo) {
+            createVirtualCoverageContainer.setVisible(true);
         }
 
         // reset to default first, to avoid the container being displayed if store is not a

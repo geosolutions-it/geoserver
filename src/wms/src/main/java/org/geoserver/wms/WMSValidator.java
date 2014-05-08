@@ -42,8 +42,11 @@ public class WMSValidator extends AbstractCatalogValidator {
             CoverageInfo cvinfo = (CoverageInfo) lyr.getResource();
             try {
                 cvinfo.getCatalog().getResourcePool().getGridCoverageReader(
-                    cvinfo.getStore(),
-                    GeoTools.getDefaultHints()
+                      cvinfo,
+                      GeoTools.getDefaultHints()
+//                cvinfo.getCatalog().getResourcePool().getGridCoverageReader(
+//                    cvinfo.getStore(),
+//                    GeoTools.getDefaultHints()
                 );
             } catch (Throwable t) {
                 throw new RuntimeException("Couldn't connect to raster layer's resource");
