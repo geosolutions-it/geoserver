@@ -14,6 +14,7 @@ import java.util.Set;
 import javax.media.jai.operator.BandMergeDescriptor;
 
 import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
+import org.geoserver.catalog.impl.CoverageDimensionImpl;
 import org.geotools.coverage.CoverageFactoryFinder;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -57,6 +58,11 @@ public class VirtualCoverageReader extends SingleGridCoverage2DReader {
                         CoverageDimensionInfo dimensionInfo = storedDimensions.get(band.getIndex());
                         wrappedDims = new GridSampleDimension[1];
                         wrappedDims[0] = new WrappedSampleDimension((GridSampleDimension) dims[0], dimensionInfo);
+                    } else {
+                        wrappedDims = new GridSampleDimension[1];
+                        CoverageDimensionInfo dimensionInfo = new CoverageDimensionImpl();
+                        dimensionInfo.setName(band.getDefinition());
+                        wrappedDims[0] = new WrappedSampleDimension((GridSampleDimension) dims[0], dimensionInfo); 
                     }
                 } else {
                     super.wrapDimensions(wrappedDims);

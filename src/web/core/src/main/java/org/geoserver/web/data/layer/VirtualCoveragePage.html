@@ -11,22 +11,10 @@
         <li><label for="name"><wicket:message key="name">name</wicket:message></label>
           <input type="text" wicket:id="name"></input>
         </li>
-        
         <li>
           <ul>
-             <li><label for="coveragesChoice"><wicket:message key="coveragesChoice">coveragesChoice</wicket:message></label>
-                 <select id="coveragesChoice" class="select" wicket:id="coveragesChoice" multiple="multiple" style="width:25em;"></select>
-<!--                  <label><wicket:message key="compositionType">Composition Type</wicket:message></label>
-                  <select wicket:id="compositionType"></select>
--->                 <button wicket:id="addBand" type="submit"> <wicket:message key="addBand">Add</wicket:message> </button>
-             </li>
-             <li><label for="definition"><wicket:message key="definition">definition</wicket:message></label>
-                 <textarea rows="60" cols="20" wicket:id="definition"></textarea>
-             </li>
-          </ul>
-          <ul>
-             <li><label for="outputBandsChoice"><wicket:message key="outputBandsChoice">outputBandsChoice</wicket:message></label>
-                 <select id="outputBandsChoice" class="select" wicket:id="outputBandsChoice" multiple="multiple" style="width:25em;"></select>
+              <li>
+             <div wicket:id="coverages"></div>
              </li>
           </ul>
        </li>

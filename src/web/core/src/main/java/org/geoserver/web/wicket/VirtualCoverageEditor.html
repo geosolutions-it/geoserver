@@ -1,0 +1,22 @@
+<html xmlns:wicket="http://wicket.apache.org/">
+<body>
+  <wicket:panel>
+      <ul>
+        <li>
+          <label for="coverages"><wicket:message key="availableCoverages">Available coverages</wicket:message></label>
+          <select id="coveragesChoice" class="select" wicket:id="coveragesChoice" multiple="multiple" style="width:25em;"></select>
+          <button wicket:id="addBand" type="submit"><wicket:message key="addBand">Add Band</wicket:message></button>
+        </li>   
+        <li>
+          <label for="compositionType"><wicket:message key="compositionType">compositionType</wicket:message></label>
+          <select id="compositionType" class="text" type="text" wicket:id="compositionType"></select>
+          
+        </li>
+             <li><label for="outputBandsChoice"><wicket:message key="outputBandsChoice">outputBandsChoice</wicket:message></label>
+                 <select id="outputBandsChoice" class="select" wicket:id="outputBandsChoice" multiple="multiple" style="width:25em;"></select>
+             </li>
+      </ul>
+      <!--<button wicket:id="addKeyword" type="submit"> <wicket:message key="addKeyword">Add</wicket:message> </button>-->
+   </wicket:panel>
+</body>
+</html>

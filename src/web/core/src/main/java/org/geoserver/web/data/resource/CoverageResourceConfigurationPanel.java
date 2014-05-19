@@ -9,13 +9,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 import org.apache.wicket.Component;
+import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.PropertyModel;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.web.data.layer.SQLViewEditPage;
 import org.geoserver.web.data.store.panel.ColorPickerPanel;
 import org.geoserver.web.data.store.panel.TextParamPanel;
 import org.geoserver.web.util.MapModel;
@@ -47,6 +52,25 @@ public class CoverageResourceConfigurationPanel extends ResourceConfigurationPan
                 item.add(inputComponent);
             }
         };
+        
+//        WebMarkupContainer virtualCoverageContainer = new WebMarkupContainer("editVirtualCoverageContainer");
+//        add(virtualCoverageContainer);
+//        virtualCoverageContainer.add(new Link("editVirtualCoverage") {
+//
+//            @Override
+//            public void onClick() {
+//                FeatureTypeInfo typeInfo = (FeatureTypeInfo) model.getObject();
+//                try {
+//                    setResponsePage(new SQLViewEditPage(typeInfo, ((ResourceConfigurationPage) this.getPage())));
+//                } catch(Exception e) {
+//                    LOGGER.log(Level.SEVERE, "Failure opening the sql view edit page", e);
+//                    error(e.toString());
+//                }
+//            }
+//            
+//           
+//        });
+        
         // needed for form components not to loose state
         paramsList.setReuseItems(true);
         add(paramsList);

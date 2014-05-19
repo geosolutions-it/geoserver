@@ -8,7 +8,6 @@ import java.awt.image.SampleModel;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -18,21 +17,13 @@ import java.util.logging.Level;
 import javax.media.jai.ImageLayout;
 
 import org.apache.wicket.PageParameters;
-import org.apache.wicket.ajax.AjaxRequestTarget;
-import org.apache.wicket.ajax.markup.html.form.AjaxButton;
-import org.apache.wicket.markup.html.form.ChoiceRenderer;
-import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.IChoiceRenderer;
-import org.apache.wicket.markup.html.form.ListMultipleChoice;
 import org.apache.wicket.markup.html.form.SubmitLink;
-import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.model.CompoundPropertyModel;
-import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
-import org.apache.wicket.model.StringResourceModel;
 import org.apache.wicket.validation.IValidatable;
 import org.apache.wicket.validation.validator.AbstractValidator;
 import org.geoserver.catalog.Catalog;
@@ -47,8 +38,9 @@ import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
 import org.geoserver.web.ComponentAuthorizer;
 import org.geoserver.web.GeoServerSecuredPage;
 import org.geoserver.web.data.resource.ResourceConfigurationPage;
-import org.geoserver.web.wicket.GeoServerAjaxFormLink;
+import org.geoserver.web.wicket.LiveCollectionModel;
 import org.geoserver.web.wicket.ParamResourceModel;
+import org.geoserver.web.wicket.VirtualCoverageEditor;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 
 /**
@@ -58,8 +50,6 @@ import org.geotools.coverage.grid.io.GridCoverage2DReader;
  */
 @SuppressWarnings("serial")
 public class VirtualCoveragePage extends GeoServerSecuredPage {
-
-    private static final String BAND_SEPARATOR = "@";
 
     public static final String COVERAGESTORE = "storeName";
 
@@ -77,30 +67,15 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
     
     List<String> availableCoverages; 
     List<String> selectedCoverages;
-    ListMultipleChoice coveragesChoice;
-//    DropDownChoice compositionType;
     
-    List<VirtualCoverageBand> outputBands; 
-    ListMultipleChoice outputBandsChoice;
+    VirtualCoverageEditor coverageEditor;
 
-    private TextArea definitionEditor;
     
 //    private GeoServerTablePanel<SQLViewAttribute> attributes;
     
 //    private GeoServerTablePanel<Parameter> parameters;
 
-//    private SQLViewParamProvider paramProvider;
     
-//    boolean guessGeometrySrid = false;
-
-//    private CheckBox guessCheckbox;
-    
-//    private boolean escapeSql = true;
-
-//    private static final List GEOMETRY_TYPES = Arrays.asList(Geometry.class,
-//            GeometryCollection.class, Point.class, MultiPoint.class, LineString.class,
-//            MultiLineString.class, Polygon.class, MultiPolygon.class);
-
     public VirtualCoveragePage(PageParameters params) throws IOException {
         this(params.getString(WORKSPACE), params.getString(COVERAGESTORE), null, null);
     }
@@ -125,26 +100,9 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
                 throw new IllegalArgumentException("The specified coverage does not have a virtual coverage attached to it");
             }
 
-            // get the store
-//            DataAccess da = store.getDataStore(null);
-//            if (!(da instanceof JDBCDataStore)) {
-//                error("Cannot create a VirtualCoverage if the store is not database based");
-//                doReturn(StorePage.class);
-//                return;
-//            }
 
             name = virtualCoverage.getName();
             String[] coverageNames = reader.getGridCoverageNames();
-//            sql = virtualTable.getSql();
-//            escapeSql = virtualTable.isEscapeSql();
-//
-//            paramProvider.init(virtualTable);
-//            try {
-//                SimpleFeatureType ft = testViewDefinition(virtualTable, false);
-//                attProvider.setFeatureType(ft, virtualTable);
-//            } catch(Exception e) {
-//                LOGGER.log(Level.SEVERE, "Failed to build feature type for the sql view", e);
-//            }
         } else {
             newCoverage = true;
             GridCoverage2DReader reader = (GridCoverage2DReader) catalog.getResourcePool().getGridCoverageReader(store, null);
@@ -158,160 +116,28 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
                 SampleModel sampleModel = layout.getSampleModel(null);
                 final int numBands = sampleModel.getNumBands();
                 for (int i=0; i < numBands; i++ ) {
-//                    builder.append(coverage).append("@").append(i).append("\n");
-                    availableCoverages.add(coverage + BAND_SEPARATOR + i);
+                    availableCoverages.add(coverage + VirtualCoverage.BAND_SEPARATOR + i);
                 }
                 
             }
             Collections.sort(availableCoverages);
-//            coverages = builder.substring(0, builder.length()-1).toString();
         }
-        selectedCoverages = new ArrayList<String>();
+        selectedCoverages = new ArrayList<String>(availableCoverages);
         
         // build the form and the text area
         Form form = new Form("form", new CompoundPropertyModel(this));
         add(form);
         
-//        add(new VirtualCoverageEditor("virtualCoverageConfig", LiveCollectionModel.list(new PropertyModel(model, "keywords"))));
         
         final TextField nameField = new TextField("name");
         nameField.setRequired(true);
         nameField.add(new VirtualCoverageNameValidator());
         form.add(nameField);
         
+
+        coverageEditor = new VirtualCoverageEditor("coverages", LiveCollectionModel.list(new PropertyModel(this, "selectedCoverages")), availableCoverages);
+        form.add(coverageEditor);
         
-        coveragesChoice = new ListMultipleChoice("coveragesChoice",
-                new Model((ArrayList<String>) selectedCoverages), 
-//                new PropertyModel(this, "selectedCoverages"),
-                availableCoverages);
-                /* availableCoverages, new ChoiceRenderer<String>() {
-                    @Override
-                    public Object getDisplayValue(String kw) {
-                        return kw;
-                    }
-            });*/
-        coveragesChoice.setOutputMarkupId(true);
-        form.add(coveragesChoice);
-        form.add(addBandButton());
-        
-//        compositionType = new DropDownChoice("compositionType", Arrays.asList(CompositionType.values()), new CompositionTypeRenderer());
-//        form.add(compositionType);
-        outputBands = new ArrayList<VirtualCoverageBand>();
-        outputBandsChoice= new ListMultipleChoice("outputBandsChoice", new Model(),
-                outputBands, new ChoiceRenderer<VirtualCoverageBand>() {
-                    @Override
-                    public Object getDisplayValue(VirtualCoverageBand kw) {
-                        return kw.getDefinition();
-                    }
-            });
-        outputBandsChoice.setOutputMarkupId(true);
-        form.add(outputBandsChoice);
-        
-        
-        
-        
-        
-        definitionEditor = new TextArea("definition");
-        form.add(definitionEditor);
-        
-        
-        
-        
-        // the links to refresh, add and remove a parameter
-//        form.add(new GeoServerAjaxFormLink("guessParams") {
-//            
-//            @Override
-//            protected void onClick(AjaxRequestTarget target, Form form) {
-//                sqlEditor.processInput();
-//                parameters.processInputs();
-//                if (sql != null && !"".equals(sql.trim())) {
-//                    paramProvider.refreshFromSql(sql);
-//                    target.addComponent(parameters);
-//                }
-//            }
-//        });
-//        form.add(new GeoServerAjaxFormLink("addNewParam") {
-//            
-//            @Override
-//            protected void onClick(AjaxRequestTarget target, Form form) {
-//                paramProvider.addParameter();
-//                target.addComponent(parameters);
-//            }
-//        });
-//        form.add(new GeoServerAjaxFormLink("removeParam") {
-//            
-//            @Override
-//            protected void onClick(AjaxRequestTarget target, Form form) {
-//                paramProvider.removeAll(parameters.getSelection());
-//                parameters.clearSelection();
-//                target.addComponent(parameters);
-//            }
-//        });
-//        
-//        // the parameters table
-//        parameters = new GeoServerTablePanel<Parameter>("parameters", paramProvider, true) {
-//
-//            @Override
-//            protected Component getComponentForProperty(String id, IModel itemModel,
-//                    Property<Parameter> property) {
-//                Fragment f = new Fragment(id, "text", VirtualCoveragePage.this);
-//                TextField text = new TextField("text", property.getModel(itemModel));
-//                text.setLabel(new ParamResourceModel("th." + property.getName(), VirtualCoveragePage.this));
-//                if(property == SQLViewParamProvider.NAME) {
-//                    text.setRequired(true);
-//                } else if(property == SQLViewParamProvider.REGEXP) {
-//                    text.add(new RegexpValidator());
-//                }
-//                f.add(text);
-//                return f;
-//            }
-//            
-//        };
-//        parameters.setFilterVisible(false);
-//        parameters.setSortable(false);
-//        parameters.getTopPager().setVisible(false);
-//        parameters.getBottomPager().setVisible(false);
-//        parameters.setOutputMarkupId(true);
-//        form.add(parameters);
-//        
-//        // the "refresh attributes" link
-//        form.add(refreshLink());
-//        form.add(guessCheckbox = new CheckBox("guessGeometrySrid", new PropertyModel(this, "guessGeometrySrid")));
-//        form.add(new CheckBox("escapeSql"));
-// 
-//        // the editable attribute table
-//        attributes = new GeoServerTablePanel<SQLViewAttribute>("attributes", attProvider) {
-//
-//            @Override
-//            protected Component getComponentForProperty(String id, IModel itemModel,
-//                    Property<SQLViewAttribute> property) {
-//                SQLViewAttribute att = (SQLViewAttribute) itemModel.getObject();
-//                boolean isGeometry = att.getType() != null
-//                        && Geometry.class.isAssignableFrom(att.getType());
-//                if (property == SQLViewAttributeProvider.PK) {
-//                    // editor for pk status
-//                    Fragment f = new Fragment(id, "checkbox", VirtualCoveragePage.this);
-//                    f.add(new CheckBox("identifier", new PropertyModel(itemModel, "pk")));
-//                    return f;
-//                } else if (property == SQLViewAttributeProvider.TYPE && isGeometry) {
-//                    Fragment f = new Fragment(id, "geometry", VirtualCoveragePage.this);
-//                    f.add(new DropDownChoice("geometry", new PropertyModel(itemModel, "type"),
-//                            GEOMETRY_TYPES, new GeometryTypeRenderer()));
-//                    return f;
-//                } else if(property == SQLViewAttributeProvider.SRID && isGeometry) {
-//                    Fragment f = new Fragment(id, "text", VirtualCoveragePage.this);
-//                    f.add(new TextField("text", new PropertyModel(itemModel, "srid")));
-//                    return f;
-//                }
-//                return null;
-//            }
-//        };
-//        // just a plain table, no filters, no paging, 
-//        attributes.setFilterVisible(false);
-//        attributes.setSortable(false);
-//        attributes.setPageable(false);
-//        attributes.setOutputMarkupId(true);
-//        form.add(attributes);
 
         // save and cancel at the bottom of the page
         form.add(new SubmitLink("save") {
@@ -329,78 +155,33 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
         });
     }
     
-    private AjaxButton addBandButton() {
-        AjaxButton button = new AjaxButton("addBand") {
-            @Override
-            public void onSubmit(AjaxRequestTarget target, Form form) {
-                coveragesChoice.getValue();
-                List selection = (List) coveragesChoice.getModelObject();
-                selection.get(0);
-//                    update(target, coveragesChoice, outputBandsChoice);
-            }
-//          
-        };
-        button.setDefaultFormProcessing(false);
-        return button;
-    }
-        
-        private void update(AjaxRequestTarget target, ListMultipleChoice from, ListMultipleChoice to){
-//            String value = newKeyword.getInput();
-                //TODO: Check bandComposition
-            for (String selected : (List<String>) from.getChoices()) {
-//                List choices = from.getChoices();
-                if (!to.getChoices().contains(selected)) {
-                  to.getChoices().add(selected);
-                  
-                }
-              }
-              target.addComponent(to);
-              target.addComponent(from);
-            
-            
-//                List<String> coverages = (List<String>) coveragesChoice.getModelObject();
-//                int i=0;
-//                for (String coverage: coverages) {
-//                    //TODO check for band composition
-//                    final int bandIndexChar = coverage.indexOf(BAND_SEPARATOR);
-//                    String coverageName = coverage.substring(0, bandIndexChar);
-//                    String bandIndex = coverage.substring(bandIndexChar + 1 , coverage.length());
-//                    VirtualCoverageBand band = new VirtualCoverageBand(Collections.singletonList(new InputCoverageBand(coverageName, bandIndex)), coverageName, i++, CompositionType.BAND_SELECT);
-//                    outputBands.add(band);
-//                }
-//                
-//                outputBandsChoice.setChoices(outputBands);
-//                coverages.clear();
-//                target.addComponent(coveragesChoice);
-            }
-       
-      
-
-    private GeoServerAjaxFormLink refreshLink() {
-        return new GeoServerAjaxFormLink("refresh") {
-
-            @Override
-            protected void onClick(AjaxRequestTarget target, Form form) {
-                definitionEditor.processInput();
-//                parameters.processInputs();
-//                guessCheckbox.processInput();
-//                if (sql != null && !"".equals(sql.trim())) {
-//                    SimpleFeatureType newSchema = null;
-//                    try {
-//                        newSchema = testViewDefinition(guessGeometrySrid);
+//      
 //
-//                        if (newSchema != null) {
-//                            attProvider.setFeatureType(newSchema, null);
-//                            target.addComponent(attributes);
-//                        }
-//                    } catch (IOException e) {
-//                        LOGGER.log(Level.INFO, "Error testing SQL query", e);
-//                        error(getFirstErrorMessage(e));
-//                    }
-//                }
-            }
-        };
-    }
+//    private GeoServerAjaxFormLink refreshLink() {
+//        return new GeoServerAjaxFormLink("refresh") {
+//
+//            @Override
+//            protected void onClick(AjaxRequestTarget target, Form form) {
+//                definitionEditor.processInput();
+////                parameters.processInputs();
+////                guessCheckbox.processInput();
+////                if (sql != null && !"".equals(sql.trim())) {
+////                    SimpleFeatureType newSchema = null;
+////                    try {
+////                        newSchema = testViewDefinition(guessGeometrySrid);
+////
+////                        if (newSchema != null) {
+////                            attProvider.setFeatureType(newSchema, null);
+////                            target.addComponent(attributes);
+////                        }
+////                    } catch (IOException e) {
+////                        LOGGER.log(Level.INFO, "Error testing SQL query", e);
+////                        error(getFirstErrorMessage(e));
+////                    }
+////                }
+//            }
+//        };
+//    }
 
 //    /**
 //     * Checks the view definition works as expected and returns the feature type guessed solely by
@@ -489,13 +270,7 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
 
     protected VirtualCoverage buildVirtualCoverage(CoverageStoreInfo storeInfo) throws IOException {
                 // TODO: ADD HINTS
-        String inputs[] = definition.split(",");
-        List<VirtualCoverageBand> bands = new ArrayList<VirtualCoverageBand>(inputs.length);
-        int i=0;
-        for (String input: inputs) {
-            bands.add(new VirtualCoverageBand(Collections.singletonList(new InputCoverageBand(input, "1")), input, i++, CompositionType.BAND_SELECT));
-        }
-        VirtualCoverage virtualCoverage = new VirtualCoverage(name, bands);
+        VirtualCoverage virtualCoverage = new VirtualCoverage(name, coverageEditor.getOutputBands());
         return virtualCoverage;
     }
 
@@ -523,14 +298,6 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
         }
     }
     
-//    public DropDownChoice getCompositionType() {
-//        return compositionType;
-//    }
-//
-//    public void setCompositionType(DropDownChoice compositionType) {
-//        this.compositionType = compositionType;
-//    }
-
     protected void onSave() {
         try {
             Catalog catalog = getCatalog();
@@ -620,18 +387,27 @@ public class VirtualCoveragePage extends GeoServerSecuredPage {
         return ComponentAuthorizer.WORKSPACE_ADMIN;
     }
     
+    public List<String> getSelectedCoverages() {
+        return selectedCoverages;
+    }
+
+    public void setSelectedCoverages(List<String> selectedCoverages) {
+        this.selectedCoverages = selectedCoverages;
+    }
+
+
     private class CompositionTypeRenderer implements  IChoiceRenderer {
 
-        public Object getDisplayValue(Object object) {
-            return new StringResourceModel(((CompositionType) object).name(), VirtualCoveragePage.this, null).getString();
+        public CompositionTypeRenderer() {
         }
 
-        public String getIdValue(Object object, int index) {
-            return ((CompositionType) object).name();
+        public Object getDisplayValue(Object object) {
+            return object.toString();
         }
-        
+
+        public String getIdValue(Object object, int index ) {
+            return object.toString();
+        }
     }
-    
-    
    
 }
