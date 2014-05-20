@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.util.Utilities;
 
 /**
  * Class containing main definition of a Virtual Coverage, such as, originating coverageStore and composing coverageNames/bands.
@@ -31,14 +32,21 @@ public class VirtualCoverage implements Serializable {
     public static final String BAND_SEPARATOR = "@";
 
     public static enum CompositionType {
-        BAND_SELECT, MATH/* , MATH */;
+        BAND_SELECT /* , MATH */;
 
         public static CompositionType getDefault() {
             return BAND_SELECT;
         }
     }
 
-    /** Definition of Input Coverage Bands composing a VirtualCoverage band */
+    /**
+     * Definition of Input Coverage Bands composing a single {@link VirtualCoverageBand} A {@link VirtualCoverageBand} may be composed of different
+     * {@link InputCoverageBand}s.
+     * 
+     * Current implementation only deal with {@link VirtualCoverageBand}s made of a single {@link InputCoverageBand}. Once we allows for Scripts and
+     * Math on bands compositions (like WindSpeedBand = SQRT(UBand^2 + VBand^2)) we will have a {@link VirtualCoverageBand} built on top of multiple
+     * {@link InputCoverageBand}s
+     */
     public static class InputCoverageBand implements Serializable {
         @Override
         public String toString() {
@@ -98,11 +106,17 @@ public class VirtualCoverage implements Serializable {
             this.band = band;
         }
 
-        String coverageName;
+        private String coverageName;
 
-        String band;
+        private String band;
     }
 
+    /**
+     * Definition of a Virtual Coverage Band composing the Virtual coverage A {@link VirtualCoverageBand} is made of - a list of
+     * {@link InputCoverageBand}s defining which coverages and which bands have been used to compose this band - The type of composition used to
+     * configure this band (Currently, only BAND_SELECT is supported) - The definition of this band (It may contain the script, or the RULE to
+     * compose that band) - The index in the output coverage (Wondering if this can be removed)
+     * */
     public static class VirtualCoverageBand implements Serializable {
 
         public VirtualCoverageBand(List<InputCoverageBand> inputCoverageBands, String definition,
@@ -119,7 +133,6 @@ public class VirtualCoverage implements Serializable {
             final int prime = 31;
             int result = 1;
             result = prime * result + ((compositionType == null) ? 0 : compositionType.hashCode());
-            // result = prime * result + ((coverageName == null) ? 0 : coverageName.hashCode());
             result = prime * result + ((definition == null) ? 0 : definition.hashCode());
             return result;
         }
@@ -135,11 +148,6 @@ public class VirtualCoverage implements Serializable {
             VirtualCoverageBand other = (VirtualCoverageBand) obj;
             if (compositionType != other.compositionType)
                 return false;
-            // if (coverageName == null) {
-            // if (other.coverageName != null)
-            // return false;
-            // } else if (!coverageName.equals(other.coverageName))
-            // return false;
             if (definition == null) {
                 if (other.definition != null)
                     return false;
@@ -155,21 +163,21 @@ public class VirtualCoverage implements Serializable {
                     + compositionType + "]";
         }
 
-        List<InputCoverageBand> inputCoverageBands;
+        /** The InputCoverageBands composing this band */
+        private List<InputCoverageBand> inputCoverageBands;
 
-        String definition;
+        /**
+         * The definition of this virtual band. Currently it simply contains the name of the input band. Once we support different compositions, it
+         * will contain the maths.
+         */
+        private String definition;
 
-        int index;
+        private int index;
 
-        CompositionType compositionType;
-
-        // public String getCoverageName() {
-        // return coverageName;
-        // }
-        //
-        // public void setCoverageName(String coverageName) {
-        // this.coverageName = coverageName;
-        // }
+        /**
+         * Type of composition used to define this band. Currently, only {@link CompositionType#BAND_SELECT} is supported.
+         */
+        private CompositionType compositionType;
 
         public String getDefinition() {
             return definition;
@@ -204,22 +212,20 @@ public class VirtualCoverage implements Serializable {
         }
     }
 
+    /** A key to be assigned to VirtualCoverage object into metadata maps */
     public static String VIRTUAL_COVERAGE = "VIRTUAL_COVERAGE";
 
     public VirtualCoverage(String name, List<VirtualCoverageBand> coverageBands) {
         super();
         this.name = name;
         this.coverageBands = coverageBands;
-        // TODO: Replace that with better logic once supporting multiple resolutions, coverages
-        // this.referenceName = coverageBands.get(0).getCoverageName();
     }
 
-    List<VirtualCoverageBand> coverageBands;
+    /** The list of VirtualCoverageBands composing this VirtualCoverage */
+    private List<VirtualCoverageBand> coverageBands;
 
+    /** The name assigned to the virtual coverage */
     private String name;
-
-    // /** Sample coverageName for info: It may be removed once we relax constraints */
-    // private String referenceName;
 
     public String getName() {
         return name;
@@ -237,21 +243,12 @@ public class VirtualCoverage implements Serializable {
         this.coverageBands = coverageBands;
     }
 
-    // public String getReferenceName() {
-    // return referenceName;
-    // }
-    //
-    // public void setReferenceName(String referenceName) {
-    // this.referenceName = referenceName;
-    // }
-
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((coverageBands == null) ? 0 : coverageBands.hashCode());
-        // result = prime * result + ((name == null) ? 0 : name.hashCode());
-        // result = prime * result + ((storeInfo == null) ? 0 : storeInfo.hashCode());
+        result = prime * result + ((name == null) ? 0 : name.hashCode());
         return result;
     }
 
@@ -277,28 +274,64 @@ public class VirtualCoverage implements Serializable {
         return true;
     }
 
-    public CoverageInfo createVirtualCoverageInfo(String name, CoverageStoreInfo storeInfo,
-            CatalogBuilder builder) throws Exception {
+    /**
+     * Create a CoverageInfo
+     * 
+     * @param builder
+     * @param storeInfo
+     * @param cinfo
+     * @param name
+     * @return
+     * @throws Exception
+     */
+    private CoverageInfo buildCoverageInfo(CatalogBuilder builder, CoverageStoreInfo storeInfo,
+            CoverageInfo cinfo, String name) throws Exception {
         Catalog catalog = storeInfo.getCatalog();
-        CoverageInfo cinfo = catalog.getFactory().createCoverage();
 
+        // Get a reader from the pool for this Sample CoverageInfo (we have to pass it down a VirtualCoverage definition)
         cinfo.setStore(storeInfo);
         cinfo.getMetadata().put(VirtualCoverage.VIRTUAL_COVERAGE, this);
         cinfo.setName(name);
         cinfo.setNativeCoverageName(name);
 
-        // Get a reader from the pool for this Sample CoverageInfo (we have to pass it down a VirtualCoverage definition)
         GridCoverage2DReader reader = (GridCoverage2DReader) catalog.getResourcePool()
                 .getGridCoverageReader(cinfo, name, null);
         builder.setStore(storeInfo);
+        return builder.buildCoverage(reader, name, null);
+    }
 
-        CoverageInfo info = builder.buildCoverage(reader, name, null);
+    /** Create a new CoverageInfo for this virtual coverage */
+    public CoverageInfo createVirtualCoverageInfo(String name, CoverageStoreInfo storeInfo,
+            CatalogBuilder builder) throws Exception {
+        Catalog catalog = storeInfo.getCatalog();
+
+        CoverageInfo coverageInfo = catalog.getFactory().createCoverage();
+        CoverageInfo info = buildCoverageInfo(builder, storeInfo, coverageInfo, name);
+
         info.getMetadata().put(VirtualCoverage.VIRTUAL_COVERAGE, this);
         info.setName(name);
         info.setNativeCoverageName(name);
-
-        // TODO: CHECK CONSISTENCY
         return info;
+    }
+
+    /**
+     * Update the specified CoverageInfo with the updated VirtualCoverage stored within its metadata
+     * 
+     * @param name
+     * @param storeInfo
+     * @param builder
+     * @param coverageInfo
+     * @throws Exception
+     */
+    public void updateVirtualCoverageInfo(String name, CoverageStoreInfo storeInfo,
+            CatalogBuilder builder, CoverageInfo coverageInfo) throws Exception {
+        Utilities.ensureNonNull("coverageInfo", coverageInfo);
+
+        // clean up coverage dimensions for the update
+        coverageInfo.getDimensions().clear();
+        CoverageInfo info = buildCoverageInfo(builder, storeInfo, coverageInfo, name);
+        coverageInfo.getMetadata().put(VirtualCoverage.VIRTUAL_COVERAGE, this);
+        coverageInfo.getDimensions().addAll(info.getDimensions());
     }
 
     public VirtualCoverageBand getBand(int i) {

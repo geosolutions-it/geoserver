@@ -19,8 +19,12 @@ import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.PropertyModel;
 import org.geoserver.catalog.CoverageInfo;
-import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.VirtualCoverage;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.web.data.layer.SQLViewEditPage;
+import org.geoserver.web.data.layer.VirtualCoverageEditPage;
+import org.geoserver.web.data.layer.VirtualCoverageAbstractPage;
 import org.geoserver.web.data.store.panel.ColorPickerPanel;
 import org.geoserver.web.data.store.panel.TextParamPanel;
 import org.geoserver.web.util.MapModel;
@@ -53,24 +57,28 @@ public class CoverageResourceConfigurationPanel extends ResourceConfigurationPan
             }
         };
         
-//        WebMarkupContainer virtualCoverageContainer = new WebMarkupContainer("editVirtualCoverageContainer");
-//        add(virtualCoverageContainer);
-//        virtualCoverageContainer.add(new Link("editVirtualCoverage") {
-//
-//            @Override
-//            public void onClick() {
-//                FeatureTypeInfo typeInfo = (FeatureTypeInfo) model.getObject();
-//                try {
-//                    setResponsePage(new SQLViewEditPage(typeInfo, ((ResourceConfigurationPage) this.getPage())));
-//                } catch(Exception e) {
-//                    LOGGER.log(Level.SEVERE, "Failure opening the sql view edit page", e);
-//                    error(e.toString());
-//                }
-//            }
-//            
-//           
-//        });
+        WebMarkupContainer virtualCoverageContainer = new WebMarkupContainer("editVirtualCoverageContainer");
+        add(virtualCoverageContainer);
+        final VirtualCoverage virtualCoverage = coverage.getMetadata().get(VirtualCoverage.VIRTUAL_COVERAGE, VirtualCoverage.class);
+        virtualCoverageContainer.add(new Link("editVirtualCoverage") {
+            
+            @Override
+            public void onClick() {
+                CoverageInfo coverageInfo = (CoverageInfo) model.getObject();
+                try {
+                    CoverageStoreInfo store = coverageInfo.getStore();
+                    WorkspaceInfo workspace = store.getWorkspace();
+                    setResponsePage(new VirtualCoverageEditPage(workspace.getName(), store.getName(), coverageInfo.getName(), coverageInfo,((ResourceConfigurationPage) this.getPage())));
+                } catch(Exception e) {
+                    LOGGER.log(Level.SEVERE, "Failure opening the Virtual Coverage edit page", e);
+                    error(e.toString());
+                }
+            }
+            
+           
+        });
         
+        virtualCoverageContainer.setVisible(virtualCoverage != null);
         // needed for form components not to loose state
         paramsList.setReuseItems(true);
         add(paramsList);

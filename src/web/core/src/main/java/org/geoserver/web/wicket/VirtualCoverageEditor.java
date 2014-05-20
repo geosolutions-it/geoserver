@@ -33,12 +33,13 @@ import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
 @SuppressWarnings("serial")
 public class VirtualCoverageEditor extends FormComponentPanel {
 
+    IModel coverages;
+    IModel outputBands;
     List<String> availableCoverages; 
-    List<String> selectedCoverages = new ArrayList<String>();
     ListMultipleChoice coveragesChoice;
     CompositionType compositionType;
     
-    List<VirtualCoverageBand> outputBands = new ArrayList<VirtualCoverageBand>(); 
+//    List<VirtualCoverageBand> outputBands = new ArrayList<VirtualCoverageBand>(); 
     ListMultipleChoice outputBandsChoice;
 
     TextField definition;
@@ -51,8 +52,11 @@ public class VirtualCoverageEditor extends FormComponentPanel {
      * @param id
      * @param The module should return a non null collection of strings.
      */
-    public VirtualCoverageEditor(String id, final IModel coverages, List<String> availableCoverages) {
-        super(id, coverages);
+    public VirtualCoverageEditor(String id, final IModel inputCoverages, final IModel bands, List<String> availableCoverages) {
+        super(id, inputCoverages);
+        this.coverages = inputCoverages;
+        this.outputBands = bands;
+        
         this.availableCoverages = availableCoverages;
 //        coveragesChoice = new ListMultipleChoice("coveragesChoice",
 ////              new Model(),
@@ -71,9 +75,9 @@ public class VirtualCoverageEditor extends FormComponentPanel {
         coveragesChoice.setOutputMarkupId(true);
         add(coveragesChoice);
 
-        outputBands = new ArrayList<VirtualCoverageBand>();
+        new ArrayList<VirtualCoverageBand>();
         outputBandsChoice= new ListMultipleChoice("outputBandsChoice", new Model(),
-                outputBands, new ChoiceRenderer<VirtualCoverageBand>() {
+                new ArrayList((List) outputBands.getObject()), new ChoiceRenderer<VirtualCoverageBand>() {
                     @Override
                     public Object getDisplayValue(VirtualCoverageBand vcb) {
                         return vcb.getDefinition();
@@ -105,13 +109,18 @@ public class VirtualCoverageEditor extends FormComponentPanel {
             public void onSubmit(AjaxRequestTarget target, Form form) {
                 List selection = (List) coveragesChoice.getModelObject();
                 List coverages = coveragesChoice.getChoices();
-                int i = 0;
+                List outputBands = (List) outputBandsChoice.getModelObject();
+                int i = (outputBands != null && !outputBands.isEmpty()) ? outputBands.size() -1 : 0;
                 for (Iterator it = selection.iterator(); it.hasNext();) {
                     String coverage = (String) it.next();
 
                     final int bandIndexChar = coverage.indexOf(VirtualCoverage.BAND_SEPARATOR);
-                    String coverageName = coverage.substring(0, bandIndexChar);
-                    String bandIndex = coverage.substring(bandIndexChar + 1, coverage.length());
+                    String coverageName = coverage;
+                    String bandIndex = "-1";
+                    if (bandIndexChar != -1) {
+                        coverageName = coverage.substring(0, bandIndexChar);
+                        bandIndex = coverage.substring(bandIndexChar + 1, coverage.length());
+                    }
                     VirtualCoverageBand band = new VirtualCoverageBand(
                             Collections.singletonList(new InputCoverageBand(coverageName, bandIndex)),
                             coverageName, i++, CompositionType.BAND_SELECT);
@@ -132,20 +141,21 @@ public class VirtualCoverageEditor extends FormComponentPanel {
         return button;
     }
     
-    @Override
-    protected void onBeforeRender() {
-        super.onBeforeRender();
-        updateFields();
-    }
-
-    private void updateFields() {
-        coveragesChoice.setChoices(getModel());
-    }
-    
-    @Override
-    protected void convertInput() {
-        setConvertedInput(coveragesChoice.getChoices());
-    }
+//    @Override
+//    protected void onBeforeRender() {
+//        super.onBeforeRender();
+//        updateFields();
+//    }
+//
+//    private void updateFields() {
+//        coveragesChoice.setChoices(coverages);
+//        outputBandsChoice.setChoices(outputBands);
+//    }
+//    
+//    @Override
+//    protected void convertInput() {
+//        setConvertedInput(coveragesChoice.getChoices());
+//    }
     private class CompositionTypeRenderer implements  IChoiceRenderer {
 
         public CompositionTypeRenderer() {
@@ -160,8 +170,8 @@ public class VirtualCoverageEditor extends FormComponentPanel {
         }
     }
     
-    public List<VirtualCoverageBand> getOutputBands() {
-        return outputBands;
-    }
+//    public List<VirtualCoverageBand> getOutputBands() {
+//        return outputBands;
+//    }
 
 }

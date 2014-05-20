@@ -873,7 +873,7 @@ public class CatalogBuilder {
         }
         
         // if we are dealing with a multicoverage reader, wrap to simplify code
-        if(coverageName != null && !(reader instanceof VirtualCoverageReader)) {
+        if(coverageName != null && !(reader instanceof VirtualGridCoverageReader)) {
             reader = SingleGridCoverage2DReader.wrap(reader, coverageName);
         }
 

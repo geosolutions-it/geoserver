@@ -245,17 +245,7 @@ public class CoverageDimensionCustomizerReader implements GridCoverage2DReader {
         if (info != null) {
             List<CoverageDimensionInfo> storedDimensions = info.getDimensions();
             MetadataMap map = info.getMetadata();
-            /*if (map.containsKey(VirtualCoverage.VIRTUAL_COVERAGE)) {
-                VirtualCoverage virtualCoverage = (VirtualCoverage) map.get(VirtualCoverage.VIRTUAL_COVERAGE);
-//                List<VirtualCoverageBand> bands = virtualCoverage.getCoverageBands(); 
-                VirtualCoverageBand band = virtualCoverage.getBand(coverageName);
-                
-                if (storedDimensions != null && storedDimensions.size() > 0) {
-                    CoverageDimensionInfo dimensionInfo = storedDimensions.get(band.getIndex());
-                    wrappedDims = new GridSampleDimension[1];
-                    wrappedDims[0] = new WrappedSampleDimension((GridSampleDimension) dims[0], dimensionInfo);
-                }
-            } else */if (storedDimensions != null && storedDimensions.size() > 0) {
+            if (storedDimensions != null && storedDimensions.size() > 0) {
                     int i = 0;
                     final int inputDims = storedDimensions.size();
                     final int outputDims = dims.length;

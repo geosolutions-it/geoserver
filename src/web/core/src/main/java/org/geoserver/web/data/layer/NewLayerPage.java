@@ -193,7 +193,7 @@ public class NewLayerPage extends GeoServerSecuredPage {
             public void onClick(AjaxRequestTarget target) {
                 CoverageStoreInfo cs = getCatalog().getStore(storeId, CoverageStoreInfo.class);
                 PageParameters pp = new PageParameters("wsName=" + cs.getWorkspace().getName() + ",storeName=" + cs.getName());
-                setResponsePage(VirtualCoveragePage.class, pp);
+                setResponsePage(VirtualCoverageNewPage.class, pp);
             }
         };
     }
