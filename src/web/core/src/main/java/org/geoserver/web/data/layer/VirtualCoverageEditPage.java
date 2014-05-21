@@ -5,6 +5,7 @@
 package org.geoserver.web.data.layer;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Level;
 
 import org.geoserver.catalog.Catalog;
@@ -12,6 +13,7 @@ import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.VirtualCoverage;
+import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
 import org.geoserver.web.data.resource.ResourceConfigurationPage;
 import org.geoserver.web.wicket.ParamResourceModel;
 
@@ -34,6 +36,10 @@ public class VirtualCoverageEditPage extends VirtualCoverageAbstractPage {
             CatalogBuilder builder = new CatalogBuilder(catalog);
             CoverageStoreInfo coverageStoreInfo = catalog.getCoverageStore(storeId);
             VirtualCoverage virtualCoverage = buildVirtualCoverage();
+            List<VirtualCoverageBand> coverageBands = virtualCoverage.getCoverageBands(); 
+            if (coverageBands == null || coverageBands.isEmpty()) {
+                throw new IllegalArgumentException("No output bands have been specified ");
+            }
             virtualCoverage.updateVirtualCoverageInfo(name, coverageStoreInfo, builder,
                     coverageInfo);
 

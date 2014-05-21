@@ -33,7 +33,6 @@ import org.geoserver.catalog.VirtualCoverage;
 import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
 import org.geoserver.web.ComponentAuthorizer;
 import org.geoserver.web.GeoServerSecuredPage;
-import org.geoserver.web.wicket.VirtualCoverageEditor;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 
 /**
@@ -47,6 +46,8 @@ public abstract class VirtualCoverageAbstractPage extends GeoServerSecuredPage {
     public static final String COVERAGESTORE = "storeName";
 
     public static final String WORKSPACE = "wsName";
+    
+    static final String VIRTUAL_COVERAGE_NAME = "VIRTUAL_COVERAGE_NAME";
 
     String storeId;
 
@@ -91,11 +92,11 @@ public abstract class VirtualCoverageAbstractPage extends GeoServerSecuredPage {
             SampleModel sampleModel = layout.getSampleModel(null);
             final int numBands = sampleModel.getNumBands();
             for (int i = 0; i < numBands; i++) {
-                availableCoverages.add(coverage
-                        + (numBands > 1 ? (VirtualCoverage.BAND_SEPARATOR + i) : ""));
+                availableCoverages.add(coverage + VirtualCoverage.BAND_SEPARATOR + i);
             }
         }
         Collections.sort(availableCoverages);
+        name = VIRTUAL_COVERAGE_NAME;
         if (coverageName != null) {
             newCoverage = false;
 

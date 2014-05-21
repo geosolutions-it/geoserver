@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.media.jai.ImageLayout;
 import javax.media.jai.operator.BandMergeDescriptor;
@@ -23,14 +25,18 @@ import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.OverviewPolicy;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
+import org.geotools.coverage.processing.CoverageProcessor;
 import org.geotools.data.DataSourceException;
 import org.geotools.factory.Hints;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.referencing.CRS;
 import org.opengis.coverage.SampleDimension;
+import org.opengis.coverage.grid.GridCoverageReader;
 import org.opengis.coverage.grid.GridEnvelope;
+import org.opengis.coverage.processing.Operation;
 import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterDescriptor;
+import org.opengis.parameter.ParameterValueGroup;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.datum.PixelInCell;
@@ -44,16 +50,31 @@ import org.opengis.referencing.operation.MathTransform;
  *
  */
 public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
-    
+
+    private final static Logger LOGGER = org.geotools.util.logging.Logging.getLogger(VirtualGridCoverageReader.class);
+
+    private static final CoverageProcessor PROCESSOR;
+
+    private static Operation BANDMERGE;
+
+    static {
+        PROCESSOR = CoverageProcessor.getInstance();
+        try {
+            BANDMERGE = PROCESSOR.getOperation("BandMergeOp");
+        } catch (Exception e) {
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning("BandMerge operation unavailable, VirtualCoverage #bands will be limited to 2 elements due to: "
+                        + e.getLocalizedMessage());
+            }
+            BANDMERGE = null;
+
+        }
+    }
+
     /**
-     * A CoveragesConsistencyChecker checks if the composing coverages
-     * respect the constraints which currently are:
+     * A CoveragesConsistencyChecker checks if the composing coverages respect the constraints which currently are:
      * 
-     * - same CRS
-     * - same resolution
-     * - same bbox
-     * - same data type
-     * - same dimensions (same number of dimension, same type, and same name)
+     * - same CRS - same resolution - same bbox - same data type - same dimensions (same number of dimension, same type, and same name)
      */
     static class CoveragesConsistencyChecker {
 
@@ -73,7 +94,7 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             dynamicParameters = reader.getDynamicParameters();
             layout = reader.getImageLayout();
         }
-        
+
         /**
          * Check whether the coverages associated to the provided reader is consistent
          * with the reference coverage.
@@ -89,12 +110,12 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             if (!envelope.equals(this.envelope, DELTA, true)) {
                 throw new IllegalArgumentException("The coverage envelope must be the same");
             }
-            
+
             //TODO: Improve these checks
             if (metadataNames.length != this.metadataNames.length) {
                 throw new IllegalArgumentException("The coverage metadataNames should have the same size");
             } 
-            
+
             MathTransform destinationToSourceTransform = null;
             if (!CRS.equalsIgnoreMetadata(crs, this.crs))
                 try {
@@ -111,7 +132,7 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             }
         }
     }
-    
+
     /**
      * A simple reader which will apply coverages customizations to the virtual coverage
      */
@@ -121,8 +142,7 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
                 String coverageName, CoverageInfo info) {
             super(delegate, coverageName, info);
         }
-        
-        
+
         protected GridSampleDimension[] wrapDimensions(SampleDimension[] dims) {
             GridSampleDimension[] wrappedDims = null;
             CoverageInfo info = getInfo();
@@ -132,7 +152,7 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
                 if (map.containsKey(VirtualCoverage.VIRTUAL_COVERAGE)) {
                     VirtualCoverage virtualCoverage = (VirtualCoverage) map.get(VirtualCoverage.VIRTUAL_COVERAGE);
                     VirtualCoverageBand band = virtualCoverage.getBand(getCoverageName());
-                    
+
                     if (storedDimensions != null && storedDimensions.size() > 0) {
                         CoverageDimensionInfo dimensionInfo = storedDimensions.get(band.getIndex());
                         wrappedDims = new GridSampleDimension[1];
@@ -150,31 +170,31 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             return wrappedDims;
         }
     }
-    
+
     static class CoverageDimensionVirtualCustomizerStructuredReader extends CoverageDimensionVirtualCustomizerReader {
 
         public CoverageDimensionVirtualCustomizerStructuredReader(GridCoverage2DReader delegate,
                 String coverageName, CoverageInfo info) {
             super(delegate, coverageName, info);
         }
-        
+
     }
-    
+
     /** The VirtualCoverage containing definition */
     private VirtualCoverage virtualCoverage;
-    
+
     /** The name of the reference coverage, we can remove/revisit it once we relax some constraint */
     private String referenceName;
-    
+
     private GridCoverage2DReader delegate;
-    
+
     private Hints hints;
-    
-    /** The CoverageInfo associated to the VirtualCoverage */  
+
+    /** The CoverageInfo associated to the VirtualCoverage */
     private CoverageInfo coverageInfo;
-    
+
     private GridCoverageFactory coverageFactory;
-    
+
     public VirtualGridCoverageReader(GridCoverage2DReader delegate, VirtualCoverage virtualCoverage, CoverageInfo coverageInfo, Hints hints) {
         super(delegate, virtualCoverage.getName());
         this.delegate = delegate;
@@ -220,40 +240,91 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
         List<VirtualCoverageBand> bands = virtualCoverage.getCoverageBands();
         List<GridCoverage2D> coverages = new ArrayList<GridCoverage2D>();
         List<SampleDimension> dims = new ArrayList<SampleDimension>();
-        
+
         // Use composition rule specific implementation
         CoveragesConsistencyChecker checker = null;
         for (VirtualCoverageBand band : bands) {
             // Refactor this once supporting complex compositions
             String coverageName = band.getInputCoverageBands().get(0).getCoverageName();
             GridCoverage2DReader reader = wrap(delegate, coverageName, coverageInfo);
-            
+
             // Remove this when removing constraints
             if (checker == null) {
                 checker = new CoveragesConsistencyChecker(reader);
             } else {
                 checker.checkConsistency(reader);
             }
-            
-            GridCoverage2D coverage = (GridCoverage2D)reader.read(parameters);
+
+            GridCoverage2D coverage = (GridCoverage2D) reader.read(parameters);
+
+            //TODO: perform band Select before proceeding
             coverages.add(coverage);
             dims.addAll(Arrays.asList(coverage.getSampleDimensions()));
         }
-        
-        
+
         GridCoverage2D sampleCoverage = coverages.get(0);
 
-        // TODO: Implement bandMerges
         RenderedImage image = null;
-        if (coverages.size() > 0) {
-           image = BandMergeDescriptor.create(sampleCoverage.getRenderedImage(), coverages.get(1).getRenderedImage(), null);
+        if (coverages.size() > 1) {
+            if (BANDMERGE != null) {
+                final ParameterValueGroup param = BANDMERGE.getParameters();
+                param.parameter("sources").setValue(coverages);
+                GridCoverage2D merge = (GridCoverage2D) PROCESSOR.doOperation(param, hints);
+                image = merge.getRenderedImage();
+
+            } else {
+                image = BandMergeDescriptor.create(sampleCoverage.getRenderedImage(), coverages.get(1).getRenderedImage(), null);
+            }
         } else {
             image = sampleCoverage.getRenderedImage();
         }
-        return coverageFactory.create(coverageInfo.getName()/*virtualCoverage.getName()*/, image, sampleCoverage.getGridGeometry(), dims.toArray(new GridSampleDimension[dims.size()]), null, /*props*/ null);
+        return coverageFactory.create(coverageInfo.getName(), image, sampleCoverage.getGridGeometry(), dims.toArray(new GridSampleDimension[dims.size()]), null, /*props*/ null);
     }
 
-    public static GridCoverage2DReader wrap(GridCoverage2DReader delegate, String coverageName, CoverageInfo info) {
+    @Override
+    public CoordinateReferenceSystem getCoordinateReferenceSystem() {
+        return super.getCoordinateReferenceSystem(referenceName);
+    }
+
+    @Override
+    public Set<ParameterDescriptor<List>> getDynamicParameters() throws IOException {
+        return super.getDynamicParameters(referenceName);
+    }
+
+    @Override
+    public double[] getReadingResolutions(OverviewPolicy policy, double[] requestedResolution)
+            throws IOException {
+        return super.getReadingResolutions(referenceName, policy, requestedResolution);
+    }
+
+    @Override
+    public int getNumOverviews() {
+        return super.getNumOverviews(referenceName);
+    }
+
+    @Override
+    public double[][] getResolutionLevels() throws IOException {
+        return super.getResolutionLevels(referenceName);
+    }
+
+    /**
+     * @param coverageName
+     */
+    protected void checkCoverageName(String coverageName) {
+        // It's virtual...
+
+    }
+
+    @Override
+    public void dispose() throws IOException {
+        delegate.dispose();
+    }
+
+    /** 
+     * Get a {@link GridCoverage2DReader} wrapping the provided delegate reader 
+     */
+    private static GridCoverage2DReader wrap(GridCoverage2DReader delegate, String coverageName,
+            CoverageInfo info) {
         GridCoverage2DReader reader = delegate;
         if (coverageName != null) {
             reader = SingleGridCoverage2DReader.wrap(delegate, coverageName);
@@ -264,34 +335,13 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             return new CoverageDimensionVirtualCustomizerReader(reader, coverageName, info);
         }
     }
-    
-    @Override
-    public CoordinateReferenceSystem getCoordinateReferenceSystem() {
-        return super.getCoordinateReferenceSystem(referenceName);
-    }
-    @Override
-    public Set<ParameterDescriptor<List>> getDynamicParameters() throws IOException {
-        return super.getDynamicParameters(referenceName);
-    }
-    @Override
-    public double[] getReadingResolutions(OverviewPolicy policy, double[] requestedResolution)
-            throws IOException {
-        return super.getReadingResolutions(referenceName, policy, requestedResolution);
-    }
-    @Override
-    public int getNumOverviews() {
-        return super.getNumOverviews(referenceName);
-    }
-    @Override
-    public double[][] getResolutionLevels() throws IOException {
-        return super.getResolutionLevels(referenceName);
-    }
-    
-    /**
-     * @param coverageName
+
+    /** 
+     * Get a {@link GridCoverage2DReader} wrapping the provided delegate reader 
      */
-    protected void checkCoverageName(String coverageName) {
-        // It's virtual...  
-        
+    public static GridCoverage2DReader wrap(GridCoverage2DReader reader,
+            VirtualCoverage virtualCoverage, CoverageInfo coverageInfo, Hints hints) {
+        return new VirtualGridCoverageReader((GridCoverage2DReader) reader, virtualCoverage,
+                coverageInfo, hints);
     }
 }

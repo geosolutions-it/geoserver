@@ -2,7 +2,7 @@
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
-package org.geoserver.web.wicket;
+package org.geoserver.web.data.layer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,7 +44,6 @@ public class VirtualCoverageEditor extends FormComponentPanel {
 
     TextField definition;
     DropDownChoice<CompositionType> compositionChoice;
-    TextField coverageName;
 
     
     /**
@@ -89,8 +88,9 @@ public class VirtualCoverageEditor extends FormComponentPanel {
         
         
         add(addBandButton());
-        definition = new TextField("newKeyword", new Model());
+        definition = new TextField("definition", new Model());
         definition.setOutputMarkupId(true);
+        definition.setEnabled(false);
         add(definition);
         compositionType = CompositionType.getDefault();
         compositionChoice = new DropDownChoice("compositionType", 
@@ -99,6 +99,7 @@ public class VirtualCoverageEditor extends FormComponentPanel {
                 
         compositionChoice.setOutputMarkupId(true);
         add(compositionChoice);
+        add(addRemoveAllButton());
 
     }
 
@@ -134,6 +135,24 @@ public class VirtualCoverageEditor extends FormComponentPanel {
 
                 // TODO: Reset choice
                 target.addComponent(coveragesChoice);
+                target.addComponent(outputBandsChoice);
+            }
+        };
+        // button.setDefaultFormProcessing(false);
+        return button;
+    }
+    
+    private AjaxButton addRemoveAllButton() {
+        AjaxButton button = new AjaxButton("removeAllBands") {
+            
+            @Override
+            public void onSubmit(AjaxRequestTarget target, Form form) {
+                List outputBands = (List) outputBandsChoice.getModelObject();
+                outputBands.clear();
+                outputBandsChoice.setChoices(outputBands);
+                outputBandsChoice.modelChanged();
+
+                // TODO: Reset choice
                 target.addComponent(outputBandsChoice);
             }
         };

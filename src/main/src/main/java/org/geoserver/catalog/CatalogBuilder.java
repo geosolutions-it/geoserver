@@ -774,8 +774,8 @@ public class CatalogBuilder {
     public void initCoverage(CoverageInfo cinfo, final String coverageName) throws Exception {
     	CoverageStoreInfo csinfo = (CoverageStoreInfo) store;
         GridCoverage2DReader reader = (GridCoverage2DReader) catalog
-            	.getResourcePool().getGridCoverageReader(csinfo, GeoTools.getDefaultHints());
-        if(coverageName != null) {
+            	.getResourcePool().getGridCoverageReader(cinfo, GeoTools.getDefaultHints());
+        if(coverageName != null && !(reader instanceof VirtualGridCoverageReader)) {
             reader = SingleGridCoverage2DReader.wrap(reader, coverageName);
         }
         

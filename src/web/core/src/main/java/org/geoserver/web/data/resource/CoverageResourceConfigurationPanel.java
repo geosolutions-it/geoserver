@@ -79,6 +79,7 @@ public class CoverageResourceConfigurationPanel extends ResourceConfigurationPan
         });
         
         virtualCoverageContainer.setVisible(virtualCoverage != null);
+        
         // needed for form components not to loose state
         paramsList.setReuseItems(true);
         add(paramsList);
