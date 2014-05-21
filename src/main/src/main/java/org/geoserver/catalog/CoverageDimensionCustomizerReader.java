@@ -17,7 +17,6 @@ import javax.media.jai.ImageLayout;
 import javax.media.jai.PropertySource;
 import javax.media.jai.PropertySourceImpl;
 
-import org.geoserver.catalog.VirtualCoverage.VirtualCoverageBand;
 import org.geotools.coverage.Category;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -229,7 +228,6 @@ public class CoverageDimensionCustomizerReader implements GridCoverage2DReader {
         if (wrappedDims == null) {
             wrappedDims = (GridSampleDimension[]) dims;
         } else if (properties != null && properties.containsKey("GC_NODATA")) {
-            // update the GC_NODATA property (if any) with the latest value, if we have any
             double[] wrappedNoDataValues = wrappedDims[0].getNoDataValues();
             if (wrappedNoDataValues != null && wrappedNoDataValues.length > 0) {
                 properties.put("GC_NODATA", wrappedNoDataValues[0]);
