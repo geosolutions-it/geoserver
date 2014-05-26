@@ -76,19 +76,19 @@ public class GeoserverInitStartupListener implements ServletContextListener {
         GeoTools.init( (Hints) null );
         
         // Custom GeoTools ImagingListener used to ignore common warnings 
-        JAI.getDefaultInstance().setImagingListener(new ImagingListener() {
-            final Logger LOGGER = Logging.getLogger("javax.media.jai");
-            @Override
-            public boolean errorOccurred(String message, Throwable thrown, Object where,
-                    boolean isRetryable) throws RuntimeException {
-                if (message.contains("Continuing in pure Java mode")) {
-                    LOGGER.log(Level.FINE, message, thrown);
-                } else {
-                    LOGGER.log(Level.INFO, message, thrown);
-                }
-                return false; // we are not trying to recover
-            }
-        });
+//        JAI.getDefaultInstance().setImagingListener(new ImagingListener() {
+//            final Logger LOGGER = Logging.getLogger("javax.media.jai");
+//            @Override
+//            public boolean errorOccurred(String message, Throwable thrown, Object where,
+//                    boolean isRetryable) throws RuntimeException {
+//                if (message.contains("Continuing in pure Java mode")) {
+//                    LOGGER.log(Level.FINE, message, thrown);
+//                } else {
+//                    LOGGER.log(Level.INFO, message, thrown);
+//                }
+//                return false; // we are not trying to recover
+//            }
+//        });
                         
         // setup concurrent operation registry
         JAI jaiDef = JAI.getDefaultInstance();
