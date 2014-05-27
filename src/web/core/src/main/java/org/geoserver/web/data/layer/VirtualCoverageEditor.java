@@ -36,6 +36,7 @@ public class VirtualCoverageEditor extends FormComponentPanel {
     IModel coverages;
     IModel outputBands;
     List<String> availableCoverages; 
+    List<VirtualCoverageBand> currentCoverages;
     ListMultipleChoice coveragesChoice;
     CompositionType compositionType;
     
@@ -85,7 +86,7 @@ public class VirtualCoverageEditor extends FormComponentPanel {
         outputBandsChoice.setOutputMarkupId(true);
         add(outputBandsChoice);
 
-        
+        currentCoverages = new ArrayList<VirtualCoverageBand>(outputBandsChoice.getChoices());
         
         add(addBandButton());
         definition = new TextField("definition", new Model());
@@ -100,7 +101,7 @@ public class VirtualCoverageEditor extends FormComponentPanel {
         compositionChoice.setOutputMarkupId(true);
         add(compositionChoice);
         add(addRemoveAllButton());
-
+        add(addRemoveButton());
     }
 
     private AjaxButton addBandButton() {
@@ -110,7 +111,7 @@ public class VirtualCoverageEditor extends FormComponentPanel {
             public void onSubmit(AjaxRequestTarget target, Form form) {
                 List selection = (List) coveragesChoice.getModelObject();
                 List coverages = coveragesChoice.getChoices();
-                List outputBands = (List) outputBandsChoice.getModelObject();
+                List outputBands = new ArrayList();
                 int i = (outputBands != null && !outputBands.isEmpty()) ? outputBands.size() -1 : 0;
                 for (Iterator it = selection.iterator(); it.hasNext();) {
                     String coverage = (String) it.next();
@@ -128,7 +129,8 @@ public class VirtualCoverageEditor extends FormComponentPanel {
                     outputBands.add(band);
 
                 }
-                outputBandsChoice.setChoices(outputBands);
+                currentCoverages.addAll(outputBands);
+                outputBandsChoice.setChoices(currentCoverages);
                 outputBandsChoice.modelChanged();
                 coveragesChoice.setChoices(availableCoverages);
                 coveragesChoice.modelChanged();
@@ -149,7 +151,31 @@ public class VirtualCoverageEditor extends FormComponentPanel {
             public void onSubmit(AjaxRequestTarget target, Form form) {
                 List outputBands = (List) outputBandsChoice.getModelObject();
                 outputBands.clear();
-                outputBandsChoice.setChoices(outputBands);
+                currentCoverages.clear();
+                outputBandsChoice.setChoices(currentCoverages);
+                outputBandsChoice.modelChanged();
+
+                // TODO: Reset choice
+                target.addComponent(outputBandsChoice);
+            }
+        };
+        // button.setDefaultFormProcessing(false);
+        return button;
+    }
+
+    private AjaxButton addRemoveButton() {
+        AjaxButton button = new AjaxButton("removeBands") {
+
+            @Override
+            public void onSubmit(AjaxRequestTarget target, Form form) {
+
+                List removedBands = (List) outputBandsChoice.getModel().getObject();
+
+                for (Object band : removedBands) {
+                    currentCoverages.remove(band);
+                }
+
+                outputBandsChoice.setChoices(currentCoverages);
                 outputBandsChoice.modelChanged();
 
                 // TODO: Reset choice
