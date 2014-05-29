@@ -256,12 +256,16 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             }
 
             GridCoverage2D coverage = (GridCoverage2D) reader.read(parameters);
-
-            //TODO: perform band Select before proceeding
-            coverages.add(coverage);
-            dims.addAll(Arrays.asList(coverage.getSampleDimensions()));
+            if (coverage != null) {
+                //TODO: perform band Select before proceeding
+                coverages.add(coverage);
+                dims.addAll(Arrays.asList(coverage.getSampleDimensions()));
+            }
         }
 
+        if (coverages.isEmpty()) {
+            return null;
+        }
         GridCoverage2D sampleCoverage = coverages.get(0);
 
         RenderedImage image = null;
