@@ -440,6 +440,7 @@ public class XStreamPersister {
         xs.registerConverter(new VirtualTableConverter());
 //        xs.registerConverter(new VirtualCoverageConverter());
         xs.registerConverter(new KeywordInfoConverter());
+        xs.registerConverter(new SettingsInfoConverter());
 
         // register Virtual structure handling
         registerBreifMapComplexType("virtualTable", VirtualTable.class);
@@ -2167,5 +2168,30 @@ public class XStreamPersister {
             writer.endNode();
         }
 
+    }
+    
+    /**
+     * Converter for SettingsInfo class
+     */
+    class SettingsInfoConverter extends AbstractReflectionConverter {
+        
+        public SettingsInfoConverter() {
+            super(SettingsInfo.class);
+        }
+        
+        public Object doUnmarshal(Object result,
+                HierarchicalStreamReader reader, UnmarshallingContext context) {
+            SettingsInfoImpl obj = (SettingsInfoImpl) super.doUnmarshal(result, reader, context);
+            if(obj.getMetadata() == null){
+                obj.setMetadata(new MetadataMap());
+            }
+            if(obj.getContact() == null){
+                obj.setContact(new ContactInfoImpl());
+            }
+            if(obj.getClientProperties() == null){
+                obj.setClientProperties(new HashMap<Object, Object>());
+            }
+            return obj;
+        }
     }
 }
