@@ -18,6 +18,9 @@ import org.geotools.util.Utilities;
  */
 public class VirtualCoverage implements Serializable {
 
+    /** serialVersionUID */
+    private static final long serialVersionUID = 5504720319141832424L;
+
     @Override
     public String toString() {
         StringBuilder output = new StringBuilder("VirtualCoverage name=").append(name);
@@ -31,12 +34,45 @@ public class VirtualCoverage implements Serializable {
 
     public static final String BAND_SEPARATOR = "@";
 
+    /**
+     * Composition Type, used to specify how output bands should be composed.
+     * 
+     * BAND_SELECT: The output band is simply a band selected from the input bands.
+     * FORMULA: The output band is computed by applying a formula on the input selected band(s).
+     * As an instance, the output band could be defined like this:
+     * Speed = SQRT(SELECTED_BAND_1^2 + SELECTED_BAND_2^2)
+     *
+     */
     public static enum CompositionType {
-        BAND_SELECT /* , MATH */;
+
+        BAND_SELECT {
+            @Override
+            public String displayValue() {
+                return BAND_SELECTION_STRING;
+            }
+
+        },
+
+        FORMULA {
+            @Override
+            public String displayValue() {
+                return FORMULA_STRING;
+            }
+
+        };
 
         public static CompositionType getDefault() {
             return BAND_SELECT;
         }
+
+        public abstract String displayValue();
+
+        public String toValue() {
+            return this.toString();
+        }
+
+        final static String BAND_SELECTION_STRING = "Band Selection";
+        final static String FORMULA_STRING = "Formula";
     }
 
     /**

@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
 import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.markup.html.form.ChoiceRenderer;
 import org.apache.wicket.markup.html.form.DropDownChoice;
@@ -36,69 +37,81 @@ public class VirtualCoverageEditor extends FormComponentPanel {
     IModel coverages;
     IModel outputBands;
     List<String> availableCoverages; 
-    List<VirtualCoverageBand> currentCoverages;
-    ListMultipleChoice coveragesChoice;
+    List<VirtualCoverageBand> currentOutputBands;
+    ListMultipleChoice<String> coveragesChoice;
     CompositionType compositionType;
-    
-//    List<VirtualCoverageBand> outputBands = new ArrayList<VirtualCoverageBand>(); 
-    ListMultipleChoice outputBandsChoice;
+
+    ListMultipleChoice<VirtualCoverageBand> outputBandsChoice;
 
     TextField definition;
     DropDownChoice<CompositionType> compositionChoice;
 
-    
     /**
-     * Creates a new  editor. 
+     * Creates a new editor.
+     * 
      * @param id
      * @param The module should return a non null collection of strings.
      */
-    public VirtualCoverageEditor(String id, final IModel inputCoverages, final IModel bands, List<String> availableCoverages) {
+    public VirtualCoverageEditor(String id, final IModel inputCoverages, final IModel bands,
+            List<String> availableCoverages) {
         super(id, inputCoverages);
         this.coverages = inputCoverages;
         this.outputBands = bands;
-        
+
         this.availableCoverages = availableCoverages;
-//        coveragesChoice = new ListMultipleChoice("coveragesChoice",
-////              new Model(),
-//              new Model((ArrayList<String>) selectedCoverages), 
-////              new PropertyModel(this, "selectedCoverages"),
-//              availableCoverages);
-        
-        
-        coveragesChoice = new ListMultipleChoice("coveragesChoice",  new Model(), 
-                new ArrayList((List) coverages.getObject()), new ChoiceRenderer<String>() {
-            @Override
-            public Object getDisplayValue(String kw) {
-                return kw;
-            }
-    });
+
+        coveragesChoice = new ListMultipleChoice<String>("coveragesChoice", new Model(),
+                new ArrayList<String>((List<String>) coverages.getObject()),
+                new ChoiceRenderer<String>() {
+                    @Override
+                    public Object getDisplayValue(String coverage) {
+                        return coverage;
+                    }
+                });
         coveragesChoice.setOutputMarkupId(true);
         add(coveragesChoice);
 
         new ArrayList<VirtualCoverageBand>();
-        outputBandsChoice= new ListMultipleChoice("outputBandsChoice", new Model(),
-                new ArrayList((List) outputBands.getObject()), new ChoiceRenderer<VirtualCoverageBand>() {
+        outputBandsChoice = new ListMultipleChoice<VirtualCoverageBand>("outputBandsChoice",
+                new Model(), new ArrayList<VirtualCoverageBand>(
+                        (List<VirtualCoverageBand>) outputBands.getObject()),
+                new ChoiceRenderer<VirtualCoverageBand>() {
                     @Override
                     public Object getDisplayValue(VirtualCoverageBand vcb) {
                         return vcb.getDefinition();
                     }
-            });
+                });
         outputBandsChoice.setOutputMarkupId(true);
         add(outputBandsChoice);
 
-        currentCoverages = new ArrayList<VirtualCoverageBand>(outputBandsChoice.getChoices());
-        
+        currentOutputBands = new ArrayList<VirtualCoverageBand>(outputBandsChoice.getChoices());
+
         add(addBandButton());
         definition = new TextField("definition", new Model());
         definition.setOutputMarkupId(true);
+
+        // TODO: make this parametric on the CompositionType choice
         definition.setEnabled(false);
         add(definition);
         compositionType = CompositionType.getDefault();
-        compositionChoice = new DropDownChoice("compositionType", 
-                new PropertyModel(this, "compositionType" ),
-                Arrays.asList(CompositionType.values()), new CompositionTypeRenderer());
-                
+        compositionChoice = new DropDownChoice("compositionType", new PropertyModel(this,
+                "compositionType"),
+        // Arrays.asList(CompositionType.values()),
+                // Replace the belove line with the above one to support Formula too:
+                Arrays.asList(CompositionType.BAND_SELECT), new CompositionTypeRenderer());
+
         compositionChoice.setOutputMarkupId(true);
+        compositionChoice.add(new AjaxFormComponentUpdatingBehavior("onchange") {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void onUpdate(AjaxRequestTarget target) {
+                compositionType = compositionChoice.getModelObject();
+                definition.setEnabled(compositionType != CompositionType.BAND_SELECT);
+                target.addComponent(definition);
+            }
+        });
+
         add(compositionChoice);
         add(addRemoveAllButton());
         add(addRemoveButton());
@@ -106,15 +119,15 @@ public class VirtualCoverageEditor extends FormComponentPanel {
 
     private AjaxButton addBandButton() {
         AjaxButton button = new AjaxButton("addBand") {
-            
+
             @Override
             public void onSubmit(AjaxRequestTarget target, Form form) {
-                List selection = (List) coveragesChoice.getModelObject();
-                List coverages = coveragesChoice.getChoices();
-                List outputBands = new ArrayList();
-                int i = (outputBands != null && !outputBands.isEmpty()) ? outputBands.size() -1 : 0;
-                for (Iterator it = selection.iterator(); it.hasNext();) {
-                    String coverage = (String) it.next();
+                List<String> selection = (List<String>) coveragesChoice.getModelObject();
+                compositionType = compositionChoice.getModelObject();
+                List<VirtualCoverageBand> bandsList = new ArrayList<VirtualCoverageBand>();
+                int i = (bandsList != null && !bandsList.isEmpty()) ? bandsList.size() - 1 : 0;
+                for (Iterator<String> it = selection.iterator(); it.hasNext();) {
+                    String coverage = it.next();
 
                     final int bandIndexChar = coverage.indexOf(VirtualCoverage.BAND_SEPARATOR);
                     String coverageName = coverage;
@@ -125,12 +138,12 @@ public class VirtualCoverageEditor extends FormComponentPanel {
                     }
                     VirtualCoverageBand band = new VirtualCoverageBand(
                             Collections.singletonList(new InputCoverageBand(coverageName, bandIndex)),
-                            coverageName, i++, CompositionType.BAND_SELECT);
-                    outputBands.add(band);
+                            coverageName, i++, compositionType);
+                    bandsList.add(band);
 
                 }
-                currentCoverages.addAll(outputBands);
-                outputBandsChoice.setChoices(currentCoverages);
+                currentOutputBands.addAll(bandsList);
+                outputBandsChoice.setChoices(currentOutputBands);
                 outputBandsChoice.modelChanged();
                 coveragesChoice.setChoices(availableCoverages);
                 coveragesChoice.modelChanged();
@@ -140,26 +153,25 @@ public class VirtualCoverageEditor extends FormComponentPanel {
                 target.addComponent(outputBandsChoice);
             }
         };
-        // button.setDefaultFormProcessing(false);
         return button;
     }
-    
+
     private AjaxButton addRemoveAllButton() {
         AjaxButton button = new AjaxButton("removeAllBands") {
-            
+
             @Override
             public void onSubmit(AjaxRequestTarget target, Form form) {
-                List outputBands = (List) outputBandsChoice.getModelObject();
+                List<VirtualCoverageBand> outputBands = (List<VirtualCoverageBand>) outputBandsChoice
+                        .getModelObject();
                 outputBands.clear();
-                currentCoverages.clear();
-                outputBandsChoice.setChoices(currentCoverages);
+                currentOutputBands.clear();
+                outputBandsChoice.setChoices(currentOutputBands);
                 outputBandsChoice.modelChanged();
 
                 // TODO: Reset choice
                 target.addComponent(outputBandsChoice);
             }
         };
-        // button.setDefaultFormProcessing(false);
         return button;
     }
 
@@ -169,54 +181,35 @@ public class VirtualCoverageEditor extends FormComponentPanel {
             @Override
             public void onSubmit(AjaxRequestTarget target, Form form) {
 
-                List removedBands = (List) outputBandsChoice.getModel().getObject();
+                List<VirtualCoverageBand> removedBands = (List<VirtualCoverageBand>) outputBandsChoice
+                        .getModel().getObject();
 
                 for (Object band : removedBands) {
-                    currentCoverages.remove(band);
+                    currentOutputBands.remove(band);
                 }
 
-                outputBandsChoice.setChoices(currentCoverages);
+                outputBandsChoice.setChoices(currentOutputBands);
                 outputBandsChoice.modelChanged();
 
                 // TODO: Reset choice
                 target.addComponent(outputBandsChoice);
             }
         };
-        // button.setDefaultFormProcessing(false);
         return button;
     }
-    
-//    @Override
-//    protected void onBeforeRender() {
-//        super.onBeforeRender();
-//        updateFields();
-//    }
-//
-//    private void updateFields() {
-//        coveragesChoice.setChoices(coverages);
-//        outputBandsChoice.setChoices(outputBands);
-//    }
-//    
-//    @Override
-//    protected void convertInput() {
-//        setConvertedInput(coveragesChoice.getChoices());
-//    }
-    private class CompositionTypeRenderer implements  IChoiceRenderer {
+
+    private class CompositionTypeRenderer implements IChoiceRenderer {
 
         public CompositionTypeRenderer() {
         }
 
         public Object getDisplayValue(Object object) {
-            return object.toString();
+            return ((CompositionType) object).displayValue();
         }
 
-        public String getIdValue(Object object, int index ) {
-            return object.toString();
+        public String getIdValue(Object object, int index) {
+            return ((CompositionType) object).toValue();
         }
     }
-    
-//    public List<VirtualCoverageBand> getOutputBands() {
-//        return outputBands;
-//    }
 
 }

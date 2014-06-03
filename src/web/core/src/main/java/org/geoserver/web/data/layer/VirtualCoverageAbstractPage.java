@@ -158,8 +158,9 @@ public abstract class VirtualCoverageAbstractPage extends GeoServerSecuredPage {
     protected VirtualCoverage buildVirtualCoverage() throws IOException {
         // TODO: ADD HINTS
         VirtualCoverage virtualCoverage = new VirtualCoverage(name,
-                (List<VirtualCoverageBand>) ((FormComponent) coverageEditor
-                        .get("outputBandsChoice")).getModelObject() /* outpugetOutputBands() */);
+                coverageEditor.currentOutputBands);
+//                (List<VirtualCoverageBand>) ((FormComponent) coverageEditor
+//                        .get("outputBandsChoice")).getModelObject() /* outpugetOutputBands() */);
         return virtualCoverage;
     }
 
