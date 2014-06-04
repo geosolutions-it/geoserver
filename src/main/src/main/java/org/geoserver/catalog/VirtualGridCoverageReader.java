@@ -4,10 +4,12 @@
  */
 package org.geoserver.catalog;
 
+import java.awt.Rectangle;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -31,7 +33,6 @@ import org.geotools.factory.Hints;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.referencing.CRS;
 import org.opengis.coverage.SampleDimension;
-import org.opengis.coverage.grid.GridCoverageReader;
 import org.opengis.coverage.grid.GridEnvelope;
 import org.opengis.coverage.processing.Operation;
 import org.opengis.parameter.GeneralParameterValue;
@@ -63,7 +64,7 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             BANDMERGE = PROCESSOR.getOperation("BandMergeOp");
         } catch (Exception e) {
             if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.warning("BandMerge operation unavailable, VirtualCoverage #bands will be limited to 2 elements due to: "
+                LOGGER.warning("MultiInputs BandMerge operation unavailable. Band Merge will be made through standard JAI BandMerge operations:\n "
                         + e.getLocalizedMessage());
             }
             BANDMERGE = null;
@@ -107,29 +108,53 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
             CoordinateReferenceSystem crs = reader.getCoordinateReferenceSystem();
             String[] metadataNames = reader.getMetadataNames();
             Set<ParameterDescriptor<List>> dynamicParameters = reader.getDynamicParameters();
+
+            // Checking envelope equality
             if (!envelope.equals(this.envelope, DELTA, true)) {
                 throw new IllegalArgumentException("The coverage envelope must be the same");
             }
 
-            //TODO: Improve these checks
+            // Checking gridRange equality
+            final Rectangle thisRectangle = new Rectangle(this.gridRange.getLow(0), this.gridRange.getLow(1), this.gridRange.getSpan(0), this.gridRange.getSpan(1));
+            final Rectangle thatRectangle = new Rectangle(gridRange.getLow(0), gridRange.getLow(1), gridRange.getSpan(0), gridRange.getSpan(1));
+            if (!thisRectangle.equals(thatRectangle)) {
+                throw new IllegalArgumentException("The coverage gridRange should be the same");
+            }
+
+            // Checking dimensions
             if (metadataNames.length != this.metadataNames.length) {
                 throw new IllegalArgumentException("The coverage metadataNames should have the same size");
             } 
 
+            final Set<String> metadataSet = new HashSet<String>(Arrays.asList(metadataNames));
+            for (String metadataName: this.metadataNames) {
+                if (!metadataSet.contains(metadataName)) {
+                    throw new IllegalArgumentException("The coverage metadata are different");
+                }
+            }
+
+            // TODO: Add check for dynamic parameters
+            
+            // Checking CRS
             MathTransform destinationToSourceTransform = null;
-            if (!CRS.equalsIgnoreMetadata(crs, this.crs))
+            if (!CRS.equalsIgnoreMetadata(crs, this.crs)) {
                 try {
                     destinationToSourceTransform = CRS.findMathTransform(crs, this.crs, true);
                 } catch (FactoryException e) {
                     throw new DataSourceException("Unable to inspect request CRS", e);
                 }
+            }
+
             // now transform the requested envelope to source crs
             if (destinationToSourceTransform != null && !destinationToSourceTransform.isIdentity()) {
                 throw new IllegalArgumentException("The coverage coordinateReferenceSystem should be the same");
             }
+
+            // Checking data type
             if (layout.getSampleModel(null).getDataType() != this.layout.getSampleModel(null).getDataType()) {
                 throw new IllegalArgumentException("The coverage dataType should be the same");
             }
+
         }
     }
 
@@ -181,12 +206,12 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
     }
 
     /** The VirtualCoverage containing definition */
-    private VirtualCoverage virtualCoverage;
+    VirtualCoverage virtualCoverage;
 
     /** The name of the reference coverage, we can remove/revisit it once we relax some constraint */
-    private String referenceName;
+    String referenceName;
 
-    private GridCoverage2DReader delegate;
+    GridCoverage2DReader delegate;
 
     private Hints hints;
 
@@ -277,7 +302,12 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
                 image = merge.getRenderedImage();
 
             } else {
-                image = BandMergeDescriptor.create(sampleCoverage.getRenderedImage(), coverages.get(1).getRenderedImage(), null);
+                final int coveragesSize = coverages.size();
+                image = sampleCoverage.getRenderedImage();
+                for (int i = 1; i < coveragesSize; i++) {
+                    image = BandMergeDescriptor.create(image, coverages.get(i).getRenderedImage(),
+                            hints);
+                }
             }
         } else {
             image = sampleCoverage.getRenderedImage();
@@ -315,7 +345,8 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
      * @param coverageName
      */
     protected void checkCoverageName(String coverageName) {
-        // It's virtual...
+        // It's virtual... the specified coverageName can be none of the 
+        // underlying reader's coverage names. 
 
     }
 
@@ -345,7 +376,7 @@ public class VirtualGridCoverageReader extends SingleGridCoverage2DReader {
      */
     public static GridCoverage2DReader wrap(GridCoverage2DReader reader,
             VirtualCoverage virtualCoverage, CoverageInfo coverageInfo, Hints hints) {
-        return new VirtualGridCoverageReader((GridCoverage2DReader) reader, virtualCoverage,
+            return new VirtualGridCoverageReader((GridCoverage2DReader) reader, virtualCoverage,
                 coverageInfo, hints);
     }
 }
