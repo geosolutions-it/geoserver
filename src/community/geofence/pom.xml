@@ -17,7 +17,7 @@
     <name>GeoFence security integration</name>
 
     <properties>
-        <gf.version>2.2-SNAPSHOT</gf.version>
+        <gf.version>2.6-SNAPSHOT</gf.version>
     </properties>
 
     <dependencies>
