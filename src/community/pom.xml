@@ -146,6 +146,7 @@
       <id>communityRelease</id>
       <modules>
         <module>authkey</module>
+		<module>geofence</module>
         <module>dds</module>
         <module>release</module>
         <module>ftp</module>
