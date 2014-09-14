@@ -29,6 +29,7 @@ import javax.media.jai.PlanarImage;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.wps.WPSException;
+import org.geoserver.wps.gs.GeoServerProcess;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;
@@ -40,7 +41,6 @@ import org.geotools.filter.text.ecql.ECQL;
 import org.geotools.process.factory.DescribeParameter;
 import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
-import org.geotools.process.gs.GSProcess;
 import org.jaitools.imageutils.ImageLayout2;
 import org.opengis.filter.Filter;
 import org.opengis.filter.expression.Expression;
@@ -55,9 +55,8 @@ import com.vividsolutions.jts.geom.Geometry;
  * @author Simone Giannecchini, GeoSolutions SAS
  * @author Andrea Aime, GeoSolutions SAS
  */
-@SuppressWarnings("deprecation")
 @DescribeProcess(title = "FilterRasterAlgebra", description = "Compute the operations specified by the filter provided on the coverages mentioned in it")
-public class FilterRasterAlgebraProcess implements GSProcess {
+public class FilterRasterAlgebraProcess implements GeoServerProcess {
 
 private Catalog catalog;
 

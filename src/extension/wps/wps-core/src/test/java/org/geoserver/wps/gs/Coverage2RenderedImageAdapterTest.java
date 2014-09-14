@@ -1,5 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
+/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -100,15 +99,6 @@ public class Coverage2RenderedImageAdapterTest extends WPSTestSupport {
                 null, new Color[][]{colors}, null);
     }
 
-    private static void view(RenderedImage ri, GridGeometry2D gg, GridSampleDimension[] gsd) {
-        final GridCoverageFactory factory = CoverageFactoryFinder.getGridCoverageFactory(null);
-
-        GridCoverage2D rendered = factory.create("Merged coverage", ri,
-                gg, gsd, null, null);
-
-        rendered.view(ViewType.RENDERED).show();
-    }
-
     @Test
     public void testSame() throws InterruptedException {
         GridCoverage2D src = createTestCoverage(500, 500, 0,0, 10,10);
@@ -127,15 +117,6 @@ public class Coverage2RenderedImageAdapterTest extends WPSTestSupport {
         pdst = cria.mapSourcePoint(psrc, 0);
         assertNull(pdst);
 
-//        src.view(ViewType.RENDERED).show();
-//        dst.view(ViewType.RENDERED).show();
-////        new Viewer(src.view(ViewType.RENDERED).getRenderedImage());
-//        new Viewer(getName(), cria);
-
-//        view(cria, dst.getGridGeometry(), src.getSampleDimensions());
-
-//        Viewer.show(src);
-//        Thread.sleep(15000);
     }
 
     @Test
@@ -157,10 +138,7 @@ public class Coverage2RenderedImageAdapterTest extends WPSTestSupport {
         pdst = cria.mapSourcePoint(psrc, 0);
         assertNull(pdst);
 
-//        src.view(ViewType.RENDERED).show();
-//        dst.view(ViewType.RENDERED).show();
-//        new Viewer(getName(), cria);
-//        Thread.sleep(15000);
+
     }
 
     /**
@@ -172,7 +150,6 @@ public class Coverage2RenderedImageAdapterTest extends WPSTestSupport {
         GridCoverage2D src = createTestCoverage(500,500, 0,0 ,10,10);
         GridCoverage2D dst = createTestCoverage(500,500, 0,0 ,5,5);
 
-//        double nodata[] = src.getSampleDimension(0).getNoDataValues();
 
         GridCoverage2DRIA cria = GridCoverage2DRIA.create(dst, src, NODATA);
 
@@ -187,12 +164,7 @@ public class Coverage2RenderedImageAdapterTest extends WPSTestSupport {
         pdst = cria.mapSourcePoint(psrc, 0);
         assertEquals(10d, pdst.getX());
         assertEquals(250d + 15d, pdst.getY());
-        // System.out.println(pdst);
 
-//        src.view(ViewType.RENDERED).show();
-//        dst.view(ViewType.RENDERED).show();
-//        new Viewer(getName(), cria);
-//        Thread.sleep(15000);
     }
 
     /**
@@ -221,10 +193,6 @@ public class Coverage2RenderedImageAdapterTest extends WPSTestSupport {
         double val = cria.getData().getSampleFloat(0, 0, 0);
         assertEquals("Value should be noData", NODATA, val);
 
-//        src.view(ViewType.RENDERED).show();
-//        dst.view(ViewType.RENDERED).show();
-//        new Viewer(getName(), cria);
-//        Thread.sleep(20000);
     }
 
 

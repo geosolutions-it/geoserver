@@ -209,7 +209,9 @@
     <bean id="rasterAlgebra" class="org.geoserver.wps.gs.rasteralgebra.FilterRasterAlgebraProcess">
       <constructor-arg index="0" ref="catalog"/>
     </bean>
-    
+    <bean id="jiffle" class="org.geoserver.wps.gs.rasteralgebra.JiffleProcess">
+      <constructor-arg index="0" ref="catalog"/>
+    </bean>    
     <!--
     Factory for deprecated processes 
     -->
