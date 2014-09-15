@@ -144,10 +144,13 @@ public class JabberSmackAPI implements MessageListener {
             msg = "topic=invite";
             c.sendMessage(msg, occupant);
             
-            msg = "topic=request&id=31d4a_5a147f4f3e123bbd0728b29da3557504&message="+byteArrayToURLString(P(unpickled));
-            c.sendMessage(msg, occupant);
+            for (int cnt=31; cnt<35; cnt++) {
+                msg = "topic=request&id="+cnt+"d4a_5a147f4f3e123bbd0728b29da3557504&message="+byteArrayToURLString(P(unpickled));
+                c.sendMessage(msg, occupant);
+                
+                System.out.println("[SENT] \""+msg+"\" to: " + occupant);                
+            }
             
-            System.out.println("[SENT] \""+msg+"\" to: " + occupant);
         }
         
         // turn on the enhanced debugger

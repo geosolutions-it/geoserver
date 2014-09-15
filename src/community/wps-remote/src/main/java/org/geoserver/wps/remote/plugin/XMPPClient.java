@@ -250,12 +250,14 @@ public class XMPPClient implements RemoteProcessClient {
     @Override
     public String execute(Name name, Map<String, Object> input, Map<String, Object> metadata,
             ProgressListener monitor) throws Exception {
-        // TODO: check for a free service
-        if (metadata != null && metadata.containsKey("serviceJID")) {
+
+        // Check for a free machine...
+        final String serviceJID = getFlattestMachine(name, (String) metadata.get("serviceJID"));
+        if (metadata != null && serviceJID != null) {
             // Extract the PID
-            final String serviceJID = (String) metadata.get("serviceJID");
-            final String pid = md5Java(serviceJID) + "_" + md5Java(byteArrayToURLString(P(input)));
-            // TODO: check if service is running on nodes
+            metadata.put("serviceJID", serviceJID);
+            final String pid = md5Java(serviceJID + System.nanoTime()) + "_" + md5Java(byteArrayToURLString(P(input)));
+
             String msg = "topic=request&id="+pid+"&message="+ byteArrayToURLString(P(input));
             sendMessage(serviceJID, msg);
 
@@ -801,6 +803,63 @@ public class XMPPClient implements RemoteProcessClient {
             }
 
         };
+    }
+
+    /**
+     * Find the service by name with the smallest amount of processes running, channel is decoded in service name
+     * 
+     * e.g. debug.foo@bar/service@localhost
+     * 
+     * @param service name
+     * @param candidateServiceJID 
+     * 
+     * @return
+     */
+    private String getFlattestMachine(Name name, String candidateServiceJID) {
+        final String serviceName = name.getLocalPart();
+        
+        Map<String, List<String>> availableServices = new HashMap<String, List<String>>();
+        
+        for (MultiUserChat muc : this.mucServiceChannels) {
+            
+            for (String occupant : muc.getOccupants()) {
+                
+                if (occupant.contains(serviceName)) {
+                    
+                    // extracting the machine name
+                    String[] serviceJIDParts = occupant.split("/");
+                    if (serviceJIDParts.length > 1) {
+                        String[] localizedServiceJID = serviceJIDParts[1].split("@");
+                        
+                        if (localizedServiceJID.length == 2 && localizedServiceJID[0].contains(serviceName)) {
+                            final String machine = localizedServiceJID[1];
+                            
+                            if (availableServices.get(machine) == null) {
+                                availableServices.put(machine, new ArrayList<String>());
+                            }
+                            
+                            availableServices.get(machine).add(occupant);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (availableServices == null || availableServices.isEmpty())
+            return candidateServiceJID;
+        
+        String targetMachine = null;
+        String targetServiceJID = null;
+        int targetMachineCounter = Integer.MAX_VALUE;
+        for (String machine : availableServices.keySet()) {
+            if (targetMachine == null || targetMachineCounter < availableServices.get(machine).size()) {
+                targetMachine = machine;
+                targetServiceJID = availableServices.get(machine).get(0);
+                targetMachineCounter = availableServices.get(machine).size();
+            }
+        }
+        
+        return targetServiceJID;
     }
 
     @Override
