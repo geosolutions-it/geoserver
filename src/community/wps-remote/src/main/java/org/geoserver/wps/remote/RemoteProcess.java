@@ -6,6 +6,7 @@
 package org.geoserver.wps.remote;
 
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.geotools.data.Parameter;
 import org.geotools.process.Process;
@@ -20,6 +21,8 @@ import org.opengis.util.ProgressListener;
  */
 public class RemoteProcess implements Process, RemoteProcessClientListener {
 
+    private static final long SLEEP_TIME = 100;
+
     private Name name;
 
     private RemoteProcessClient remoteClient;
@@ -33,6 +36,8 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
     private String pid;
 
     private ProgressListener listener;
+    
+    private Exception exception;
     
     /**
      * Constructs a new stup for the Remote Process Execution
@@ -57,12 +62,10 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             running = pid != null;
             if (running) {
                 remoteClient.registerListener(this);
-                while (running && outputs == null) {
-                    Thread.sleep(100);
+                while (running && outputs == null && exception == null && !listener.isCanceled()) {
+                    Thread.sleep(SLEEP_TIME);
                 }
             }
-
-            return outputs;
         } catch (Exception e) {
             monitor.exceptionOccurred(e);
             throw new ProcessException(e);
@@ -70,6 +73,11 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             remoteClient.deregisterListener(this);
         }
 
+        if (exception != null) {
+            throw new ProcessException(exception);
+        }
+        
+        return outputs;
     }
 
     /**
@@ -104,14 +112,12 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
     public void registerService(Name name, String title, String description,
             Map<String, Parameter<?>> paramInfo, Map<String, Parameter<?>> outputInfo,
             Map<String, Object> metadata) {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     public void deregisterService(Name name) {
-        // TODO Auto-generated method stub
-
+        listener.setCanceled(true);
+        running = false;
     }
 
     @Override
@@ -132,8 +138,26 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
 
     @Override
     public void exceptionOccurred(final String pId, Exception cause, Map<String, Object> metadata) {
-        // TODO Auto-generated method stub
-
+        if (pId != null && pId.equals(pid)) {
+            listener.exceptionOccurred(cause);
+            exception = cause;
+            running = false;
+        } else if (metadata != null) {
+            boolean metadataIsEqual = true;
+            
+            for (Entry<String, Object> entry : metadata.entrySet()) {
+                if (!this.metadata.containsKey(entry.getKey()) || this.metadata.get(entry.getKey()) != entry.getValue()) {
+                    metadataIsEqual = false;
+                    break;
+                }
+            }
+            
+            if (metadataIsEqual) {
+                listener.exceptionOccurred(cause);
+                exception = cause;
+                running = false;
+            }
+        }
     }
 
 }

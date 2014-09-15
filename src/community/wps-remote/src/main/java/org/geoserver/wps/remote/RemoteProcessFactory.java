@@ -170,7 +170,7 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessClient
         if ( checkName(name) ) {
             names.remove(name);
             descriptors.remove(name);
-            RemoteProcess process = remoteInstances.get(name);
+            remoteInstances.remove(name);
             System.out.println("Deregistered Service [" + name + "]");
         }
     }

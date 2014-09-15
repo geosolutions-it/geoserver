@@ -247,6 +247,24 @@ public class XMPPClient implements RemoteProcessClient {
         }
     }
 
+    @Override
+    public String execute(Name name, Map<String, Object> input, Map<String, Object> metadata,
+            ProgressListener monitor) throws Exception {
+        // TODO: check for a free service
+        if (metadata != null && metadata.containsKey("serviceJID")) {
+            // Extract the PID
+            final String serviceJID = (String) metadata.get("serviceJID");
+            final String pid = md5Java(serviceJID) + "_" + md5Java(byteArrayToURLString(P(input)));
+            // TODO: check if service is running on nodes
+            String msg = "topic=request&id="+pid+"&message="+ byteArrayToURLString(P(input));
+            sendMessage(serviceJID, msg);
+
+            return pid;
+        }
+
+        return null;
+    }
+    
     /*
      * Add features to our XMPP client We do support Data forms, XHTML-IM, Service Discovery
      */
@@ -407,7 +425,7 @@ public class XMPPClient implements RemoteProcessClient {
                             }
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.WARNING, e.getMessage(), e);
                     }
                 } else if (packet instanceof Message) {
                     Message message = (Message) packet;
@@ -481,11 +499,11 @@ public class XMPPClient implements RemoteProcessClient {
                                                             Text.text(paramName),
                                                             Text.text((String) paramType
                                                                     .get("description")),
-                                                            paramType.get("min") != null
-                                                                    && (Integer) paramType
+                                                            paramType.get("min") == null
+                                                                    || (Integer) paramType
                                                                             .get("min") > 0,
                                                             paramType.get("min") != null ? (Integer) paramType
-                                                                    .get("min") : 0,
+                                                                    .get("min") : 1,
                                                             paramType.get("max") != null ? (Integer) paramType
                                                                     .get("max") : -1, paramType
                                                                     .get("default"), null));
@@ -516,11 +534,11 @@ public class XMPPClient implements RemoteProcessClient {
                                                             Text.text(paramName),
                                                             Text.text((String) paramType
                                                                     .get("description")),
-                                                            paramType.get("min") != null
-                                                                    && (Integer) paramType
+                                                            paramType.get("min") == null
+                                                                    || (Integer) paramType
                                                                             .get("min") > 0,
                                                             paramType.get("min") != null ? (Integer) paramType
-                                                                    .get("min") : -1,
+                                                                    .get("min") : 1,
                                                             paramType.get("max") != null ? (Integer) paramType
                                                                     .get("max") : 0, paramType
                                                                     .get("default"), null));
@@ -535,7 +553,18 @@ public class XMPPClient implements RemoteProcessClient {
                                                 outputs, metadata);
                                     }
                                 } catch (Exception e) {
-                                    LOGGER.log(Level.WARNING, e.getMessage(), e);
+                                    LOGGER.log(Level.SEVERE, e.getMessage(), e);
+                                    
+                                    // NOTIFY LISTENERS
+                                    for (RemoteProcessClientListener listener : listeners) {
+                                        
+                                        Map<String, Object> metadata = new HashMap<String, Object>();
+                                        metadata.put("serviceJID", packet.getFrom());
+                                        
+                                        final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+                                        
+                                        listener.exceptionOccurred(pID, e, metadata);
+                                    }
                                 }
                             }
                             
@@ -543,7 +572,20 @@ public class XMPPClient implements RemoteProcessClient {
                              * UNREGISTER Signal
                              */
                             if (signalArgs.get("topic").equals("unregister")) {
-                                handleMemberLeave(packet);
+                                try {
+                                    handleMemberLeave(packet);
+                                } catch (Exception e) {
+                                    // NOTIFY LISTENERS
+                                    for (RemoteProcessClientListener listener : listeners) {
+                                        
+                                        Map<String, Object> metadata = new HashMap<String, Object>();
+                                        metadata.put("serviceJID", packet.getFrom());
+                                        
+                                        final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+                                        
+                                        listener.exceptionOccurred(pID, e, metadata);
+                                    }
+                                }
                             }
                             
                             /**
@@ -588,6 +630,31 @@ public class XMPPClient implements RemoteProcessClient {
                                 sendMessage(serviceJID, "topic=finish");
                             }
                             
+                            /**
+                             * ERROR Signal
+                             */
+                            if (signalArgs.get("topic").equals("error")) {
+                                Map<String, Object> metadata = new HashMap<String, Object>();
+                                metadata.put("serviceJID", packet.getFrom());
+                                
+                                Exception cause = null;
+                                try {
+                                    cause = new Exception(URLDecoder.decode(signalArgs.get("message"), "UTF-8"));
+                                } catch (UnsupportedEncodingException e) {
+                                    cause = e;
+                                }
+                                final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+
+                                // NOTIFY SERVICE
+                                final String serviceJID = message.getFrom();
+                                sendMessage(serviceJID, "topic=abort");
+
+                                // NOTIFY LISTENERS
+                                for (RemoteProcessClientListener listener : listeners) {
+                                    listener.exceptionOccurred(pID, cause, metadata);
+                                }
+                            }
+                            
                         }
                     }
                 }
@@ -598,7 +665,7 @@ public class XMPPClient implements RemoteProcessClient {
         connection.addPacketListener(packetListener, null);
     }
 
-    protected void sendInvitations() {
+    protected void sendInvitations() throws Exception {
         for (MultiUserChat mucServiceChannel : mucServiceChannels) {
             for (String occupant : mucServiceChannel.getOccupants()) {
                 final Name serviceName = extractServiceName(occupant);
@@ -610,7 +677,7 @@ public class XMPPClient implements RemoteProcessClient {
         }
     }
 
-    protected void handleMemberJoin(Presence p) {
+    protected void handleMemberJoin(Presence p) throws Exception {
         System.out.println("Member " + p.getFrom() + " joined the chat.");
         final Name serviceName = extractServiceName(p.getFrom());
         if (!registeredServices.contains(serviceName)) {
@@ -619,7 +686,7 @@ public class XMPPClient implements RemoteProcessClient {
         }
     }
 
-    protected void handleMemberLeave(Packet p) {
+    protected void handleMemberLeave(Packet p) throws Exception {
         System.out.println("Member " + p.getFrom() + " leaved the chat.");
         final Name serviceName = extractServiceName(p.getFrom());
         if (registeredServices.contains(serviceName)) {
@@ -634,7 +701,7 @@ public class XMPPClient implements RemoteProcessClient {
      * @param p
      * @return
      */
-    private static NameImpl extractServiceName(String person) {
+    private static NameImpl extractServiceName(String person) throws Exception {
         String occupantFlatName = null;
         if (person.lastIndexOf("@") < person.indexOf("/")) {
             occupantFlatName = person.substring(person.indexOf("/") + 1);
@@ -699,10 +766,7 @@ public class XMPPClient implements RemoteProcessClient {
                 String status = "unknown";
                 if (entry_status != null)
                     status = entry_status.toString();
-                // mView.loadUrl("javascript:navigator.xmppClient._addToRoster('" + name + "','"
-                // + user + "','" + status + "');");
             }
-            // mView.loadUrl("javascript:navigator.xmppClient._xmppClientDidUpdateRoster()");
         }
     }
 
@@ -715,9 +779,7 @@ public class XMPPClient implements RemoteProcessClient {
         RosterListener rListen = new RosterListener() {
 
             public void entriesAdded(Collection<String> arg0) {
-                // TODO Auto-generated method stub
                 for (String str : arg0) {
-                    // Send the changes to the Javascript
                 }
             }
 
@@ -867,13 +929,11 @@ public class XMPPClient implements RemoteProcessClient {
 
     @Override
     public void registerListener(RemoteProcessClientListener listener) {
-        // TODO Auto-generated method stub
         listeners.add(listener);
     }
 
     @Override
     public void deregisterListener(RemoteProcessClientListener listener) {
-        // TODO Auto-generated method stub
         listeners.remove(listener);
     }
 
@@ -973,24 +1033,6 @@ public class XMPPClient implements RemoteProcessClient {
             }
             LOGGER.log(Level.FINER, "pinger exit");
         }
-    }
-
-    @Override
-    public String execute(Name name, Map<String, Object> input, Map<String, Object> metadata,
-            ProgressListener monitor) throws Exception {
-        // TODO: check for a free service
-        if (metadata != null && metadata.containsKey("serviceJID")) {
-            // Extract the PID
-            final String serviceJID = (String) metadata.get("serviceJID");
-            final String pid = md5Java(serviceJID) + "_" + md5Java(byteArrayToURLString(P(input)));
-            // TODO: check if service is running on nodes
-            String msg = "topic=request&id="+pid+"&message="+ byteArrayToURLString(P(input));
-            sendMessage(serviceJID, msg);
-
-            return pid;
-        }
-
-        return null;
     }
 
     public void disconnect() throws NotConnectedException {
