@@ -263,17 +263,23 @@
         <module>kml2</module>
       </modules>
     </profile>
-		<profile>
-			<id>libjpeg-turbo</id>
-			<activation>
-				<property>
-					<name>all</name>
-					<value>true</value>
-				</property>
-			</activation>
-			<modules>
-				<module>libjpeg-turbo</module>
-			</modules>
-		</profile>    
+    <profile>
+        <id>libjpeg-turbo</id>
+        <activation>
+            <property>
+                <name>all</name>
+                <value>true</value>
+            </property>
+        </activation>
+        <modules>
+            <module>libjpeg-turbo</module>
+        </modules>
+    </profile>    
+    <profile>
+      <id>wps-remote</id>
+      <modules>
+        <module>wps-remote</module>
+      </modules>
+    </profile>
   </profiles>
 </project>

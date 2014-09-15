@@ -933,8 +933,8 @@
          </dependency>
       </dependencies>
     </profile>
-		<profile>
-			<id>libjpeg-turbo</id>
+    <profile>
+      <id>libjpeg-turbo</id>
       <dependencies>
         <dependency>
           <groupId>org.geoserver.community</groupId>
@@ -942,7 +942,17 @@
           <version>${project.version}</version>
         </dependency>
       </dependencies>
-		</profile>    
+    </profile>    
+    <profile>
+      <id>wps-remote</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>wps-remote</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
  </profiles>
 
 </project>
