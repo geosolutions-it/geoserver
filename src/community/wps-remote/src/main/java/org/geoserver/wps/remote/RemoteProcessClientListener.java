@@ -23,5 +23,6 @@ public abstract interface RemoteProcessClientListener {
     public void deregisterService(Name name);
 
     public void progress(final String pId, final Double progress);
+    public void complete(final String pId, final Object outputs);
     public void exceptionOccurred(final String pId, Exception cause, Map<String, Object> metadata);
 }

@@ -405,8 +405,7 @@ public class XMPPClient implements RemoteProcessClient {
                                 if (serviceChannels.contains(channel))
                                     handleMemberJoin(p);
                             }
-                        } else
-                            handleMemberLeave(p);
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -416,6 +415,7 @@ public class XMPPClient implements RemoteProcessClient {
                     Chat chat = openChat.get(origin);
                     if (chat == null)
                         setupChat(origin);
+                    
                     if (message.getBody() != null) {
                         System.out.println("ReceivedMessage('" + message.getBody() + "','" + origin
                                 + "','" + message.getPacketID() + "');");
@@ -433,6 +433,7 @@ public class XMPPClient implements RemoteProcessClient {
                         }
 
                         if (!signalArgs.isEmpty() && signalArgs.containsKey("topic")) {
+                            
                             /**
                              * REGISTER Signal
                              */
@@ -539,16 +540,54 @@ public class XMPPClient implements RemoteProcessClient {
                             }
                             
                             /**
-                             * REGISTER Signal
+                             * UNREGISTER Signal
+                             */
+                            if (signalArgs.get("topic").equals("unregister")) {
+                                handleMemberLeave(packet);
+                            }
+                            
+                            /**
+                             * PROGRESS Signal
                              */
                             if (signalArgs.get("topic").equals("progress")) {
                                 final String pID = signalArgs.get("id");
                                 final Double progress = Double.parseDouble(signalArgs.get("message"));
                                 
+                                // NOTIFY LISTENERS
                                 for (RemoteProcessClientListener listener : listeners) {
                                     listener.progress(pID, progress);
                                 }
                             }
+                            
+                            /**
+                             * COMPLETED Signal
+                             */
+                            if (signalArgs.get("topic").equals("completed")) {
+                                final String pID = signalArgs.get("id");
+                                final String type = signalArgs.get("message");
+                                
+                                // NOTIFY LISTENERS
+                                if ( "textual".equals(type) ) {
+                                    Object outputs;
+                                    try {
+                                        String serviceResultString = URLDecoder.decode(signalArgs.get("result"), "UTF-8");
+                                        JSONObject serviceResultJSON = (JSONObject) JSONSerializer.toJSON(serviceResultString);
+                                        outputs = U(P(serviceResultJSON));
+                                        for (RemoteProcessClientListener listener : listeners) {
+                                            listener.complete(pID, outputs);
+                                        }
+                                    } catch (PickleException e) {
+                                        LOGGER.log(Level.FINER, e.getMessage(), e);
+                                    } catch (IOException e) {
+                                        LOGGER.log(Level.FINER, e.getMessage(), e);
+                                    }
+                                }
+
+                                // NOTIFY SERVICE
+                                final String serviceJID = message.getFrom();
+                                sendMessage(serviceJID, "topic=finish");
+                            }
+                            
                         }
                     }
                 }
@@ -580,7 +619,7 @@ public class XMPPClient implements RemoteProcessClient {
         }
     }
 
-    protected void handleMemberLeave(Presence p) {
+    protected void handleMemberLeave(Packet p) {
         System.out.println("Member " + p.getFrom() + " leaved the chat.");
         final Name serviceName = extractServiceName(p.getFrom());
         if (registeredServices.contains(serviceName)) {

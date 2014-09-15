@@ -346,5 +346,11 @@
         <module>kmlppio</module>
       </modules>
     </profile>
-  </profiles>
+    <profile>
+      <id>wps-remote</id>
+      <modules>
+        <module>wps-remote</module>
+      </modules>
+    </profile>
+ </profiles>
 </project>

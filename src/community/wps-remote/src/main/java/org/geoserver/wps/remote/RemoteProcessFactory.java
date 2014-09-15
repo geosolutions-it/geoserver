@@ -182,9 +182,14 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessClient
     }
 
     @Override
-    public void exceptionOccurred(String executionId, Exception cause, Map<String, Object> metadata) {
+    public void complete(String pId, Object outputs) {
         // TODO Auto-generated method stub
         
     }
 
+    @Override
+    public void exceptionOccurred(String executionId, Exception cause, Map<String, Object> metadata) {
+        // TODO Auto-generated method stub
+        
+    }
 }

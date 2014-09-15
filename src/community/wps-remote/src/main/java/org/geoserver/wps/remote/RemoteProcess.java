@@ -32,7 +32,7 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
 
     private String pid;
 
-    private ProgressListener monitor;
+    private ProgressListener listener;
     
     /**
      * Constructs a new stup for the Remote Process Execution
@@ -53,11 +53,11 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
         try {
             // Generate a unique Process ID
             pid = remoteClient.execute(name, input, metadata, monitor);
-            monitor = monitor;
+            listener = monitor;
             running = pid != null;
             if (running) {
                 remoteClient.registerListener(this);
-                while (running || outputs == null) {
+                while (running && outputs == null) {
                     Thread.sleep(100);
                 }
             }
@@ -117,8 +117,17 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
     @Override
     public void progress(final String pId, final Double progress) {
         if (pId.equals(pid)) {
-            monitor.progress(progress.floatValue());
+            listener.progress(progress.floatValue());
         }
+    }
+
+    @Override
+    public void complete(String pId, Object outputs) {
+        if (pId.equals(pid)) {
+            listener.complete();
+            this.outputs = (Map<String, Object>) outputs;
+            running = false;
+        }        
     }
 
     @Override
