@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -28,7 +29,7 @@ import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.catalog.util.ReaderDimensionsAccessor;
 import org.geoserver.web.util.MetadataMapModel;
 import org.geoserver.web.wicket.ParamResourceModel;
-import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.util.logging.Logging;
 
 /**
@@ -69,7 +70,7 @@ public class ResourceDimensionsTabPanelInfo extends LayerEditTabPanel {
         if (resource instanceof CoverageInfo) {
             CoverageInfo ci = (CoverageInfo) resource;
             try {
-                AbstractGridCoverage2DReader reader = (AbstractGridCoverage2DReader) ci
+                GridCoverage2DReader reader = (GridCoverage2DReader) ci
                         .getGridCoverageReader(null, null);
                 ReaderDimensionsAccessor ra = new ReaderDimensionsAccessor(reader);
 

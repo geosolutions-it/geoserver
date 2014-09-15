@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -18,6 +19,7 @@ import org.geoserver.flow.controller.GlobalFlowController;
 import org.geoserver.flow.controller.IpFlowController;
 import org.geoserver.flow.controller.SingleIpFlowController;
 import org.geoserver.flow.controller.UserFlowController;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.security.PropertyFileWatcher;
 import org.junit.Test;
 
@@ -73,7 +75,7 @@ public class DefaultControlFlowConfigurationTest {
         Properties properties;
 
         public FixedWatcher(Properties properties) {
-            super(null);
+            super((Resource)null);
             this.properties = properties;
         }
 

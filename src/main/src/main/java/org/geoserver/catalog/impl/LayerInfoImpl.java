@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -63,6 +64,8 @@ public class LayerInfoImpl implements LayerInfo {
     transient protected Boolean advertised;
 
     protected Boolean queryable;
+
+    protected Boolean opaque;
 
     protected MetadataMap metadata = new MetadataMap();
 
@@ -342,6 +345,16 @@ public class LayerInfoImpl implements LayerInfo {
     @Override
     public boolean isQueryable() {
         return this.queryable == null? true : this.queryable.booleanValue();
+    }
+
+    @Override
+    public void setOpaque(boolean opaque) {
+        this.opaque = opaque;
+    }
+
+    @Override
+    public boolean isOpaque() {
+        return this.opaque == null? false : this.opaque.booleanValue();
     }
 
     @Override

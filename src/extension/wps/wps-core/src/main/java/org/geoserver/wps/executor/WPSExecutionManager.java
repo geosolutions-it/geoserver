@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -105,6 +106,9 @@ public class WPSExecutionManager implements ApplicationContextAware,
         final AsynchronousProcessContext context = new AsynchronousProcessContext(request,
                 executionId, inputs, processManager, applicationContext);
         contexts.put(executionId, context);
+        if(!synchronous) {
+            LOGGER.log(Level.INFO, "Submitting new asynch process " + processName.getURI() + " with execution id " + executionId);
+        }
         processManager.submit(executionId, processName, inputs, request.isAsynchronous());
         if (request.isAsynchronous()) {
             // ah, we need to store the output at the end, schedule a thread that will
@@ -287,18 +291,18 @@ public class WPSExecutionManager implements ApplicationContextAware,
             if (inner == null || inner.phase == ProcessState.COMPLETED) {
                 if (exception != null) {
                     // failed
-                    return new ExecutionStatus(request.getProcessName(), executionId, ProcessState.COMPLETED, 1f);
+                    return new ExecutionStatus(request.getProcessName(), executionId, ProcessState.COMPLETED, 100f, null);
                 } else {
                     // Still running, it's writing the output. Right now we have no way to track the
                     // output progress, so return 66% complete
                     return new ExecutionStatus(request.getProcessName(), executionId, ProcessState.RUNNING,
-                            0.66f);
+                            66f, null);
                 }
             } else {
                 // still running
                 float progress = inputs.getRetrievedInputPercentage() * inputWeight;
                 progress += inner.getProgress() * processWeight;
-                return new ExecutionStatus(request.getProcessName(), executionId, ProcessState.RUNNING, progress);
+                return new ExecutionStatus(request.getProcessName(), executionId, ProcessState.RUNNING, progress, inner.getTask());
             }
         }
 
@@ -312,7 +316,7 @@ public class WPSExecutionManager implements ApplicationContextAware,
                 // spec demands this, "If status is "false" then the Status element shall not be
                 // updated until the process either completes successfully or fails)
                 overallStatus = new ExecutionStatus(request.getProcessName(), executionId, ProcessState.QUEUED,
-                        0f);
+                        0f, null);
             }
             ExecuteResponseBuilder responseBuilder = new ExecuteResponseBuilder(request.getRequest(),
                     applicationContext, started);
@@ -332,7 +336,7 @@ public class WPSExecutionManager implements ApplicationContextAware,
                     Map<String, Object> outputs = processManager.getOutput(executionId, -1);
                     responseBuilder.setOutputs(outputs);
                 } catch (Exception exception) {
-                    LOGGER.log(Level.SEVERE, "Request failed during execution", exception);
+                    LOGGER.log(Level.SEVERE, "Request " + executionId + " failed during execution", exception);
                     responseBuilder.setException(exception);
                 }
 
@@ -374,6 +378,8 @@ public class WPSExecutionManager implements ApplicationContextAware,
                 fos.close();
                 if (!tmpOutput.renameTo(output)) {
                     LOGGER.log(Level.SEVERE, "Failed to rename " + tmpOutput + " to " + output);
+                } else {
+                    LOGGER.log(Level.FINE, "Asynch process final response written to " + output.getAbsolutePath());
                 }
             } finally {
                 IOUtils.closeQuietly(fos);

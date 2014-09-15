@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -17,10 +18,6 @@ import org.springframework.security.core.GrantedAuthority;
 public class AdminComponentAuthorizer implements ComponentAuthorizer {
 
     public boolean isAccessAllowed(Class componentClass, Authentication authentication) {
-        if (authentication == null) {
-            return false;
-        }
-
         return getSecurityManager().checkAuthenticationForAdminRole(authentication);
     }
 

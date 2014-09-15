@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -76,13 +77,14 @@ public class CoverageStoreNewPageTest extends GeoServerWicketTestSupport {
     public void testInitialModelState() {
 
         CoverageStoreNewPage page = startPage();
+        // print(page, true, true);
 
         assertNull(page.getDefaultModelObject());
 
         tester.assertModelValue("rasterStoreForm:enabledPanel:paramValue", Boolean.TRUE);
         tester.assertModelValue("rasterStoreForm:workspacePanel:border:paramValue", getCatalog()
                 .getDefaultWorkspace());
-        tester.assertModelValue("rasterStoreForm:parametersPanel:urlPanel:border:paramValue",
+        tester.assertModelValue("rasterStoreForm:parametersPanel:url",
                 "file:data/example.extension");
     }
 
@@ -96,7 +98,7 @@ public class CoverageStoreNewPageTest extends GeoServerWicketTestSupport {
         tester.assertModelValue("rasterStoreForm:enabledPanel:paramValue", Boolean.TRUE);
         tester.assertModelValue("rasterStoreForm:workspacePanel:border:paramValue", getCatalog()
                 .getDefaultWorkspace());
-        tester.assertModelValue("rasterStoreForm:parametersPanel:urlPanel:border:paramValue",
+        tester.assertModelValue("rasterStoreForm:parametersPanel:url",
                 "file:data/example.extension");
 
     }

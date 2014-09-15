@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -28,6 +29,8 @@ public class GWCConfig implements Cloneable, Serializable {
     private boolean WMTSEnabled;
 
     private boolean TMSEnabled;
+    
+    private boolean securityEnabled;
 
     /**
      * Whether to automatically cache GeoServer layers or they should be enabled explicitly
@@ -153,6 +156,14 @@ public class GWCConfig implements Cloneable, Serializable {
 
     public void setTMSEnabled(boolean tMSEnabled) {
         TMSEnabled = tMSEnabled;
+    }
+    
+    public void setSecurityEnabled(boolean securityEnabled) {
+        this.securityEnabled = securityEnabled;
+    }
+    
+    public boolean isSecurityEnabled() {
+        return securityEnabled;
     }
 
     public boolean isCacheNonDefaultStyles() {

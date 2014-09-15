@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -21,10 +22,6 @@ import com.sun.media.jai.util.SunTileCache;
  * Initializes JAI functionality from configuration.
  * 
  * @author Justin Deoliveira, The Open Planning Project
- * 
- * TODO: we should figure out if we want JAI to be core to the model or a plugin
- * ... right now it is both
- *
  */
 public class JAIInitializer implements GeoServerInitializer {
 
@@ -50,11 +47,6 @@ public class JAIInitializer implements GeoServerInitializer {
         
         JAI jaiDef = JAI.getDefaultInstance();
         jai.setJAI( jaiDef );
-        
-        // setup concurrent operation registry
-        if(!(jaiDef.getOperationRegistry() instanceof ConcurrentOperationRegistry)) {
-            jaiDef.setOperationRegistry(ConcurrentOperationRegistry.initializeRegistry());
-        }
         
         // setting JAI wide hints
         jaiDef.setRenderingHint(JAI.KEY_CACHED_TILE_RECYCLING_ENABLED, jai.isRecycling());
@@ -89,5 +81,7 @@ public class JAIInitializer implements GeoServerInitializer {
         
         // Workaround for native mosaic BUG
         Registry.setNativeAccelerationAllowed("Mosaic", jai.isAllowNativeMosaic(), jaiDef);
+        // Workaround for native Warp BUG
+        Registry.setNativeAccelerationAllowed("Warp", jai.isAllowNativeWarp(), jaiDef);
     }
 }

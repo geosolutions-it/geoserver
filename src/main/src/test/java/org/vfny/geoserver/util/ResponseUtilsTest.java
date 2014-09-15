@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -12,6 +13,7 @@ import org.geoserver.config.SettingsInfo;
 import org.geoserver.ows.ProxifyingURLMangler;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
@@ -36,12 +38,12 @@ public class ResponseUtilsTest {
         expect(appContext.getBeanNamesForType(URLMangler.class)).andReturn(new String[]{"mangler"});
         expect(appContext.getBean("mangler")).andReturn(mangler).anyTimes();
         replay(appContext);
-        new GeoServerExtensions().setApplicationContext(appContext);
+        GeoServerExtensionsHelper.init(appContext);
     }
 
     @After
     public void clearAppContext() {
-        new GeoServerExtensions().setApplicationContext(null);
+        GeoServerExtensionsHelper.init(null);
     }
 
     @Test

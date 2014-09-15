@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -39,7 +40,7 @@ import org.geoserver.wcs.test.WCSTestSupport;
 import org.geoserver.wcs.xml.v1_0_0.WcsXmlReader;
 import org.geotools.coverage.grid.GeneralGridEnvelope;
 import org.geotools.coverage.grid.GridCoverage2D;
-import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.data.DataSourceException;
 import org.geotools.gce.geotiff.GeoTiffFormat;
 import org.geotools.gce.geotiff.GeoTiffReader;
@@ -293,7 +294,7 @@ public class GetCoverageTest extends WCSTestSupport {
         assertEquals("image/tiff", response.getContentType());
         
         GeoTiffFormat format = new GeoTiffFormat();
-        AbstractGridCoverage2DReader reader = format.getReader(getBinaryInputStream(response));
+        GridCoverage2DReader reader = format.getReader(getBinaryInputStream(response));
         
         assertEquals(CRS.decode("EPSG:3857"), reader.getOriginalEnvelope().getCoordinateReferenceSystem());
     }

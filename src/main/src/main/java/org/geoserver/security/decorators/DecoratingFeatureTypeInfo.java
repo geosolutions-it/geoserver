@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -23,6 +24,7 @@ import org.geoserver.catalog.impl.AbstractDecorator;
 import org.geotools.data.FeatureSource;
 import org.geotools.factory.Hints;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.measure.Measure;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
@@ -271,4 +273,38 @@ public abstract class DecoratingFeatureTypeInfo extends AbstractDecorator<Featur
         delegate.setAdvertised(advertised);
     }
 
+    @Override
+    public List<String> getResponseSRS() {
+        return delegate.getResponseSRS();
+    }
+    
+    @Override
+    public boolean isOverridingServiceSRS() {
+        return delegate.isOverridingServiceSRS();
+    }
+    
+    @Override
+    public void setOverridingServiceSRS(boolean overridingServiceSRS) {
+        delegate.setOverridingServiceSRS(overridingServiceSRS);
+    }
+
+    @Override
+    public Measure getLinearizationTolerance() {
+        return delegate.getLinearizationTolerance();
+    }
+
+    @Override
+    public void setLinearizationTolerance(Measure tolerance) {
+        delegate.setLinearizationTolerance(tolerance);
+    }
+    
+    @Override
+    public boolean isCircularArcPresent() {
+    	return delegate.isCircularArcPresent();
+    }
+    
+    @Override
+    public void setCircularArcPresent(boolean enabled) {
+    	delegate.setCircularArcPresent(enabled);
+    }
 }

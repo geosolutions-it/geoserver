@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -23,6 +24,9 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.measure.quantity.Quantity;
+import javax.measure.unit.Unit;
+
 import org.apache.commons.collections.MultiHashMap;
 import org.geoserver.catalog.AttributeTypeInfo;
 import org.geoserver.catalog.AttributionInfo;
@@ -46,6 +50,9 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.CoverageView;
+import org.geoserver.catalog.CoverageView.InputCoverageBand;
+import org.geoserver.catalog.CoverageView.CoverageBand;
 import org.geoserver.catalog.WMSLayerInfo;
 import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
@@ -101,12 +108,14 @@ import org.geotools.jdbc.RegexpValidator;
 import org.geotools.jdbc.VirtualTable;
 import org.geotools.jdbc.VirtualTableParameter;
 import org.geotools.jdbc.VirtualTableParameter.Validator;
+import org.geotools.measure.Measure;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.referencing.crs.DefaultProjectedCRS;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.referencing.wkt.Formattable;
 import org.geotools.util.Converters;
+import org.geotools.util.MeasureConverterFactory;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.opengis.coverage.grid.GridGeometry;
@@ -145,7 +154,8 @@ import com.vividsolutions.jts.geom.Geometry;
  */
 public class XStreamPersister {
 
-    
+    private boolean unwrapNulls = true;
+   
     /**
      * Callback interface or xstream persister.
      */
@@ -270,9 +280,23 @@ public class XStreamPersister {
         init(xs);
     }
     
+    /**
+     * Sets null handling in proxy objects.
+     * Defaults to unwrap. If set to false, proxy object are not transformed to nulls.
+     * 
+     * @param unwrapNulls
+     */
+    public void setUnwrapNulls(boolean unwrapNulls) {
+        this.unwrapNulls = unwrapNulls;
+    }
+
     protected void init(XStream xs) {
         // Default implementations
         initImplementationDefaults(xs);
+        
+        // ignore unkonwn fields, this should help using data dirs that has new config elements
+        // with older versions of GeoServer
+        xs.ignoreUnknownElements();
         
         // Aliases
         xs.alias("global", GeoServerInfo.class);
@@ -291,6 +315,8 @@ public class XStreamPersister {
         xs.alias( "coverage", CoverageInfo.class);
         xs.alias( "wmsLayer", WMSLayerInfo.class);
         xs.alias( "coverageDimension", CoverageDimensionInfo.class);
+        xs.alias( "coverageBand", CoverageBand.class);
+        xs.alias( "inputCoverageBand", InputCoverageBand.class);
         xs.alias( "metadataLink", MetadataLinkInfo.class);
         xs.alias( "attribute", AttributeTypeInfo.class );
         xs.alias( "layer", LayerInfo.class);
@@ -302,7 +328,7 @@ public class XStreamPersister {
         xs.aliasField("abstract", ResourceInfoImpl.class, "_abstract" );
         xs.alias("AuthorityURL", AuthorityURLInfo.class);
         xs.alias("Identifier", LayerIdentifierInfo.class);
-        
+
         // GeoServerInfo
         xs.omitField(impl(GeoServerInfo.class), "clientProperties");
         xs.omitField(impl(GeoServerInfo.class), "geoServer");
@@ -418,11 +444,14 @@ public class XStreamPersister {
         xs.registerConverter(new ProxyCollectionConverter( xs.getMapper() ) );
         xs.registerConverter(new VirtualTableConverter());
         xs.registerConverter(new KeywordInfoConverter());
-
-        // register VirtulaTable handling
-        registerBreifMapComplexType("virtualTable", VirtualTable.class);
-        registerBreifMapComplexType("dimensionInfo", DimensionInfoImpl.class);
+        xs.registerConverter(new SettingsInfoConverter());
+        xs.registerConverter(new MeasureConverter());
         
+        // register Virtual structure handling
+        registerBreifMapComplexType("virtualTable", VirtualTable.class);
+        registerBreifMapComplexType("coverageView", CoverageView.class);
+        registerBreifMapComplexType("dimensionInfo", DimensionInfoImpl.class);
+
         callback = new Callback();
     }
     
@@ -436,7 +465,6 @@ public class XStreamPersister {
     public void registerBreifMapComplexType(String typeId, Class clazz) {
         forwardBreifMap.put(typeId, clazz);
         backwardBreifMap.put(clazz, typeId);
-        
     }
 
     public XStream getXStream() {
@@ -523,7 +551,7 @@ public class XStreamPersister {
         obj = unwrapProxies( obj );
         xs.toXML(obj, new OutputStreamWriter( out, "UTF-8" ));
     }
-    
+
     /**
      * Unwraps any proxies around the object.
      * <p>
@@ -965,7 +993,8 @@ public class XStreamPersister {
             if ( reader.hasMoreChildren() ) {
                 while(reader.hasMoreChildren()) {
                     reader.moveDown();
-                    if ("workspace".equals(reader.getNodeName())) {
+                    String nodeName = reader.getNodeName();
+                    if ("workspace".equals(nodeName)) {
                         if (reader.hasMoreChildren()) {
                             //specified as <workspace><name>[name]</name></workspace>
                             reader.moveDown();
@@ -977,10 +1006,10 @@ public class XStreamPersister {
                             pre = reader.getValue();
                         }
                     }
-                    else {
+                    else if("name".equals(nodeName) || "id".equals(nodeName) || "prefix".equals(nodeName)) {
                         ref = reader.getValue();
                     }
-
+                    
                     reader.moveUp();
                 }
             }
@@ -993,8 +1022,12 @@ public class XStreamPersister {
             if ( catalog != null ) {
                 resolved = ResolvingProxy.resolve( catalog, proxy );
             }
-            
-            return CatalogImpl.unwrap( resolved );
+            if(unwrapNulls) {
+                return CatalogImpl.unwrap( resolved );
+            } else {
+                return resolved != null ? CatalogImpl.unwrap( resolved ) : proxy;
+            }
+            //            
         }
     }
     class ReferenceCollectionConverter extends LaxCollectionConverter {
@@ -1654,6 +1687,9 @@ public class XStreamPersister {
             if ( featureType.getAttributes() == null ){
                 featureType.setAttributes(new ArrayList());
             }
+            if ( featureType.getResponseSRS() == null) {
+                featureType.setResponseSRS(new ArrayList());
+            }
             if( featureType.getMetadata() == null) {
                 featureType.setMetadata(new MetadataMap());
             }
@@ -1927,19 +1963,8 @@ public class XStreamPersister {
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
             String name = readValue("name", String.class, reader);
             String sql = readValue("sql", String.class, reader);
-            
-            // escapeSql value may be missing from existing definitions.  In this 
-            // case set it to false to prevent changing behaviour
-            boolean escapeSql;
-            try {
-                escapeSql = Boolean.valueOf(readValue("escapeSql", String.class, reader));
-            } catch (IllegalArgumentException e) {
-                escapeSql = false;
-                // the reader is now in the wrong position, it must be moved back a line
-                reader.moveUp();
-            }
                 
-            VirtualTable vt = new VirtualTable(name, sql, escapeSql);
+            VirtualTable vt = new VirtualTable(name, sql, false);
             List<String> primaryKeys = new ArrayList<String>();
             while(reader.hasMoreChildren()) {
                 reader.moveDown();
@@ -1966,6 +1991,8 @@ public class XStreamPersister {
                     }
                     
                     vt.addParameter(new VirtualTableParameter(pname, defaultValue, validator));
+                } else if(reader.getNodeName().equals("escapeSql")) {
+            		vt.setEscapeSql(Boolean.valueOf(reader.getValue()));
                 }
                 reader.moveUp();
             }
@@ -1976,15 +2003,19 @@ public class XStreamPersister {
         
         <T> T readValue(String name, Class<T> type, HierarchicalStreamReader reader) {
            if(!reader.hasMoreChildren()) {
-               throw new IllegalArgumentException("Expected element " + name + " but could not find it");
+                throw new IllegalArgumentException("Expected element " + name + " but could not find it");
            }
            reader.moveDown();
-           if(!name.equals(reader.getNodeName())) {
-               throw new IllegalArgumentException("Expected element " + name + " but found " + reader.getNodeName() + " instead");
+           try {
+               if(!name.equals(reader.getNodeName())) {
+                   throw new IllegalArgumentException("Expected element " + name + " but found " + reader.getNodeName() + " instead");
+               }
+               String value = reader.getValue();
+               return Converters.convert(value, type);
+           } finally {
+               reader.moveUp();
            }
-           String value = reader.getValue();
-           reader.moveUp();
-           return Converters.convert(value, type);
+           
         }
 
         public boolean canConvert(Class type) {
@@ -2036,6 +2067,37 @@ public class XStreamPersister {
             return sb.toString();
         }
     }
+    
+    static class MeasureConverter extends AbstractSingleValueConverter {
+
+    	org.geotools.util.Converter str2Measure = new MeasureConverterFactory().createConverter(String.class, Measure.class, null);
+    	org.geotools.util.Converter measure2Str = new MeasureConverterFactory().createConverter(Measure.class, String.class, null);
+
+    	
+        @Override
+        public boolean canConvert(Class type) {
+            return Measure.class.isAssignableFrom(type);
+        }
+
+        @Override
+        public Object fromString(String str) {
+        	try {
+				return str2Measure.convert(str, Measure.class);
+			} catch (Exception e) {
+				throw new IllegalArgumentException(e);
+			}
+        }
+
+        @Override
+        public String toString(Object obj) {
+        	try {
+				return measure2Str.convert(obj, String.class);
+			} catch (Exception e) {
+				throw new IllegalArgumentException(e);
+			}
+        }
+    }
+
 
     class KeywordListConverter extends LaxCollectionConverter {
 
@@ -2057,5 +2119,30 @@ public class XStreamPersister {
             writer.endNode();
         }
 
+    }
+    
+    /**
+     * Converter for SettingsInfo class
+     */
+    class SettingsInfoConverter extends AbstractReflectionConverter {
+        
+        public SettingsInfoConverter() {
+            super(SettingsInfo.class);
+        }
+        
+        public Object doUnmarshal(Object result,
+                HierarchicalStreamReader reader, UnmarshallingContext context) {
+            SettingsInfoImpl obj = (SettingsInfoImpl) super.doUnmarshal(result, reader, context);
+            if(obj.getMetadata() == null){
+                obj.setMetadata(new MetadataMap());
+            }
+            if(obj.getContact() == null){
+                obj.setContact(new ContactInfoImpl());
+            }
+            if(obj.getClientProperties() == null){
+                obj.setClientProperties(new HashMap<Object, Object>());
+            }
+            return obj;
+        }
     }
 }

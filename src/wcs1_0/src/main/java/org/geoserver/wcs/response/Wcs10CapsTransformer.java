@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -39,7 +40,7 @@ import org.geoserver.config.ResourceErrorHandling;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.wcs.WCSInfo;
-import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.factory.GeoTools;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.logging.Logging;
@@ -555,9 +556,10 @@ public class Wcs10CapsTransformer extends TransformerBase {
         /**
          * 
          * @param referencedEnvelope
+         * @throws IOException 
          */
         private void handleEnvelope(ReferencedEnvelope referencedEnvelope, DimensionInfo timeInfo, 
-                ReaderDimensionsAccessor dimensions) {
+                ReaderDimensionsAccessor dimensions) throws IOException {
             AttributesImpl attributes = new AttributesImpl();
 
             attributes.addAttribute("", "srsName", "srsName", "", /* "WGS84(DD)" */ "urn:ogc:def:crs:OGC:1.3:CRS84");
@@ -703,8 +705,9 @@ public class Wcs10CapsTransformer extends TransformerBase {
         /**
          * 
          * @param cv
+         * @throws IOException 
          */
-        private void handleCoverageOfferingBrief(CoverageInfo cv) {
+        private void handleCoverageOfferingBrief(CoverageInfo cv) throws IOException {
             if (cv.isEnabled()) {
                 start("wcs:CoverageOfferingBrief");
 
@@ -737,9 +740,9 @@ public class Wcs10CapsTransformer extends TransformerBase {
                     throw new WcsException("Unable to acquire coverage store resource for coverage: " + cv.getName());
                 }
                 
-                AbstractGridCoverage2DReader reader = null;
+                GridCoverage2DReader reader = null;
                 try {
-                    reader = (AbstractGridCoverage2DReader) catalog.getResourcePool().getGridCoverageReader(csinfo, GeoTools.getDefaultHints());
+                    reader = (GridCoverage2DReader) cv.getGridCoverageReader(null, GeoTools.getDefaultHints());
                 } catch (IOException e) {
                     LOGGER.severe("Unable to acquire a reader for this coverage with format: " + csinfo.getFormat().getName());
                 }

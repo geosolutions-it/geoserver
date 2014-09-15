@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -52,6 +53,8 @@ import org.geoserver.gwc.layer.GeoServerTileLayerInfo;
 import org.geoserver.gwc.layer.TileLayerInfoUtil;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.util.CaseInsensitiveMap;
+import org.geoserver.security.GeoServerSecurityManager;
+import org.geoserver.security.config.SecurityManagerConfig;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.kvp.PaletteManager;
 import org.geotools.filter.identity.FeatureIdImpl;
@@ -145,6 +148,8 @@ public class GWCTest {
 
     private DefaultStorageFinder storageFinder;
 
+    private JDBCConfigurationStorage jdbcStorage;
+
     @Before
     public void setUp() throws Exception {
         catalog = mock(Catalog.class);
@@ -177,9 +182,10 @@ public class GWCTest {
         owsDispatcher = mock(Dispatcher.class);
         
         storageFinder = mock(DefaultStorageFinder.class);
+        jdbcStorage = mock(JDBCConfigurationStorage.class);
 
         mediator = new GWC(gwcConfigPersister, storageBroker, tld, gridSetBroker, tileBreeder,
-                diskQuotaMonitor, owsDispatcher, catalog, storageFinder);
+                diskQuotaMonitor, owsDispatcher, catalog, storageFinder, jdbcStorage);
 
         GWC.set(mediator);
     }

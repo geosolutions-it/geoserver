@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -17,6 +18,7 @@ import org.geotools.process.factory.DescribeParameter;
 import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
 import org.geotools.util.SimpleInternationalString;
+import org.jdom.Text;
 import org.opengis.util.ProgressListener;
 
 @DescribeProcess(title = "Monkey", description = "Process used to test asynch calls")
@@ -86,7 +88,9 @@ public class MonkeyProcess {
                 commands.remove(id);
                 return (SimpleFeatureCollection) command.value;
             } else if (command.type == CommandType.SetProgress) {
-                listener.progress(((Number) command.value).floatValue());
+                float progress = ((Number) command.value).floatValue();
+                listener.progress(progress);
+                listener.setTask(new SimpleInternationalString("Currently at " + progress));
             } else {
                 ProcessException exception = (ProcessException) command.value;
                 listener.exceptionOccurred(exception);

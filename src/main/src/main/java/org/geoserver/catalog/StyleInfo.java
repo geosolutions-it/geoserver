@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -65,14 +66,36 @@ public interface StyleInfo extends CatalogInfo {
 
     /**
      * The sld version of the style.
+     * @deprecated use {@link #getFormatVersion()}
      */
     Version getSLDVersion();
 
     /**
      * Sets the sld version of the style.
+     * @deprecated use {@link #setFormatVersion(Version)}
      */
     void setSLDVersion(Version v);
-    
+
+    /**
+     * The styling language/format for the style, for example: "sld"
+     */
+    String getFormat();
+
+    /**
+     * Sets the styling format for the style, for example: "sld"
+     */
+    void setFormat(String format);
+
+    /**
+     * The version of the style format.
+     */
+    Version getFormatVersion();
+
+    /**
+     * Sets the version of the style format.
+     */
+    void setFormatVersion(Version version);
+
     /**
      * The name of the file the style originates from.
      */

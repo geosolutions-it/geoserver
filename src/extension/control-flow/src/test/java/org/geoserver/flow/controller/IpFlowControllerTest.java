@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -55,6 +56,8 @@ public class IpFlowControllerTest extends AbstractFlowControllerTest {
             waitTerminated(t1, MAX_WAIT);
 
             assertEquals(ThreadState.COMPLETE, t1.state);
+            // Give some time to the t2 to restart
+            Thread.sleep(100);
             assertEquals(ThreadState.PROCESSING, t2.state);
 
             t2.interrupt();
@@ -106,6 +109,8 @@ public class IpFlowControllerTest extends AbstractFlowControllerTest {
             waitTerminated(t1, MAX_WAIT);
 
             assertEquals(ThreadState.COMPLETE, t1.state);
+            // Give some time to the t2 to restart
+            Thread.sleep(100);
             assertEquals(ThreadState.PROCESSING, t2.state);
 
             t2.interrupt();
@@ -153,6 +158,8 @@ public class IpFlowControllerTest extends AbstractFlowControllerTest {
             waitTerminated(t1, MAX_WAIT);
 
             assertEquals(ThreadState.COMPLETE, t1.state);
+            // Give some time to the t2 to restart
+            Thread.sleep(100);
             assertEquals(ThreadState.PROCESSING, t2.state);
 
             t2.interrupt();

@@ -1,12 +1,11 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.test;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.fail;
-import static org.junit.Assert.assertEquals;
+import static junit.framework.Assert.*;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -42,11 +41,10 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
@@ -64,19 +62,20 @@ import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.TestHttpClientProvider;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.GeoServerLoaderProxy;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.data.test.TestData;
 import org.geoserver.logging.LoggingUtils;
 import org.geoserver.ows.util.CaseInsensitiveMap;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ContextLoadedEvent;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.security.AccessMode;
 import org.geoserver.security.GeoServerRoleService;
@@ -93,7 +92,6 @@ import org.geoserver.security.password.GeoServerDigestPasswordEncoder;
 import org.geoserver.security.password.GeoServerPBEPasswordEncoder;
 import org.geoserver.security.password.GeoServerPlainTextPasswordEncoder;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FeatureSource;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.util.logging.Log4JLoggerFactory;
 import org.geotools.util.logging.Logging;
@@ -107,7 +105,6 @@ import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.HandlerInterceptor;
-import org.vfny.geoserver.global.GeoserverDataDirectory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -182,6 +179,9 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
         LoggingUtils.configureGeoServerLogging(loader, getClass().getResourceAsStream(getLogConfiguration()), false, true, null);
 
         setUpTestData(testData);
+        
+        // put the mock http server in test mode
+        TestHttpClientProvider.startTest();
 
         // if we have data, create a mock servlet context and start up the spring configuration
         if (testData.isTestDataAvailable()) {
@@ -222,6 +222,8 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
             onTearDown(testData);
 
             destroyGeoServer();
+            
+            TestHttpClientProvider.endTest();
 
             // some tests do need a kick on the GC to fully clean up
             if(isMemoryCleanRequired()) {
@@ -245,11 +247,7 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
             applicationContext.destroy();
             
             // kill static caches
-            new GeoServerExtensions().setApplicationContext(null);
-    
-            // this cleans up the data directory static loader, if we don't the next test
-            // will keep on running on the current data dir
-            GeoserverDataDirectory.destroy();
+            GeoServerExtensionsHelper.init(null);
         } finally {
             applicationContext = null;
         }
@@ -441,7 +439,7 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
             throws IOException {
         // TODO: expand test support to DataAccess FeatureSource
         FeatureTypeInfo ft = getFeatureTypeInfo(typeName);
-        return DataUtilities.simple((FeatureSource) ft.getFeatureSource(null, null));
+        return DataUtilities.simple(ft.getFeatureSource(null, null));
     }
 
     /**
@@ -826,7 +824,7 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
         request.setQueryString(ResponseUtils.getQueryString(path));
         request.setRemoteAddr("127.0.0.1");
         request.setServletPath(ResponseUtils.makePathAbsolute( ResponseUtils.stripRemainingPath(path)) );
-        request.setPathInfo(ResponseUtils.makePathAbsolute( ResponseUtils.stripBeginningPath( path)));
+        request.setPathInfo(ResponseUtils.makePathAbsolute( ResponseUtils.stripBeginningPath( ResponseUtils.stripQueryString(path))));
         request.setHeader("Host", "localhost:8080");
         
         // deal with authentication
@@ -1154,7 +1152,22 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
             throws Exception {
         return getAsDOM(path, true);
     }
-    
+
+    /**
+     * Executes an ows request using the GET method and returns the result as an 
+     * xml document, with the ability to override the XML document encoding. 
+     * 
+     * @param path The portion of the request after the context, 
+     *   example: 'wms?request=GetMap&version=1.1.1&..."
+     * @param encoding Override for the encoding of the document.
+     * 
+     * @return A result of the request parsed into a dom.
+     * 
+     * @throws Exception
+     */
+    protected Document getAsDOM(final String path, String encoding) throws Exception {
+        return getAsDOM(path, true, encoding);
+    }
     /**
      * Executes a request using the GET method and parses the result as a json object.
      * 
@@ -1204,7 +1217,29 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
     throws Exception {
         return dom(get(path), skipDTD);
     }
-    
+
+    /**
+     * Executes an ows request using the GET method and returns the result as an xml document.
+     * 
+     * @param path
+     *                The portion of the request after the context, example:
+     *                'wms?request=GetMap&version=1.1.1&..."
+     * @param skipDTD
+     *                if true, will avoid loading and validating against the response document
+     *                schema or DTD
+     *
+     * @param encoding 
+     *                Overide for the encoding of the document.
+     * 
+     * @return A result of the request parsed into a dom.
+     * 
+     * @throws Exception
+     */
+    protected Document getAsDOM(final String path, final boolean skipDTD, String encoding)
+            throws Exception {
+        return dom(get(path), skipDTD, encoding);
+    }
+
     /**
      * Executes an ows request using the POST method with key value pairs 
      * form encoded, returning the result as a dom.
@@ -1288,8 +1323,20 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
      * @param skipDTD If true, will skip loading and validating against the associated DTD
      */
     protected Document dom(InputStream input, boolean skipDTD) throws ParserConfigurationException, SAXException, IOException {
+        return dom(input, skipDTD, null);
+    }
+
+    protected Document dom(InputStream stream, boolean skipDTD, String encoding) 
+        throws ParserConfigurationException, SAXException, IOException {
+
+        InputSource input = new InputSource(stream);
+        if (encoding != null) {
+            input.setEncoding(encoding);
+        }
+
         if(skipDTD) {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); 
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            
             factory.setNamespaceAware( true );
             factory.setValidating( false );
            
@@ -1696,6 +1743,7 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
         try {
             Transformer tx = TransformerFactory.newInstance().newTransformer();
             tx.setOutputProperty(OutputKeys.INDENT, "yes");
+            tx.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
             tx.transform(new DOMSource(document), new StreamResult(output));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -1798,7 +1846,16 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
             myBody = body.getBytes();
         }
         
-        public ServletInputStream getInputStream(){
+        
+        
+        @Override
+        public BufferedReader getReader() throws IOException {
+            if (null == myBody)
+                return null;
+            return new BufferedReader(new StringReader(new String(myBody)));
+        }
+        
+        public ServletInputStream getInputStream() {
             return new GeoServerMockServletInputStream(myBody);
         }
     }

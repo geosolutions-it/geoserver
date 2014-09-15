@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -61,7 +62,7 @@ public class ControlFlowCallback extends AbstractDispatcherCallback implements
     }
 
     public void finished(Request request) {
-        if(SENTINEL.isOutermostRequest()) {
+        if(SENTINEL.isOutermostRequest() && REQUEST_CONTROLLERS.get() != null) {
             runningRequests.decrementAndGet();
             // call back the same controllers we used when the operation started
             if (REQUEST_CONTROLLERS.get() != null) {

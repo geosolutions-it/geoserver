@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -176,6 +177,12 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
 
     @Override
     protected <T extends CatalogInfo> Filter securityFilter(Class<T> infoType, Filter filter) {
+        if(!isOgcCapabilitiesRequest()) {
+            // Not needed for other kinds of request
+            // TODO use a common implementation for GetCapabilities and Layer Preview
+            return filter;
+        }
+        
         if (!ResourceInfo.class.isAssignableFrom(infoType) && 
             !LayerInfo.class.isAssignableFrom(infoType) &&
             !LayerGroupInfo.class.isAssignableFrom(infoType)) 

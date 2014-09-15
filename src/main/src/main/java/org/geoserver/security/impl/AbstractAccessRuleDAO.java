@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -22,6 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.geoserver.config.GeoServerDataDirectory;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.PropertyFileWatcher;
 import org.geotools.util.logging.Logging;
 
@@ -77,7 +79,8 @@ public abstract class AbstractAccessRuleDAO<R extends Comparable<?>> {
     protected AbstractAccessRuleDAO(File securityDirectory, String propertyFileName) {
         this.securityDir = securityDirectory; 
         this.propertyFileName = propertyFileName;
-        this.dd = org.vfny.geoserver.global.GeoserverDataDirectory.accessor();
+        this.dd = GeoServerExtensions.bean(GeoServerDataDirectory.class);
+        //this.dd = org.vfny.geoserver.global.GeoserverDataDirectory.accessor();
     }
     
     /**

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -106,13 +107,11 @@ public class ModificationProxy implements WrappingProxy, Serializable {
                         // in this case there is nothing we can do
                         return null;
                     }
-                    Collection wrap = real.getClass().newInstance();
-                    wrap.addAll( real );
+                    Collection wrap = ModificationProxyCloner.cloneCollection(real, true);
                     properties().put( property, wrap );
                     // we also need to store a clone of the initial state as the collection
                     // might be a live one
-                    Collection clone = real.getClass().newInstance();
-                    clone.addAll( real );
+                    Collection clone = ModificationProxyCloner.cloneCollection(real, false);
                     oldCollectionValues().put(property, clone);
                     return wrap;
                 } else if(Map.class.isAssignableFrom( method.getReturnType() )) {
@@ -121,13 +120,11 @@ public class ModificationProxy implements WrappingProxy, Serializable {
                         // in this case there is nothing we can do
                         return null;
                     }
-                    Map wrap = real.getClass().newInstance();
-                    wrap.putAll( real );
+                    Map wrap = ModificationProxyCloner.cloneMap(real, true);
                     properties().put( property, wrap );
                     // we also need to store a clone of the initial state as the collection
                     // might be a live one
-                    Map clone = real.getClass().newInstance();
-                    clone.putAll( real );
+                    Map clone = ModificationProxyCloner.cloneMap(real, false);
                     oldCollectionValues().put(property, clone);
                     return wrap;
                 } else {

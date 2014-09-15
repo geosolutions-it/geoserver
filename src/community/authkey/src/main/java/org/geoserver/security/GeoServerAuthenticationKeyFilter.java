@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -210,11 +211,7 @@ public class GeoServerAuthenticationKeyFilter extends  GeoServerSecurityFilter
         // only cache if no HTTP session is available 
         if ( request.getSession(false) != null)
             return false;
-        
-       // if a session will be creaed, return false     
-       if (Boolean.TRUE.equals(request.getAttribute(GeoServerSecurityContextPersistenceFilter.ALLOWSESSIONCREATION_ATTR)))
-            return false;
-       
+               
        return true;
     
     }

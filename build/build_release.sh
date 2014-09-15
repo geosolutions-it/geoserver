@@ -286,8 +286,16 @@ if [ -z $SKIP_BUILD ]; then
   # build the user docs
   pushd ../doc/en/user > /dev/null
   make clean html
+  make latex
+  cd build/latex
+  sed  "s/includegraphics/includegraphics[scale=0.5]/g" GeoServerUserManual.tex > manual.tex
+  # run pdflatex twice in a row to get the TOC, and ignore errors 
+  set +e
+  pdflatex -interaction batchmode manual.tex
+  pdflatex -interaction batchmode manual.tex
+  set -e
 
-  cd ../developer
+  cd ../../../developer
   make clean html
 
   popd > /dev/null
@@ -352,6 +360,7 @@ popd > /dev/null
 popd > /dev/null
 
 echo "copying artifacts to $dist"
+cp $artifacts/../../../doc/en/user/build/latex/manual.pdf $dist/geoserver-$tag-user-manual.pdf
 cp $artifacts/*-plugin.zip $dist/plugins
 for a in `ls $artifacts/*.zip | grep -v plugin`; do
   cp $a $dist
@@ -360,8 +369,8 @@ done
 # fire off mac and windows build machines
 if [ -z $SKIP_INSTALLERS ]; then
   echo "starting installer jobs"
-  start_installer_job $WIN_HUDSON $tag
-  start_installer_job $MAC_HUDSON $tag
+  start_installer_job $WIN_JENKINS $WIN_JENKINS_USER $WIN_JENKINS_KEY $tag
+  start_installer_job $MAC_JENKINS $MAC_JENKINS_USER $MAC_JENKINS_KEY $tag
 fi
 
 # git commit changes on the release branch

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -18,6 +19,7 @@ import java.util.logging.Logger;
 
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.geoserver.data.util.IOUtils;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geotools.util.logging.Logging;
 
@@ -110,7 +112,7 @@ public class GWCConfigPersister {
             out.close();
         }
         File configFile = new File(getConfigRoot(), GWC_CONFIG_FILE);
-        tmp.renameTo(configFile);
+        IOUtils.rename(tmp, configFile);
         this.config = config;
         LOGGER.finer("Integrated GWC configuration saved to " + configFile.getAbsolutePath());
     }

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -31,7 +32,6 @@ import org.geoserver.web.FormTestPage;
 import org.geoserver.web.GeoServerWicketTestSupport;
 import org.geowebcache.layer.TileLayer;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
@@ -42,7 +42,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
 
     @Before
     public void setUpInternal() throws Exception {
-        LayerInfo layerInfo = getCatalog().getLayers().get(0);
+        LayerInfo layerInfo = getCatalog().getLayerByName(getLayerId(MockData.BUILDINGS));
         assertTrue(CatalogConfiguration.isLayerExposable(layerInfo));
         GeoServerTileLayer tileLayer = GWC.get().getTileLayer(layerInfo);
         assertNotNull(tileLayer);
@@ -181,5 +181,35 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
         panel.save();
 
         assertNull(mediator.getTileLayer(layerModel.getObject()));
+    }
+
+    @Test
+    public void testAddNullFilter() {
+        // Create a form page for the LayerCacheOptionsTabPanel component
+        FormTestPage page = new FormTestPage(new ComponentBuilder() {
+            private static final long serialVersionUID = -5907648151984337786L;
+
+            public Component buildComponent(final String id) {
+                return new LayerCacheOptionsTabPanel(id, layerModel, tileLayerModel);
+            }
+        });
+        // Start the page
+        tester.startPage(page);
+        // Ensure the GeoServerTileLayerEditor is rendered
+        tester.assertComponent("form:panel:tileLayerEditor", GeoServerTileLayerEditor.class);
+        // Create new form tester for the final submit
+        FormTester form = tester.newFormTester("form");
+        // Click on the addFilter button withou setting any filter
+        tester.executeAjaxEvent(
+                "form:panel:tileLayerEditor:container:configs:parameterFilters:addFilter",
+                "onclick");
+        // Ensure that the Component is rendered again
+        tester.assertComponent("form:panel:tileLayerEditor", GeoServerTileLayerEditor.class);
+        // Ensure that an Error message has been thrown
+        tester.assertErrorMessages(new String[] { "Filter should not be empty" });
+        // Save the changes
+        form.submit();
+        // Check no exception has been thrown
+        tester.assertNoErrorMessage();
     }
 }

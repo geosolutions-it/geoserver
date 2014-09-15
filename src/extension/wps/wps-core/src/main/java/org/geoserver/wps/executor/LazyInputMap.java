@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -49,19 +50,22 @@ class LazyInputMap extends AbstractMap<String, Object> {
         }
         return result;
     }
-    
+    /**
+     * The retrieved input percentage, as a number between 0 and 100
+     * @return
+     */
     public float getRetrievedInputPercentage() {
         if(providers.size() == 0) {
-            return 1.0f;
+            return 100.0f;
         }
         
-        float count = 0;
+        int  count = 0;
         for (InputProvider provider: providers.values()) {
             if(provider.resolved()) {
                 count++;
             }
         }
-        return count / providers.size();
+        return 100f * count / providers.size();
     }
     
     public boolean longParse() {

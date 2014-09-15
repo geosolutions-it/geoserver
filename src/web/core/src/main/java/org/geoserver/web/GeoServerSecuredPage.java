@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -14,6 +15,7 @@ import org.springframework.security.web.PortResolverImpl;
 import org.springframework.security.web.savedrequest.DefaultSavedRequest;
 import org.springframework.security.web.savedrequest.SavedRequest;
 import org.apache.wicket.protocol.http.WebRequest;
+import org.geoserver.security.GeoServerSecurityFilterChainProxy;
 
 
 /**
@@ -29,6 +31,10 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
 
     public GeoServerSecuredPage() {
         super();
+        
+        if (GeoServerSecurityFilterChainProxy.isSecurityEnabledForCurrentRequest()==false)
+            return; // nothing to do
+        
         Authentication auth = getSession().getAuthentication();
         if(auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             // emulate what spring security url control would do so that we get a proper redirect after login
@@ -63,6 +69,7 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
      * Convenience method to determine if the current user is authenticated as full administartor.
      */
     protected boolean isAuthenticatedAsAdmin() {
+                
         return ComponentAuthorizer.ADMIN.isAccessAllowed(GeoServerSecuredPage.class, 
             SecurityContextHolder.getContext().getAuthentication());
     }

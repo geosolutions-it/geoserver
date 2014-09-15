@@ -48,7 +48,7 @@ Automatic buffer sizing cannot be computed if:
 In this event, the following defaults are used:
 
 * 0 pixels for :ref:`wms_getmap` requests
-* 2 pixels for :ref:`wms_getfeatureinfo` requests
+* 5 pixels for :ref:`wms_getfeatureinfo` requests (a different min value can be set via the ``org.geoserver.wms.featureinfo.minBuffer`` system variable, e.g., add ``-Dorg.geoserver.wms.featureinfo.minBuffer=10`` to make the min buffer be 10 pixels)
   
 If these are not sufficiently large, the explicit parameter can be used.
 
@@ -102,6 +102,8 @@ An example of an OGC filter encoded in a GET request is::
 
    filter=%3CFilter%20xmlns:gml=%22http://www.opengis.net/gml%22%3E%3CIntersects%3E%3CPropertyName%3Ethe_geom%3C/PropertyName%3E%3Cgml:Point%20srsName=%224326%22%3E%3Cgml:coordinates%3E-74.817265,40.5296504%3C/gml:coordinates%3E%3C/gml:Point%3E%3C/Intersects%3E%3C/Filter%3E
    
+.. _format_options:
+
 format_options
 --------------
 
@@ -251,3 +253,16 @@ The following code shows how to specify the meta-tiling parameters:
         {buffer: 0} 
     );
 
+scaleMethod
+-----------
+
+The ``scaleMethod`` parameter controls how the scale denominator is computed by GeoServer
+The two possible values are:
+
+  * ``OGC`` (default): the scale denominator is computed according to the OGC SLD specification, which
+                       imposes simplified formulas for the sake of interoperability
+  * ``Accurate``: use the full expressions for computing the scale denominator against geographic
+                   data, taking into account the ellipsoidal shape of Earth
+                   
+The two methods tend to return values rather close to each other near the equator, but they
+do diverge to larger differences as the latitude approaches the poles.

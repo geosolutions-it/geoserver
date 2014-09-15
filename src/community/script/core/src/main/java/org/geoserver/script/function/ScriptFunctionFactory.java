@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -122,7 +123,9 @@ public class ScriptFunctionFactory extends ScriptFactory implements FunctionFact
                         }
                         
                         if (!f.exists()) {
-                            throw new FileNotFoundException(f.getPath());
+                            //throw new FileNotFoundException(f.getPath());
+                            LOGGER.log(Level.WARNING, "File not found : " + f.getPath());
+                            return null;
                         }
 
                         function = new ScriptFunction(f, scriptMgr);

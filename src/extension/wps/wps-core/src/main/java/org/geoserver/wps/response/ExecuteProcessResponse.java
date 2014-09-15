@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -18,7 +19,6 @@ import net.opengis.wps10.ExecuteResponseType;
 import net.opengis.wps10.ExecuteType;
 import net.opengis.wps10.LiteralDataType;
 import net.opengis.wps10.OutputDataType;
-import net.opengis.wps10.OutputDefinitionType;
 
 import org.geoserver.ows.Response;
 import org.geoserver.ows.XmlObjectEncodingResponse;
@@ -27,10 +27,9 @@ import org.geoserver.platform.ServiceException;
 import org.geoserver.wps.BinaryEncoderDelegate;
 import org.geoserver.wps.CDataEncoderDelegate;
 import org.geoserver.wps.Execute;
-import org.geoserver.wps.GetExecutionStatusType;
+import org.geoserver.wps.RawDataEncoderDelegate;
 import org.geoserver.wps.WPSException;
 import org.geoserver.wps.XMLEncoderDelegate;
-import org.geoserver.wps.executor.ExecutionStatus;
 import org.geotools.ows.v1_1.OWS;
 import org.geotools.ows.v1_1.OWSConfiguration;
 import org.geotools.xml.Encoder;
@@ -189,7 +188,10 @@ public class ExecuteProcessResponse extends Response {
     void writeComplex(OutputStream output, OutputDataType result)
             throws IOException {
         Object rawResult = result.getData().getComplexData().getData().get(0);
-        if (rawResult instanceof XMLEncoderDelegate) {
+        if (rawResult instanceof RawDataEncoderDelegate) {
+            RawDataEncoderDelegate delegate = (RawDataEncoderDelegate) rawResult;
+            delegate.encode(output);
+        } else if (rawResult instanceof XMLEncoderDelegate) {
             XMLEncoderDelegate delegate = (XMLEncoderDelegate) rawResult;
 
             try {

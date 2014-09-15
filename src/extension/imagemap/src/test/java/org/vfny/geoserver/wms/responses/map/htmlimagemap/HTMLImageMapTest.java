@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -45,7 +46,6 @@ import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
 import org.springframework.web.context.support.GenericWebApplicationContext;
-import org.vfny.geoserver.global.GeoserverDataDirectory;
 
 import com.vividsolutions.jts.geom.Envelope;
 
@@ -84,7 +84,6 @@ public class HTMLImageMapTest {
         GeoServerResourceLoader loader = new GeoServerResourceLoader(testdata);
         GenericWebApplicationContext context = new GenericWebApplicationContext();
         context.getBeanFactory().registerSingleton("resourceLoader", loader);
-        GeoserverDataDirectory.init(context);
 
         // initialized WGS84 CRS (used by many tests)
         WGS84 = CRS.decode("EPSG:4326");
@@ -507,6 +506,27 @@ public class HTMLImageMapTest {
         EncodeHTMLImageMap result = mapProducer.produceMap(map);
         assertTestResult("NoCoords", result);
     }
+    
+    @Test
+    public void testPointsAreAlwaysRenderedAsCircles() throws Exception {
+        final String s = "VariousPoints";
+        FeatureSource<SimpleFeatureType, SimpleFeature> fs = testDS
+                .getFeatureSource(s);
+        ReferencedEnvelope env = new ReferencedEnvelope(fs.getBounds(), WGS84);
+        LOGGER.info("about to create map ctx for BuildingCenters with bounds "
+                + env);
+    
+        WMSMapContent map = new WMSMapContent();
+        map.getViewport().setBounds(env);
+        map.setMapWidth(mapWidth);
+        map.setMapHeight(mapHeight);
+        map.setTransparent(false);
+        Style basicStyle = getTestStyle(String.format("%s.sld", s));
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+    
+        EncodeHTMLImageMap result = mapProducer.produceMap(map);
+        assertTestResult(s, result);
+    }
 
     static class MyPropertyDataStore extends PropertyDataStore {
 
@@ -539,6 +559,8 @@ public class HTMLImageMapTest {
                 throw new DataSourceException(e.getMessage(), e);
             }
         }
+        
+        
 
     }
 

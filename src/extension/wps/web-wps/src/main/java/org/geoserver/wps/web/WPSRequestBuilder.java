@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -94,6 +95,8 @@ public class WPSRequestBuilder extends GeoServerBasePage {
                         .singletonMap("strict", "true"), URLType.SERVICE);
                 request.setRequestUrl(url);
                 request.setRequestBody((String) responseWindow.getDefaultModelObject());
+                request.setUserName(builder.username);
+                request.setPassword(builder.password);
                 return new DemoRequestResponse(new Model(request));
             }
         });

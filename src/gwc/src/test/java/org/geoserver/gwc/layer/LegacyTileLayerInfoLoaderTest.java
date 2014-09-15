@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -40,6 +41,8 @@ public class LegacyTileLayerInfoLoaderTest {
 
         assertNull(LegacyTileLayerInfoLoader.load(layer));
 
+        TileLayerInfoUtil.checkAutomaticStyles(layer, defaultVectorInfo);
+        
         LegacyTileLayerInfoLoader.save(defaultVectorInfo, layer.getMetadata());
 
         GeoServerTileLayerInfo info2 = LegacyTileLayerInfoLoader.load(layer);
@@ -56,6 +59,7 @@ public class LegacyTileLayerInfoLoaderTest {
         TileLayerInfoUtil.setCachedStyles(info, "default", ImmutableSet.of("style1"));
 
         LayerInfoImpl layer = mockLayer("testLayer", new String[]{"style1", "style2"}, LayerInfoImpl.Type.RASTER);
+        TileLayerInfoUtil.checkAutomaticStyles(layer, info);
 
         assertNull(LegacyTileLayerInfoLoader.load(layer));
 
@@ -82,6 +86,8 @@ public class LegacyTileLayerInfoLoaderTest {
 
         LayerInfoImpl layer = mockLayer("testLayer", new String[]{"style1", "style2"}, LayerInfoImpl.Type.RASTER);
         assertNull(LegacyTileLayerInfoLoader.load(layer));
+
+        TileLayerInfoUtil.checkAutomaticStyles(layer, defaultVectorInfo);
 
         LegacyTileLayerInfoLoader.save(info, layer.getMetadata());
 

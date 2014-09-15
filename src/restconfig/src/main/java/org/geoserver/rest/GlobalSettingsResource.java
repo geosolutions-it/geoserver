@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -146,8 +147,7 @@ public class GlobalSettingsResource extends AbstractCatalogResource {
                     properties.put("memoryCapacity", jaiInfo.getMemoryCapacity());
                     properties.put("memoryThreshold", jaiInfo.getMemoryThreshold());
                     properties.put("imageIOCache", jaiInfo.isImageIOCache() ? "true" : "false");
-                    properties.put("pngAcceleration", jaiInfo.isPngAcceleration() ? "true"
-                            : "false");
+                    properties.put("pngEncoderType", jaiInfo.getPngEncoderType().toString());
                     properties.put("jpegAcceleration", jaiInfo.isJpegAcceleration() ? "true"
                             : "false");
                     properties.put("allowNativeMosaic", jaiInfo.isAllowNativeMosaic() ? "true"

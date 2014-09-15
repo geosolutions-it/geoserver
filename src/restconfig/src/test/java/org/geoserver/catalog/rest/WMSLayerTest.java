@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -14,6 +15,7 @@ import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ProjectionPolicy;
+import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.WMSLayerInfo;
 import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.data.test.SystemTestData;
@@ -74,6 +76,18 @@ public class WMSLayerTest extends CatalogRESTTestSupport {
         }
     }
 
+    @Before
+    public void removeBugsites() throws Exception {
+        LayerInfo l = catalog.getLayerByName(new NameImpl("sf", "bugsites"));
+        if(l != null) {
+            catalog.remove(l);
+        }
+
+        ResourceInfo r = catalog.getResourceByName("sf", "bugsites", WMSLayerInfo.class);
+        if (r != null) {
+            catalog.remove(r);
+        }
+    }
     @Test
     public void testGetAllByWorkspace() throws Exception {
         Document dom = getAsDOM( "/rest/workspaces/sf/wmslayers.xml");
@@ -301,7 +315,7 @@ public class WMSLayerTest extends CatalogRESTTestSupport {
         Document doc = getAsDOM( "/rest/layers/states.xml");
         
         XpathEngine xpath = XMLUnit.newXpathEngine();
-        String resourceUrl = xpath.evaluate("//atom:link/@href", doc);
+        String resourceUrl = xpath.evaluate("//resource/atom:link/@href", doc);
         resourceUrl = resourceUrl.substring(resourceUrl.indexOf("/rest"));
         
         doc = getAsDOM(resourceUrl);

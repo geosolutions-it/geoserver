@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -261,6 +262,7 @@ public class Dispatcher extends AbstractController {
 
             //dispatch the operation
             Operation operation = dispatch(request, service);
+            request.setOperation(operation);
 
             if (request.isSOAP()) {
                 //let the request object know that this is a SOAP request, since it effects
@@ -616,10 +618,15 @@ public class Dispatcher extends AbstractController {
                 //track an exception 
                 Throwable t = null;
 
+                // Boolean used for evaluating if the request bean has been parsed in KVP or in XML
+                boolean kvpParsed = false;
+                boolean xmlParsed = false;
+
                 if (req.getKvp() != null && req.getKvp().size() > 0) {
                     //use the kvp reader mechanism
                     try {
                         requestBean = parseRequestKVP(parameterType, req);
+                        kvpParsed = true;
                     } 
                     catch (Exception e) {
                         //dont die now, there might be a body to parse
@@ -629,6 +636,7 @@ public class Dispatcher extends AbstractController {
                 if (req.getInput() != null) {
                     //use the xml reader mechanism
                     requestBean = parseRequestXML(requestBean,req.getInput(), req);
+                    xmlParsed = true;
                 }
                 
                 //if no reader found for the request, throw exception
@@ -640,7 +648,17 @@ public class Dispatcher extends AbstractController {
                     if ( t != null ) {
                         throw t;
                     }
-                    throw new ServiceException( "Could not find request reader (either kvp or xml) for: " + parameterType.getName() );
+                    if (kvpParsed && xmlParsed || (!kvpParsed && !xmlParsed)) {
+                        throw new ServiceException(
+                                "Could not find request reader (either kvp or xml) for: "
+                                        + parameterType.getName());
+                    } else if (kvpParsed) {
+                        throw new ServiceException("Could not parse the KVP for: "
+                                + parameterType.getName());
+                    } else {
+                        throw new ServiceException("Could not parse the XML for: "
+                                + parameterType.getName());
+                    }
                 }
                 
                 // GEOS-934  and GEOS-1288
@@ -1593,6 +1611,11 @@ public class Dispatcher extends AbstractController {
             	} else {
             		request.getHttpResponse().sendError(ece.getErrorCode());
             	}
+                if (ece.getErrorCode() < 400) {
+                    // gwc returns an HttpErrorCodeException for 304s
+                    // we don't want to flag these as errors for upstream filters, ie the monitoring extension
+                    t = null;
+                }
             } 
             catch (IOException e) {
                 //means the resposne was already commited

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -50,11 +51,12 @@ public class GeoServerFeatureStore extends GeoServerFeatureSource implements Sim
      * @param definitionQuery Filter that constrains source
      * @param declaredCRS Geometries will be forced to this CRS (or null, if no forcing is needed)
      * @param srsHandling
+     * @param linearizationTolerance TODO
      */
     GeoServerFeatureStore(FeatureStore<SimpleFeatureType, SimpleFeature> store,
             SimpleFeatureType schema, Filter definitionQuery,
-            CoordinateReferenceSystem declaredCRS, int srsHandling) {
-        super(store, schema, definitionQuery, declaredCRS, srsHandling);
+            CoordinateReferenceSystem declaredCRS, int srsHandling, Double linearizationTolerance) {
+        super(store, schema, definitionQuery, declaredCRS, srsHandling, linearizationTolerance);
     }
 
     /**

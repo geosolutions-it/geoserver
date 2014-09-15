@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -13,6 +14,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
@@ -30,7 +32,7 @@ import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMS;
-import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.factory.FactoryRegistryException;
@@ -96,6 +98,11 @@ public class GetLegendGraphicKvpReader extends KvpRequestReader {
                 version = wms.getVersion();
             }
             request.setVersion(version);
+        }
+        
+        final String language = (String) rawKvp.get("LANGUAGE");
+        if(language != null) {
+            request.setLocale(new Locale(language));
         }
 
         // Fix for http://jira.codehaus.org/browse/GEOS-710
@@ -234,8 +241,8 @@ public class GetLegendGraphicKvpReader extends KvpRequestReader {
             CoverageInfo coverageInfo = mli.getCoverage();
             // it much safer to wrap a reader rather than a coverage in most cases, OOM can
             // occur otherwise
-            final AbstractGridCoverage2DReader reader;
-            reader = (AbstractGridCoverage2DReader) coverageInfo.getGridCoverageReader(
+            final GridCoverage2DReader reader;
+            reader = (GridCoverage2DReader) coverageInfo.getGridCoverageReader(
                     new NullProgressListener(), GeoTools.getDefaultHints());
             final SimpleFeatureCollection feature;
             feature = FeatureUtilities.wrapGridCoverageReader(reader, null);

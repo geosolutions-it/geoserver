@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -8,15 +9,12 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 
 import org.apache.wicket.Component;
-import org.apache.wicket.Page;
 import org.apache.wicket.PageParameters;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.extensions.markup.html.tabs.AbstractTab;
@@ -47,7 +45,7 @@ import org.geoserver.web.publish.LayerConfigurationPanel;
 import org.geoserver.web.publish.LayerConfigurationPanelInfo;
 import org.geoserver.web.wicket.ParamResourceModel;
 import org.geotools.coverage.grid.GridGeometry2D;
-import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.NameImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -279,7 +277,7 @@ public class ResourceConfigurationPage extends GeoServerSecuredPage {
                     // the coverage bounds computation path is a bit more linear, the
                     // readers always return the bounds and in the proper CRS (afaik)
                     CoverageInfo cinfo = (CoverageInfo) resourceInfo;
-                    AbstractGridCoverage2DReader reader = (AbstractGridCoverage2DReader) cinfo
+                    GridCoverage2DReader reader = (GridCoverage2DReader) cinfo
                             .getGridCoverageReader(null, GeoTools.getDefaultHints());
 
                     // get bounds

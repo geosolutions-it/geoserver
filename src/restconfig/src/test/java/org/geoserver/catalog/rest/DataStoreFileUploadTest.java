@@ -1,10 +1,15 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.catalog.rest;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -38,6 +43,7 @@ public class DataStoreFileUploadTest extends CatalogRESTTestSupport {
     @Before
     public void removePdsDataStore() {
         removeStore("gs", "pds");
+        removeStore("gs", "store with spaces");
     }
 
     @After
@@ -188,7 +194,7 @@ public class DataStoreFileUploadTest extends CatalogRESTTestSupport {
                 body, "text/plain");
         assertEquals(400, response.getStatusCode());
     }
-
+    
     @Test
     public void testShapeFileUploadIntoExisting() throws Exception {
         Catalog cat = getCatalog();
@@ -235,6 +241,19 @@ public class DataStoreFileUploadTest extends CatalogRESTTestSupport {
         
         Document dom = getAsDOM( "wfs?request=getfeature&typename=gs:pds" );
         assertFeatures( dom );
+    }
+    
+    @Test
+    public void testShapeFileUploadWithSpaces() throws Exception {
+        Catalog cat = getCatalog();
+        assertNull(cat.getDataStoreByName("gs", "store with spaces"));
+        
+        byte[] bytes = shpZipAsBytes();
+        put( "/rest/workspaces/gs/datastores/store%20with%20spaces/file.shp", bytes, "application/zip");
+        
+        DataStoreInfo ds = cat.getDataStoreByName("gs", "store with spaces"); 
+        assertNotNull(ds);
+        assertFalse(cat.getFeatureTypesByDataStore(ds).isEmpty());
     }
  
     @Test

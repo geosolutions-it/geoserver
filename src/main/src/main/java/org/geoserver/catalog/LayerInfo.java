@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -161,7 +162,7 @@ public interface LayerInfo extends PublishedInfo {
 
     /**
      * Sets the queryable status
-     * 
+     *
      * @param {@code true} to set this Layer as queryable and subject of GetFeatureInfo requests,
      *        {@code false} to make the layer not queryable.
      */
@@ -174,6 +175,22 @@ public interface LayerInfo extends PublishedInfo {
      * </p>
      */
     boolean isQueryable();
+
+    /**
+     * Sets the opaque status
+     * 
+     * @param {@code true} to set this Layer as opaque,
+     *        {@code false} to make the layer not opaque.
+     */
+    void setOpaque(boolean opaque);
+
+    /**
+     * Whether the layer is opaque
+     * <p>
+     * Defaults to {@code false}
+     * </p>
+     */
+    boolean isOpaque();
 
     /**
      * Gets the attribution information for this layer.  

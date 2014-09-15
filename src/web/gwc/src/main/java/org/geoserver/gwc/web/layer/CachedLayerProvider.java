@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -77,7 +78,11 @@ class CachedLayerProvider extends GeoServerDataProvider<TileLayer> {
         @Override
         public Object getPropertyValue(TileLayer item) {
             GWC gwc = GWC.get();
-            return gwc.getUsedQuota(item.getName());
+            if(gwc.isDiskQuotaEnabled()) {
+                return gwc.getUsedQuota(item.getName());
+            } else {
+                return null;
+            }
         }
     };
 

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -38,7 +39,6 @@ import org.geoserver.ows.Request;
 import org.geoserver.ows.util.CaseInsensitiveMap;
 import org.geoserver.ows.util.KvpMap;
 import org.geoserver.ows.util.KvpUtils;
-import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wcs.WebCoverageService100;
 import org.geoserver.wcs.WebCoverageService111;
 import org.geoserver.wfs.WebFeatureService;
@@ -50,8 +50,9 @@ import org.geoserver.wps.ppio.BoundingBoxPPIO;
 import org.geoserver.wps.ppio.ComplexPPIO;
 import org.geoserver.wps.ppio.LiteralPPIO;
 import org.geoserver.wps.ppio.ProcessParameterIO;
+import org.geoserver.wps.ppio.RawDataPPIO;
+import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.resource.GridCoverageResource;
-import org.opengis.coverage.Coverage;
 import org.opengis.coverage.grid.GridCoverage;
 import org.springframework.context.ApplicationContext;
 
@@ -136,7 +137,12 @@ class SimpleInputProvider implements InputProvider {
                     value = ((LiteralPPIO) ppio).decode(literal.getValue());
                 } else if (data.getComplexData() != null) {
                     ComplexDataType complex = data.getComplexData();
-                    value = ((ComplexPPIO) ppio).decode(complex.getData().get(0));
+                    if (ppio instanceof RawDataPPIO) {
+                        String content = complex.getData().get(0).toString();
+                        return new StringRawData(content, complex.getMimeType());
+                    } else {
+                        value = ((ComplexPPIO) ppio).decode(complex.getData().get(0));
+                    }
                 } else if (data.getBoundingBoxData() != null) {
                     value = ((BoundingBoxPPIO) ppio).decode(data.getBoundingBoxData());
                 }

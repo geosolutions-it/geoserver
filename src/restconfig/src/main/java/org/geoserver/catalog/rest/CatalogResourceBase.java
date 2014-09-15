@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -23,6 +24,7 @@ import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
 import org.geoserver.rest.format.MediaTypes;
 import org.geoserver.rest.format.ReflectiveXMLFormat;
+import org.geoserver.security.GeoServerSecurityManager;
 import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -156,20 +158,15 @@ public abstract class CatalogResourceBase extends ReflectiveResource {
         if (SecurityContextHolder.getContext() == null) {
             return false;
         }
-
-        //TODO: change to getSecurityMangager().isAuthenticatedAsAdmin() once security work lands
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return false;
-        }
-
-        for (GrantedAuthority authority : auth.getAuthorities()) {
-            if ("ROLE_ADMINISTRATOR".equals(authority.getAuthority()))
-                return true;
-        }
-        return false;
+        return GeoServerExtensions.bean(GeoServerSecurityManager.class).
+                checkAuthenticationForAdminRole();
     } 
     
+    /**
+     * Uses messages as a template to update resource.
+     * @param message Possibly incomplete ResourceInfo used to update resource
+     * @param resource Original resource (to be saved in catalog after modification)
+     */
     protected void calculateOptionalFields(ResourceInfo message, ResourceInfo resource) {
         Form form = getRequest().getResourceRef().getQueryAsForm();
         String calculate = form.getFirstValue("recalculate", true);

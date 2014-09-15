@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -74,6 +75,25 @@ public class Ogr2OgrWfsTest extends GeoServerSystemTestSupport {
     @Test
     public void testSimpleRequest() throws Exception {
         String request = "wfs?request=GetFeature&typename=" + getLayerId(MockData.BUILDINGS) + "&version=1.0.0&service=wfs&outputFormat=OGR-KML";
+        MockHttpServletResponse resp = getAsServletResponse(request);
+        
+        // check content type
+        assertEquals("application/vnd.google-earth.kml", resp.getContentType());
+        
+        // read back
+        Document dom = dom(getBinaryInputStream(resp));
+        // print(dom);
+
+        // some very light assumptions on the contents, since we
+        // cannot control how ogr encodes the kml... let's just assess
+        // it's kml with the proper number of features
+        assertEquals("kml", dom.getDocumentElement().getTagName());
+        assertEquals(2, dom.getElementsByTagName("Placemark").getLength());
+    }
+    
+    @Test
+    public void testSimpleRequest20() throws Exception {
+        String request = "wfs?request=GetFeature&typename=" + getLayerId(MockData.BUILDINGS) + "&version=2.0.0&service=wfs&outputFormat=OGR-KML&srsName=EPSG:4326";
         MockHttpServletResponse resp = getAsServletResponse(request);
         
         // check content type
