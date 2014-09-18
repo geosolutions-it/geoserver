@@ -53,6 +53,7 @@
 		  <descriptor>release/ext-rest-ext.xml</descriptor>
 		  <descriptor>release/ext-kmlppio.xml</descriptor>
 		  <descriptor>release/ext-gpx.xml</descriptor>
+		  <descriptor>release/ext-wps-download.xml</descriptor>
         </descriptors>
       </configuration>
      </plugin>
@@ -172,6 +173,7 @@
 		<module>rest-ext</module>
 		<module>gpxppio</module>
 		<module>kmlppio</module>
+        <module>wps-download</module>
       </modules>
     </profile>
     <profile>
@@ -358,5 +360,11 @@
         <module>wps-resource</module>
       </modules>
     </profile>
- </profiles>
+    <profile>      
+      <id>wps-download</id>
+      <modules>
+        <module>wps-download</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
