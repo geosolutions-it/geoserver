@@ -162,7 +162,7 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessClient
         names.add(name);
         descriptors.put(name, new RemoteServiceDescriptor(name, title, description, paramInfo, outputInfo, metadata));
         create(name);
-        System.out.println("Registered Service [" + name + "]");
+        LOGGER.info("Registered Service [" + name + "]");
     }
 
     @Override
@@ -171,7 +171,7 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessClient
             names.remove(name);
             descriptors.remove(name);
             remoteInstances.remove(name);
-            System.out.println("Deregistered Service [" + name + "]");
+            LOGGER.info("Deregistered Service [" + name + "]");
         }
     }
 

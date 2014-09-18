@@ -352,5 +352,11 @@
         <module>wps-remote</module>
       </modules>
     </profile>
+    <profile>
+      <id>wps-resource</id>
+      <modules>
+        <module>wps-resource</module>
+      </modules>
+    </profile>
  </profiles>
 </project>

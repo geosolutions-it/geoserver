@@ -215,8 +215,7 @@ public class XMPPClient implements RemoteProcessClient {
     @Override
     public void init() throws Exception {
 
-        System.out.println(String.format("Initializing connection to server %1$s port %2$d",
-                server, port));
+        LOGGER.info(String.format("Initializing connection to server %1$s port %2$d", server, port));
 
         SmackConfiguration.setDefaultPacketReplyTimeout(packetReplyTimeout);
 
@@ -227,7 +226,7 @@ public class XMPPClient implements RemoteProcessClient {
         connection = new XMPPTCPConnection(config);
         connection.connect();
 
-        System.out.println("Connected: " + connection.isConnected());
+        LOGGER.info("Connected: " + connection.isConnected());
 
         if (connection.isConnected()) {
             chatManager = ChatManager.getInstanceFor(connection);
@@ -383,24 +382,15 @@ public class XMPPClient implements RemoteProcessClient {
         Roster roster = connection.getRoster();
         Collection<RosterEntry> entries = roster.getEntries();
         for (RosterEntry entry : entries) {
-            System.out.println(String.format("Buddy:%1$s - Status:%2$s", entry.getName(),
-                    entry.getStatus()));
+            LOGGER.fine(String.format("Buddy:%1$s - Status:%2$s", entry.getName(), entry.getStatus()));
         }
     }
 
     public void createEntry(String user, String name) throws Exception {
-        System.out.println(String.format("Creating entry for buddy '%1$s' with name %2$s", user,
-                name));
+        LOGGER.fine(String.format("Creating entry for buddy '%1$s' with name %2$s", user, name));
         Roster roster = connection.getRoster();
         roster.createEntry(user, name, null);
     }
-
-    // @Override
-    // public void processMessage(Chat chat, Message message) {
-    // String from = message.getFrom();
-    // String body = message.getBody();
-    // System.out.println(String.format("Received message '%1$s' from %2$s", body, from));
-    // }
 
     /*
      * This handles the chat listener. We can't simply listen to chats for some reason, and intead have to grab the chats from the packets. The other
@@ -437,7 +427,7 @@ public class XMPPClient implements RemoteProcessClient {
                         setupChat(origin);
                     
                     if (message.getBody() != null) {
-                        System.out.println("ReceivedMessage('" + message.getBody() + "','" + origin
+                        LOGGER.fine("ReceivedMessage('" + message.getBody() + "','" + origin
                                 + "','" + message.getPacketID() + "');");
 
                         Map<String, String> signalArgs = new HashMap<String, String>();
@@ -671,8 +661,14 @@ public class XMPPClient implements RemoteProcessClient {
         for (MultiUserChat mucServiceChannel : mucServiceChannels) {
             for (String occupant : mucServiceChannel.getOccupants()) {
                 final Name serviceName = extractServiceName(occupant);
-                if (!registeredServices.contains(serviceName)) {
+
+                // send invitation and register source JID
+                String[] serviceJIDParts = occupant.split("/");
+                if (serviceJIDParts.length == 3 && serviceJIDParts[2].startsWith("master")) {
                     sendMessage(occupant, "topic=invite");
+                }
+                // register service on listeners
+                if (!registeredServices.contains(serviceName)) {
                     registeredServices.add(serviceName);
                 }
             }
@@ -680,16 +676,20 @@ public class XMPPClient implements RemoteProcessClient {
     }
 
     protected void handleMemberJoin(Presence p) throws Exception {
-        System.out.println("Member " + p.getFrom() + " joined the chat.");
+        LOGGER.finer("Member " + p.getFrom() + " joined the chat.");
         final Name serviceName = extractServiceName(p.getFrom());
-        if (!registeredServices.contains(serviceName)) {
+        // send invitation and register source JID
+        String[] serviceJIDParts = p.getFrom().split("/");
+        if (serviceJIDParts.length == 3 && serviceJIDParts[2].startsWith("master")) {
             sendMessage(p.getFrom(), "topic=invite");
+        }
+        if (!registeredServices.contains(serviceName)) {
             registeredServices.add(serviceName);
         }
     }
 
     protected void handleMemberLeave(Packet p) throws Exception {
-        System.out.println("Member " + p.getFrom() + " leaved the chat.");
+        LOGGER.finer("Member " + p.getFrom() + " leaved the chat.");
         final Name serviceName = extractServiceName(p.getFrom());
         if (registeredServices.contains(serviceName)) {
             registeredServices.remove(serviceName);
@@ -819,6 +819,7 @@ public class XMPPClient implements RemoteProcessClient {
         final String serviceName = name.getLocalPart();
         
         Map<String, List<String>> availableServices = new HashMap<String, List<String>>();
+        Map<String, List<String>> availableServiceJIDs = new HashMap<String, List<String>>();
         
         for (MultiUserChat muc : this.mucServiceChannels) {
             
@@ -832,13 +833,20 @@ public class XMPPClient implements RemoteProcessClient {
                         String[] localizedServiceJID = serviceJIDParts[1].split("@");
                         
                         if (localizedServiceJID.length == 2 && localizedServiceJID[0].contains(serviceName)) {
-                            final String machine = localizedServiceJID[1];
+                            //final String machine = localizedServiceJID[1];
+                            final String machine = occupant.substring(occupant.lastIndexOf("@")+1);
                             
                             if (availableServices.get(machine) == null) {
                                 availableServices.put(machine, new ArrayList<String>());
                             }
+                            if (availableServiceJIDs.get(machine) == null) {
+                                availableServiceJIDs.put(machine, new ArrayList<String>());
+                            }
                             
                             availableServices.get(machine).add(occupant);
+                            if (serviceJIDParts.length == 3 && serviceJIDParts[2].startsWith("master")) {
+                                availableServiceJIDs.get(machine).add(occupant);
+                            }
                         }
                     }
                 }
@@ -854,7 +862,7 @@ public class XMPPClient implements RemoteProcessClient {
         for (String machine : availableServices.keySet()) {
             if (targetMachine == null || targetMachineCounter < availableServices.get(machine).size()) {
                 targetMachine = machine;
-                targetServiceJID = availableServices.get(machine).get(0);
+                targetServiceJID = availableServiceJIDs.get(machine).get(0);
                 targetMachineCounter = availableServices.get(machine).size();
             }
         }
@@ -1099,9 +1107,9 @@ public class XMPPClient implements RemoteProcessClient {
     }
 
     public void processMessage(Chat chat, Message message) {
-        System.out.println("Received something: " + message.getBody());
+        LOGGER.finer("Received something: " + message.getBody());
         if (message.getType() == Message.Type.chat)
-            System.out.println(chat.getParticipant() + " says: " + message.getBody());
+            LOGGER.finest(chat.getParticipant() + " says: " + message.getBody());
     }
 
     static Object U(String strdata) throws PickleException, IOException {
