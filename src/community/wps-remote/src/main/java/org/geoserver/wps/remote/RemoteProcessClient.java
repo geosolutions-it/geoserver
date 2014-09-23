@@ -5,27 +5,140 @@
  */
 package org.geoserver.wps.remote;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.opengis.feature.type.Name;
 import org.opengis.util.ProgressListener;
 
 /**
- * @author alessio.fabiani
- *
+ * Base class for the remote clients implementations. Those implementations will be plugged into GeoServer through the Spring app-context.
+ * 
+ * @author Alessio Fabiani, GeoSolutions
+ * 
  */
-public interface RemoteProcessClient {
+public abstract class RemoteProcessClient {
 
-    public void init() throws Exception;
-    
-    public void destroy() throws Exception;
-    
-    public boolean isEnabled();
-    
-    public void registerListener(RemoteProcessClientListener listener);
-    
-    public void deregisterListener(RemoteProcessClientListener listener);
+    /** Whether this client is enabled or not from configuration */
+    private boolean enabled;
 
-    public String execute(Name name, Map<String, Object> input, Map<String, Object> metadata, ProgressListener monitor) throws Exception;
-    
+    /** The {@link RemoteProcessFactoryConfigurationWatcher} implementation */
+    private final RemoteProcessFactoryConfigurationWatcher remoteProcessFactoryConfigurationWatcher;
+
+    /** The registered {@link RemoteProcessFactoryListener} */
+    protected List<RemoteProcessFactoryListener> remoteFactoryListeners = Collections
+            .synchronizedList(new ArrayList<RemoteProcessFactoryListener>());
+
+    /** The registered {@link RemoteProcessClientListener} */
+    protected List<RemoteProcessClientListener> remoteClientListeners = Collections
+            .synchronizedList(new ArrayList<RemoteProcessClientListener>());
+
+    /**
+     * The default Cosntructor
+     * 
+     * @param remoteProcessFactory
+     */
+    public RemoteProcessClient(
+            RemoteProcessFactoryConfigurationWatcher remoteProcessFactoryConfigurationWatcher,
+            boolean enabled) {
+        this.remoteProcessFactoryConfigurationWatcher = remoteProcessFactoryConfigurationWatcher;
+        this.enabled = enabled;
+    }
+
+    /**
+     * @return the {@link RemoteProcessFactoryConfiguration} object
+     */
+    public RemoteProcessFactoryConfiguration getConfiguration() {
+        return this.remoteProcessFactoryConfigurationWatcher.getConfiguration();
+    }
+
+    /**
+     * Initialization method
+     * 
+     * @throws Exception
+     */
+    public abstract void init() throws Exception;
+
+    /**
+     * Destroy method
+     * 
+     * @throws Exception
+     */
+    public abstract void destroy() throws Exception;
+
+    /**
+     * @param enabled the enabled to set
+     */
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
+     * Whether the plugin is enabled or not.
+     * 
+     * @return
+     */
+    public boolean isEnabled() {
+        return this.enabled;
+    }
+
+    /**
+     * Registers the {@link RemoteProcessFactoryListener} remoteClientListeners
+     * 
+     * @param listener
+     */
+    public void registerProcessFactoryListener(RemoteProcessFactoryListener listener) {
+        synchronized (remoteFactoryListeners) {
+            remoteFactoryListeners.add(listener);
+        }
+    }
+
+    /**
+     * De-registers the {@link RemoteProcessFactoryListener} remoteClientListeners
+     * 
+     * @param listener
+     */
+    public void deregisterProcessFactoryListener(RemoteProcessFactoryListener listener) {
+        synchronized (remoteFactoryListeners) {
+            remoteFactoryListeners.remove(listener);
+        }
+    }
+
+    /**
+     * Registers the {@link RemoteProcessClientListener} remoteClientListeners
+     * 
+     * @param listener
+     */
+    public void registerProcessClientListener(RemoteProcessClientListener listener) {
+        synchronized (remoteClientListeners) {
+            remoteClientListeners.add(listener);
+        }
+    }
+
+    /**
+     * De-registers the {@link RemoteProcessClientListener} remoteClientListeners
+     * 
+     * @param listener
+     */
+    public void deregisterProcessClientListener(RemoteProcessClientListener listener) {
+        synchronized (remoteClientListeners) {
+            remoteClientListeners.remove(listener);
+        }
+    }
+
+    /**
+     * Invoke the {@link RemoteProcessClient} execution
+     * 
+     * @param name
+     * @param input
+     * @param metadata
+     * @param monitor
+     * @return
+     * @throws Exception
+     */
+    public abstract String execute(Name name, Map<String, Object> input,
+            Map<String, Object> metadata, ProgressListener monitor) throws Exception;
+
 }

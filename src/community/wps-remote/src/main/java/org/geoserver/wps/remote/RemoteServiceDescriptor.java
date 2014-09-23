@@ -11,7 +11,9 @@ import org.geotools.data.Parameter;
 import org.opengis.feature.type.Name;
 
 /**
- * @author alessio.fabiani
+ * Just a utility class to store some info associated to the new WPS Processes created dynamically by the {@link RemoteProcessFactory}
+ * 
+ * @author Alessio Fabiani, GeoSolutions
  * 
  */
 public class RemoteServiceDescriptor {
@@ -25,7 +27,7 @@ public class RemoteServiceDescriptor {
     private Map<String, Parameter<?>> paramInfo;
 
     private Map<String, Parameter<?>> outputInfo;
-    
+
     private Map<String, Object> metadata;
 
     /**

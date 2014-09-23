@@ -7,22 +7,36 @@ package org.geoserver.wps.remote;
 
 import java.util.Map;
 
-import org.geotools.data.Parameter;
-import org.opengis.feature.type.Name;
-
 /**
- * @author alessio.fabiani
+ * Interface allowing a {@link RemoteProcess} instance to listen to the {@link RemoteProcessClient} messages.
+ * 
+ * @author Alessio Fabiani, GeoSolutions
  * 
  */
-public abstract interface RemoteProcessClientListener {
+public interface RemoteProcessClientListener {
 
-    public void registerService(Name name, String title, String description,
-            Map<String, Parameter<?>> paramInfo, Map<String, Parameter<?>> outputInfo,
-            Map<String, Object> metadata);
-
-    public void deregisterService(Name name);
-
+    /**
+     * Sets the progress of the {@link RemoteProcess} associated to the remote service with the unique @param pId
+     * 
+     * @param pId
+     * @param progress
+     */
     public void progress(final String pId, final Double progress);
+
+    /**
+     * Completes of the {@link RemoteProcess} associated to the remote service with the unique @param pId
+     * 
+     * @param pId
+     * @param outputs
+     */
     public void complete(final String pId, final Object outputs);
+
+    /**
+     * Raise an Exception to the {@link RemoteProcess} associated to the remote service with the unique @param pId
+     * 
+     * @param pId
+     * @param cause
+     * @param metadata
+     */
     public void exceptionOccurred(final String pId, Exception cause, Map<String, Object> metadata);
 }
