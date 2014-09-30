@@ -27,20 +27,19 @@
 	    <constructor-arg index="2" value="1"/>
 	</bean>
 
-
 	<!-- REGISTER Signal -->
-	<bean id="xmppRemoteProcessClient" class="org.geoserver.wps.remote.plugin.XMPPRegisterMessage" />
+	<bean id="xmppRegisterMessage" class="org.geoserver.wps.remote.plugin.XMPPRegisterMessage" />
 
 	<!-- UNREGISTER Signal -->
-	<bean id="xmppRemoteProcessClient" class="org.geoserver.wps.remote.plugin.XMPPUnRegisterMessage" />
+	<bean id="xmppUnRegisterMessage" class="org.geoserver.wps.remote.plugin.XMPPUnRegisterMessage" />
 
 	<!-- PROGRESS Signal -->
-	<bean id="xmppRemoteProcessClient" class="org.geoserver.wps.remote.plugin.XMPPProgressMessage" />
+	<bean id="xmppProgressMessage" class="org.geoserver.wps.remote.plugin.XMPPProgressMessage" />
 
 	<!-- COMPLETED Signal -->
-	<bean id="xmppRemoteProcessClient" class="org.geoserver.wps.remote.plugin.XMPPCompletedMessage" />
+	<bean id="xmppCompletedMessage" class="org.geoserver.wps.remote.plugin.XMPPCompletedMessage" />
 
 	<!-- ERROR Signal -->
-	<bean id="xmppRemoteProcessClient" class="org.geoserver.wps.remote.plugin.XMPPErrorMessage" />
+	<bean id="xmppErrorMessage" class="org.geoserver.wps.remote.plugin.XMPPErrorMessage" />
 		
 </beans>
