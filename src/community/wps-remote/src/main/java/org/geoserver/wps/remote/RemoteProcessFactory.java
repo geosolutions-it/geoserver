@@ -7,8 +7,10 @@ package org.geoserver.wps.remote;
 
 import java.awt.RenderingHints.Key;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -61,11 +63,21 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessFactor
      */
     public RemoteProcessFactory() {
         try {
-            for (RemoteProcessClient ext : GeoServerExtensions
-                    .extensions(RemoteProcessClient.class)) {
+            List<RemoteProcessClient> availableRemoteClientInstances = GeoServerExtensions
+                    .extensions(RemoteProcessClient.class);
+            Collections.sort(availableRemoteClientInstances, new Comparator<RemoteProcessClient>() {
+
+                @Override
+                public int compare(RemoteProcessClient o1, RemoteProcessClient o2) {
+                    return Integer.compare(o2.getPriority(), o1.getPriority());
+                }
+
+            });
+            
+            for (RemoteProcessClient ext : availableRemoteClientInstances) {
                 if (ext.isEnabled()) {
                     remoteClient = ext;
-                    remoteClient.init();
+                    remoteClient.init(null);
                     remoteClient.registerProcessFactoryListener(this);
                     break;
                 }
@@ -73,6 +85,20 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessFactor
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
         }
+    }
+
+    /**
+     * @return the remoteClient
+     */
+    public RemoteProcessClient getRemoteClient() {
+        return remoteClient;
+    }
+
+    /**
+     * @param remoteClient the remoteClient to set
+     */
+    public void setRemoteClient(RemoteProcessClient remoteClient) {
+        this.remoteClient = remoteClient;
     }
 
     /** The Title of the {@link RemoteProcessFactory} */

@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.net.ssl.SSLContext;
+
 import net.razorvine.pickle.Opcodes;
 import net.razorvine.pickle.PickleException;
 import net.razorvine.pickle.PickleUtils;
@@ -107,18 +109,18 @@ public class XMPPClient extends RemoteProcessClient {
 
     private String managementChannelPassword;
 
-    private String managementChannel;
+    protected String managementChannel;
 
-    private List<String> serviceChannels;
+    protected List<String> serviceChannels;
 
     /**
      * Private structures
      */
-    private List<Name> registeredServices = Collections.synchronizedList(new ArrayList<Name>());
+    protected List<Name> registeredServices = Collections.synchronizedList(new ArrayList<Name>());
 
-    private List<MultiUserChat> mucServiceChannels = new ArrayList<MultiUserChat>();
+    protected List<MultiUserChat> mucServiceChannels = new ArrayList<MultiUserChat>();
 
-    private MultiUserChat mucManagementChannel;
+    protected MultiUserChat mucManagementChannel;
 
     /**
      * Default Constructor
@@ -128,8 +130,8 @@ public class XMPPClient extends RemoteProcessClient {
      */
     public XMPPClient(
             RemoteProcessFactoryConfigurationWatcher remoteProcessFactoryConfigurationWatcher,
-            boolean enabled) {
-        super(remoteProcessFactoryConfigurationWatcher, enabled);
+            boolean enabled, int priority) {
+        super(remoteProcessFactoryConfigurationWatcher, enabled, priority);
         this.server = getConfiguration().get("xmpp_server");
         this.port = Integer.parseInt(getConfiguration().get("xmpp_port"));
         this.domain = getConfiguration().get("xmpp_domain");
@@ -147,7 +149,7 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     @Override
-    public void init() throws Exception {
+    public void init(SSLContext customSSLContext) throws Exception {
 
         // Initializes the XMPP Client and starts the communication. It also register GeoServer as "manager" to the service channels on the MUC (Multi
         // User Channel) Rooms
@@ -161,8 +163,13 @@ public class XMPPClient extends RemoteProcessClient {
         SmackConfiguration.setDefaultPacketReplyTimeout(packetReplyTimeout);
 
         config = new ConnectionConfiguration(server, port);
-        // config.setSASLAuthenticationEnabled(false);
-        config.setSecurityMode(SecurityMode.disabled);
+        if (customSSLContext != null) {
+            // config.setSASLAuthenticationEnabled(false);
+            config.setSecurityMode(SecurityMode.enabled);
+            config.setCustomSSLContext(customSSLContext);
+        } else {
+            config.setSecurityMode(SecurityMode.disabled);
+        }
 
         connection = new XMPPTCPConnection(config);
         connection.connect();
@@ -310,263 +317,7 @@ public class XMPPClient extends RemoteProcessClient {
         /*
          * This is the actual code that handles what happens with XMPP users
          */
-        packetListener = new PacketListener() {
-
-            @Override
-            public void processPacket(Packet packet) {
-                if (packet instanceof Presence) {
-                    Presence p = (Presence) packet;
-
-                    try {
-                        if (p.isAvailable()) {
-                            if (p.getFrom().indexOf("@") > 0) {
-                                final String channel = p.getFrom().substring(0,
-                                        p.getFrom().indexOf("@"));
-                                if (serviceChannels.contains(channel))
-                                    handleMemberJoin(p);
-                            }
-                        }
-                    } catch (Exception e) {
-                        LOGGER.log(Level.WARNING, e.getMessage(), e);
-                    }
-                } else if (packet instanceof Message) {
-                    Message message = (Message) packet;
-                    String origin = message.getFrom().split("/")[0];
-                    Chat chat = setupChat(origin);
-
-                    if (message.getBody() != null) {
-                        LOGGER.fine("ReceivedMessage('" + message.getBody() + "','" + origin
-                                + "','" + message.getPacketID() + "');");
-
-                        Map<String, String> signalArgs = new HashMap<String, String>();
-                        try {
-                            String[] messageParts = message.getBody().split("&");
-                            for (String mp : messageParts) {
-                                String[] signalArg = mp.split("=");
-                                signalArgs.put(signalArg[0], signalArg[1]);
-                            }
-                        } catch (Exception e) {
-                            LOGGER.log(Level.WARNING, "Wrong message! [" + message.getBody() + "]");
-                            signalArgs.clear();
-                        }
-
-                        if (!signalArgs.isEmpty() && signalArgs.containsKey("topic")) {
-
-                            /**
-                             * REGISTER Signal
-                             */
-                            if (signalArgs.get("topic").equals("register")) {
-                                final String serviceName[] = signalArgs.get("service").split("\\.");
-                                final Name name = new NameImpl(serviceName[0], serviceName[1]);
-
-                                try {
-                                    String serviceDescriptorString = URLDecoder.decode(
-                                            signalArgs.get("message"), "UTF-8");
-                                    JSONObject serviceDescriptorJSON = (JSONObject) JSONSerializer
-                                            .toJSON(serviceDescriptorString);
-
-                                    final String title = (String) serviceDescriptorJSON
-                                            .get("title");
-                                    final String description = (String) serviceDescriptorJSON
-                                            .get("description");
-
-                                    JSONArray input = (JSONArray) serviceDescriptorJSON
-                                            .get("input");
-                                    JSONArray output = (JSONArray) serviceDescriptorJSON
-                                            .get("output");
-
-                                    // INPUTS
-                                    Map<String, Parameter<?>> inputs = new HashMap<String, Parameter<?>>();
-                                    for (int ii = 0; ii < input.size(); ii++) {
-                                        Object obj = input.get(ii);
-                                        if (obj instanceof JSONArray) {
-                                            JSONArray jsonArray = (JSONArray) obj;
-
-                                            String paramName = (String) jsonArray.get(0);
-                                            String ss = ((String) jsonArray.get(1));
-                                            ss = ss.substring(1, ss.length() - 1);
-                                            JSONObject paramType = (JSONObject) JSONSerializer
-                                                    .toJSON(ss);
-                                            String className = (String) paramType.get("type");
-                                            Class clazz = convertToJavaClass(className,
-                                                    XMPPClient.class.getClassLoader());
-
-                                            inputs.put(
-                                                    paramName,
-                                                    new Parameter(
-                                                            paramName,
-                                                            clazz,
-                                                            Text.text(paramName),
-                                                            Text.text((String) paramType
-                                                                    .get("description")),
-                                                            paramType.get("min") == null
-                                                                    || (Integer) paramType
-                                                                            .get("min") > 0,
-                                                            paramType.get("min") != null ? (Integer) paramType
-                                                                    .get("min") : 1,
-                                                            paramType.get("max") != null ? (Integer) paramType
-                                                                    .get("max") : -1, paramType
-                                                                    .get("default"), null));
-                                        }
-                                    }
-
-                                    // OUTPUTS
-                                    Map<String, Parameter<?>> outputs = new HashMap<String, Parameter<?>>();
-                                    for (int oo = 0; oo < output.size(); oo++) {
-                                        Object obj = output.get(oo);
-                                        if (obj instanceof JSONArray) {
-                                            JSONArray jsonArray = (JSONArray) obj;
-
-                                            String paramName = (String) jsonArray.get(0);
-                                            String ss = ((String) jsonArray.get(1));
-                                            ss = ss.substring(1, ss.length() - 1);
-                                            JSONObject paramType = (JSONObject) JSONSerializer
-                                                    .toJSON(ss);
-                                            String className = (String) paramType.get("type");
-                                            Class clazz = convertToJavaClass(className,
-                                                    XMPPClient.class.getClassLoader());
-
-                                            outputs.put(
-                                                    paramName,
-                                                    new Parameter(
-                                                            paramName,
-                                                            clazz,
-                                                            Text.text(paramName),
-                                                            Text.text((String) paramType
-                                                                    .get("description")),
-                                                            paramType.get("min") == null
-                                                                    || (Integer) paramType
-                                                                            .get("min") > 0,
-                                                            paramType.get("min") != null ? (Integer) paramType
-                                                                    .get("min") : 1,
-                                                            paramType.get("max") != null ? (Integer) paramType
-                                                                    .get("max") : 0, paramType
-                                                                    .get("default"), null));
-                                        }
-                                    }
-
-                                    // NOTIFY LISTENERS
-                                    Map<String, Object> metadata = new HashMap<String, Object>();
-                                    metadata.put("serviceJID", packet.getFrom());
-                                    for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
-                                        listener.registerService(name, title, description, inputs,
-                                                outputs, metadata);
-                                    }
-                                } catch (Exception e) {
-                                    LOGGER.log(Level.SEVERE, e.getMessage(), e);
-
-                                    // NOTIFY LISTENERS
-                                    for (RemoteProcessClientListener listener : remoteClientListeners) {
-
-                                        Map<String, Object> metadata = new HashMap<String, Object>();
-                                        metadata.put("serviceJID", packet.getFrom());
-
-                                        final String pID = (signalArgs != null ? signalArgs
-                                                .get("id") : null);
-
-                                        listener.exceptionOccurred(pID, e, metadata);
-                                    }
-                                }
-                            }
-
-                            /**
-                             * UNREGISTER Signal
-                             */
-                            if (signalArgs.get("topic").equals("unregister")) {
-                                try {
-                                    handleMemberLeave(packet);
-                                } catch (Exception e) {
-                                    // NOTIFY LISTENERS
-                                    for (RemoteProcessClientListener listener : remoteClientListeners) {
-
-                                        Map<String, Object> metadata = new HashMap<String, Object>();
-                                        metadata.put("serviceJID", packet.getFrom());
-
-                                        final String pID = (signalArgs != null ? signalArgs
-                                                .get("id") : null);
-
-                                        listener.exceptionOccurred(pID, e, metadata);
-                                    }
-                                }
-                            }
-
-                            /**
-                             * PROGRESS Signal
-                             */
-                            if (signalArgs.get("topic").equals("progress")) {
-                                final String pID = signalArgs.get("id");
-                                final Double progress = Double.parseDouble(signalArgs
-                                        .get("message"));
-
-                                // NOTIFY LISTENERS
-                                for (RemoteProcessClientListener listener : remoteClientListeners) {
-                                    listener.progress(pID, progress);
-                                }
-                            }
-
-                            /**
-                             * COMPLETED Signal
-                             */
-                            if (signalArgs.get("topic").equals("completed")) {
-                                final String pID = signalArgs.get("id");
-                                final String type = signalArgs.get("message");
-
-                                // NOTIFY LISTENERS
-                                if ("textual".equals(type)) {
-                                    Object outputs;
-                                    try {
-                                        String serviceResultString = URLDecoder.decode(
-                                                signalArgs.get("result"), "UTF-8");
-                                        JSONObject serviceResultJSON = (JSONObject) JSONSerializer
-                                                .toJSON(serviceResultString);
-                                        outputs = U(P(serviceResultJSON));
-                                        for (RemoteProcessClientListener listener : remoteClientListeners) {
-                                            listener.complete(pID, outputs);
-                                        }
-                                    } catch (PickleException e) {
-                                        LOGGER.log(Level.FINER, e.getMessage(), e);
-                                    } catch (IOException e) {
-                                        LOGGER.log(Level.FINER, e.getMessage(), e);
-                                    }
-                                }
-
-                                // NOTIFY SERVICE
-                                final String serviceJID = message.getFrom();
-                                sendMessage(serviceJID, "topic=finish");
-                            }
-
-                            /**
-                             * ERROR Signal
-                             */
-                            if (signalArgs.get("topic").equals("error")) {
-                                Map<String, Object> metadata = new HashMap<String, Object>();
-                                metadata.put("serviceJID", packet.getFrom());
-
-                                Exception cause = null;
-                                try {
-                                    cause = new Exception(URLDecoder.decode(
-                                            signalArgs.get("message"), "UTF-8"));
-                                } catch (UnsupportedEncodingException e) {
-                                    cause = e;
-                                }
-                                final String pID = (signalArgs != null ? signalArgs.get("id")
-                                        : null);
-
-                                // NOTIFY SERVICE
-                                final String serviceJID = message.getFrom();
-                                sendMessage(serviceJID, "topic=abort");
-
-                                // NOTIFY LISTENERS
-                                for (RemoteProcessClientListener listener : remoteClientListeners) {
-                                    listener.exceptionOccurred(pID, cause, metadata);
-                                }
-                            }
-
-                        }
-                    }
-                }
-            }
-        };
+        packetListener = new XMPPPacketListener(this);
 
         // PacketFilter filter = new MessageTypeFilter(Message.Type.chat);
         connection.addPacketListener(packetListener, null);
@@ -714,7 +465,7 @@ public class XMPPClient extends RemoteProcessClient {
             }
         }
 
-        for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
+        for (RemoteProcessFactoryListener listener : getRemoteFactoryListeners()) {
             listener.deregisterService(serviceName);
         }
     }
@@ -1102,7 +853,7 @@ public class XMPPClient extends RemoteProcessClient {
      * 
      * @throws ClassNotFoundException When the class could not be found by the specified ClassLoader
      */
-    private final static Class convertToJavaClass(String name, ClassLoader cl)
+    final static Class convertToJavaClass(String name, ClassLoader cl)
             throws ClassNotFoundException {
         int arraySize = 0;
         while (name.endsWith("[]")) {
@@ -1132,5 +883,295 @@ public class XMPPClient extends RemoteProcessClient {
         }
 
         return c;
+    }
+}
+
+/**
+ * 
+ * 
+ * @author Alessio Fabiani, GeoSolutions
+ * 
+ */
+class XMPPPacketListener implements PacketListener {
+
+    /** The LOGGER */
+    public static final Logger LOGGER = Logging.getLogger(XMPPPacketListener.class.getPackage()
+            .getName());
+
+    private XMPPClient xmppClient;
+
+    public XMPPPacketListener(XMPPClient xmppClient) {
+        this.xmppClient = xmppClient;
+    }
+
+    @Override
+    public void processPacket(Packet packet) {
+        if (packet instanceof Presence) {
+            Presence p = (Presence) packet;
+
+            try {
+                if (p.isAvailable()) {
+                    if (p.getFrom().indexOf("@") > 0) {
+                        final String channel = p.getFrom().substring(0, p.getFrom().indexOf("@"));
+                        if (xmppClient.serviceChannels.contains(channel))
+                            xmppClient.handleMemberJoin(p);
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, e.getMessage(), e);
+            }
+        } else if (packet instanceof Message) {
+            Message message = (Message) packet;
+            String origin = message.getFrom().split("/")[0];
+            Chat chat = xmppClient.setupChat(origin);
+
+            if (message.getBody() != null) {
+                LOGGER.fine("ReceivedMessage('" + message.getBody() + "','" + origin + "','"
+                        + message.getPacketID() + "');");
+
+                Map<String, String> signalArgs = new HashMap<String, String>();
+                try {
+                    String[] messageParts = message.getBody().split("&");
+                    for (String mp : messageParts) {
+                        String[] signalArg = mp.split("=");
+                        signalArgs.put(signalArg[0], signalArg[1]);
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Wrong message! [" + message.getBody() + "]");
+                    signalArgs.clear();
+                }
+
+                if (!signalArgs.isEmpty() && signalArgs.containsKey("topic")) {
+
+                    /**
+                     * REGISTER Signal
+                     */
+                    if (signalArgs.get("topic").equals("register")) {
+                        handleRegisterSignal(packet, message, signalArgs);
+                    }
+
+                    /**
+                     * UNREGISTER Signal
+                     */
+                    if (signalArgs.get("topic").equals("unregister")) {
+                        handleUnRegisterSignal(packet, message, signalArgs);
+                    }
+
+                    /**
+                     * PROGRESS Signal
+                     */
+                    if (signalArgs.get("topic").equals("progress")) {
+                        handleProgressSignal(packet, message, signalArgs);
+                    }
+
+                    /**
+                     * COMPLETED Signal
+                     */
+                    if (signalArgs.get("topic").equals("completed")) {
+                        handleCompletedSignal(packet, message, signalArgs);
+                    }
+
+                    /**
+                     * ERROR Signal
+                     */
+                    if (signalArgs.get("topic").equals("error")) {
+                        handleErrorSignal(packet, message, signalArgs);
+                    }
+
+                }
+            }
+        }
+    }
+
+    /**
+     * @param packet
+     * @param message
+     * @param signalArgs
+     */
+    protected void handleErrorSignal(Packet packet, Message message, Map<String, String> signalArgs) {
+        Map<String, Object> metadata = new HashMap<String, Object>();
+        metadata.put("serviceJID", packet.getFrom());
+
+        Exception cause = null;
+        try {
+            cause = new Exception(URLDecoder.decode(signalArgs.get("message"), "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            cause = e;
+        }
+        final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+
+        // NOTIFY SERVICE
+        final String serviceJID = message.getFrom();
+        xmppClient.sendMessage(serviceJID, "topic=abort");
+
+        // NOTIFY LISTENERS
+        for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+            listener.exceptionOccurred(pID, cause, metadata);
+        }
+    }
+
+    /**
+     * @param packet
+     * @param message
+     * @param signalArgs
+     */
+    protected void handleCompletedSignal(Packet packet, Message message,
+            Map<String, String> signalArgs) {
+        final String pID = signalArgs.get("id");
+        final String type = signalArgs.get("message");
+
+        // NOTIFY LISTENERS
+        if ("textual".equals(type)) {
+            Object outputs;
+            try {
+                String serviceResultString = URLDecoder.decode(signalArgs.get("result"), "UTF-8");
+                JSONObject serviceResultJSON = (JSONObject) JSONSerializer
+                        .toJSON(serviceResultString);
+                outputs = xmppClient.U(xmppClient.P(serviceResultJSON));
+                for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+                    listener.complete(pID, outputs);
+                }
+            } catch (PickleException e) {
+                LOGGER.log(Level.FINER, e.getMessage(), e);
+            } catch (IOException e) {
+                LOGGER.log(Level.FINER, e.getMessage(), e);
+            }
+        }
+
+        // NOTIFY SERVICE
+        final String serviceJID = message.getFrom();
+        xmppClient.sendMessage(serviceJID, "topic=finish");
+    }
+
+    /**
+     * @param packet
+     * @param message
+     * @param signalArgs
+     * 
+     * @throws NumberFormatException
+     */
+    protected void handleProgressSignal(Packet packet, Message message,
+            Map<String, String> signalArgs) throws NumberFormatException {
+        final String pID = signalArgs.get("id");
+        final Double progress = Double.parseDouble(signalArgs.get("message"));
+
+        // NOTIFY LISTENERS
+        for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+            listener.progress(pID, progress);
+        }
+    }
+
+    /**
+     * @param packet
+     * @param message
+     * @param signalArgs
+     */
+    protected void handleUnRegisterSignal(Packet packet, Message message,
+            Map<String, String> signalArgs) {
+        try {
+            xmppClient.handleMemberLeave(packet);
+        } catch (Exception e) {
+            // NOTIFY LISTENERS
+            for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+
+                Map<String, Object> metadata = new HashMap<String, Object>();
+                metadata.put("serviceJID", packet.getFrom());
+
+                final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+
+                listener.exceptionOccurred(pID, e, metadata);
+            }
+        }
+    }
+
+    /**
+     * @param packet
+     * @param message
+     * @param signalArgs
+     */
+    protected void handleRegisterSignal(Packet packet, Message message,
+            Map<String, String> signalArgs) {
+        final String serviceName[] = signalArgs.get("service").split("\\.");
+        final Name name = new NameImpl(serviceName[0], serviceName[1]);
+
+        try {
+            String serviceDescriptorString = URLDecoder.decode(signalArgs.get("message"), "UTF-8");
+            JSONObject serviceDescriptorJSON = (JSONObject) JSONSerializer
+                    .toJSON(serviceDescriptorString);
+
+            final String title = (String) serviceDescriptorJSON.get("title");
+            final String description = (String) serviceDescriptorJSON.get("description");
+
+            JSONArray input = (JSONArray) serviceDescriptorJSON.get("input");
+            JSONArray output = (JSONArray) serviceDescriptorJSON.get("output");
+
+            // INPUTS
+            Map<String, Parameter<?>> inputs = new HashMap<String, Parameter<?>>();
+            for (int ii = 0; ii < input.size(); ii++) {
+                Object obj = input.get(ii);
+                if (obj instanceof JSONArray) {
+                    JSONArray jsonArray = (JSONArray) obj;
+
+                    String paramName = (String) jsonArray.get(0);
+                    String ss = ((String) jsonArray.get(1));
+                    ss = ss.substring(1, ss.length() - 1);
+                    JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
+                    String className = (String) paramType.get("type");
+                    Class clazz = xmppClient.convertToJavaClass(className,
+                            XMPPClient.class.getClassLoader());
+
+                    inputs.put(paramName, new Parameter(paramName, clazz, Text.text(paramName),
+                            Text.text((String) paramType.get("description")),
+                            paramType.get("min") == null || (Integer) paramType.get("min") > 0,
+                            paramType.get("min") != null ? (Integer) paramType.get("min") : 1,
+                            paramType.get("max") != null ? (Integer) paramType.get("max") : -1,
+                            paramType.get("default"), null));
+                }
+            }
+
+            // OUTPUTS
+            Map<String, Parameter<?>> outputs = new HashMap<String, Parameter<?>>();
+            for (int oo = 0; oo < output.size(); oo++) {
+                Object obj = output.get(oo);
+                if (obj instanceof JSONArray) {
+                    JSONArray jsonArray = (JSONArray) obj;
+
+                    String paramName = (String) jsonArray.get(0);
+                    String ss = ((String) jsonArray.get(1));
+                    ss = ss.substring(1, ss.length() - 1);
+                    JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
+                    String className = (String) paramType.get("type");
+                    Class clazz = xmppClient.convertToJavaClass(className,
+                            XMPPClient.class.getClassLoader());
+
+                    outputs.put(paramName, new Parameter(paramName, clazz, Text.text(paramName),
+                            Text.text((String) paramType.get("description")),
+                            paramType.get("min") == null || (Integer) paramType.get("min") > 0,
+                            paramType.get("min") != null ? (Integer) paramType.get("min") : 1,
+                            paramType.get("max") != null ? (Integer) paramType.get("max") : 0,
+                            paramType.get("default"), null));
+                }
+            }
+
+            // NOTIFY LISTENERS
+            Map<String, Object> metadata = new HashMap<String, Object>();
+            metadata.put("serviceJID", packet.getFrom());
+            for (RemoteProcessFactoryListener listener : xmppClient.getRemoteFactoryListeners()) {
+                listener.registerService(name, title, description, inputs, outputs, metadata);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, e.getMessage(), e);
+
+            // NOTIFY LISTENERS
+            for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+
+                Map<String, Object> metadata = new HashMap<String, Object>();
+                metadata.put("serviceJID", packet.getFrom());
+
+                final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+
+                listener.exceptionOccurred(pID, e, metadata);
+            }
+        }
     }
 }

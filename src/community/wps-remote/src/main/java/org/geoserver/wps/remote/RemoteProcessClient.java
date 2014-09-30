@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SSLContext;
+
 import org.opengis.feature.type.Name;
 import org.opengis.util.ProgressListener;
 
@@ -24,15 +26,18 @@ public abstract class RemoteProcessClient {
     /** Whether this client is enabled or not from configuration */
     private boolean enabled;
 
+    /** Whenever more instances of the client are available, they should be ordered by ascending priority */
+    private int priority;
+    
     /** The {@link RemoteProcessFactoryConfigurationWatcher} implementation */
     private final RemoteProcessFactoryConfigurationWatcher remoteProcessFactoryConfigurationWatcher;
 
     /** The registered {@link RemoteProcessFactoryListener} */
-    protected List<RemoteProcessFactoryListener> remoteFactoryListeners = Collections
+    private List<RemoteProcessFactoryListener> remoteFactoryListeners = Collections
             .synchronizedList(new ArrayList<RemoteProcessFactoryListener>());
 
     /** The registered {@link RemoteProcessClientListener} */
-    protected List<RemoteProcessClientListener> remoteClientListeners = Collections
+    private List<RemoteProcessClientListener> remoteClientListeners = Collections
             .synchronizedList(new ArrayList<RemoteProcessClientListener>());
 
     /**
@@ -42,9 +47,10 @@ public abstract class RemoteProcessClient {
      */
     public RemoteProcessClient(
             RemoteProcessFactoryConfigurationWatcher remoteProcessFactoryConfigurationWatcher,
-            boolean enabled) {
+            boolean enabled, int priority) {
         this.remoteProcessFactoryConfigurationWatcher = remoteProcessFactoryConfigurationWatcher;
         this.enabled = enabled;
+        this.priority = priority;
     }
 
     /**
@@ -59,7 +65,7 @@ public abstract class RemoteProcessClient {
      * 
      * @throws Exception
      */
-    public abstract void init() throws Exception;
+    public abstract void init(SSLContext customSSLContext) throws Exception;
 
     /**
      * Destroy method
@@ -67,6 +73,20 @@ public abstract class RemoteProcessClient {
      * @throws Exception
      */
     public abstract void destroy() throws Exception;
+
+    /**
+     * @return the remoteFactoryListeners
+     */
+    public List<RemoteProcessFactoryListener> getRemoteFactoryListeners() {
+        return remoteFactoryListeners;
+    }
+
+    /**
+     * @return the remoteClientListeners
+     */
+    public List<RemoteProcessClientListener> getRemoteClientListeners() {
+        return remoteClientListeners;
+    }
 
     /**
      * @param enabled the enabled to set
@@ -82,6 +102,20 @@ public abstract class RemoteProcessClient {
      */
     public boolean isEnabled() {
         return this.enabled;
+    }
+
+    /**
+     * @return the priority
+     */
+    public int getPriority() {
+        return priority;
+    }
+
+    /**
+     * @param priority the priority to set
+     */
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     /**
