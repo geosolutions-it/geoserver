@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+	<resource class="vectorialLayer">
+		<name>test</name>
+		<persistent>true</persistent>
+		<defaultStyle>
+			<name>polygon</name>
+			<filename>polygon.sld</filename>
+		</defaultStyle>
+		<title>USA Population</title>
+		<abstract>This is some census data on the states.</abstract>
+		<keywords>
+			<string>census</string>
+			<string>united</string>
+			<string>boundaries</string>
+			<string>state</string>
+			<string>states</string>
+		</keywords>
+		<nativeCRS>GEOGCS["GCS_WGS_1984",
+			DATUM["WGS_1984",
+			SPHEROID["WGS_1984", 6378137.0, 298.257223563]],
+			PRIMEM["Greenwich",
+			0.0],
+			UNIT["degree", 0.017453292519943295],
+			AXIS["Longitude", EAST],
+			AXIS["Latitude", NORTH]]
+		</nativeCRS>
+		<srs>EPSG:4326</srs>
+		<nativeBoundingBox>
+			<minx>-124.73142200000001</minx>
+			<maxx>-66.969849</maxx>
+			<miny>24.955967</miny>
+			<maxy>49.371735</maxy>
+			<crs>EPSG:4326</crs>
+		</nativeBoundingBox>
+		<metadata>
+			<cacheAgeMax>3600</cacheAgeMax>
+			<kml.regionateFeatureLimit>10</kml.regionateFeatureLimit>
+			<indexingEnabled>false</indexingEnabled>
+			<cachingEnabled>true</cachingEnabled>
+			<dirName>states</dirName>
+		</metadata>
+		<translate>
+			<item class="dataStore">
+			    <type>SOURCE</type>
+				<store>
+					<url>file:data/shapefiles/states.shp</url>
+				</store>
+			</item>
+			<item class="dataStore">
+			    <type>TARGET</type>
+				<store>
+					<dbtype>postgis</dbtype>
+					<host>localhost</host>
+					<port>5432</port>
+					<database>postgres</database>
+					<user>postgres</user>
+					<passwd>postgres</passwd>
+				</store>
+			</item>
+		</translate>
+	</resource>
+</resources>
