@@ -29,14 +29,14 @@ import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
  * @author alessio.fabiani
- *
+ * 
  */
 public class VectorialLayerConverter extends ResourceLoaderConverter {
 
     public VectorialLayerConverter(String type) {
         super(type);
     }
-    
+
     @Override
     public boolean canConvert(Class clazz) {
         return VectorialLayer.class.equals(clazz);
@@ -46,25 +46,87 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
     public void marshal(Object value, HierarchicalStreamWriter writer, MarshallingContext context) {
         VectorialLayer resource = (VectorialLayer) value;
 
-        context.convertAnother(resource);
+        if (resource.getName() != null) {
+            writer.startNode("name");
+            writer.setValue(resource.getName());
+            writer.endNode();
+        }
+
+        writer.startNode("persistent");
+        writer.setValue(String.valueOf(resource.isPersistent()));
+        writer.endNode();
+
+        if (resource.getDefaultStyle() != null) {
+            writer.startNode("defaultStyle");
+            context.convertAnother(resource.getDefaultStyle());
+            writer.endNode();
+        }
+
+        if (resource.getTitle() != null) {
+            writer.startNode("title");
+            writer.setValue(resource.getTitle());
+            writer.endNode();
+        }
+
+        if (resource.getAbstract() != null) {
+            writer.startNode("abstract");
+            writer.setValue(resource.getAbstract());
+            writer.endNode();
+        }
+
+        if (resource.getKeywords() != null) {
+            writer.startNode("keywords");
+            context.convertAnother(resource.getKeywords());
+            writer.endNode();
+        }
+
+        if (resource.getNativeCRS() != null) {
+            writer.startNode("nativeCRS");
+            writer.setValue(resource.getNativeCRS());
+            writer.endNode();
+        }
+
+        if (resource.getSrs() != null) {
+            writer.startNode("srs");
+            writer.setValue(resource.getSrs());
+            writer.endNode();
+        }
+
+        if (resource.getNativeBoundingBox() != null) {
+            writer.startNode("nativeBoundingBox");
+            context.convertAnother(resource.getNativeBoundingBox());
+            writer.endNode();
+        }
+
+        if (resource.getMetadata() != null) {
+            writer.startNode("metadata");
+            context.convertAnother(resource.getMetadata());
+            writer.endNode();
+        }
+
+        if (resource.getTranslate() != null) {
+            writer.startNode("translate");
+            context.convertAnother(resource.getTranslate());
+            writer.endNode();
+        }
     }
 
     @Override
     public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
         VectorialLayer resource = new VectorialLayer();
-        
+
         while (reader.hasMoreChildren()) {
             reader.moveDown();
 
             String nodeName = reader.getNodeName(); // nodeName aka element's name
             Object nodeValue = reader.getValue();
-            
+
             if ("name".equals(nodeName)) {
                 resource.setName((String) nodeValue);
             }
-            
+
             if ("persistent".equals(nodeName)) {
-                resource.setPersistent(Boolean.valueOf((String)nodeValue));
+                resource.setPersistent(Boolean.valueOf((String) nodeValue));
             }
 
             if ("title".equals(nodeName)) {
@@ -76,9 +138,10 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             }
 
             if ("defaultStyle".equals(nodeName)) {
-                resource.setDefaultStyle((Map<String, String>) context.convertAnother(nodeValue, Map.class));
+                resource.setDefaultStyle((Map<String, String>) context.convertAnother(nodeValue,
+                        Map.class));
             }
-            
+
             if ("keywords".equals(nodeName)) {
                 resource.setKeywords((List<String>) context.convertAnother(nodeValue, List.class));
             }
@@ -92,20 +155,23 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             }
 
             if ("nativeBoundingBox".equals(nodeName)) {
-                resource.setNativeBoundingBox((Map<String, String>) context.convertAnother(nodeValue, Map.class));
+                resource.setNativeBoundingBox((Map<String, String>) context.convertAnother(
+                        nodeValue, Map.class));
             }
 
             if ("metadata".equals(nodeName)) {
-                resource.setMetadata((Map<String, String>) context.convertAnother(nodeValue, Map.class));
+                resource.setMetadata((Map<String, String>) context.convertAnother(nodeValue,
+                        Map.class));
             }
 
             if ("translate".equals(nodeName)) {
-                resource.setTranslate((Translate) context.convertAnother(nodeValue, Translate.class));
+                resource.setTranslate((Translate) context
+                        .convertAnother(nodeValue, Translate.class));
             }
-            
+
             reader.moveUp();
         }
-        
+
         return resource;
     }
 

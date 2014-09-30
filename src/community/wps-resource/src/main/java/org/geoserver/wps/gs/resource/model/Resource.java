@@ -86,5 +86,60 @@ public abstract class Resource {
     public void setTranslate(Translate translate) {
         this.translate = translate;
     }
+    
+    /**
+     * 
+     * @return
+     */
+    public boolean isWellDefined() {
+        boolean res = true;
 
+        if (getType() == null || getName() == null)
+            return false;
+
+        // Check the consistency of the Translation Items
+        int sourceItems = 0;
+        int targetItems = 0;
+        String sourceClass = null;
+        String targetClass = null;
+
+        for (TranslateItem item : getTranslate().getItems()) {
+            // Check if it's SOURCE
+            if (item.getType() == TranslateItem.TYPE.SOURCE) {
+                sourceItems++;
+                sourceClass = item.getStoreClass();
+            }
+
+            if (sourceItems > 1) {
+                res = false;
+                break;
+            }
+
+            // Check if it's TARGET
+            if (item.getType() == TranslateItem.TYPE.TARGET) {
+                targetItems++;
+                targetClass = item.getStoreClass();
+            }
+
+            if (targetItems > 1) {
+                res = false;
+                break;
+            }
+
+        }
+
+        // Sanity Checks
+        if (sourceItems == 0)
+            res = false;
+        if (targetItems > 0 && !sourceClass.equals(targetClass))
+            res = false;
+
+        return res && resourcePropertiesConsistencyCheck();
+    }
+
+    /**
+     * 
+     * @return
+     */
+    protected abstract boolean resourcePropertiesConsistencyCheck();
 }

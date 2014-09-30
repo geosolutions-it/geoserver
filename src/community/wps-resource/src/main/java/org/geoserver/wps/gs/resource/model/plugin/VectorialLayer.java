@@ -25,7 +25,7 @@ import org.geoserver.wps.gs.resource.model.Resource;
 
 /**
  * @author alessio.fabiani
- *
+ * 
  */
 public class VectorialLayer extends Resource {
 
@@ -72,7 +72,7 @@ public class VectorialLayer extends Resource {
     public void setAbstract(String abstractTxt) {
         this.abstractTxt = abstractTxt;
     }
-    
+
     /**
      * @return the keywords
      */
@@ -155,6 +155,11 @@ public class VectorialLayer extends Resource {
      */
     public void setMetadata(Map<String, String> metadata) {
         this.metadata = metadata;
+    }
+
+    @Override
+    protected boolean resourcePropertiesConsistencyCheck() {
+        return true;
     }
 
 }
