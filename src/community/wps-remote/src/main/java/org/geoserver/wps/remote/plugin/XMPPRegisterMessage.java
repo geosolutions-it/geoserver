@@ -63,49 +63,59 @@ public class XMPPRegisterMessage implements XMPPMessage {
 
             // INPUTS
             Map<String, Parameter<?>> inputs = new HashMap<String, Parameter<?>>();
-            for (int ii = 0; ii < input.size(); ii++) {
-                Object obj = input.get(ii);
-                if (obj instanceof JSONArray) {
-                    JSONArray jsonArray = (JSONArray) obj;
+            if (input != null) {
+                for (int ii = 0; ii < input.size(); ii++) {
+                    Object obj = input.get(ii);
+                    if (obj instanceof JSONArray) {
+                        JSONArray jsonArray = (JSONArray) obj;
 
-                    String paramName = (String) jsonArray.get(0);
-                    String ss = ((String) jsonArray.get(1));
-                    ss = ss.substring(1, ss.length() - 1);
-                    JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
-                    String className = (String) paramType.get("type");
-                    Class clazz = xmppClient.convertToJavaClass(className,
-                            XMPPClient.class.getClassLoader());
+                        String paramName = (String) jsonArray.get(0);
+                        String ss = ((String) jsonArray.get(1));
+                        ss = ss.substring(1, ss.length() - 1);
+                        JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
+                        String className = (String) paramType.get("type");
+                        Class clazz = xmppClient.convertToJavaClass(className,
+                                XMPPClient.class.getClassLoader());
 
-                    inputs.put(paramName, new Parameter(paramName, clazz, Text.text(paramName),
-                            Text.text((String) paramType.get("description")),
-                            paramType.get("min") == null || (Integer) paramType.get("min") > 0,
-                            paramType.get("min") != null ? (Integer) paramType.get("min") : 1,
-                            paramType.get("max") != null ? (Integer) paramType.get("max") : -1,
-                            paramType.get("default"), null));
+                        inputs.put(
+                                paramName,
+                                new Parameter(paramName, clazz, Text.text(paramName), Text
+                                        .text((String) paramType.get("description")), paramType
+                                        .get("min") == null || (Integer) paramType.get("min") > 0,
+                                        paramType.get("min") != null ? (Integer) paramType
+                                                .get("min") : 1,
+                                        paramType.get("max") != null ? (Integer) paramType
+                                                .get("max") : -1, paramType.get("default"), null));
+                    }
                 }
             }
 
             // OUTPUTS
             Map<String, Parameter<?>> outputs = new HashMap<String, Parameter<?>>();
-            for (int oo = 0; oo < output.size(); oo++) {
-                Object obj = output.get(oo);
-                if (obj instanceof JSONArray) {
-                    JSONArray jsonArray = (JSONArray) obj;
+            if (output != null) {
+                for (int oo = 0; oo < output.size(); oo++) {
+                    Object obj = output.get(oo);
+                    if (obj instanceof JSONArray) {
+                        JSONArray jsonArray = (JSONArray) obj;
 
-                    String paramName = (String) jsonArray.get(0);
-                    String ss = ((String) jsonArray.get(1));
-                    ss = ss.substring(1, ss.length() - 1);
-                    JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
-                    String className = (String) paramType.get("type");
-                    Class clazz = xmppClient.convertToJavaClass(className,
-                            XMPPClient.class.getClassLoader());
+                        String paramName = (String) jsonArray.get(0);
+                        String ss = ((String) jsonArray.get(1));
+                        ss = ss.substring(1, ss.length() - 1);
+                        JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
+                        String className = (String) paramType.get("type");
+                        Class clazz = xmppClient.convertToJavaClass(className,
+                                XMPPClient.class.getClassLoader());
 
-                    outputs.put(paramName, new Parameter(paramName, clazz, Text.text(paramName),
-                            Text.text((String) paramType.get("description")),
-                            paramType.get("min") == null || (Integer) paramType.get("min") > 0,
-                            paramType.get("min") != null ? (Integer) paramType.get("min") : 1,
-                            paramType.get("max") != null ? (Integer) paramType.get("max") : 0,
-                            paramType.get("default"), null));
+                        outputs.put(
+                                paramName,
+                                new Parameter(paramName, clazz, Text.text(paramName), Text
+                                        .text((String) paramType.get("description")), paramType
+                                        .get("min") == null || (Integer) paramType.get("min") > 0,
+                                        paramType.get("min") != null ? (Integer) paramType
+                                                .get("min") : 1,
+                                        paramType.get("max") != null ? (Integer) paramType
+                                                .get("max") : 0, paramType.get("default"), null));
+                    }
                 }
             }
 
