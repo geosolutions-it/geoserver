@@ -1165,5 +1165,26 @@
         </dependency>
       </dependencies>
     </profile>
+	<profile>
+		<id>cluster</id>
+		<activation>
+			<property>
+				<name>all</name>
+				<value>true</value>
+			</property>
+		</activation>
+		<dependencies>
+			<dependency>
+				<groupId>org.geoserver</groupId>
+				<artifactId>gs-jms-commons</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.geoserver</groupId>
+				<artifactId>gs-jms-geoserver</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+		</dependencies>
+	</profile>	
  </profiles>
 </project>

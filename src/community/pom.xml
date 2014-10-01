@@ -54,6 +54,8 @@
 		  <descriptor>release/ext-kmlppio.xml</descriptor>
 		  <descriptor>release/ext-gpx.xml</descriptor>
 		  <descriptor>release/ext-wps-download.xml</descriptor>
+          <descriptor>release/ext-cluster.xml</descriptor>
+          <descriptor>release/ext-activeMQ.xml</descriptor>		  
         </descriptors>
       </configuration>
      </plugin>
@@ -354,5 +356,29 @@
         <module>wps-download</module>
       </modules>
     </profile>	
+	<profile>
+		<id>cluster</id>
+		<activation>
+			<property>
+				<name>all</name>
+				<value>true</value>
+			</property>
+		</activation>
+		<modules>
+			<module>cluster</module>
+		</modules>
+	</profile>
+	<profile>
+		<id>activemq</id>
+		<activation>
+			<property>
+				<name>all</name>
+				<value>true</value>
+			</property>
+		</activation>
+		<modules>
+			<module>cluster</module>
+		</modules>
+	</profile>	
   </profiles>
 </project>
