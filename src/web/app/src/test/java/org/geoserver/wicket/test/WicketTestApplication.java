@@ -82,7 +82,7 @@ public class WicketTestApplication extends WebApplication
 	}
 	
 	/**
-	 * Same as {@link #start(IComponentFactory)}, but allows to specify the context path and the
+	 * Same as {@link #start(IComponentFactory)}, but allows to specify the translateContext path and the
 	 * port 
 	 * @param factory
 	 * @param contextPath
@@ -105,7 +105,7 @@ public class WicketTestApplication extends WebApplication
         connector.setPort(port);
         server.setConnectors(new Connector[] { connector });
 
-        // programmatically add the wicket servlet to the context
+        // programmatically add the wicket servlet to the translateContext
         Context root = new Context(server, contextPath ,Context.SESSIONS);
         ServletHolder wicket = new ServletHolder(WicketServlet.class);
         wicket.setInitParameter("applicationClassName", WicketTestApplication.class.getName());

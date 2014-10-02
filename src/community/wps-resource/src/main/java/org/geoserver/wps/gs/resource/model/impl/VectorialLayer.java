@@ -14,7 +14,7 @@
  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *    Lesser General Public License for more details.
  */
-package org.geoserver.wps.gs.resource.model.plugin;
+package org.geoserver.wps.gs.resource.model.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;

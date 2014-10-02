@@ -12,7 +12,14 @@
 
 	<!-- ResourceLoader Pluggable Converters -->
 	<bean id="vectorialLayerResourceConverter"
-		class="org.geoserver.wps.gs.resource.model.plugin.VectorialLayerConverter">
+		class="org.geoserver.wps.gs.resource.model.impl.VectorialLayerConverter">
 		<constructor-arg index="0" value="vectorialLayer" />
 	</bean>
+	
+	<!-- TranslateItems Pluggable Converters -->
+	<bean id="sataStoreItemConverter"
+		class="org.geoserver.wps.gs.resource.model.translate.impl.DataStoreItemConverter">
+		<constructor-arg index="0" value="dataStore" />
+	</bean>
+	
 </beans>

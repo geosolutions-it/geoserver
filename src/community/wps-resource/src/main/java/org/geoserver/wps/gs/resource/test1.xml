@@ -40,24 +40,22 @@
 			<cachingEnabled>true</cachingEnabled>
 			<dirName>states</dirName>
 		</metadata>
-		<translate>
-			<item class="dataStore">
-			    <type>SOURCE</type>
-				<store>
-					<url>file:data/shapefiles/states.shp</url>
-				</store>
-			</item>
-			<item class="dataStore">
-			    <type>TARGET</type>
+		<translateContext>
+			<item class="dataStore" order="1">
 				<store>
 					<dbtype>postgis</dbtype>
 					<host>localhost</host>
 					<port>5432</port>
-					<database>postgres</database>
+					<database>geoserver</database>
 					<user>postgres</user>
 					<passwd>postgres</passwd>
 				</store>
 			</item>
-		</translate>
+			<item class="dataStore" order="0">
+				<store>
+					<url>file:/D:/tmp/nyc/tiger_roads.shp</url>
+				</store>
+			</item>
+		</translateContext>
 	</resource>
 </resources>

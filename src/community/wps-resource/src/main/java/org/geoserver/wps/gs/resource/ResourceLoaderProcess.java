@@ -22,8 +22,9 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.Resources;
-import org.geoserver.wps.gs.resource.model.Translate;
-import org.geoserver.wps.gs.resource.model.TranslateItem;
+import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
+import org.geoserver.wps.gs.resource.model.translate.TranslateItem;
+import org.geoserver.wps.gs.resource.model.translate.TranslateItemConverter;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.process.ProcessException;
 import org.geotools.process.factory.DescribeParameter;
@@ -86,6 +87,8 @@ public class ResourceLoaderProcess implements GSProcess {
                     throw new IllegalArgumentException(
                             "The resources definition were not well formed.");
                 }
+
+                resource.getTranslateContext().run();
             }
 
             // Store XML into the WPS folder
@@ -95,7 +98,7 @@ public class ResourceLoaderProcess implements GSProcess {
             throw new ProcessException(cause);
         }
 
-        return null;
+        return resourcesXML;
     }
 
     /**
@@ -110,6 +113,7 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.alias("resources", Resources.class);
         xs.alias("resource", Resource.class);
         xs.aliasField("abstract", Resource.class, "abstractTxt");
+        xs.aliasField("translateContext", Resource.class, "translateContext");
         xs.aliasAttribute(Resource.class, "type", "class");
 
         xs.alias("nativeBoundingBox", Map.class);
@@ -117,17 +121,18 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.alias("defaultStyle", Map.class);
         xs.alias("metadata", Map.class);
 
-        xs.alias("translate", Translate.class);
+        xs.alias("translateContext", TranslateContext.class);
         xs.alias("item", TranslateItem.class);
-        xs.aliasAttribute(TranslateItem.class, "storeClass", "class");
+        xs.aliasAttribute(TranslateItem.class, "type", "class");
+        xs.aliasAttribute(TranslateItem.class, "order", "order");
 
         // Converters
         xs.addImplicitCollection(Resources.class, "resources");
-        xs.addImplicitCollection(Translate.class, "items");
+        xs.addImplicitCollection(TranslateContext.class, "items");
 
         xs.registerConverter(new MapEntryConverter());
-
-        xs.registerConverter(new ResourceConverter());
+        xs.registerConverter(new ResourceConverter(this.catalog));
+        xs.registerConverter(new ResourceItemConverter());
 
         return xs;
     }
@@ -221,6 +226,17 @@ public class ResourceLoaderProcess implements GSProcess {
      */
     public static class ResourceConverter implements Converter {
 
+        private Catalog catalog;
+
+        /**
+         * 
+         * @param geoServer
+         * @param resourceManager
+         */
+        public ResourceConverter(Catalog catalog) {
+            this.catalog = catalog;
+        }
+
         @Override
         public boolean canConvert(Class clazz) {
             return Resource.class.isAssignableFrom(clazz);
@@ -248,7 +264,55 @@ public class ResourceLoaderProcess implements GSProcess {
                 if (extension.getTYPE().equals(type)) {
                     Resource resource = (Resource) extension.unmarshal(reader, context);
                     resource.setType(type);
+
+                    /** Set the Translate Context Resources */
+                    resource.getTranslateContext().setCatalog(catalog);
+                    resource.getTranslateContext().setOriginator(resource);
                     return resource;
+                }
+            }
+
+            return null;
+        }
+
+    }
+
+    /**
+     * 
+     * @author alessio.fabiani
+     * 
+     */
+    public static class ResourceItemConverter implements Converter {
+
+        @Override
+        public boolean canConvert(Class clazz) {
+            return TranslateItem.class.isAssignableFrom(clazz);
+        }
+
+        @Override
+        public void marshal(Object value, HierarchicalStreamWriter writer,
+                MarshallingContext context) {
+
+            for (TranslateItemConverter extension : GeoServerExtensions
+                    .extensions(TranslateItemConverter.class)) {
+                if (extension.canConvert(value.getClass())) {
+                    extension.marshal(value, writer, context);
+                    break;
+                }
+            }
+        }
+
+        @Override
+        public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
+            final String type = reader.getAttribute("class");
+
+            for (TranslateItemConverter extension : GeoServerExtensions
+                    .extensions(TranslateItemConverter.class)) {
+                if (extension.getTYPE().equals(type)) {
+                    TranslateItem translateItem = (TranslateItem) extension.unmarshal(reader,
+                            context);
+                    translateItem.setType(type);
+                    return translateItem;
                 }
             }
 

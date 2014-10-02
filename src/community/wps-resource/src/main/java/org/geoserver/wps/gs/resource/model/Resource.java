@@ -16,20 +16,21 @@
  */
 package org.geoserver.wps.gs.resource.model;
 
+import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 
 /**
  * @author alessio.fabiani
  * 
  */
 public abstract class Resource {
-    
+
     private String type;
-    
+
     protected String name;
 
     protected boolean persistent;
-    
-    protected Translate translate;
+
+    protected TranslateContext translateContext;
 
     /**
      * @return the type
@@ -74,19 +75,19 @@ public abstract class Resource {
     }
 
     /**
-     * @return the translate
+     * @return the translateContext
      */
-    public Translate getTranslate() {
-        return translate;
+    public TranslateContext getTranslateContext() {
+        return translateContext;
     }
 
     /**
-     * @param translate the translate to set
+     * @param translateContext the translateContext to set
      */
-    public void setTranslate(Translate translate) {
-        this.translate = translate;
+    public void setTranslateContext(TranslateContext context) {
+        this.translateContext = context;
     }
-    
+
     /**
      * 
      * @return
@@ -96,43 +97,6 @@ public abstract class Resource {
 
         if (getType() == null || getName() == null)
             return false;
-
-        // Check the consistency of the Translation Items
-        int sourceItems = 0;
-        int targetItems = 0;
-        String sourceClass = null;
-        String targetClass = null;
-
-        for (TranslateItem item : getTranslate().getItems()) {
-            // Check if it's SOURCE
-            if (item.getType() == TranslateItem.TYPE.SOURCE) {
-                sourceItems++;
-                sourceClass = item.getStoreClass();
-            }
-
-            if (sourceItems > 1) {
-                res = false;
-                break;
-            }
-
-            // Check if it's TARGET
-            if (item.getType() == TranslateItem.TYPE.TARGET) {
-                targetItems++;
-                targetClass = item.getStoreClass();
-            }
-
-            if (targetItems > 1) {
-                res = false;
-                break;
-            }
-
-        }
-
-        // Sanity Checks
-        if (sourceItems == 0)
-            res = false;
-        if (targetItems > 0 && !sourceClass.equals(targetClass))
-            res = false;
 
         return res && resourcePropertiesConsistencyCheck();
     }

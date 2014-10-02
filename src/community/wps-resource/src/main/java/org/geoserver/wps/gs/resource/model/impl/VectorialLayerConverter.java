@@ -14,13 +14,13 @@
  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *    Lesser General Public License for more details.
  */
-package org.geoserver.wps.gs.resource.model.plugin;
+package org.geoserver.wps.gs.resource.model.impl;
 
 import java.util.List;
 import java.util.Map;
 
 import org.geoserver.wps.gs.resource.ResourceLoaderConverter;
-import org.geoserver.wps.gs.resource.model.Translate;
+import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 
 import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
@@ -104,9 +104,9 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             writer.endNode();
         }
 
-        if (resource.getTranslate() != null) {
-            writer.startNode("translate");
-            context.convertAnother(resource.getTranslate());
+        if (resource.getTranslateContext() != null) {
+            writer.startNode("translateContext");
+            context.convertAnother(resource.getTranslateContext());
             writer.endNode();
         }
     }
@@ -164,9 +164,9 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
                         Map.class));
             }
 
-            if ("translate".equals(nodeName)) {
-                resource.setTranslate((Translate) context
-                        .convertAnother(nodeValue, Translate.class));
+            if ("translateContext".equals(nodeName)) {
+                resource.setTranslateContext((TranslateContext) context.convertAnother(nodeValue,
+                        TranslateContext.class));
             }
 
             reader.moveUp();
