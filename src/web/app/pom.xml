@@ -1166,7 +1166,6 @@
       </dependencies>
     </profile>
 	<profile>
-<<<<<<< HEAD
       <id>solr</id>
       <dependencies>
         <dependency>
@@ -1196,27 +1195,6 @@
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>
-=======
-		<id>cluster</id>
-		<activation>
-			<property>
-				<name>all</name>
-				<value>true</value>
-			</property>
-		</activation>
-		<dependencies>
-			<dependency>
-				<groupId>org.geoserver</groupId>
-				<artifactId>gs-jms-commons</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.geoserver</groupId>
-				<artifactId>gs-jms-geoserver</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-		</dependencies>
->>>>>>> ac19587ec99e37896125911d07f24e3091124a23
 	</profile>	
  </profiles>
 </project>

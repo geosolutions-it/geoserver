@@ -138,14 +138,11 @@
       <artifactId>gs-jms-geoserver</artifactId>
      <version>${project.version}</version>
    </dependency>  
-<<<<<<< HEAD
-=======
    <dependency>
       <groupId>org.geoserver</groupId>
       <artifactId>gs-jms-commons</artifactId>
      <version>${project.version}</version>
    </dependency>   
->>>>>>> ac19587ec99e37896125911d07f24e3091124a23
  </dependencies>
  <build>
   <plugins>

@@ -4,29 +4,10 @@
     <format>zip</format>
   </formats>
   <includeBaseDirectory>false</includeBaseDirectory>
-<<<<<<< HEAD
    <fileSets>
 	<fileSet>
 	      <directory>release/target/dependency</directory>
 	      <outputDirectory></outputDirectory>
-=======
-  
-   <fileSets>
-	<fileSet>
-	    <directory>cluster/jms-geoserver/target/</directory>
-	    <outputDirectory>.</outputDirectory>
-	    <includes>
-	      <include>gs-jms-*.jar</include>
-	    </includes>
-	    <excludes>
-	      <exclude>*-sources*</exclude>
-	      <exclude>*-test*</exclude>
-	    </excludes>
-	</fileSet>
-	<fileSet>
-	      <directory>cluster/jms-geoserver/target/dependency/</directory>
-	      <outputDirectory>.</outputDirectory>
->>>>>>> ac19587ec99e37896125911d07f24e3091124a23
 	      <includes>
 			<include>gs-jms*.jar</include>
 			<include>jms-api*.jar</include>
@@ -58,19 +39,10 @@
 			<include>hawtbuf*.jar</include>
 			<include>hawtjni*.jar</include>
 			<include>hawtdispatch*.jar</include>
-
-
 			<include>activemq-spring*.jar</include>
 			<include>activemq-pool*.jar</include>
 			<include>activemq-protobuf*.jar</include>
 	      </includes>
-<<<<<<< HEAD
-=======
-	      <excludes>
-			<exclude>*-sources*</exclude>
-			<exclude>*-test*</exclude>
-	      </excludes>
->>>>>>> ac19587ec99e37896125911d07f24e3091124a23
 	</fileSet>
  </fileSets>
 </assembly>
