@@ -54,9 +54,11 @@
 		</profile>
 		<profile>
 			<id>cluster</id>
+
      <activation>
        <activeByDefault>true</activeByDefault>
      </activation>
+
 			<modules>
 				<module>jms-commons</module>
 				<module>jms-geoserver</module>

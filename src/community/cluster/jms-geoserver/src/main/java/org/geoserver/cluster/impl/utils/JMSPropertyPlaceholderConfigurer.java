@@ -21,18 +21,6 @@ import org.springframework.core.io.Resource;
 public class JMSPropertyPlaceholderConfigurer extends
 		PropertyPlaceholderConfigurer implements InitializingBean {
 
-	@Override
-	public void setLocation(Resource location) {
-		// TODO Auto-generated method stub
-		super.setLocation(location);
-	}
-
-	@Override
-	public void setLocations(Resource[] locations) {
-		// TODO Auto-generated method stub
-		super.setLocations(locations);
-	}
-
 	private final JMSConfiguration config;
 	private final Resource defaults;
 
@@ -40,6 +28,7 @@ public class JMSPropertyPlaceholderConfigurer extends
 			JMSConfiguration config) throws IOException {
 		if (!defaultFile.exists()) {
 			throw new IOException("Unable to locate the default properties file at:"+ defaultFile);
+
 		}
 		this.defaults = defaultFile;
 		this.config = config;
