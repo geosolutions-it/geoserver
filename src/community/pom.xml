@@ -365,6 +365,12 @@
       <modules>
         <module>wps-download</module>
       </modules>
+    </profile>	
+    <profile>
+      <id>solr</id>
+      <modules>
+        <module>solr</module>
+      </modules>
     </profile>
   </profiles>
 </project>
