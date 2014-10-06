@@ -5,9 +5,9 @@
  */
 package org.geoserver.importer.transform;
 
+import org.geoserver.importer.ImportTask;
 import org.geotools.data.DataStore;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.geoserver.importer.ImportTask;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.GeometryDescriptor;
@@ -65,6 +65,7 @@ public class AttributesToPointGeometryTransform extends AbstractVectorTransform 
         builder.remove(latField);
         builder.remove(lngField);
         builder.add(pointFieldName, Point.class);
+        builder.setDefaultGeometry(pointFieldName);
 
         return builder.buildFeatureType();
     }
@@ -81,7 +82,13 @@ public class AttributesToPointGeometryTransform extends AbstractVectorTransform 
         } else {
             Coordinate coordinate = new Coordinate(lng, lat);
             Point point = geometryFactory.createPoint(coordinate);
-            feature.setAttribute(pointFieldName, point);
+            final String geomAttName = feature.getDefaultGeometryProperty().getName().getLocalPart();
+            if (geomAttName
+                    .equals(pointFieldName)) {
+                feature.setAttribute(pointFieldName, point);
+            } else {
+                feature.setAttribute(geomAttName, point);
+            }
         }
         return feature;
     }

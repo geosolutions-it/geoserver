@@ -1220,9 +1220,15 @@ public class Importer implements DisposableBean, ApplicationListener {
         if (isOracleDataStore(dataStore)) {
             name = name.toUpperCase();
         }
+        
+        List<String> names = Arrays.asList(dataStore.getTypeNames());
+
+        //hack for shapefiles, the typeName must be equal to the fileName
+        if (isShapefileDataStore(dataStore)) {
+            return names.get(0);
+        }
 
         //TODO: put an upper limit on how many times to try
-        List<String> names = Arrays.asList(dataStore.getTypeNames());
         if (names.contains(name)) {
             int i = 0;
             name += i;

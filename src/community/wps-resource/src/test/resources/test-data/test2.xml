@@ -7,8 +7,8 @@
 			<name>polygon</name>
 			<filename>polygon.sld</filename>
 		</defaultStyle>
-		<title>USA Population</title>
-		<abstract>This is some census data on the states.</abstract>
+		<title>A Test Vectorial Resource</title>
+		<abstract>This is a Test Vectorial Resource.</abstract>
 		<keywords>
 			<string>census</string>
 			<string>united</string>
@@ -41,14 +41,9 @@
 			<dirName>states</dirName>
 		</metadata>
 		<translateContext>
-			<!-- item class="dataStore" order="0">
-				<store>
-					<url>file:/D:/tmp/nyc/tiger_roads.shp</url>
-				</store>
-			</item -->
 			<item class="dataStore" order="0">
 				<store>
-					<url>file:/D:/Work/NURC/OAA/OAAondemand/Solutions_Output/waypoints.csv</url>
+					<url>file:waypoints.csv</url>
 				</store>
 			</item>
 			<item class="transform" order="1"
@@ -66,12 +61,7 @@
 			</item>
 			<item class="dataStore" order="2">
 				<store>
-					<dbtype>postgis</dbtype>
-					<host>localhost</host>
-					<port>5432</port>
-					<database>geoserver</database>
-					<user>postgres</user>
-					<passwd>postgres</passwd>
+					<url>file:way_points.shp</url>
 				</store>
 			</item>
 		</translateContext>

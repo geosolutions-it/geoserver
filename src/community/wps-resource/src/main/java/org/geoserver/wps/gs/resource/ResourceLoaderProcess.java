@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.util.XStreamPersisterFactory;
@@ -39,6 +41,8 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.Converter;
 import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
+import com.thoughtworks.xstream.converters.reflection.PureJavaReflectionProvider;
+import com.thoughtworks.xstream.converters.reflection.ReflectionConverter;
 import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
@@ -74,10 +78,8 @@ public class ResourceLoaderProcess implements GSProcess {
         XStream xs = initialize();
 
         // De-serialize resources
-        File test;
         try {
-            test = new File(ResourceLoaderProcess.class.getResource("test1.xml").toURI());
-            Resources resources = (Resources) xs.fromXML(test);
+            Resources resources = (Resources) xs.fromXML(resourcesXML);
 
             // Create-or-update the resources
             for (Resource resource : resources.getResources()) {
@@ -92,8 +94,8 @@ public class ResourceLoaderProcess implements GSProcess {
             }
 
             // Store XML into the WPS folder
-            storeResourcesXML(xs, resources);
-
+            // storeResourcesXML(xs, resources);
+            storeResourcesXML(resourcesXML);
         } catch (Exception cause) {
             throw new ProcessException(cause);
         }
@@ -133,6 +135,8 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.registerConverter(new MapEntryConverter());
         xs.registerConverter(new ResourceConverter(this.catalog));
         xs.registerConverter(new ResourceItemConverter());
+        xs.registerConverter(new ReflectionConverter(xs.getMapper(),
+                new PureJavaReflectionProvider()), XStream.PRIORITY_VERY_LOW);
 
         return xs;
     }
@@ -164,9 +168,37 @@ public class ResourceLoaderProcess implements GSProcess {
             } catch (Exception cause) {
                 LOGGER.log(Level.SEVERE, "Could not marshall Resources.", cause);
             } finally {
-                if (fos != null) {
-                    fos.close();
-                }
+                IOUtils.closeQuietly(fos);
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param data
+     * @throws IllegalArgumentException
+     * @throws IOException
+     * @throws FileNotFoundException
+     */
+    protected void storeResourcesXML(String data) throws IllegalArgumentException, IOException,
+            FileNotFoundException {
+        final String executionId = resourceManager.getExecutionId(null);
+        GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
+        File wpsProcessFolder = new File(loader.getBaseDirectory().getCanonicalPath(), "/temp/wps/"
+                + executionId);
+
+        if (!wpsProcessFolder.exists()) {
+            wpsProcessFolder.mkdirs();
+        }
+
+        if (wpsProcessFolder.exists() && wpsProcessFolder.isDirectory()) {
+            final File wpsResourceLoaderOutput = new File(wpsProcessFolder, "resources_"
+                    + executionId + ".xml");
+            try {
+                FileUtils.writeStringToFile(wpsResourceLoaderOutput, data, "UTF-8", false);
+            } catch (Exception cause) {
+                LOGGER.log(Level.SEVERE, "Could not marshall Resources.", cause);
+            } finally {
             }
         }
     }

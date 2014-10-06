@@ -37,6 +37,7 @@ import org.geotools.util.logging.Logging;
  */
 public class TranslateContext {
 
+    /** */
     static Logger LOGGER = Logging.getLogger(TranslateContext.class);
 
     private SortedSet<TranslateItem> items = new TreeSet<TranslateItem>(
@@ -186,7 +187,7 @@ public class TranslateContext {
     }
 
     /**
-     * @throws IOException 
+     * @throws IOException
      * 
      */
     public void run() throws IOException {
@@ -207,7 +208,7 @@ public class TranslateContext {
                 }
                 next = next.run(this);
             }
-            
+
             // lunch the importer
             importer.run(importContext);
         }

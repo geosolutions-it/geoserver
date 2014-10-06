@@ -7,8 +7,8 @@
 			<name>polygon</name>
 			<filename>polygon.sld</filename>
 		</defaultStyle>
-		<title>USA Population</title>
-		<abstract>This is some census data on the states.</abstract>
+		<title>A Test Vectorial Resource</title>
+		<abstract>This is a Test Vectorial Resource.</abstract>
 		<keywords>
 			<string>census</string>
 			<string>united</string>
@@ -48,7 +48,7 @@
 			</item -->
 			<item class="dataStore" order="0">
 				<store>
-					<url>file:/D:/Work/NURC/OAA/OAAondemand/Solutions_Output/waypoints.csv</url>
+					<url>file:waypoints.csv</url>
 				</store>
 			</item>
 			<item class="transform" order="1"
