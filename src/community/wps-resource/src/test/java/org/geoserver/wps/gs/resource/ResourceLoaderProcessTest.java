@@ -11,14 +11,13 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.process.ProcessException;
 import org.junit.Test;
-
-import com.thoughtworks.xstream.XStream;
 
 /**
  * 
@@ -30,9 +29,6 @@ public class ResourceLoaderProcessTest extends WPSResourceTestSupport {
 
     @Test
     public void testResourceLoaderProcess() {
-
-        // Initialize Unmarshaller
-        XStream xs = initialize();
 
         // De-serialize resources
         File test2;
@@ -54,6 +50,40 @@ public class ResourceLoaderProcessTest extends WPSResourceTestSupport {
 
             LayerInfo layer = getGeoServer().getCatalog().getLayerByName("way_points");
             assertNotNull(layer);
+
+            // cleanup
+            cleanCatalog();
+        } catch (Exception cause) {
+            fail(cause.getMessage());
+            throw new ProcessException(cause);
+        }
+
+        // De-serialize resources
+        File test3;
+        try {
+            test3 = new File(testData.getDataDirectoryRoot().getAbsolutePath(), "test3.xml");
+            assertTrue(test3.exists());
+
+            String dump = null;
+            FileInputStream fis = new FileInputStream(test3);
+            try {
+                dump = IOUtils.toString(fis, "UTF-8");
+            } finally {
+                IOUtils.closeQuietly(fis);
+            }
+
+            List<LayerInfo> layers = getGeoServer().getCatalog().getLayers();
+            final int numLayers = layers.size();
+            assertTrue(numLayers == 0);
+
+            ResourceLoaderProcess rsp = new ResourceLoaderProcess(getGeoServer(),
+                    (WPSResourceManager) applicationContext.getBean("wpsResourceManager"));
+            rsp.execute(dump, null);
+
+            assertNotNull(layers.size() > numLayers);
+
+            // cleanup
+            cleanCatalog();
         } catch (Exception cause) {
             fail(cause.getMessage());
             throw new ProcessException(cause);

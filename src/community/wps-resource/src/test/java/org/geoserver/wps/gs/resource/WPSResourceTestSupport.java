@@ -5,8 +5,10 @@
  */
 package org.geoserver.wps.gs.resource;
 
+import java.io.IOException;
 import java.util.Map;
 
+import org.geoserver.catalog.StoreInfo;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.GeoServerExtensions;
@@ -34,6 +36,7 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
     @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
         super.setUpTestData(testData);
+
         // add limits properties file
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
@@ -41,6 +44,9 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
                         "test-data/test2.xml"), "test2.xml");
+        testData.copyTo(
+                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
+                        "test-data/test3.xml"), "test3.xml");
 
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
@@ -48,7 +54,13 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
                         "test-data/waypoints.prj"), "waypoints.prj");
-}
+    }
+
+    protected void cleanCatalog() throws IOException {
+        for (StoreInfo s : getGeoServer().getCatalog().getStores(StoreInfo.class)) {
+            removeStore(null, s.getName());
+        }
+    }
 
     /**
      * @return
