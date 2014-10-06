@@ -1194,6 +1194,21 @@
 		  <version>${project.version}</version>
         </dependency>
       </dependencies>
-    </profile>
+   </profile>
+   <profile>
+	<id>jms-cluster</id>
+	<dependencies>
+		<dependency>
+			<groupId>org.geoserver</groupId>
+			<artifactId>gs-jms-commons</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.geoserver</groupId>
+			<artifactId>gs-jms-geoserver</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+	</profile>	
  </profiles>
 </project>
