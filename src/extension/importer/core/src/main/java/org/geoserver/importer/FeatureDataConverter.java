@@ -80,7 +80,7 @@ public class FeatureDataConverter {
             ImportData data, ImportTask task) {
 
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
-        typeBuilder.setName(convertTypeName(task.getLayer().getName() != null ? task.getLayer()
+        typeBuilder.setName(convertTypeName(task != null && task.getLayer().getName() != null ? task.getLayer()
                 .getName() : featureType.getTypeName()));
 
         AttributeTypeBuilder attBuilder = new AttributeTypeBuilder();
