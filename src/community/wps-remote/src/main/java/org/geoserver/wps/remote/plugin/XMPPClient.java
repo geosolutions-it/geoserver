@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,7 +28,9 @@ import net.razorvine.pickle.PickleUtils;
 import net.razorvine.pickle.Pickler;
 import net.razorvine.pickle.Unpickler;
 
+import org.apache.commons.io.IOUtils;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.wps.process.RawData;
 import org.geoserver.wps.remote.RemoteProcessClient;
 import org.geoserver.wps.remote.RemoteProcessFactoryConfigurationWatcher;
 import org.geoserver.wps.remote.RemoteProcessFactoryListener;
@@ -201,16 +204,45 @@ public class XMPPClient extends RemoteProcessClient {
         if (metadata != null && serviceJID != null) {
             // Extract the PID
             metadata.put("serviceJID", serviceJID);
+            final Object fixedInputs = getFixedInputs(input);
             final String pid = md5Java(serviceJID + System.nanoTime()) + "_"
-                    + md5Java(byteArrayToURLString(P(input)));
+                    + md5Java(byteArrayToURLString(P(fixedInputs)));
 
-            String msg = "topic=request&id=" + pid + "&message=" + byteArrayToURLString(P(input));
+            String msg = "topic=request&id=" + pid + "&message=" + byteArrayToURLString(P(fixedInputs));
             sendMessage(serviceJID, msg);
 
             return pid;
         }
 
         return null;
+    }
+
+    private Object getFixedInputs(Map<String, Object> input) throws IOException {
+        Map<String, Object> fixedInputs = new HashMap<String, Object>();
+
+        for (Entry<String, Object> entry : input.entrySet()) {
+            final String key = entry.getKey();
+            final Object value = entry.getValue();
+
+            Object fixedValue = value;
+            if (value instanceof RawData) {
+                fixedValue = IOUtils.toString(((RawData) value).getInputStream(), "UTF-8");
+            } else if (value instanceof List) {
+                List<Object> values = (List<Object>) value;
+                
+                if (values != null && values.size() > 0 && values.get(0) instanceof RawData) {
+                    fixedValue = new ArrayList<String>();
+                    
+                    for (Object o : values) {
+                        ((List<String>) fixedValue).add(IOUtils.toString(((RawData) o).getInputStream(), "UTF-8"));
+                    }
+                }
+            }
+
+            fixedInputs.put(key, fixedValue);
+        }
+
+        return fixedInputs;
     }
 
     /*
@@ -855,8 +887,14 @@ public class XMPPClient extends RemoteProcessClient {
             arraySize++;
         }
 
-        // Check for a primitive type
-        Class c = (Class) PRIMITIVE_NAME_TYPE_MAP.get(name);
+        Class c = null;
+        if (name.equalsIgnoreCase("complex") || name.equalsIgnoreCase("complex")) {
+            // Is it a complex/raw data type?
+            c = RawData.class;
+        } else {
+            // Check for a primitive type
+            c = (Class) PRIMITIVE_NAME_TYPE_MAP.get(name);
+        }
 
         if (c == null) {
             // No primitive, try to load it from the given ClassLoader

@@ -17,8 +17,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.net.ssl.SSLContext;
@@ -28,12 +30,10 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.vysper.mina.TCPEndpoint;
 import org.apache.vysper.storage.StorageProviderRegistry;
 import org.apache.vysper.storage.inmemory.MemoryStorageProviderRegistry;
-import org.apache.vysper.xmpp.addressing.Entity;
 import org.apache.vysper.xmpp.addressing.EntityImpl;
 import org.apache.vysper.xmpp.authorization.AccountManagement;
 import org.apache.vysper.xmpp.modules.extension.xep0045_muc.MUCModule;
 import org.apache.vysper.xmpp.modules.extension.xep0045_muc.model.Conference;
-import org.apache.vysper.xmpp.modules.extension.xep0045_muc.model.Room;
 import org.apache.vysper.xmpp.modules.extension.xep0049_privatedata.PrivateDataModule;
 import org.apache.vysper.xmpp.modules.extension.xep0054_vcardtemp.VcardTempModule;
 import org.apache.vysper.xmpp.modules.extension.xep0092_software_version.SoftwareVersionModule;
@@ -44,10 +44,13 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wps.WPSTestSupport;
 import org.geoserver.wps.remote.plugin.MockRemoteClient;
 import org.geoserver.wps.remote.plugin.XMPPClient;
+import org.geoserver.wps.remote.plugin.XMPPMessage;
+import org.geoserver.wps.remote.plugin.XMPPRegisterMessage;
 import org.geotools.factory.FactoryIteratorProvider;
 import org.geotools.factory.GeoTools;
 import org.geotools.feature.NameImpl;
 import org.geotools.process.ProcessFactory;
+import org.jivesoftware.smack.packet.Packet;
 import org.junit.Test;
 import org.opengis.feature.type.Name;
 
@@ -176,9 +179,9 @@ public class RemoteProcessTest extends WPSTestSupport {
                     .loadTrustMaterial(trustStore, new TrustSelfSignedStrategy()).build();
 
             server.setTLSCertificateInfo(certfile, "boguspw");
-            
+
             server.start();
-            
+
             // other initialization
             server.addModule(new SoftwareVersionModule());
             server.addModule(new EntityTimeModule());
@@ -188,21 +191,17 @@ public class RemoteProcessTest extends WPSTestSupport {
 
             Conference conference = new Conference(configuration.get("xmpp_bus"));
             server.addModule(new MUCModule(configuration.get("xmpp_bus"), conference));
-            
+
             /**
-            Entity managementRoomJID = EntityImpl.parseUnchecked(configuration.get("xmpp_management_channel") + "@" + xmppDomain);
-            
-            Room management = conference.findOrCreateRoom(managementRoomJID, configuration.get("xmpp_management_channel"));
-            management.setPassword(configuration.get("xmpp_management_channel_pwd"));
-            
-            String[] serviceChannels = configuration.get("xmpp_service_channels").split(",");
-            if (serviceChannels != null) {
-                for (String channel : serviceChannels) {
-                    Entity serviceRoomJID = EntityImpl.parseUnchecked(channel + "@" + xmppDomain);
-                    conference.findOrCreateRoom(serviceRoomJID, channel);                    
-                }
-            }
-            **/
+             * Entity managementRoomJID = EntityImpl.parseUnchecked(configuration.get("xmpp_management_channel") + "@" + xmppDomain);
+             * 
+             * Room management = conference.findOrCreateRoom(managementRoomJID, configuration.get("xmpp_management_channel"));
+             * management.setPassword(configuration.get("xmpp_management_channel_pwd"));
+             * 
+             * String[] serviceChannels = configuration.get("xmpp_service_channels").split(","); if (serviceChannels != null) { for (String channel :
+             * serviceChannels) { Entity serviceRoomJID = EntityImpl.parseUnchecked(channel + "@" + xmppDomain);
+             * conference.findOrCreateRoom(serviceRoomJID, channel); } }
+             **/
 
             // /
             XMPPClient xmppRemoteClient = (XMPPClient) applicationContext
@@ -215,6 +214,51 @@ public class RemoteProcessTest extends WPSTestSupport {
             e.printStackTrace();
             fail(e.getLocalizedMessage());
         }
+    }
+
+    @Test
+    public void testRegisterMessage() {
+        // /
+        XMPPClient xmppRemoteClient = (XMPPClient) applicationContext
+                .getBean("xmppRemoteProcessClient");
+        assertNotNull(xmppRemoteClient);
+
+        XMPPMessage msg = new XMPPRegisterMessage();
+
+        // build register body
+        Map<String, String> signalArgs = new HashMap<String, String>();
+        signalArgs.put("topic", "register");
+        signalArgs.put("service", "test.Service");
+        /**
+         * JSON URL Encoded Body
+         * 
+         * {
+         *   "title": "test.Service",
+         *   "description": "This is a test Service!",
+         *   "input": [
+         *     ["simpleType", "{\"type\": \"string\", \"description\": \"A simple string parameter\", \"max\": 1}"],
+         *     ["complexType", "{\"type\": \"complex\", \"description\": \"A complex parameter\", \"min\": 1, \"max\": 10}"]
+         *   ]
+         * }
+         */
+        signalArgs
+                .put("message",
+                        "%7B%0A%20%20%22title%22%3A%20%22test.Service%22%2C%0A%20%20%22description%22%3A%20%22This%20is%20a%20test%20Service!%22%2C%0A%20%20%22input%22%3A%20%5B%0A%20%20%20%20%5B%22simpleType%22%2C%20%22%7B%5C%22type%5C%22%3A%20%5C%22string%5C%22%2C%20%5C%22description%5C%22%3A%20%5C%22A%20simple%20string%20parameter%5C%22%2C%20%5C%22max%5C%22%3A%201%7D%22%5D%2C%0A%20%20%20%20%5B%22complexType%22%2C%20%22%7B%5C%22type%5C%22%3A%20%5C%22complex%5C%22%2C%20%5C%22description%5C%22%3A%20%5C%22A%20complex%20parameter%5C%22%2C%20%5C%22min%5C%22%3A%201%2C%20%5C%22max%5C%22%3A%2010%7D%22%5D%0A%20%20%5D%0A%7D");
+
+        // handle signal
+        Packet packet = new Packet() {
+            
+            @Override
+            public String getFrom() {
+                return "test@geoserver.org";
+            }
+
+            @Override
+            public CharSequence toXML() {
+                return null;
+            }
+        };
+        msg.handleSignal(xmppRemoteClient, packet, null, signalArgs);
     }
 
     /**
