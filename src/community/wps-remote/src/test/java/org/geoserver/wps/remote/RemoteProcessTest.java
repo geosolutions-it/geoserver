@@ -130,7 +130,7 @@ public class RemoteProcessTest extends WPSTestSupport {
         }
     }
 
-    @Test
+    //@Test
     public void testXMPPClient() {
         setupFactory();
 
