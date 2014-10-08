@@ -23,17 +23,24 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
+ * Abstract base class for the XStream Resource Converters. Each converter can be plugged into the GeoServer environment as an extension by extending
+ * this base class.
+ * 
  * @author alessio.fabiani
- *
+ * 
  */
 public abstract class ResourceLoaderConverter implements Converter {
 
+    /**
+     * The type of the extension allows the converter to correctly recognize the resource. This must be equal to the Resource "class" attribute
+     * defined into the XML.
+     */
     private final String TYPE;
-    
+
     public ResourceLoaderConverter(String type) {
         TYPE = type;
     }
-    
+
     /**
      * @return the tYPE
      */

@@ -22,6 +22,8 @@ import java.util.logging.Logger;
 import org.geotools.util.logging.Logging;
 
 /**
+ * The base class for 
+ * 
  * @author alessio.fabiani
  * 
  */

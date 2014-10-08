@@ -22,6 +22,8 @@ import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 import org.geotools.util.logging.Logging;
 
 /**
+ * This is the base class for each WPS Resource concrete implementation.
+ * 
  * @author alessio.fabiani
  * 
  */

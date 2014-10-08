@@ -23,6 +23,8 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamImplicit;
 
 /**
+ * A bean collecing a list of {@link Resource}s. Useful for XStream Alias mapping purposes.
+ * 
  * @author alessio.fabiani
  * 
  */

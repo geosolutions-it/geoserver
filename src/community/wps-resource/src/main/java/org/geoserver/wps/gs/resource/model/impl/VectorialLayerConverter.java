@@ -28,6 +28,8 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
+ * {@link ResourceLoaderConverter} extension for the marshalling/unmarshalling of {@link VectorialLayer}s.
+ * 
  * @author alessio.fabiani
  * 
  */

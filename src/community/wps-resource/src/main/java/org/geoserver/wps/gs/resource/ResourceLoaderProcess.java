@@ -47,6 +47,9 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
+ * The process takes an XML defining the Resources to load and runs the TranlationContext state machine on each one. Every ResourceLoader and Resource
+ * know how to handle the import process. The ones integrated with GeoServer, like the VectorialLayer and RasterLayer, basically do a Importer
+ * Extension wrap in order to perform the transformation the import on the catalog.
  * 
  * @author alessio.fabiani
  * 
@@ -204,6 +207,8 @@ public class ResourceLoaderProcess implements GSProcess {
     }
 
     /**
+     * This XStream converter performs the marshalling and unmarshalling of a {@link java.util.Map} into an XML having the nodes named like the Map
+     * keys.
      * 
      * @author alessio.fabiani
      * 
@@ -252,6 +257,8 @@ public class ResourceLoaderProcess implements GSProcess {
     }
 
     /**
+     * This XStream converter performs a scan of the GeoServer Extension capable of converting the Resource defined into the XML. The converter than
+     * delegates the conversion responsibility to the selected extension.
      * 
      * @author alessio.fabiani
      * 
@@ -310,6 +317,7 @@ public class ResourceLoaderProcess implements GSProcess {
     }
 
     /**
+     * Acts similarly to the {@link ResourceConverter} excepts that it searches for the Resources Translation Items.
      * 
      * @author alessio.fabiani
      * 

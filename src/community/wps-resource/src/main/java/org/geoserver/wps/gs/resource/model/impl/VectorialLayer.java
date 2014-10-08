@@ -32,6 +32,8 @@ import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
+ * Wraps a GeoServer Vector type Layer XML definition and provides some properties conversion methods for the correct GeoServer Catalog configuration.
+ * 
  * @author alessio.fabiani
  * 
  */
