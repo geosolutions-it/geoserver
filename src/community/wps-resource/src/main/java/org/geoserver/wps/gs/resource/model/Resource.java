@@ -16,13 +16,18 @@
  */
 package org.geoserver.wps.gs.resource.model;
 
+import java.util.logging.Logger;
+
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
+import org.geotools.util.logging.Logging;
 
 /**
  * @author alessio.fabiani
  * 
  */
 public abstract class Resource {
+
+    static protected Logger LOGGER = Logging.getLogger(Resource.class);
 
     private String type;
 

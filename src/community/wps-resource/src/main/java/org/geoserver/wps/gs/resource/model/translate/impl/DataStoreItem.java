@@ -20,6 +20,7 @@ import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.StyleInfo;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.importer.DataFormat;
 import org.geoserver.importer.Database;
@@ -176,13 +177,17 @@ public class DataStoreItem extends TranslateItem {
         VectorialLayer userLayer = (VectorialLayer) originator;
         ResourceInfo resource = layer.getResource();
         resource.setSRS(userLayer.getSrs());
-        // resource.setNativeBoundingBox(box);
-        // resource.setNativeCRS(nativeCRS);
+        resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
+        resource.setNativeCRS(userLayer.nativeCRS());
 
         layer.setName(userLayer.getName());
         layer.setAbstract(userLayer.getAbstract());
         layer.setTitle(userLayer.getTitle());
-        // layer.setDefaultStyle(defaultStyle);
+
+        StyleInfo defaultStyle = userLayer.defaultStyle(catalog);
+        if (defaultStyle != null) {
+            layer.setDefaultStyle(defaultStyle);
+        }
 
         task.getData().prepare();
     }

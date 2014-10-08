@@ -69,7 +69,7 @@ public class ResourceLoaderProcess implements GSProcess {
         this.resourceManager = resourceManager;
     }
 
-    @DescribeResult(name = "result", description = "Zipped output files to download")
+    @DescribeResult(name = "result", description = "XML describing the Resources to load")
     public String execute(
             @DescribeParameter(name = "resourcesXML", min = 1, description = "XML describing the Resources to load") String resourcesXML,
             final ProgressListener progressListener) throws ProcessException {

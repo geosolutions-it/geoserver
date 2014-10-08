@@ -20,8 +20,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.StyleInfo;
 import org.geoserver.wps.gs.resource.model.Resource;
+import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.referencing.CRS;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * @author alessio.fabiani
@@ -160,6 +168,75 @@ public class VectorialLayer extends Resource {
     @Override
     protected boolean resourcePropertiesConsistencyCheck() {
         return true;
+    }
+
+    /**
+     * 
+     * @return
+     */
+    public ReferencedEnvelope nativeBoundingBox() {
+        if (this.nativeBoundingBox != null) {
+            double x1 = Double.parseDouble(this.nativeBoundingBox.get("minx"));
+            double x2 = Double.parseDouble(this.nativeBoundingBox.get("maxx"));
+            double y1 = Double.parseDouble(this.nativeBoundingBox.get("miny"));
+            double y2 = Double.parseDouble(this.nativeBoundingBox.get("maxy"));
+            CoordinateReferenceSystem crs = null;
+            if (this.nativeBoundingBox.get("crs") != null) {
+                try {
+                    crs = CRS.decode(this.nativeBoundingBox.get("crs"));
+                } catch (NoSuchAuthorityCodeException e) {
+                    LOGGER.log(Level.WARNING,
+                            "Exception occurred while trying to decode Native BBOX", e);
+                } catch (FactoryException e) {
+                    LOGGER.log(Level.WARNING,
+                            "Exception occurred while trying to decode Native BBOX", e);
+                }
+            }
+            ReferencedEnvelope bbox = new ReferencedEnvelope(x1, x2, y1, y2, crs);
+            return bbox;
+        }
+
+        return null;
+    }
+
+    /**
+     * 
+     * @return
+     */
+    public CoordinateReferenceSystem nativeCRS() {
+        CoordinateReferenceSystem crs = null;
+        if (this.nativeBoundingBox.get("crs") != null) {
+            try {
+                crs = CRS.decode(this.nativeBoundingBox.get("crs"));
+            } catch (NoSuchAuthorityCodeException e) {
+                LOGGER.log(Level.WARNING, "Exception occurred while trying to decode Native BBOX",
+                        e);
+            } catch (FactoryException e) {
+                LOGGER.log(Level.WARNING, "Exception occurred while trying to decode Native BBOX",
+                        e);
+            }
+        }
+        return crs;
+    }
+
+    /**
+     * 
+     * @param catalog
+     * @return
+     */
+    public StyleInfo defaultStyle(Catalog catalog) {
+        if (this.defaultStyle != null && this.defaultStyle.get("name") != null) {
+            StyleInfo style = catalog.getStyleByName(this.defaultStyle.get("name"));
+
+            if (style == null && this.defaultStyle.get("filename") != null) {
+                style = catalog.getFactory().createStyle();
+                style.setName(this.defaultStyle.get("name"));
+                style.setFilename(this.defaultStyle.get("filename"));
+            }
+
+            return style;
+        }
+        return null;
     }
 
 }
