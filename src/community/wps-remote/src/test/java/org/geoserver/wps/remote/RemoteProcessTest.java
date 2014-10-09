@@ -60,6 +60,8 @@ import org.opengis.feature.type.Name;
  * @author "Alessio Fabiani - alessio.fabiani@geo-solutions.it"
  */
 public class RemoteProcessTest extends WPSTestSupport {
+    
+    private static final boolean DISABLE = "true".equalsIgnoreCase(System.getProperty("disableTest", "true"));
 
     private RemoteProcessFactory factory;
 
@@ -133,8 +135,14 @@ public class RemoteProcessTest extends WPSTestSupport {
         }
     }
 
-    //@Test
+    @Test
     public void testXMPPClient() {
+        
+        if (DISABLE)
+        {
+            return;
+        }
+        
         setupFactory();
 
         try {
