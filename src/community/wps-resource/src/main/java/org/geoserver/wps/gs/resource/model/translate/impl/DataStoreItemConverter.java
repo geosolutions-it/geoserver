@@ -7,6 +7,7 @@ package org.geoserver.wps.gs.resource.model.translate.impl;
 
 import java.util.Map;
 
+import org.geoserver.wps.gs.resource.ResourceLoaderConverter;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItemConverter;
 
 import com.thoughtworks.xstream.converters.MarshallingContext;
@@ -15,7 +16,7 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
- * 
+ * {@link ResourceLoaderConverter} extension for the marshalling/unmarshalling of {@link DataStoreItem}s.
  * 
  * @author Alessio Fabiani, GeoSolutions
  * 

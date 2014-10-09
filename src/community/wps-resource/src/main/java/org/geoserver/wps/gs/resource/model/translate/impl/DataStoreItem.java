@@ -33,9 +33,10 @@ import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.impl.VectorialLayer;
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItem;
+import org.geotools.data.DataStore;
 
 /**
- * 
+ * Implementation of the {@link TranslateItem} for the management of a GeoServer {@link DataStore}.
  * 
  * @author Alessio Fabiani, GeoSolutions
  * 

@@ -19,10 +19,15 @@ package org.geoserver.wps.gs.resource.model.translate;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import org.geoserver.importer.Importer;
 import org.geotools.util.logging.Logging;
 
 /**
- * The base class for 
+ * The base class for an XStream translate item. Those are generic items wrapping DataStores, CoverageStore, Transformation elements of the Import
+ * package and any other custom implementation which can handle part of the {@link TranlateContext} workflow.
+ * 
+ * A {@link TranslateItem} is a component of a state machine which runs atomic steps in a predefined order sequence. Each {@link TranslateItem} should
+ * configure and manage a piece of the wrapped {@link Importer} context.
  * 
  * @author alessio.fabiani
  * 
@@ -69,7 +74,7 @@ public abstract class TranslateItem implements Comparable {
      * 
      * @param translateContext
      * @return
-     * @throws IOException 
+     * @throws IOException
      */
     public TranslateItem run(TranslateContext context) throws IOException {
 
@@ -82,7 +87,7 @@ public abstract class TranslateItem implements Comparable {
      * 
      * @param context
      * @return
-     * @throws IOException 
+     * @throws IOException
      */
     protected abstract TranslateItem execute(TranslateContext context) throws IOException;
 

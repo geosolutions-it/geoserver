@@ -32,6 +32,14 @@ import org.geoserver.wps.gs.resource.model.Resource;
 import org.geotools.util.logging.Logging;
 
 /**
+ * This class prepares the context of an {@link Importer} instance in order to tranform, import and store a {@link Resource} into the GeoServer
+ * catalog.
+ * 
+ * A {@link TranslateContext} is composed by an ordered list of {@link TranslateItem}s, each of them responsible for the configuration and setup of
+ * the {@link Importer} context.
+ * 
+ * At the end of the workflow the {@link TranslateContext} performs the {@link Importer} run.
+ * 
  * @author alessio.fabiani
  * 
  */

@@ -16,6 +16,8 @@
  */
 package org.geoserver.wps.gs.resource.model.translate;
 
+import org.geoserver.wps.gs.resource.ResourceLoaderConverter;
+
 import com.thoughtworks.xstream.converters.Converter;
 import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
@@ -23,6 +25,8 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
+ * {@link ResourceLoaderConverter} extension for the marshalling/unmarshalling of {@link TranslateItem}s.
+ * 
  * @author alessio.fabiani
  * 
  */

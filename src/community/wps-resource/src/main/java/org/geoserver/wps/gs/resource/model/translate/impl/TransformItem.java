@@ -14,7 +14,7 @@ import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItem;
 
 /**
- * 
+ * Implementation of the {@link TranslateItem} wrapping an {@link ImportTransform}.
  * 
  * @author Alessio Fabiani, GeoSolutions
  * 
@@ -43,7 +43,7 @@ public class TransformItem extends TranslateItem {
         if (task != null && task.getTransform() != null) {
             final TransformChain transformChain = task.getTransform();
             transformChain.add(this.transform);
-            
+
             context.getImporter().changed(task);
         }
 
