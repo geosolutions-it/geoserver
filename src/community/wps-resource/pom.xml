@@ -32,6 +32,12 @@
 			<version>${gs.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>commons-net</groupId>
+			<artifactId>commons-net</artifactId>
+			<version>3.3</version>
+		</dependency>
+
 		<!-- test dependencies -->
 		<dependency>
 			<groupId>xmlunit</groupId>

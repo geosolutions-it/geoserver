@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -21,7 +20,6 @@ import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
-import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.importer.DataFormat;
 import org.geoserver.importer.Database;
 import org.geoserver.importer.ImportData;
@@ -33,7 +31,9 @@ import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.impl.VectorialLayer;
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItem;
+import org.geoserver.wps.gs.resource.model.translate.TranslateItemUtils;
 import org.geotools.data.DataStore;
+import org.geotools.data.DataUtilities;
 
 /**
  * Implementation of the {@link TranslateItem} for the management of a GeoServer {@link DataStore}.
@@ -100,22 +100,13 @@ public class DataStoreItem extends TranslateItem {
      */
     private ImportData convertToImprtData(TranslateContext context) throws URISyntaxException,
             IOException {
-        if (this.store.containsKey("url") && this.store.get("url").startsWith("file")) {
+        if (this.store.containsKey("url") && this.store.get("url").startsWith("file:")) {
             // CSV or Shape
-            File file = null;
-            final String urlTxt = this.store.get("url");
-            final URL url = new URL(urlTxt);
-            if (!urlTxt.startsWith("file:/")) {
-                GeoServerDataDirectory dd = new GeoServerDataDirectory(context.getCatalog()
-                        .getResourceLoader());
-                file = dd.findFile(urlTxt.substring(urlTxt.indexOf(":") + 1));
-            } else {
-                file = new File(url.toURI());
-            }
+            final File file = TranslateItemUtils.getFileFromUrl(context, this.store);
             DataFormat dataFormat = DataFormat.lookup(file);
             CSVDataStoreFactory csvDataStoreFactory = new CSVDataStoreFactory();
-            if ((dataFormat.getName().equals("CSV") && csvDataStoreFactory.canProcess(url))
-                    || dataFormat.getName().equals("Shapefile")) {
+            if ((dataFormat.getName().equals("CSV") && csvDataStoreFactory.canProcess(DataUtilities
+                    .fileToURL(file))) || dataFormat.getName().equals("Shapefile")) {
                 SpatialFile spatialData = new SpatialFile(file);
                 spatialData.prepare();
                 return spatialData;
