@@ -6,8 +6,8 @@ package org.geoserver.wps.remote.plugin;
 
 import java.net.URLDecoder;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,6 +17,7 @@ import net.sf.json.JSONSerializer;
 
 import org.geoserver.wps.remote.RemoteProcessClientListener;
 import org.geoserver.wps.remote.RemoteProcessFactoryListener;
+import org.geoserver.wps.remote.RemoteServiceDescriptor;
 import org.geotools.data.Parameter;
 import org.geotools.feature.NameImpl;
 import org.geotools.text.Text;
@@ -126,18 +127,16 @@ public class XMPPRegisterMessage implements XMPPMessage {
             // NOTIFY LISTENERS
             Map<String, Object> metadata = new HashMap<String, Object>();
             metadata.put("serviceJID", packet.getFrom());
-            List<RemoteProcessFactoryListener> remoteFactoryListeners = xmppClient
-                    .getRemoteFactoryListeners();
-            synchronized (remoteFactoryListeners) {
-                for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
-                    listener.registerService(name, title, description, inputs, outputs, metadata);
-                }
+            for (RemoteProcessFactoryListener listener : xmppClient.getRemoteFactoryListeners()) {
+                listener.registerProcess(new RemoteServiceDescriptor(name, title, description,
+                        inputs, outputs, metadata));
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
 
             // NOTIFY LISTENERS
-            final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+            final Set<RemoteProcessClientListener> remoteClientListeners = xmppClient
+                    .getRemoteClientListeners();
             synchronized (remoteClientListeners) {
                 for (RemoteProcessClientListener listener : remoteClientListeners) {
 

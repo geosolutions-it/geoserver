@@ -5,8 +5,8 @@
 package org.geoserver.wps.remote.plugin;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.geoserver.wps.remote.RemoteProcessClientListener;
@@ -40,7 +40,7 @@ public class XMPPUnRegisterMessage implements XMPPMessage {
             xmppClient.handleMemberLeave(packet);
         } catch (Exception e) {
             // NOTIFY LISTENERS
-            final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+            final Set<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
             synchronized (remoteClientListeners) {
                 for (RemoteProcessClientListener listener : remoteClientListeners) {
 

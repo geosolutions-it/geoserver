@@ -4,9 +4,6 @@
  */
 package org.geoserver.wps.remote;
 
-import java.util.Map;
-
-import org.geotools.data.Parameter;
 import org.opengis.feature.type.Name;
 
 /**
@@ -20,22 +17,15 @@ public interface RemoteProcessFactoryListener {
     /**
      * Registers a new {@link RemoteProcess} upon a new remote service presentation; from now on a new WPS Process will be available
      * 
-     * @param name
-     * @param title
-     * @param description
-     * @param paramInfo
-     * @param outputInfo
-     * @param metadata
+     * @param serviceDescriptor
      */
-    public void registerService(Name name, String title, String description,
-            Map<String, Parameter<?>> paramInfo, Map<String, Parameter<?>> outputInfo,
-            Map<String, Object> metadata);
+    public void registerProcess(RemoteServiceDescriptor serviceDescriptor);
 
     /**
      * De-registers a {@link RemoteProcess} upon a {@link RemoteProcessClient} request; the WPS Process won't be available anymore
      * 
      * @param name
      */
-    public void deregisterService(Name name);
+    public void deregisterProcess(Name name);
 
 }

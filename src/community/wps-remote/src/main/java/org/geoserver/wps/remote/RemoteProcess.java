@@ -6,6 +6,7 @@ package org.geoserver.wps.remote;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,6 +54,9 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
     /** Whether the remote service raised and exception or not. This property contains the cause and is instantiated by the {@link RemoteProcessClient} */
     private Exception exception;
 
+    /** The semaphore */
+    CountDownLatch doneSignal = new CountDownLatch(1);
+
     /**
      * Constructs a new stub for the {@link RemoteProcess} execution. Metadata is a kvp map containing specific properties of the
      * {@link RemoteProcessClient} instance
@@ -76,12 +80,15 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             LOGGER.fine("Starting the execution of Remote Process with pId [" + pid + "]");
             listener = monitor;
             running = pid != null;
-            if (running) {
+            if (running && !listener.isCanceled()) {
                 remoteClient.registerProcessClientListener(this);
-                while (running && outputs == null && exception == null && !listener.isCanceled()) {
-                    Thread.sleep(remoteClient.getConfiguration()
-                            .getRemoteProcessStubCycleSleepTime());
-                }
+                /*
+                 * while (running && outputs == null && exception == null && !listener.isCanceled()) { Thread.sleep(remoteClient.getConfiguration()
+                 * .getRemoteProcessStubCycleSleepTime()); }
+                 */
+
+                // doneSignal.await(timeout, unit); // TIMEOUT TODO
+                doneSignal.await();
             }
             LOGGER.fine("Stopping the execution of Remote Process with pId [" + pid + "]");
         } catch (Exception e) {
@@ -93,10 +100,19 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             remoteClient.deregisterProcessClientListener(this);
         }
 
+        // forward the Exception if necessary
         if (exception != null) {
             LOGGER.log(Level.SEVERE, "The Remote Service associated to the Process with pId ["
                     + pid + "] rasied an Exeption", exception);
             throw new ProcessException(exception);
+        }
+
+        // check if the Process has been cancelled
+        if (listener.isCanceled()) {
+            LOGGER.log(Level.WARNING, "The Remote Service associated to the Process with pId ["
+                    + pid + "] has been cancelled");
+            throw new ProcessException("The Remote Service associated to the Process with pId ["
+                    + pid + "] has been cancelled");
         }
 
         return outputs;
@@ -135,14 +151,28 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
         if (pId.equals(pid)) {
             listener.progress(progress.floatValue());
         }
+
+        if (listener.isCanceled()) {
+            doneSignal.countDown();
+        }
     }
 
     @Override
     public void complete(String pId, Object outputs) {
         if (pId.equals(pid)) {
             listener.complete();
-            this.outputs = (Map<String, Object>) outputs;
+            
+            try {
+                this.outputs = (Map<String, Object>) outputs;
+            } catch (Exception e) {
+                exception = e;
+                LOGGER.log(Level.SEVERE, "The Remote Service associated to the Process with pId ["
+                        + pid + "] rasied an Exeption while setting the outputs on completion", exception);
+                this.outputs = null;
+            }
+            
             running = false;
+            doneSignal.countDown();
         }
     }
 
@@ -169,6 +199,7 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
                 running = false;
             }
         }
+        doneSignal.countDown();
     }
 
 }

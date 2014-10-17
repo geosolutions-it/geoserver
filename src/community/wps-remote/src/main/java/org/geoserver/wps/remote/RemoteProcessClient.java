@@ -4,10 +4,10 @@
  */
 package org.geoserver.wps.remote;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.ssl.SSLContext;
 
@@ -27,17 +27,17 @@ public abstract class RemoteProcessClient {
 
     /** Whenever more instances of the client are available, they should be ordered by ascending priority */
     private int priority;
-    
+
     /** The {@link RemoteProcessFactoryConfigurationWatcher} implementation */
     private final RemoteProcessFactoryConfigurationWatcher remoteProcessFactoryConfigurationWatcher;
 
     /** The registered {@link RemoteProcessFactoryListener} */
-    private List<RemoteProcessFactoryListener> remoteFactoryListeners = Collections
-            .synchronizedList(new ArrayList<RemoteProcessFactoryListener>());
+    private Set<RemoteProcessFactoryListener> remoteFactoryListeners = Collections
+            .newSetFromMap(new ConcurrentHashMap<RemoteProcessFactoryListener, Boolean>());
 
     /** The registered {@link RemoteProcessClientListener} */
-    private List<RemoteProcessClientListener> remoteClientListeners = Collections
-            .synchronizedList(new ArrayList<RemoteProcessClientListener>());
+    private Set<RemoteProcessClientListener> remoteClientListeners = Collections
+            .newSetFromMap(new ConcurrentHashMap<RemoteProcessClientListener, Boolean>());
 
     /**
      * The default Cosntructor
@@ -76,14 +76,14 @@ public abstract class RemoteProcessClient {
     /**
      * @return the remoteFactoryListeners
      */
-    public List<RemoteProcessFactoryListener> getRemoteFactoryListeners() {
+    public Set<RemoteProcessFactoryListener> getRemoteFactoryListeners() {
         return remoteFactoryListeners;
     }
 
     /**
      * @return the remoteClientListeners
      */
-    public List<RemoteProcessClientListener> getRemoteClientListeners() {
+    public Set<RemoteProcessClientListener> getRemoteClientListeners() {
         return remoteClientListeners;
     }
 
@@ -123,9 +123,7 @@ public abstract class RemoteProcessClient {
      * @param listener
      */
     public void registerProcessFactoryListener(RemoteProcessFactoryListener listener) {
-        synchronized (remoteFactoryListeners) {
-            remoteFactoryListeners.add(listener);
-        }
+        remoteFactoryListeners.add(listener);
     }
 
     /**
@@ -134,9 +132,7 @@ public abstract class RemoteProcessClient {
      * @param listener
      */
     public void deregisterProcessFactoryListener(RemoteProcessFactoryListener listener) {
-        synchronized (remoteFactoryListeners) {
-            remoteFactoryListeners.remove(listener);
-        }
+        remoteFactoryListeners.remove(listener);
     }
 
     /**
@@ -145,9 +141,7 @@ public abstract class RemoteProcessClient {
      * @param listener
      */
     public void registerProcessClientListener(RemoteProcessClientListener listener) {
-        synchronized (remoteClientListeners) {
-            remoteClientListeners.add(listener);
-        }
+        remoteClientListeners.add(listener);
     }
 
     /**
@@ -156,9 +150,7 @@ public abstract class RemoteProcessClient {
      * @param listener
      */
     public void deregisterProcessClientListener(RemoteProcessClientListener listener) {
-        synchronized (remoteClientListeners) {
-            remoteClientListeners.remove(listener);
-        }
+        remoteClientListeners.remove(listener);
     }
 
     /**

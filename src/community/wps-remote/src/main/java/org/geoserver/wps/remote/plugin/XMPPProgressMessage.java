@@ -39,11 +39,8 @@ public class XMPPProgressMessage implements XMPPMessage {
         final Double progress = Double.parseDouble(signalArgs.get("message"));
 
         // NOTIFY LISTENERS
-        final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
-        synchronized (remoteClientListeners) {
-            for (RemoteProcessClientListener listener : remoteClientListeners) {
-                listener.progress(pID, progress);
-            }
+        for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+            listener.progress(pID, progress);
         }
     }
 

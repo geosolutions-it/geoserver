@@ -59,8 +59,9 @@ import org.opengis.feature.type.Name;
  * @author "Alessio Fabiani - alessio.fabiani@geo-solutions.it"
  */
 public class RemoteProcessTest extends WPSTestSupport {
-    
-    private static final boolean DISABLE = "true".equalsIgnoreCase(System.getProperty("disableTest", "true"));
+
+    private static final boolean DISABLE = "true".equalsIgnoreCase(System.getProperty(
+            "disableTest", "true"));
 
     private RemoteProcessFactory factory;
 
@@ -98,11 +99,12 @@ public class RemoteProcessTest extends WPSTestSupport {
         assertTrue(names.size() == 0);
 
         final NameImpl name = new NameImpl("default", "Service");
-        factory.registerService(name, "Service", "A test service", null, null, null);
+        factory.registerProcess(new RemoteServiceDescriptor(name, "Service", "A test service",
+                null, null, null));
         assertTrue(names.size() == 1);
         assertTrue(names.contains(name));
 
-        factory.deregisterService(name);
+        factory.deregisterProcess(name);
         assertTrue(names.size() == 0);
     }
 
@@ -125,7 +127,7 @@ public class RemoteProcessTest extends WPSTestSupport {
             assertTrue(names.size() == 1);
             assertTrue(names.contains(name));
 
-            factory.deregisterService(name);
+            factory.deregisterProcess(name);
         } catch (Exception e) {
             e.printStackTrace();
             fail(e.getLocalizedMessage());
@@ -136,12 +138,11 @@ public class RemoteProcessTest extends WPSTestSupport {
 
     @Test
     public void testXMPPClient() {
-        
-        if (DISABLE)
-        {
+
+        if (DISABLE) {
             return;
         }
-        
+
         setupFactory();
 
         try {
@@ -239,14 +240,9 @@ public class RemoteProcessTest extends WPSTestSupport {
         /**
          * JSON URL Encoded Body
          * 
-         * {
-         *   "title": "test.Service",
-         *   "description": "This is a test Service!",
-         *   "input": [
-         *     ["simpleType", "{\"type\": \"string\", \"description\": \"A simple string parameter\", \"max\": 1}"],
-         *     ["complexType", "{\"type\": \"complex\", \"description\": \"A complex parameter\", \"min\": 1, \"max\": 10}"]
-         *   ]
-         * }
+         * { "title": "test.Service", "description": "This is a test Service!", "input": [ ["simpleType",
+         * "{\"type\": \"string\", \"description\": \"A simple string parameter\", \"max\": 1}"], ["complexType",
+         * "{\"type\": \"complex\", \"description\": \"A complex parameter\", \"min\": 1, \"max\": 10}"] ] }
          */
         signalArgs
                 .put("message",
@@ -254,7 +250,7 @@ public class RemoteProcessTest extends WPSTestSupport {
 
         // handle signal
         Packet packet = new Packet() {
-            
+
             @Override
             public String getFrom() {
                 return "test@geoserver.org";

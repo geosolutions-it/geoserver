@@ -6,7 +6,6 @@ package org.geoserver.wps.remote.plugin;
 
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,11 +52,8 @@ public class XMPPCompletedMessage implements XMPPMessage {
                 JSONObject serviceResultJSON = (JSONObject) JSONSerializer
                         .toJSON(serviceResultString);
                 outputs = xmppClient.U(xmppClient.P(serviceResultJSON));
-                final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
-                synchronized (remoteClientListeners) {
-                    for (RemoteProcessClientListener listener : remoteClientListeners) {
-                        listener.complete(pID, outputs);
-                    }
+                for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+                    listener.complete(pID, outputs);
                 }
             } catch (PickleException e) {
                 LOGGER.log(Level.FINER, e.getMessage(), e);
@@ -67,14 +63,11 @@ public class XMPPCompletedMessage implements XMPPMessage {
         }
         // In any case stop the process by notifying the listeners ...
         else {
-            final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
-            synchronized (remoteClientListeners) {
-                for (RemoteProcessClientListener listener : remoteClientListeners) {
-                    listener.complete(pID, null);
-                }
+            for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+                listener.complete(pID, null);
             }
         }
-        
+
         // NOTIFY THE SERVICE
         final String serviceJID = message.getFrom();
         xmppClient.sendMessage(serviceJID, "topic=finish");

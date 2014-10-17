@@ -4,7 +4,6 @@
  */
 package org.geoserver.wps.remote.plugin;
 
-import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.SSLContext;
@@ -12,6 +11,7 @@ import javax.net.ssl.SSLContext;
 import org.geoserver.wps.remote.RemoteProcessClient;
 import org.geoserver.wps.remote.RemoteProcessFactoryConfigurationWatcher;
 import org.geoserver.wps.remote.RemoteProcessFactoryListener;
+import org.geoserver.wps.remote.RemoteServiceDescriptor;
 import org.opengis.feature.type.Name;
 import org.opengis.util.ProgressListener;
 
@@ -42,12 +42,9 @@ public class MockRemoteClient extends RemoteProcessClient {
             Map<String, Object> metadata, ProgressListener monitor) throws Exception {
 
         if (serviceName != null) {
-            List<RemoteProcessFactoryListener> remoteFactoryListeners = getRemoteFactoryListeners();
-            synchronized (remoteFactoryListeners) {
-                for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
-                    listener.registerService(serviceName, "Service", "A test service", null, null,
-                            metadata);
-                }
+            for (RemoteProcessFactoryListener listener : getRemoteFactoryListeners()) {
+                listener.registerProcess(new RemoteServiceDescriptor(serviceName, "Service",
+                        "A test service", null, null, metadata));
             }
         }
 

@@ -487,18 +487,13 @@ public class XMPPClient extends RemoteProcessClient {
     protected void handleMemberLeave(Packet p) throws Exception {
         final Name serviceName = extractServiceName(p.getFrom());
 
-        synchronized (registeredServices) {
-            LOGGER.finer("Member " + p.getFrom() + " leaved the chat.");
-            if (registeredServices.contains(serviceName)) {
-                registeredServices.remove(serviceName);
-            }
+        LOGGER.finer("Member " + p.getFrom() + " leaved the chat.");
+        if (registeredServices.contains(serviceName)) {
+            registeredServices.remove(serviceName);
         }
 
-        List<RemoteProcessFactoryListener> remoteFactoryListeners = getRemoteFactoryListeners();
-        synchronized (remoteFactoryListeners) {
-            for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
-                listener.deregisterService(serviceName);
-            }
+        for (RemoteProcessFactoryListener listener : getRemoteFactoryListeners()) {
+            listener.deregisterProcess(serviceName);
         }
     }
 

@@ -54,11 +54,8 @@ public class XMPPErrorMessage implements XMPPMessage {
         xmppClient.sendMessage(serviceJID, "topic=abort");
 
         // NOTIFY LISTENERS
-        final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
-        synchronized (remoteClientListeners) {
-            for (RemoteProcessClientListener listener : remoteClientListeners) {
-                listener.exceptionOccurred(pID, cause, metadata);
-            }
+        for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+            listener.exceptionOccurred(pID, cause, metadata);
         }
 
     }
