@@ -1,10 +1,10 @@
 /* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wps.remote.plugin;
 
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -39,10 +39,12 @@ public class XMPPProgressMessage implements XMPPMessage {
         final Double progress = Double.parseDouble(signalArgs.get("message"));
 
         // NOTIFY LISTENERS
-        for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
-            listener.progress(pID, progress);
+        final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+        synchronized (remoteClientListeners) {
+            for (RemoteProcessClientListener listener : remoteClientListeners) {
+                listener.progress(pID, progress);
+            }
         }
-
     }
 
 }

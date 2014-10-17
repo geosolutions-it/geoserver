@@ -1,10 +1,10 @@
 /* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wps.remote.plugin;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.SSLContext;
@@ -42,9 +42,12 @@ public class MockRemoteClient extends RemoteProcessClient {
             Map<String, Object> metadata, ProgressListener monitor) throws Exception {
 
         if (serviceName != null) {
-            for (RemoteProcessFactoryListener listener : getRemoteFactoryListeners()) {
-                listener.registerService(serviceName, "Service", "A test service", null, null,
-                        metadata);
+            List<RemoteProcessFactoryListener> remoteFactoryListeners = getRemoteFactoryListeners();
+            synchronized (remoteFactoryListeners) {
+                for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
+                    listener.registerService(serviceName, "Service", "A test service", null, null,
+                            metadata);
+                }
             }
         }
 

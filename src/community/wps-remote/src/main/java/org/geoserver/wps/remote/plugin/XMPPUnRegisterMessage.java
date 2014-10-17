@@ -1,11 +1,11 @@
 /* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wps.remote.plugin;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -40,14 +40,17 @@ public class XMPPUnRegisterMessage implements XMPPMessage {
             xmppClient.handleMemberLeave(packet);
         } catch (Exception e) {
             // NOTIFY LISTENERS
-            for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+            final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+            synchronized (remoteClientListeners) {
+                for (RemoteProcessClientListener listener : remoteClientListeners) {
 
-                Map<String, Object> metadata = new HashMap<String, Object>();
-                metadata.put("serviceJID", packet.getFrom());
+                    Map<String, Object> metadata = new HashMap<String, Object>();
+                    metadata.put("serviceJID", packet.getFrom());
 
-                final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+                    final String pID = (signalArgs != null ? signalArgs.get("id") : null);
 
-                listener.exceptionOccurred(pID, e, metadata);
+                    listener.exceptionOccurred(pID, e, metadata);
+                }
             }
         }
 

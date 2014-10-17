@@ -1,5 +1,4 @@
 /* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -7,6 +6,7 @@ package org.geoserver.wps.remote.plugin;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,7 +45,7 @@ public class XMPPCompletedMessage implements XMPPMessage {
         final String pID = signalArgs.get("id");
         final String type = signalArgs.get("message");
 
-        // NOTIFY LISTENERS
+        // NOTIFY THE LISTENERS
         if ("textual".equals(type)) {
             Object outputs;
             try {
@@ -53,8 +53,11 @@ public class XMPPCompletedMessage implements XMPPMessage {
                 JSONObject serviceResultJSON = (JSONObject) JSONSerializer
                         .toJSON(serviceResultString);
                 outputs = xmppClient.U(xmppClient.P(serviceResultJSON));
-                for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
-                    listener.complete(pID, outputs);
+                final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+                synchronized (remoteClientListeners) {
+                    for (RemoteProcessClientListener listener : remoteClientListeners) {
+                        listener.complete(pID, outputs);
+                    }
                 }
             } catch (PickleException e) {
                 LOGGER.log(Level.FINER, e.getMessage(), e);
@@ -62,8 +65,17 @@ public class XMPPCompletedMessage implements XMPPMessage {
                 LOGGER.log(Level.FINER, e.getMessage(), e);
             }
         }
-
-        // NOTIFY SERVICE
+        // In any case stop the process by notifying the listeners ...
+        else {
+            final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+            synchronized (remoteClientListeners) {
+                for (RemoteProcessClientListener listener : remoteClientListeners) {
+                    listener.complete(pID, null);
+                }
+            }
+        }
+        
+        // NOTIFY THE SERVICE
         final String serviceJID = message.getFrom();
         xmppClient.sendMessage(serviceJID, "topic=finish");
 

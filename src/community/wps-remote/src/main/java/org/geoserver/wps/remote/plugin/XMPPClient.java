@@ -1,5 +1,4 @@
 /* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -12,6 +11,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +31,7 @@ import net.razorvine.pickle.Unpickler;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.remote.RemoteProcessClient;
 import org.geoserver.wps.remote.RemoteProcessFactoryConfigurationWatcher;
 import org.geoserver.wps.remote.RemoteProcessFactoryListener;
@@ -208,7 +209,8 @@ public class XMPPClient extends RemoteProcessClient {
             final String pid = md5Java(serviceJID + System.nanoTime()) + "_"
                     + md5Java(byteArrayToURLString(P(fixedInputs)));
 
-            String msg = "topic=request&id=" + pid + "&message=" + byteArrayToURLString(P(fixedInputs));
+            String msg = "topic=request&id=" + pid + "&message="
+                    + byteArrayToURLString(P(fixedInputs));
             sendMessage(serviceJID, msg);
 
             return pid;
@@ -229,12 +231,13 @@ public class XMPPClient extends RemoteProcessClient {
                 fixedValue = IOUtils.toString(((RawData) value).getInputStream(), "UTF-8");
             } else if (value instanceof List) {
                 List<Object> values = (List<Object>) value;
-                
+
                 if (values != null && values.size() > 0 && values.get(0) instanceof RawData) {
                     fixedValue = new ArrayList<String>();
-                    
+
                     for (Object o : values) {
-                        ((List<String>) fixedValue).add(IOUtils.toString(((RawData) o).getInputStream(), "UTF-8"));
+                        ((List<String>) fixedValue).add(IOUtils.toString(
+                                ((RawData) o).getInputStream(), "UTF-8"));
                     }
                 }
             }
@@ -491,8 +494,11 @@ public class XMPPClient extends RemoteProcessClient {
             }
         }
 
-        for (RemoteProcessFactoryListener listener : getRemoteFactoryListeners()) {
-            listener.deregisterService(serviceName);
+        List<RemoteProcessFactoryListener> remoteFactoryListeners = getRemoteFactoryListeners();
+        synchronized (remoteFactoryListeners) {
+            for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
+                listener.deregisterService(serviceName);
+            }
         }
     }
 
@@ -838,16 +844,25 @@ public class XMPPClient extends RemoteProcessClient {
     private static final Map<String, Object> PRIMITIVE_NAME_TYPE_MAP = new HashMap<String, Object>();
 
     /** Setup the primitives map. */
+    static enum CType {
+        SIMPLE, COMPLEX
+    }
+
     static {
-        PRIMITIVE_NAME_TYPE_MAP.put("string", String.class);
-        PRIMITIVE_NAME_TYPE_MAP.put("boolean", Boolean.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("byte", Byte.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("char", Character.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("short", Short.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("int", Integer.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("long", Long.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("float", Float.TYPE);
-        PRIMITIVE_NAME_TYPE_MAP.put("double", Double.TYPE);
+        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("short", new Object[] { Short.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("int", new Object[] { Integer.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("long", new Object[] { Long.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("float", new Object[] { Float.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("double", new Object[] { Double.TYPE, CType.SIMPLE });
+        PRIMITIVE_NAME_TYPE_MAP.put("datetime", new Object[] { Date.class, CType.SIMPLE });
+        // Complex and Raw data types
+        PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { StringRawData.class,
+                CType.COMPLEX, new StringRawData("", "application/json") });
+
     }
 
     /**
@@ -864,7 +879,7 @@ public class XMPPClient extends RemoteProcessClient {
             throws ClassNotFoundException {
         ArrayList<Class<?>> classes = new ArrayList<Class<?>>();
         while (it.hasNext()) {
-            classes.add(convertToJavaClass(it.next(), cl));
+            classes.add(convertToJavaClass(it.next(), cl, null).getClazz());
         }
         return classes.toArray(new Class[classes.size()]);
     }
@@ -874,26 +889,29 @@ public class XMPPClient extends RemoteProcessClient {
      * 
      * @param name Name of class
      * @param cl ClassLoader to use
+     * @param object
+     * @param sample
      * 
      * @return The class for the given name
      * 
      * @throws ClassNotFoundException When the class could not be found by the specified ClassLoader
      */
-    final static Class convertToJavaClass(String name, ClassLoader cl)
-            throws ClassNotFoundException {
+    final static ParameterTemplate convertToJavaClass(String name, ClassLoader cl,
+            Object defaultValue) throws ClassNotFoundException {
         int arraySize = 0;
         while (name.endsWith("[]")) {
             name = name.substring(0, name.length() - 2);
             arraySize++;
         }
 
+        // Retrieve the Class of the parameter through the mapping
         Class c = null;
         if (name.equalsIgnoreCase("complex") || name.equalsIgnoreCase("complex")) {
             // Is it a complex/raw data type?
             c = RawData.class;
         } else {
             // Check for a primitive type
-            c = (Class) PRIMITIVE_NAME_TYPE_MAP.get(name);
+            c = (Class) ((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name))[0];
         }
 
         if (c == null) {
@@ -914,7 +932,19 @@ public class XMPPClient extends RemoteProcessClient {
             c = Array.newInstance(c, dims).getClass();
         }
 
-        return c;
+        // Set the default value or the sample object
+        Object sample;
+        if (defaultValue != null
+                && CType.SIMPLE.equals(((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name))[1])) {
+            sample = defaultValue;
+        } else if (CType.COMPLEX.equals(((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name))[1])
+                && ((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name)).length > 2) {
+            sample = ((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name))[2];
+        } else {
+            sample = null;
+        }
+
+        return new ParameterTemplate(c, sample);
     }
 }
 
@@ -986,4 +1016,41 @@ class XMPPPacketListener implements PacketListener {
             }
         }
     }
+}
+
+/**
+ * 
+ * 
+ * @author Alessio Fabiani, GeoSolutions
+ * 
+ */
+class ParameterTemplate {
+
+    private final Class<?> clazz;
+
+    private final Object defaultValue;
+
+    /**
+     * @param clazz
+     * @param defaultValue
+     */
+    public ParameterTemplate(Class<?> clazz, Object defaultValue) {
+        this.clazz = clazz;
+        this.defaultValue = defaultValue;
+    }
+
+    /**
+     * @return the clazz
+     */
+    public Class<?> getClazz() {
+        return clazz;
+    }
+
+    /**
+     * @return the defaultValue
+     */
+    public Object getDefaultValue() {
+        return defaultValue;
+    }
+
 }

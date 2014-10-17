@@ -1,5 +1,4 @@
 /* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -7,6 +6,7 @@ package org.geoserver.wps.remote.plugin;
 
 import java.net.URLDecoder;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -74,18 +74,20 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         ss = ss.substring(1, ss.length() - 1);
                         JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
                         String className = (String) paramType.get("type");
-                        Class clazz = xmppClient.convertToJavaClass(className,
-                                XMPPClient.class.getClassLoader());
+                        ParameterTemplate paramTemplate = xmppClient.convertToJavaClass(className,
+                                XMPPClient.class.getClassLoader(), paramType.get("default"));
 
                         inputs.put(
                                 paramName,
-                                new Parameter(paramName, clazz, Text.text(paramName), Text
-                                        .text((String) paramType.get("description")), paramType
-                                        .get("min") == null || (Integer) paramType.get("min") > 0,
+                                new Parameter(paramName, paramTemplate.getClazz(), Text
+                                        .text(paramName), Text.text((String) paramType
+                                        .get("description")), paramType.get("min") == null
+                                        || (Integer) paramType.get("min") > 0,
                                         paramType.get("min") != null ? (Integer) paramType
                                                 .get("min") : 1,
                                         paramType.get("max") != null ? (Integer) paramType
-                                                .get("max") : -1, paramType.get("default"), null));
+                                                .get("max") : -1, paramTemplate.getDefaultValue(),
+                                        null));
                     }
                 }
             }
@@ -103,18 +105,20 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         ss = ss.substring(1, ss.length() - 1);
                         JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
                         String className = (String) paramType.get("type");
-                        Class clazz = xmppClient.convertToJavaClass(className,
-                                XMPPClient.class.getClassLoader());
+                        ParameterTemplate paramTemplate = xmppClient.convertToJavaClass(className,
+                                XMPPClient.class.getClassLoader(), paramType.get("default"));
 
                         outputs.put(
                                 paramName,
-                                new Parameter(paramName, clazz, Text.text(paramName), Text
-                                        .text((String) paramType.get("description")), paramType
-                                        .get("min") == null || (Integer) paramType.get("min") > 0,
+                                new Parameter(paramName, paramTemplate.getClazz(), Text
+                                        .text(paramName), Text.text((String) paramType
+                                        .get("description")), paramType.get("min") == null
+                                        || (Integer) paramType.get("min") > 0,
                                         paramType.get("min") != null ? (Integer) paramType
                                                 .get("min") : 1,
                                         paramType.get("max") != null ? (Integer) paramType
-                                                .get("max") : 0, paramType.get("default"), null));
+                                                .get("max") : 0, paramTemplate.getDefaultValue(),
+                                        null));
                     }
                 }
             }
@@ -122,21 +126,28 @@ public class XMPPRegisterMessage implements XMPPMessage {
             // NOTIFY LISTENERS
             Map<String, Object> metadata = new HashMap<String, Object>();
             metadata.put("serviceJID", packet.getFrom());
-            for (RemoteProcessFactoryListener listener : xmppClient.getRemoteFactoryListeners()) {
-                listener.registerService(name, title, description, inputs, outputs, metadata);
+            List<RemoteProcessFactoryListener> remoteFactoryListeners = xmppClient
+                    .getRemoteFactoryListeners();
+            synchronized (remoteFactoryListeners) {
+                for (RemoteProcessFactoryListener listener : remoteFactoryListeners) {
+                    listener.registerService(name, title, description, inputs, outputs, metadata);
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
 
             // NOTIFY LISTENERS
-            for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
+            final List<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+            synchronized (remoteClientListeners) {
+                for (RemoteProcessClientListener listener : remoteClientListeners) {
 
-                Map<String, Object> metadata = new HashMap<String, Object>();
-                metadata.put("serviceJID", packet.getFrom());
+                    Map<String, Object> metadata = new HashMap<String, Object>();
+                    metadata.put("serviceJID", packet.getFrom());
 
-                final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+                    final String pID = (signalArgs != null ? signalArgs.get("id") : null);
 
-                listener.exceptionOccurred(pID, e, metadata);
+                    listener.exceptionOccurred(pID, e, metadata);
+                }
             }
         }
 
