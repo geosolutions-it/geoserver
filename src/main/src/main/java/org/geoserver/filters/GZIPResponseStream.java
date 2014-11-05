@@ -11,28 +11,26 @@
  */
 package org.geoserver.filters;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
-
+/**
+ * A simple streaming gzipping servlet output stream wrapper
+ * 
+ * @author Andrea Aime - GeoSolutions
+ */
 public class GZIPResponseStream extends ServletOutputStream {
-    protected ByteArrayOutputStream baos = null;
     protected GZIPOutputStream gzipstream = null;
+
     protected boolean closed = false;
-    protected HttpServletResponse response = null;
-    protected ServletOutputStream output = null;
 
     public GZIPResponseStream(HttpServletResponse response) throws IOException {
         super();
         closed = false;
-        this.response = response;
-        this.output = response.getOutputStream();
-        baos = new ByteArrayOutputStream();
-        gzipstream = new GZIPOutputStream(baos);
+        gzipstream = new GZIPOutputStream(response.getOutputStream(), 4096, true);
     }
 
     public void close() throws IOException {
@@ -40,24 +38,6 @@ public class GZIPResponseStream extends ServletOutputStream {
             throw new IOException("This output stream has already been closed");
         }
         gzipstream.finish();
-
-        byte[] bytes = baos.toByteArray();
-        String contentLength = Integer.toString(bytes.length);
-        
-        //JD: we need to be careful about how we set the header, checking first if it has 
-        // already been set, if we don't the result will be two values for the content lenght
-        // header which will throw off most http clients
-        if (response.containsHeader("Content-Length")) {
-            response.setHeader("Content-Length", contentLength);
-        }
-        else {
-            response.addHeader("Content-Length", contentLength);
-        }
-         
-        response.addHeader("Content-Encoding", "gzip");
-        output.write(bytes);
-        output.flush();
-        output.close();
         closed = true;
     }
 
@@ -72,7 +52,7 @@ public class GZIPResponseStream extends ServletOutputStream {
         if (closed) {
             throw new IOException("Cannot write to a closed output stream");
         }
-        gzipstream.write((byte)b);
+        gzipstream.write((byte) b);
     }
 
     public void write(byte b[]) throws IOException {
@@ -90,7 +70,4 @@ public class GZIPResponseStream extends ServletOutputStream {
         return (this.closed);
     }
 
-    public void reset() {
-        //noop
-    }
 }
