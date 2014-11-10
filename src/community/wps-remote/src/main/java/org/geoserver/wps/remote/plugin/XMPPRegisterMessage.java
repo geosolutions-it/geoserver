@@ -49,6 +49,9 @@ public class XMPPRegisterMessage implements XMPPMessage {
             Map<String, String> signalArgs) {
 
         final String serviceName[] = signalArgs.get("service").split("\\.");
+        
+        if (serviceName.length <= 1) return;
+        
         final Name name = new NameImpl(serviceName[0], serviceName[1]);
 
         try {
