@@ -47,8 +47,10 @@ public class ResourceLoaderProcessTest extends WPSResourceTestSupport {
                     (WPSResourceManager) applicationContext.getBean("wpsResourceManager"));
             rsp.execute(dump, null);
 
-            LayerInfo layer = getGeoServer().getCatalog().getLayerByName("way_points");
-            assertNotNull(layer);
+            List<LayerInfo> layers = getGeoServer().getCatalog().getLayers();
+            assertNotNull(layers);
+            
+            assertTrue(!layers.isEmpty());
 
             // cleanup
             cleanCatalog();
