@@ -281,13 +281,13 @@ public class XMPPClient extends RemoteProcessClient {
 
             mucManagementChannel = new MultiUserChat(connection, managementChannel + "@" + bus
                     + "." + domain);
-            mucManagementChannel.join(managementChannelUser, managementChannelPassword, history,
+            mucManagementChannel.join(username, managementChannelPassword, history,
                     connection.getPacketReplyTimeout());
 
             for (String channel : serviceChannels) {
                 MultiUserChat serviceChannel = new MultiUserChat(connection, channel + "@" + bus
                         + "." + domain);
-                serviceChannel.join(managementChannelUser, managementChannelPassword, history,
+                serviceChannel.join(username, managementChannelPassword, history,
                         connection.getPacketReplyTimeout());
                 mucServiceChannels.add(serviceChannel);
             }

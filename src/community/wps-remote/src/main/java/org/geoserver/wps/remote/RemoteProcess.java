@@ -82,10 +82,6 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             running = pid != null;
             if (running && !listener.isCanceled()) {
                 remoteClient.registerProcessClientListener(this);
-                /*
-                 * while (running && outputs == null && exception == null && !listener.isCanceled()) { Thread.sleep(remoteClient.getConfiguration()
-                 * .getRemoteProcessStubCycleSleepTime()); }
-                 */
 
                 // doneSignal.await(timeout, unit); // TIMEOUT TODO
                 doneSignal.await();
@@ -114,7 +110,7 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             throw new ProcessException("The Remote Service associated to the Process with pId ["
                     + pid + "] has been cancelled");
         }
-
+        
         return outputs;
     }
 
