@@ -4,7 +4,6 @@
  */
 package org.geoserver.wps.remote.plugin;
 
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 

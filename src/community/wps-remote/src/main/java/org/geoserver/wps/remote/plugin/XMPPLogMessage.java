@@ -4,13 +4,12 @@
  */
 package org.geoserver.wps.remote.plugin;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.geoserver.wps.remote.RemoteProcessClientListener;
 import org.geotools.util.logging.Logging;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
@@ -21,7 +20,7 @@ import org.jivesoftware.smack.packet.Packet;
  * @author Alessio Fabiani, GeoSolutions
  * 
  */
-public class XMPPErrorMessage implements XMPPMessage {
+public class XMPPLogMessage implements XMPPMessage {
 
     /** The LOGGER */
     public static final Logger LOGGER = Logging.getLogger(XMPPMessage.class.getPackage().getName());
@@ -29,7 +28,7 @@ public class XMPPErrorMessage implements XMPPMessage {
     @Override
     public boolean canHandle(Map<String, String> signalArgs) {
         if (signalArgs != null && signalArgs.get("topic") != null)
-            return signalArgs.get("topic").equals("error");
+            return signalArgs.get("topic").equals("log");
         return false;
     }
 
@@ -40,23 +39,13 @@ public class XMPPErrorMessage implements XMPPMessage {
         Map<String, Object> metadata = new HashMap<String, Object>();
         metadata.put("serviceJID", packet.getFrom());
 
-        Exception cause = null;
         try {
-            cause = new Exception(URLDecoder.decode(signalArgs.get("message"), "UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            cause = e;
-        }
-        final String pID = (signalArgs != null ? signalArgs.get("id") : null);
-
-        // NOTIFY SERVICE
-        final String serviceJID = message.getFrom();
-        xmppClient.sendMessage(serviceJID, "topic=abort");
-
-        // NOTIFY LISTENERS
-        for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
-            listener.exceptionOccurred(pID, cause, metadata);
-        }
-
+			final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+			
+			LOGGER.log(Level.parse(signalArgs.get("level")), "[" + pID + "]" + URLDecoder.decode(signalArgs.get("message"), "UTF-8"));
+		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, "Error while trying to decode Log message: " + message.getBody(), e);
+		}
     }
 
 }
