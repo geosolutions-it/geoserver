@@ -28,6 +28,9 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
+import org.geoserver.gs.mapstoreconfig.components.GeoserverXMLLayerDescriptorManager;
+import org.geoserver.gs.mapstoreconfig.ftl.model.DimensionsTemplateModel;
+import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
 import org.geoserver.wps.WPSTestSupport;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
@@ -89,13 +92,17 @@ public class MapstoreConfigTest extends WPSTestSupport {
         layerValues1.setQueryable("Queryable1");
         timeDimensions1.setCurrent("Current1");
         timeDimensions1.setDefaultVal("DefaultVal1");
-        timeDimensions1.setLlbbox("Llbbox1");
+        timeDimensions1.setMinX("minX");
+        timeDimensions1.setMinY("minY");
+        timeDimensions1.setMaxX("maxX");
+        timeDimensions1.setMaxY("maxY");
         timeDimensions1.setMultipleVal("MultipleVal1");
         timeDimensions1.setName("Name1");
         timeDimensions1.setNearestVal("NearestVal1");
         timeDimensions1.setUnits("Units1");
         timeDimensions1.setUnitsymbol("Unitsymbol1");
-        timeDimensions1.setValues("Values1");
+        timeDimensions1.setMinLimit("minLimit");
+        timeDimensions1.setMaxLimit("maxLimit");
         
         LayerTemplateModel layerValues2 = new LayerTemplateModel();
         DimensionsTemplateModel timeDimensions2 = new DimensionsTemplateModel();
@@ -114,13 +121,17 @@ public class MapstoreConfigTest extends WPSTestSupport {
         layerValues2.setQueryable("Queryable2");
         timeDimensions2.setCurrent("Current2");
         timeDimensions2.setDefaultVal("DefaultVal2");
-        timeDimensions2.setLlbbox("Llbbox2");
+        timeDimensions2.setMinX("minX");
+        timeDimensions2.setMinY("minY");
+        timeDimensions2.setMaxX("maxX");
+        timeDimensions2.setMaxY("maxY");
         timeDimensions2.setMultipleVal("MultipleVal2");
         timeDimensions2.setName("Name2");
         timeDimensions2.setNearestVal("NearestVal2");
         timeDimensions2.setUnits("Units2");
         timeDimensions2.setUnitsymbol("Unitsymbol2");
-        timeDimensions2.setValues("Values2");
+        timeDimensions2.setMinLimit("minLimit");
+        timeDimensions2.setMaxLimit("maxLimit");
         
         LayerTemplateModel layerValues3 = new LayerTemplateModel();
         DimensionsTemplateModel timeDimensions3 = new DimensionsTemplateModel();
@@ -139,13 +150,17 @@ public class MapstoreConfigTest extends WPSTestSupport {
         layerValues3.setQueryable("Queryable3");
         timeDimensions3.setCurrent("Current3");
         timeDimensions3.setDefaultVal("DefaultVal3");
-        timeDimensions3.setLlbbox("Llbbox3");
+        timeDimensions3.setMinX("minX");
+        timeDimensions3.setMinY("minY");
+        timeDimensions3.setMaxX("maxX");
+        timeDimensions3.setMaxY("maxY");
         timeDimensions3.setMultipleVal("MultipleVal3");
         timeDimensions3.setName("Name3");
         timeDimensions3.setNearestVal("NearestVal3");
         timeDimensions3.setUnits("Units3");
         timeDimensions3.setUnitsymbol("Unitsymbol3");
-        timeDimensions3.setValues("Values3");
+        timeDimensions3.setMinLimit("minLimit");
+        timeDimensions3.setMaxLimit("maxLimit");
         
         list.add(layerValues1);
         list.add(layerValues2);

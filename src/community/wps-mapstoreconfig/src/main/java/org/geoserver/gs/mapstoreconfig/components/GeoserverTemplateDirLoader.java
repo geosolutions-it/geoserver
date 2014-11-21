@@ -17,9 +17,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.geoserver.gs.mapstoreconfig;
+package org.geoserver.gs.mapstoreconfig.components;
 
 import java.io.File;
+
+import org.geoserver.gs.mapstoreconfig.TemplateDirLoader;
 import org.geoserver.platform.GeoServerResourceLoader;
 
 /**
@@ -33,6 +35,15 @@ public class GeoserverTemplateDirLoader implements TemplateDirLoader {
     // The path related to gs datadir in which search for templates
     private final static String TEMPLATE_DIR = "templates";
 
+    /**
+     * @param loader the loader to set
+     */
+    public void setLoader(GeoServerResourceLoader loader) {
+        this.loader = loader;
+    }
+
+    public GeoserverTemplateDirLoader(){}
+    
     @Override
     public File getTemplateDir() {
         return new File(loader.getBaseDirectory(),TEMPLATE_DIR);

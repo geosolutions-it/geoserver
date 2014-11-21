@@ -22,6 +22,7 @@ package org.geoserver.gs.mapstoreconfig;
 import java.io.IOException;
 import java.util.List;
 
+import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
 import org.opengis.geometry.BoundingBox;
 
 /**

@@ -17,7 +17,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.geoserver.gs.mapstoreconfig;
+package org.geoserver.gs.mapstoreconfig.ftl.model;
 
 /**
  * @author DamianoG
@@ -39,9 +39,17 @@ public class DimensionsTemplateModel {
 
     private String defaultVal;
 
-    private String values;
+    private String minX;
 
-    private String llbbox;
+    private String minY;
+
+    private String maxX;
+
+    private String maxY;
+
+    private String minLimit;
+    
+    private String maxLimit;
 
     /**
      * @return the name
@@ -142,31 +150,88 @@ public class DimensionsTemplateModel {
     }
 
     /**
-     * @return the values
+     * @return the minX
      */
-    public String getValues() {
-        return values;
+    public String getMinX() {
+        return minX;
     }
 
     /**
-     * @param values the values to set
+     * @param minX the minX to set
      */
-    public void setValues(String values) {
-        this.values = values;
+    public void setMinX(String minX) {
+        this.minX = minX;
     }
 
     /**
-     * @return the llbbox
+     * @return the minY
      */
-    public String getLlbbox() {
-        return llbbox;
+    public String getMinY() {
+        return minY;
     }
 
     /**
-     * @param llbbox the llbbox to set
+     * @param minY the minY to set
      */
-    public void setLlbbox(String llbbox) {
-        this.llbbox = llbbox;
+    public void setMinY(String minY) {
+        this.minY = minY;
     }
 
+    /**
+     * @return the maxX
+     */
+    public String getMaxX() {
+        return maxX;
+    }
+
+    /**
+     * @param maxX the maxX to set
+     */
+    public void setMaxX(String maxX) {
+        this.maxX = maxX;
+    }
+
+    /**
+     * @return the maxY
+     */
+    public String getMaxY() {
+        return maxY;
+    }
+
+    /**
+     * @param maxY the maxY to set
+     */
+    public void setMaxY(String maxY) {
+        this.maxY = maxY;
+    }
+
+    /**
+     * @return the minLimit
+     */
+    public String getMinLimit() {
+        return minLimit;
+    }
+
+    /**
+     * @param minLimit the minLimit to set
+     */
+    public void setMinLimit(String minLimit) {
+        this.minLimit = minLimit;
+    }
+
+    /**
+     * @return the maxLimit
+     */
+    public String getMaxLimit() {
+        return maxLimit;
+    }
+
+    /**
+     * @param maxLimit the maxLimit to set
+     */
+    public void setMaxLimit(String maxLimit) {
+        this.maxLimit = maxLimit;
+    }
+  
+    
 }

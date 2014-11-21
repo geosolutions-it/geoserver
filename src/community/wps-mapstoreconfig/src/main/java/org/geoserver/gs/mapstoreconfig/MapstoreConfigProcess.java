@@ -33,10 +33,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import org.geoserver.gs.mapstoreconfig.components.GeoserverTemplateDirLoader;
+import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
+import org.geoserver.wps.gs.GeoServerProcess;
 import org.geoserver.wps.gs.GeorectifyConfiguration;
 import org.geotools.process.factory.DescribeParameter;
 import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
+import org.geotools.process.gs.GSProcess;
 import org.geotools.util.logging.Logging;
 import org.opengis.geometry.BoundingBox;
 
@@ -46,17 +50,27 @@ import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
 
 @DescribeProcess(title = "mapstoreConfigProcess", description = "A wps process responsible for generate Mapstore jsnon configuration files")
-public class MapstoreConfigProcess {
+public class MapstoreConfigProcess  implements GeoServerProcess {
 
-    // The name of the template to load
+    private static final Logger LOGGER = Logging.getLogger(MapstoreConfigProcess.class);
+    
+    /**
+     * The name of the template to load
+     */
     public final static String TEMPLATE_NAME = "mapstoreTemplate.tpl";
-    // The name of the properties file that stores the default values
+    /**
+     * The name of the properties file that stores the default values
+     */
     public final static String DEFAULT_PROPERTIES_NAME = "defaultMapstoreConfigValues.tpl";
     
-    private static final Logger LOGGER = Logging.getLogger(GeorectifyConfiguration.class);
-    
+    /**
+     * Interface responsible to load the template dir. Use {@link GeoserverTemplateDirLoader} as implementation to place the template dir inside a Geoserver Datadir
+     */
     private TemplateDirLoader templateDirLoader;
     
+    /**
+     * This Interface manage a layer descriptor. Different implementation should support different datatype supported (xml, json, plaintext ecc...).
+     */
     private LayerDescriptorManager layerDescriptorManager;
     
     /**
@@ -76,10 +90,11 @@ public class MapstoreConfigProcess {
     @DescribeResult(name = "JSON MapStore configuration file", description = "output result", type=String.class)
     public String execute(
             @DescribeParameter(name = "layerDescriptor", min=1, description="An xml document that provides a description of a set of layers") String layerDescriptor, 
-            @DescribeParameter(name = "bbox", min=0, description="A default BoundingBox to set in the layer definition" ) BoundingBox bbox, 
-            @DescribeParameter(name = "minTime", min=0, description="A default lower time interval border") String minTime, 
-            @DescribeParameter(name = "maxTime", min=0, description="A default time interval border") String maxTime,
-            @DescribeParameter(name = "forceDefaultValuesUsage", min=1, description="Flag indicate that the default bbox and interval values must overrides also the ones in the XML document if presents") boolean forceDefaultValuesUsage) {
+            @DescribeParameter(name = "bbox", min=0, description="The default BoundingBox to set in the layer definition" ) BoundingBox bbox, 
+            @DescribeParameter(name = "minTime", min=0, description="The default lower time interval border") String minTime, 
+            @DescribeParameter(name = "maxTime", min=0, description="The default upper interval border") String maxTime,
+            //This flag still deoesn't have any effect since atm the only model provided to parse the layerDescriptor doesn't have the Coordinates
+            @DescribeParameter(name = "forceDefaultValuesUsage", min=1, description="***NB: still not implemented*** Flag indicate that the default bbox and interval values must overrides also the ones in the XML document if presents") boolean forceDefaultValuesUsage) throws IOException {
         
         //Manage the layerDescriptor and produce the value to substitute in the FTL template
         layerDescriptorManager.loadDocument(layerDescriptor, true);
@@ -92,54 +107,45 @@ public class MapstoreConfigProcess {
         layerDescriptorManager.setMaxTime(maxTime);
         layerDescriptorManager.setForceDefaultValuesUsage(forceDefaultValuesUsage);
         List<LayerTemplateModel> model = null;
-        try {
-            model = layerDescriptorManager.produceModelForFTLTemplate(templateDirLoader);
-        } catch (IOException e2) {
-            // TODO How handle this? How throw an Exception???
-            LOGGER.severe(e2.getMessage());
-        }
+        
+        // Could maybe throw an exception
+        model = layerDescriptorManager.produceModelForFTLTemplate(templateDirLoader);
         
         //Load the template Location
         File templateDir = null;
-        try {
-            templateDir = templateDirLoader.getTemplateDir();
-        } catch (IOException e1) {
-            // TODO How handle this? How throw an Exception???
-            LOGGER.severe(e1.getMessage());
-        }
+     
+        // Could maybe throw an exception
+        templateDir = templateDirLoader.getTemplateDir();
         
         // Setup the FTL Context
         Configuration cfg = new Configuration();
-        try {
-            // Where do we load the templates from:
-            cfg.setDirectoryForTemplateLoading(templateDir);
-        } catch (IOException e) {
-            LOGGER.severe(e.getMessage());
-        }
+        
+        // Could maybe throw an exception
+        // Where do we load the templates from:
+        cfg.setDirectoryForTemplateLoading(templateDir);
+        
         cfg.setDefaultEncoding("UTF-8");
         cfg.setLocale(Locale.ENGLISH);
         cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
         
         // Set the values to use for the template resolving
         Map<String, Object> input = new HashMap<String, Object>();
+        
+//        input.put("layers", MapstoreConfigTest.produceModel());
         input.put("layers", model);
         
         //Load the FTL template
-        Template template = null;
-        try {
-            template = cfg.getTemplate(TEMPLATE_NAME);
-        } catch (IOException e) {
-            LOGGER.severe(e.getMessage());
-        }
+        // Could maybe throw an exception
+        Template template = cfg.getTemplate(TEMPLATE_NAME);
 
+        
         // Resolve the template
+        // Could maybe throw an exception
         Writer writer = new StringWriter();
         try {
             template.process(input, writer);
         } catch (TemplateException e) {
-            LOGGER.severe(e.getMessage());
-        } catch (IOException e) {
-            LOGGER.severe(e.getMessage());
+            throw new IOException("An instance of TemplateException as been thrown, reporting its mesage: '" + e.getMessage() + "'");
         }
         
         return writer.toString();

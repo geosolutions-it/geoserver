@@ -26,10 +26,10 @@
 					"multipleVal":${layer.timeDimensions.multipleVal},
 					"current":${layer.timeDimensions.current},
 					"default":${layer.timeDimensions.defaultVal},
-					"values":[${layer.timeDimensions.values}]
-					}
+					"values":["${layer.timeDimensions.minLimit}","${layer.timeDimensions.maxLimit}"]
+				}
 			},
-		   "llbbox": [${layer.timeDimensions.llbbox}],
+		   "llbbox": [${layer.timeDimensions.minX},${layer.timeDimensions.minY},${layer.timeDimensions.maxX},${layer.timeDimensions.maxY}],
 		   "tileSets": [{"srs":{"EPSG:900913":true},"bbox":{"EPSG:900913":{"bbox":[939258.2034374997,5322463.1528125,1252344.2712499984,5635549.220624998],"srs":"EPSG:900913"}},"resolutions":[4891.9698095703125,2445.9849047851562,1222.9924523925781,611.4962261962891,305.74811309814453,152.87405654907226,76.43702827453613,38.218514137268066,19.109257068634033,9.554628534317017,4.777314267158508,2.388657133579254,1.194328566789627,0.5971642833948135,0.29858214169740677],"width":256,"height":256,"format":"image/png8","layers":"ndvi:ndvi","styles":""}]
 		  }
 	  </#list>
