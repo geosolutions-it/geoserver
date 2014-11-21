@@ -40,13 +40,13 @@ public class ResourceModelTest extends WPSResourceTestSupport {
         XStream xs = initialize();
 
         // De-serialize resources
-        File test1;
+        File testXML;
         try {
-            test1 = new File(testData.getDataDirectoryRoot().getAbsolutePath(), "test1.xml");
-            assertTrue(test1.exists());
+            testXML = new File(testData.getDataDirectoryRoot().getAbsolutePath(), "test4.xml");
+            assertTrue(testXML.exists());
 
             String dump = null;
-            FileInputStream fis = new FileInputStream(test1);
+            FileInputStream fis = new FileInputStream(testXML);
             try {
                 dump = IOUtils.toString(fis, "UTF-8");
             } finally {
@@ -56,7 +56,7 @@ public class ResourceModelTest extends WPSResourceTestSupport {
             Resources resources = (Resources) xs.fromXML(dump);
             assertNotNull(resources);
 
-            assertEquals("Number of un-marshalled resources", resources.getResources().size(), 1);
+            assertEquals("Number of un-marshalled resources", resources.getResources().size(), 2);
 
             // Create-or-update the resources
             for (Resource resource : resources.getResources()) {

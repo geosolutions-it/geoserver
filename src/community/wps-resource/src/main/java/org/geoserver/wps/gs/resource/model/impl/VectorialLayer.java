@@ -27,6 +27,8 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
  */
 public class VectorialLayer extends Resource {
 
+	protected String workspace;
+
     protected String title;
 
     protected String abstractTxt;
@@ -40,10 +42,26 @@ public class VectorialLayer extends Resource {
     protected Map<String, String> defaultStyle = new HashMap<String, String>();
 
     protected Map<String, String> nativeBoundingBox = new HashMap<String, String>();
+    
+    protected Map<String, String> latLonBoundingBox = new HashMap<String, String>();
 
     protected Map<String, String> metadata = new HashMap<String, String>();
 
     /**
+	 * @return the workspace
+	 */
+	public String getWorkspace() {
+		return workspace;
+	}
+
+	/**
+	 * @param workspace the workspace to set
+	 */
+	public void setWorkspace(String workspace) {
+		this.workspace = workspace;
+	}
+
+	/**
      * @return the title
      */
     public String getTitle() {
@@ -142,6 +160,20 @@ public class VectorialLayer extends Resource {
     }
 
     /**
+	 * @return the latLonBoundingBox
+	 */
+	public Map<String, String> getLatLonBoundingBox() {
+		return latLonBoundingBox;
+	}
+
+	/**
+	 * @param latLonBoundingBox the latLonBoundingBox to set
+	 */
+	public void setLatLonBoundingBox(Map<String, String> latLonBoundingBox) {
+		this.latLonBoundingBox = latLonBoundingBox;
+	}
+
+	/**
      * @return the metadata
      */
     public Map<String, String> getMetadata() {
@@ -189,6 +221,35 @@ public class VectorialLayer extends Resource {
         return null;
     }
 
+    /**
+     * 
+     * @return
+     */
+    public ReferencedEnvelope latLonBoundingBox() {
+        if (this.latLonBoundingBox != null) {
+            double x1 = Double.parseDouble(this.latLonBoundingBox.get("minx"));
+            double x2 = Double.parseDouble(this.latLonBoundingBox.get("maxx"));
+            double y1 = Double.parseDouble(this.latLonBoundingBox.get("miny"));
+            double y2 = Double.parseDouble(this.latLonBoundingBox.get("maxy"));
+            CoordinateReferenceSystem crs = null;
+            if (this.latLonBoundingBox.get("crs") != null) {
+                try {
+                    crs = CRS.decode(this.latLonBoundingBox.get("crs"));
+                } catch (NoSuchAuthorityCodeException e) {
+                    LOGGER.log(Level.WARNING,
+                            "Exception occurred while trying to decode Native BBOX", e);
+                } catch (FactoryException e) {
+                    LOGGER.log(Level.WARNING,
+                            "Exception occurred while trying to decode Native BBOX", e);
+                }
+            }
+            ReferencedEnvelope bbox = new ReferencedEnvelope(x1, x2, y1, y2, crs);
+            return bbox;
+        }
+
+        return null;
+    }
+    
     /**
      * 
      * @return

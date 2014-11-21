@@ -51,6 +51,12 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             context.convertAnother(resource.getDefaultStyle());
             writer.endNode();
         }
+        
+        if (resource.getTitle() != null) {
+            writer.startNode("workspace");
+            writer.setValue(resource.getWorkspace());
+            writer.endNode();
+        }
 
         if (resource.getTitle() != null) {
             writer.startNode("title");
@@ -88,6 +94,12 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             writer.endNode();
         }
 
+        if (resource.getLatLonBoundingBox() != null) {
+            writer.startNode("latLonBoundingBox");
+            context.convertAnother(resource.getLatLonBoundingBox());
+            writer.endNode();
+        }
+
         if (resource.getMetadata() != null) {
             writer.startNode("metadata");
             context.convertAnother(resource.getMetadata());
@@ -101,7 +113,8 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
         }
     }
 
-    @Override
+    @SuppressWarnings("unchecked")
+	@Override
     public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
         VectorialLayer resource = new VectorialLayer();
 
@@ -119,6 +132,10 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
                 resource.setPersistent(Boolean.valueOf((String) nodeValue));
             }
 
+            if ("workspace".equals(nodeName)) {
+                resource.setWorkspace((String) nodeValue);
+            }
+            
             if ("title".equals(nodeName)) {
                 resource.setTitle((String) nodeValue);
             }
@@ -146,6 +163,11 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
 
             if ("nativeBoundingBox".equals(nodeName)) {
                 resource.setNativeBoundingBox((Map<String, String>) context.convertAnother(
+                        nodeValue, Map.class));
+            }
+            
+            if ("latLonBoundingBox".equals(nodeName)) {
+                resource.setLatLonBoundingBox((Map<String, String>) context.convertAnother(
                         nodeValue, Map.class));
             }
 

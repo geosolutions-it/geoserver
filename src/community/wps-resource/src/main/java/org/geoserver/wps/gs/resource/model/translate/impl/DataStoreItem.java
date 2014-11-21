@@ -16,9 +16,11 @@ import java.util.logging.Level;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.importer.DataFormat;
 import org.geoserver.importer.Database;
 import org.geoserver.importer.ImportData;
@@ -83,6 +85,12 @@ public class DataStoreItem extends TranslateItem {
                     context.getCatalog(), task);
             if (targetStore != null) {
                 task.setStore(targetStore);
+                NamespaceInfo namespace = context.getCatalog().getNamespaceByPrefix(targetStore.getWorkspace().getName());
+                if (namespace == null) {
+                	namespace = context.getCatalog().getDefaultNamespace();
+                }
+				task.getLayer().getResource().setNamespace(namespace);
+				context.getImportContext().setTargetWorkspace(targetStore.getWorkspace());
                 context.getImportContext().setTargetStore(targetStore);
             }
         }
@@ -129,6 +137,7 @@ public class DataStoreItem extends TranslateItem {
      */
     private StoreInfo getDataStore(Resource resource, Catalog catalog, ImportTask task)
             throws MalformedURLException {
+    	VectorialLayer userLayer = (VectorialLayer) resource;
         DataStoreInfo dataStore = catalog.getDataStoreByName(resource.getName());
         if (dataStore != null) {
             task.setUpdateMode(UpdateMode.REPLACE);
@@ -137,7 +146,18 @@ public class DataStoreItem extends TranslateItem {
 
         dataStore = catalog.getFactory().createDataStore();
         dataStore.setName(resource.getName());
-        dataStore.setWorkspace(catalog.getDefaultWorkspace());
+        WorkspaceInfo workspace = null;
+        if (userLayer.getWorkspace() != null) {
+        	for(WorkspaceInfo wk : catalog.getWorkspaces()) {
+        		if (wk.getName().equalsIgnoreCase(userLayer.getWorkspace())) {
+        			workspace = wk;
+        		}
+        	}
+        } else {
+        	// the DEFAULT one
+        	workspace = catalog.getDefaultWorkspace();
+        }
+        dataStore.setWorkspace(workspace);
         dataStore.getConnectionParameters().putAll(this.store);
         dataStore.setEnabled(true);
         catalog.add(dataStore);
@@ -167,9 +187,10 @@ public class DataStoreItem extends TranslateItem {
         // set the correct Resource information
         VectorialLayer userLayer = (VectorialLayer) originator;
         ResourceInfo resource = layer.getResource();
-        resource.setSRS(userLayer.getSrs());
         resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
+        resource.setLatLonBoundingBox(userLayer.latLonBoundingBox());
         resource.setNativeCRS(userLayer.nativeCRS());
+        resource.setSRS(userLayer.getSrs());
 
         layer.setName(userLayer.getName());
         layer.setAbstract(userLayer.getAbstract());
