@@ -121,6 +121,7 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.aliasAttribute(Resource.class, "type", "class");
 
         xs.alias("nativeBoundingBox", Map.class);
+        xs.alias("latLonBoundingBox", Map.class);
 
         xs.alias("defaultStyle", Map.class);
         xs.alias("metadata", Map.class);

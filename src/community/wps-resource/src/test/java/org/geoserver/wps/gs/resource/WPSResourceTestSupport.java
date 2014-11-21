@@ -46,7 +46,16 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
                         "test-data/test3.xml"), "test3.xml");
+        testData.copyTo(
+                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
+                        "test-data/test4.xml"), "test4.xml");
 
+        testData.copyTo(
+                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
+                        "test-data/tracks_filtered.csv"), "tracks_filtered.csv");
+        testData.copyTo(
+                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
+                        "test-data/tracks_filtered.prj"), "tracks_filtered.prj");
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
                         "test-data/waypoints.csv"), "waypoints.csv");
@@ -77,6 +86,7 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
         xs.aliasAttribute(Resource.class, "type", "class");
 
         xs.alias("nativeBoundingBox", Map.class);
+        xs.alias("latLonBoundingBox", Map.class);
 
         xs.alias("defaultStyle", Map.class);
         xs.alias("metadata", Map.class);

@@ -41,5 +41,8 @@
 
 	<!-- ERROR Signal -->
 	<bean id="xmppErrorMessage" class="org.geoserver.wps.remote.plugin.XMPPErrorMessage" />
-		
+	
+	<!-- LOG Signal -->
+	<bean id="xmppLogMessage" class="org.geoserver.wps.remote.plugin.XMPPLogMessage" />
+	
 </beans>
