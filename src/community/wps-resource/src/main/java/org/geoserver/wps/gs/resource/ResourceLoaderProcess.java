@@ -17,10 +17,13 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.DimensionInfo;
+import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.wps.gs.resource.model.Dimension;
 import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.Resources;
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
@@ -77,7 +80,7 @@ public class ResourceLoaderProcess implements GSProcess {
             final ProgressListener progressListener) throws ProcessException {
 
         // Initialize Unmarshaller
-        XStream xs = initialize();
+        XStream xs = initialize(catalog);
 
         // De-serialize resources
         try {
@@ -106,18 +109,24 @@ public class ResourceLoaderProcess implements GSProcess {
     }
 
     /**
+     * @param catalog2 
      * @return
      * @throws IllegalArgumentException
      */
-    protected XStream initialize() throws IllegalArgumentException {
+    public static XStream initialize(Catalog catalog) throws IllegalArgumentException {
         XStreamPersisterFactory xpf = GeoServerExtensions.bean(XStreamPersisterFactory.class);
         XStream xs = xpf.createXMLPersister().getXStream();
 
         // Aliases
         xs.alias("resources", Resources.class);
         xs.alias("resource", Resource.class);
+        xs.alias("dimension", Dimension.class);
+        xs.alias("dimensionInfo", DimensionInfo.class);
+        
         xs.aliasField("abstract", Resource.class, "abstractTxt");
+        xs.aliasField("dimensionInfo", Dimension.class, "dimensionInfo");
         xs.aliasField("translateContext", Resource.class, "translateContext");
+        
         xs.aliasAttribute(Resource.class, "type", "class");
 
         xs.alias("nativeBoundingBox", Map.class);
@@ -131,12 +140,16 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.aliasAttribute(TranslateItem.class, "type", "class");
         xs.aliasAttribute(TranslateItem.class, "order", "order");
 
+        // Default Implementations
+        xs.addDefaultImplementation(DimensionInfoImpl.class, DimensionInfo.class);
+        
         // Converters
         xs.addImplicitCollection(Resources.class, "resources");
+        xs.addImplicitCollection(Resource.class, "dimensions");
         xs.addImplicitCollection(TranslateContext.class, "items");
 
         xs.registerConverter(new MapEntryConverter());
-        xs.registerConverter(new ResourceConverter(this.catalog));
+        xs.registerConverter(new ResourceConverter(catalog));
         xs.registerConverter(new ResourceItemConverter());
         xs.registerConverter(new ReflectionConverter(xs.getMapper(),
                 new PureJavaReflectionProvider()), XStream.PRIORITY_VERY_LOW);

@@ -13,7 +13,7 @@
 	</parent>
 
 	<groupId>org.geoserver.community</groupId>
-	<artifactId>wps-mapstoreconfig</artifactId>
+	<artifactId>gs-wps-mapstoreconfig</artifactId>
 	<name>Web Processing Service - WPS to create Mapstore Configuration</name>
 
 	<properties>

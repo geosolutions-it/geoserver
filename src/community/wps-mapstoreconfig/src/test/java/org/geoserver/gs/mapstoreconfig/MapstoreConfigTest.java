@@ -32,15 +32,11 @@ import org.geoserver.gs.mapstoreconfig.components.GeoserverXMLLayerDescriptorMan
 import org.geoserver.gs.mapstoreconfig.ftl.model.DimensionsTemplateModel;
 import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
 import org.geoserver.wps.WPSTestSupport;
-import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.referencing.CRS;
 import org.geotools.test.TestData;
 import org.geotools.util.logging.Logging;
 import org.junit.Test;
-import org.opengis.geometry.BoundingBox;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * @author DamianoG
@@ -62,9 +58,7 @@ public class MapstoreConfigTest extends WPSTestSupport {
                 .getCatalog());
         mapstoreProcess.setLayerDescriptorManager(ldm);
         mapstoreProcess.setTemplateDirLoader(new TestTemplateDirLoader());
-        CoordinateReferenceSystem crs = CRS.decode("EPSG:4326");
-        BoundingBox bbox = new ReferencedEnvelope(1, 1, 1, 1, crs);
-        LOGGER.info(mapstoreProcess.execute(getLayerDescriptor(), bbox, "", "", false));
+        LOGGER.info(mapstoreProcess.execute(getLayerDescriptor()));
     }
 
     private String getLayerDescriptor() throws FileNotFoundException, IOException {

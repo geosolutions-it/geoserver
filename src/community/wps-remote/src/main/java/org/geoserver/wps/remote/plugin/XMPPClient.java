@@ -206,8 +206,7 @@ public class XMPPClient extends RemoteProcessClient {
             // Extract the PID
             metadata.put("serviceJID", serviceJID);
             final Object fixedInputs = getFixedInputs(input);
-            final String pid = md5Java(serviceJID + System.nanoTime()) + "_"
-                    + md5Java(byteArrayToURLString(P(fixedInputs)));
+            final String pid = md5Java(serviceJID + System.nanoTime() + byteArrayToURLString(P(fixedInputs)));
 
             String msg = "topic=request&id=" + pid + "&message="
                     + byteArrayToURLString(P(fixedInputs));
@@ -783,7 +782,7 @@ public class XMPPClient extends RemoteProcessClient {
             for (byte b : hash) {
                 sb.append(String.format("%02x", b & 0xff));
             }
-            digest = sb.toString();
+            digest = sb.substring(0, 15).toString();
         } catch (UnsupportedEncodingException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
         } catch (NoSuchAlgorithmException ex) {

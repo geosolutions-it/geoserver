@@ -35,14 +35,12 @@ import java.util.logging.Logger;
 
 import org.geoserver.gs.mapstoreconfig.components.GeoserverTemplateDirLoader;
 import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
+import org.geoserver.gs.mapstoreconfig.ftl.model.MapTemplateModel;
 import org.geoserver.wps.gs.GeoServerProcess;
-import org.geoserver.wps.gs.GeorectifyConfiguration;
 import org.geotools.process.factory.DescribeParameter;
 import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
-import org.geotools.process.gs.GSProcess;
 import org.geotools.util.logging.Logging;
-import org.opengis.geometry.BoundingBox;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
@@ -89,12 +87,7 @@ public class MapstoreConfigProcess  implements GeoServerProcess {
 
     @DescribeResult(name = "JSON MapStore configuration file", description = "output result", type=String.class)
     public String execute(
-            @DescribeParameter(name = "layerDescriptor", min=1, description="An xml document that provides a description of a set of layers") String layerDescriptor, 
-            @DescribeParameter(name = "bbox", min=0, description="The default BoundingBox to set in the layer definition" ) BoundingBox bbox, 
-            @DescribeParameter(name = "minTime", min=0, description="The default lower time interval border") String minTime, 
-            @DescribeParameter(name = "maxTime", min=0, description="The default upper interval border") String maxTime,
-            //This flag still deoesn't have any effect since atm the only model provided to parse the layerDescriptor doesn't have the Coordinates
-            @DescribeParameter(name = "forceDefaultValuesUsage", min=1, description="***NB: still not implemented*** Flag indicate that the default bbox and interval values must overrides also the ones in the XML document if presents") boolean forceDefaultValuesUsage) throws IOException {
+            @DescribeParameter(name = "layerDescriptor", min=1, description="An xml document that provides a description of a set of layers") String layerDescriptor) throws IOException {
         
         //Manage the layerDescriptor and produce the value to substitute in the FTL template
         layerDescriptorManager.loadDocument(layerDescriptor, true);
@@ -102,11 +95,7 @@ public class MapstoreConfigProcess  implements GeoServerProcess {
          // TODO How handle this? How throw an Exception???
             LOGGER.severe("The provided layerDescriptor Document is not valid for the '" + layerDescriptorManager.mimeFormatHandled() + "' input format...");
         }
-        layerDescriptorManager.setBbox(bbox);
-        layerDescriptorManager.setMinTime(minTime);
-        layerDescriptorManager.setMaxTime(maxTime);
-        layerDescriptorManager.setForceDefaultValuesUsage(forceDefaultValuesUsage);
-        List<LayerTemplateModel> model = null;
+        MapTemplateModel model = null;
         
         // Could maybe throw an exception
         model = layerDescriptorManager.produceModelForFTLTemplate(templateDirLoader);
@@ -132,7 +121,7 @@ public class MapstoreConfigProcess  implements GeoServerProcess {
         Map<String, Object> input = new HashMap<String, Object>();
         
 //        input.put("layers", MapstoreConfigTest.produceModel());
-        input.put("layers", model);
+        input.put("map", model);
         
         //Load the FTL template
         // Could maybe throw an exception

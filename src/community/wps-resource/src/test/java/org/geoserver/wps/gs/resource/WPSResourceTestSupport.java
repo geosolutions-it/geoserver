@@ -70,42 +70,4 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
         }
     }
 
-    /**
-     * @return
-     * @throws IllegalArgumentException
-     */
-    protected XStream initialize() throws IllegalArgumentException {
-        XStreamPersisterFactory xpf = GeoServerExtensions.bean(XStreamPersisterFactory.class);
-        XStream xs = xpf.createXMLPersister().getXStream();
-
-        // Aliases
-        xs.alias("resources", Resources.class);
-        xs.alias("resource", Resource.class);
-        xs.aliasField("abstract", Resource.class, "abstractTxt");
-        xs.aliasField("translateContext", Resource.class, "translateContext");
-        xs.aliasAttribute(Resource.class, "type", "class");
-
-        xs.alias("nativeBoundingBox", Map.class);
-        xs.alias("latLonBoundingBox", Map.class);
-
-        xs.alias("defaultStyle", Map.class);
-        xs.alias("metadata", Map.class);
-
-        xs.alias("translateContext", TranslateContext.class);
-        xs.alias("item", TranslateItem.class);
-        xs.aliasAttribute(TranslateItem.class, "type", "class");
-        xs.aliasAttribute(TranslateItem.class, "order", "order");
-
-        // Converters
-        xs.addImplicitCollection(Resources.class, "resources");
-        xs.addImplicitCollection(TranslateContext.class, "items");
-
-        xs.registerConverter(new MapEntryConverter());
-        xs.registerConverter(new ResourceConverter(this.catalog));
-        xs.registerConverter(new ResourceItemConverter());
-        xs.registerConverter(new ReflectionConverter(xs.getMapper(),
-                new PureJavaReflectionProvider()), XStream.PRIORITY_VERY_LOW);
-
-        return xs;
-    }
 }

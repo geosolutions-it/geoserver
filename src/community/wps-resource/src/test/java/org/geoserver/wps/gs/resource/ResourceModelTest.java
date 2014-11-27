@@ -37,12 +37,12 @@ public class ResourceModelTest extends WPSResourceTestSupport {
     public void testVectorialLayerMarshalling() {
 
         // Initialize Unmarshaller
-        XStream xs = initialize();
+        XStream xs = ResourceLoaderProcess.initialize(this.getCatalog());
 
         // De-serialize resources
         File testXML;
         try {
-            testXML = new File(testData.getDataDirectoryRoot().getAbsolutePath(), "test4.xml");
+            testXML = new File(testData.getDataDirectoryRoot().getAbsolutePath(), "test1.xml");
             assertTrue(testXML.exists());
 
             String dump = null;
@@ -56,7 +56,7 @@ public class ResourceModelTest extends WPSResourceTestSupport {
             Resources resources = (Resources) xs.fromXML(dump);
             assertNotNull(resources);
 
-            assertEquals("Number of un-marshalled resources", resources.getResources().size(), 2);
+            assertEquals("Number of un-marshalled resources", resources.getResources().size(), 1);
 
             // Create-or-update the resources
             for (Resource resource : resources.getResources()) {

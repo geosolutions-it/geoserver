@@ -20,42 +20,21 @@
 package org.geoserver.gs.mapstoreconfig;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
-import org.opengis.geometry.BoundingBox;
+import org.geoserver.gs.mapstoreconfig.ftl.model.MapTemplateModel;
 
 /**
  * @author DamianoG
- *
+ * 
  */
 public interface LayerDescriptorManager {
-
-    /**
-     * @param bbox the bbox to set
-     */
-    public void setBbox(BoundingBox bbox);
-
-    /**
-     * @param minTime the minTime to set
-     */
-    public void setMinTime(String minTime);
-
-    /**
-     * @param maxTime the maxTime to set
-     */
-    public void setMaxTime(String maxTime);
-
-    /**
-     * @param forceDefaultValuesUsage the forceDefaultValuesUsage to set
-     */
-    public void setForceDefaultValuesUsage(boolean forceDefaultValuesUsage);
 
     public void loadDocument(String document, boolean forceReload);
 
     public boolean validateDocument();
 
-    public List<LayerTemplateModel> produceModelForFTLTemplate(TemplateDirLoader templateDirLoader) throws IOException;
+    public MapTemplateModel produceModelForFTLTemplate(TemplateDirLoader templateDirLoader)
+            throws IOException;
 
     public String mimeFormatHandled();
 

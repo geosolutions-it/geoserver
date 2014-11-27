@@ -4,6 +4,9 @@
  */
 package org.geoserver.wps.gs.resource.model;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
@@ -15,15 +18,17 @@ import org.geotools.util.logging.Logging;
  * @author alessio.fabiani
  * 
  */
-public abstract class Resource {
+public abstract class Resource implements Serializable {
 
-    static protected Logger LOGGER = Logging.getLogger(Resource.class);
+	static protected Logger LOGGER = Logging.getLogger(Resource.class);
 
     private String type;
 
     protected String name;
 
     protected boolean persistent;
+
+    protected List<Dimension> dimensions = new ArrayList<Dimension>();
 
     protected TranslateContext translateContext;
 
@@ -69,6 +74,20 @@ public abstract class Resource {
         this.persistent = persistent;
     }
 
+    /**
+	 * @return the dimensions
+	 */
+	public List<Dimension> getDimensions() {
+		return dimensions;
+	}
+
+	/**
+	 * @param dimensions the dimensions to set
+	 */
+	public void setDimensions(List<Dimension> dimensions) {
+		this.dimensions = dimensions;
+	}
+    
     /**
      * @return the translateContext
      */

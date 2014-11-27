@@ -48,7 +48,7 @@ public class DimensionsTemplateModel {
     private String maxY;
 
     private String minLimit;
-    
+
     private String maxLimit;
 
     /**
@@ -232,6 +232,5 @@ public class DimensionsTemplateModel {
     public void setMaxLimit(String maxLimit) {
         this.maxLimit = maxLimit;
     }
-  
-    
+
 }

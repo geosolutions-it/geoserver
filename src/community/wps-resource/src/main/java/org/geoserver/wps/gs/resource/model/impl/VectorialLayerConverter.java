@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.geoserver.wps.gs.resource.ResourceLoaderConverter;
+import org.geoserver.wps.gs.resource.model.Dimension;
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 
 import com.thoughtworks.xstream.converters.MarshallingContext;
@@ -105,6 +106,12 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             context.convertAnother(resource.getMetadata());
             writer.endNode();
         }
+        
+        if (resource.getDimensions() != null) {
+            writer.startNode("dimensions");
+            context.convertAnother(resource.getDimensions());
+            writer.endNode();
+        }
 
         if (resource.getTranslateContext() != null) {
             writer.startNode("translateContext");
@@ -176,6 +183,10 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
                         Map.class));
             }
 
+            if ("dimensions".equals(nodeName)) {
+                resource.setDimensions((List<Dimension>) context.convertAnother(nodeValue, List.class));
+            }
+            
             if ("translateContext".equals(nodeName)) {
                 resource.setTranslateContext((TranslateContext) context.convertAnother(nodeValue,
                         TranslateContext.class));

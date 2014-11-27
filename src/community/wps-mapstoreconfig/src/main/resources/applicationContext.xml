@@ -13,5 +13,4 @@
 		<property name="layerDescriptorManager" ref="layerDescriptorManager" />
 	</bean>
 	
-	
 </beans>

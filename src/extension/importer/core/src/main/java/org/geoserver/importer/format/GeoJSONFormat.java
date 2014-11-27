@@ -220,7 +220,7 @@ public class GeoJSONFormat extends VectorFormat {
     }
 
     Optional<File> maybeFile(ImportData data) {
-        if (data instanceof FileData) {
+        if (data instanceof FileData && ((FileData) data).getFile() != null) {
             return Optional.of(((FileData) data).getFile());
         }
         return Optional.absent();

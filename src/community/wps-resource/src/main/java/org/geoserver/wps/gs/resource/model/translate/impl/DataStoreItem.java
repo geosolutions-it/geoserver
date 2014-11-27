@@ -15,12 +15,15 @@ import java.util.logging.Level;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.DimensionDefaultValueSetting;
+import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.importer.DataFormat;
 import org.geoserver.importer.Database;
 import org.geoserver.importer.ImportData;
@@ -28,6 +31,7 @@ import org.geoserver.importer.ImportTask;
 import org.geoserver.importer.SpatialFile;
 import org.geoserver.importer.UpdateMode;
 import org.geoserver.importer.csv.CSVDataStoreFactory;
+import org.geoserver.wps.gs.resource.model.Dimension;
 import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.impl.VectorialLayer;
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
@@ -187,15 +191,23 @@ public class DataStoreItem extends TranslateItem {
         // set the correct Resource information
         VectorialLayer userLayer = (VectorialLayer) originator;
         ResourceInfo resource = layer.getResource();
-        resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
-        resource.setLatLonBoundingBox(userLayer.latLonBoundingBox());
+        if (userLayer.nativeBoundingBox() != null)
+        	resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
+        if (userLayer.latLonBoundingBox() != null)
+        	resource.setLatLonBoundingBox(userLayer.latLonBoundingBox());
         resource.setNativeCRS(userLayer.nativeCRS());
         resource.setSRS(userLayer.getSrs());
 
         layer.setName(userLayer.getName());
         layer.setAbstract(userLayer.getAbstract());
         layer.setTitle(userLayer.getTitle());
-
+        
+        if (originator.getDimensions() != null) {
+        	for (Dimension dim : originator.getDimensions()) {
+        		resource.getMetadata().put(dim.getName(), dim.getDimensionInfo());
+        	}
+        }
+        
         StyleInfo defaultStyle = userLayer.defaultStyle(catalog);
         if (defaultStyle != null) {
             layer.setDefaultStyle(defaultStyle);

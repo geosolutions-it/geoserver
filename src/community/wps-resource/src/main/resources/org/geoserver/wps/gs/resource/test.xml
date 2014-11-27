@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <resources>
 	<resource class="vectorialLayer">
-		<workspace>topp</workspace>
+		<workspace>it.geosolutions</workspace>
 		<name>OAATracks</name>
 		<persistent>true</persistent>
 		<defaultStyle>
@@ -26,13 +26,13 @@
 			AXIS["Latitude", NORTH]]
 		</nativeCRS>
 		<srs>EPSG:4326</srs>
-		<!-- <nativeBoundingBox>
-			<minx>-124.73142200000001</minx>
-			<maxx>-66.969849</maxx> 
-			<miny>24.955967</miny>
-			<maxy>49.371735</maxy>
+		<!-- nativeBoundingBox>
+			<minx>6.346</minx>
+			<maxx>20.83</maxx>
+			<miny>36.492</miny>
+			<maxy>46.591</maxy>
 			<crs>EPSG:4326</crs>
-		</nativeBoundingBox> -->
+		</nativeBoundingBox -->
 		<latLonBoundingBox>
 			<minx>6.346</minx>
 			<maxx>20.83</maxx>
@@ -52,7 +52,7 @@
 				<name>time</name>
 				<description />
 				<min>2014-08-01T00:00:00Z</min>
-				<max>2014-09-01T02:00:00Z</max>
+				<max>2014-09-01T00:00:00Z</max>
 				<dimensionInfo>
 					<enabled>true</enabled>
 					<attribute>Time</attribute>
@@ -66,10 +66,7 @@
 		</dimensions>
 		<translateContext>
 			<item class="dataStore" order="0">
-				<store>
-					<!--<url>file:tracks_filtered.csv</url> -->
-					<url>file:tracks_filtered.csv</url>
-				</store>
+				<store><url>file:tracks_filtered.csv</url></store>
 			</item>
 			<item class="transform" order="1"
 				type="org.geoserver.importer.transform.AttributesToPointGeometryTransform">
@@ -78,8 +75,7 @@
 					<lngField>Lon</lngField>
 					<pointFieldName>location</pointFieldName>
 					<geometryFactory>
-						<coordinateSequenceFactory
-							class="com.vividsolutions.jts.geom.impl.CoordinateArraySequenceFactory" />
+						<coordinateSequenceFactory class="com.vividsolutions.jts.geom.impl.CoordinateArraySequenceFactory" />
 						<SRID>4326</SRID>
 					</geometryFactory>
 				</transform>
@@ -93,19 +89,24 @@
 			</item>
 			<item class="dataStore" order="3">
 				<store>
-					<dbtype>h2</dbtype>
-					<database>test</database>
+					<dbtype>postgis</dbtype>
+					<host>172.21.64.40</host>
+					<port>5432</port>
+					<schema>geoserver</schema>
+					<database>geoserver</database>
+					<user>geoserver</user>
+					<passwd>hellasFORever</passwd>
 				</store>
 			</item>
 		</translateContext>
 	</resource>
 	<resource class="vectorialLayer">
-		<workspace>topp</workspace>
+		<workspace>it.geosolutions</workspace>
 		<name>OAAWaypoints</name>
 		<persistent>true</persistent>
 		<defaultStyle>
-			<name>polygon</name>
-			<filename>polygon.sld</filename>
+			<name>point</name>
+			<filename>point.sld</filename>
 		</defaultStyle>
 		<title>Optimal Asset Allocator waypoints</title>
 		<abstract>Optimal Asset Allocator waypoints</abstract>
@@ -126,13 +127,13 @@
 			AXIS["Latitude", NORTH]]
 		</nativeCRS>
 		<srs>EPSG:4326</srs>
-		<!-- <nativeBoundingBox>
-			<minx>-124.73142200000001</minx>
-			<maxx>-66.969849</maxx> 
-			<miny>24.955967</miny>
-			<maxy>49.371735</maxy>
+		<!-- nativeBoundingBox>
+			<minx>-180</minx>
+			<maxx>-90</maxx>
+			<miny>180</miny>
+			<maxy>90</maxy>
 			<crs>EPSG:4326</crs>
-		</nativeBoundingBox> -->
+		</nativeBoundingBox -->
 		<metadata>
 			<cacheAgeMax>3600</cacheAgeMax>
 			<kml.regionateFeatureLimit>10</kml.regionateFeatureLimit>
@@ -143,7 +144,6 @@
 		<translateContext>
 			<item class="dataStore" order="0">
 				<store>
-					<!--<url>file:waypoints.csv</url> -->
 					<url>file:waypoints.csv</url>
 				</store>
 			</item>
@@ -162,8 +162,13 @@
 			</item>
 			<item class="dataStore" order="2">
 				<store>
-					<dbtype>h2</dbtype>
-					<database>test</database>
+					<dbtype>postgis</dbtype>
+					<host>172.21.64.40</host>
+					<port>5432</port>
+					<schema>geoserver</schema>
+					<database>geoserver</database>
+					<user>geoserver</user>
+					<passwd>hellasFORever</passwd>
 				</store>
 			</item>
 		</translateContext>

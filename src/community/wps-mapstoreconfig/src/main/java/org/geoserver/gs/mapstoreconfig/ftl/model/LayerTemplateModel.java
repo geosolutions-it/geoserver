@@ -19,7 +19,6 @@
  */
 package org.geoserver.gs.mapstoreconfig.ftl.model;
 
-
 /**
  * @author DamianoG
  * 
@@ -27,7 +26,7 @@ package org.geoserver.gs.mapstoreconfig.ftl.model;
 public class LayerTemplateModel {
 
     private String format;
-    
+
     private String fixed;
 
     private String group;
@@ -39,19 +38,19 @@ public class LayerTemplateModel {
     private String selected;
 
     private String source;
-    
+
     private String styles;
 
     private String title;
 
     private String visibility;
-    
+
     private String transparent;
 
     private String queryable;
-    
-    private DimensionsTemplateModel timeDimensions;
 
+    private DimensionsTemplateModel timeDimensions;
+    
     /**
      * @return the format
      */
@@ -234,5 +233,4 @@ public class LayerTemplateModel {
         this.queryable = queryable;
     }
 
-    
 }
