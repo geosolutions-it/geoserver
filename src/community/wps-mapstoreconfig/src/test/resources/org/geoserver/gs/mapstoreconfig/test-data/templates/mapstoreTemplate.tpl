@@ -119,6 +119,9 @@
        "llbbox": [${layer.timeDimensions.minX},${layer.timeDimensions.minY},${layer.timeDimensions.maxX},${layer.timeDimensions.maxY}]
       }<#if layer_has_next>,</#if>
       </#list>
+      <#list map.rawData as raw>
+      ,{"${raw.name}" : "${raw.text}"}
+      </#list>
     ], 
     "maxExtent": [
       ${map.maxExtentMinX}, 

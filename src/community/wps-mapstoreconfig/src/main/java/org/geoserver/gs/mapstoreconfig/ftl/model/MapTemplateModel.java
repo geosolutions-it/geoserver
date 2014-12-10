@@ -36,6 +36,8 @@ public class MapTemplateModel {
     private String units;
 
     private Integer zoom;
+    
+    private List<LiteralDataTemplateModel> rawData;
 
     private List<LayerTemplateModel> layers;
     
@@ -219,6 +221,20 @@ public class MapTemplateModel {
      */
     public void setZoom(int zoom) {
         this.zoom = zoom;
+    }
+
+    /**
+     * @return the rawData
+     */
+    public List<LiteralDataTemplateModel> getRawData() {
+        return rawData;
+    }
+
+    /**
+     * @param rawData the rawData to set
+     */
+    public void setRawData(List<LiteralDataTemplateModel> rawData) {
+        this.rawData = rawData;
     }
 
     /**

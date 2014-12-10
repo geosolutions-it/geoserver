@@ -20,6 +20,11 @@
 		<constructor-arg index="0" value="vectorialLayer" />
 	</bean>
 
+	<bean id="literalDataResourceConverter"
+		class="org.geoserver.wps.gs.resource.model.impl.LiteralDataConverter">
+		<constructor-arg index="0" value="literalData" />
+	</bean>
+	
 	<!-- TranslateItems Pluggable Converters -->
 	<bean id="dataStoreItemConverter"
 		class="org.geoserver.wps.gs.resource.model.translate.impl.DataStoreItemConverter">

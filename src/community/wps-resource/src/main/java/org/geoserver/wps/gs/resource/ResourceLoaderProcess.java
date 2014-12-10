@@ -95,7 +95,9 @@ public class ResourceLoaderProcess implements GSProcess {
                             "The resources definition were not well formed.");
                 }
 
-                resource.getTranslateContext().run();
+                if (resource.getTranslateContext() != null) {
+                    resource.getTranslateContext().run();
+                }
             }
 
             // Store XML into the WPS folder
@@ -318,8 +320,11 @@ public class ResourceLoaderProcess implements GSProcess {
                     resource.setType(type);
 
                     /** Set the Translate Context Resources */
-                    resource.getTranslateContext().setCatalog(catalog);
-                    resource.getTranslateContext().setOriginator(resource);
+                    if (resource.getTranslateContext() != null) {
+                        resource.getTranslateContext().setCatalog(catalog);
+                        resource.getTranslateContext().setOriginator(resource);
+                    }
+                    
                     return resource;
                 }
             }

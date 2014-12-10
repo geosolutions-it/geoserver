@@ -52,7 +52,8 @@ public class MapstoreConfigTest extends WPSTestSupport {
 
     @Test
     // @Ignore
-    public void basicTest() throws NoSuchAuthorityCodeException, FactoryException, FileNotFoundException, IOException {
+    public void basicTest() throws NoSuchAuthorityCodeException, FactoryException,
+            FileNotFoundException, IOException {
         mapstoreProcess = new MapstoreConfigProcess();
         LayerDescriptorManager ldm = new GeoserverXMLLayerDescriptorManager(getGeoServer()
                 .getCatalog());
@@ -65,10 +66,10 @@ public class MapstoreConfigTest extends WPSTestSupport {
         File xmlDoc = TestData.file(this, "layerDescriptor.xml");
         return IOUtils.toString(new FileInputStream(xmlDoc));
     }
-    
-    public static List<LayerTemplateModel> produceModel(){
+
+    public static List<LayerTemplateModel> produceModel() {
         List<LayerTemplateModel> list = new ArrayList<>();
-        
+
         LayerTemplateModel layerValues1 = new LayerTemplateModel();
         DimensionsTemplateModel timeDimensions1 = new DimensionsTemplateModel();
         layerValues1.setTimeDimensions(timeDimensions1);
@@ -97,7 +98,7 @@ public class MapstoreConfigTest extends WPSTestSupport {
         timeDimensions1.setUnitsymbol("Unitsymbol1");
         timeDimensions1.setMinLimit("minLimit");
         timeDimensions1.setMaxLimit("maxLimit");
-        
+
         LayerTemplateModel layerValues2 = new LayerTemplateModel();
         DimensionsTemplateModel timeDimensions2 = new DimensionsTemplateModel();
         layerValues2.setTimeDimensions(timeDimensions2);
@@ -126,7 +127,7 @@ public class MapstoreConfigTest extends WPSTestSupport {
         timeDimensions2.setUnitsymbol("Unitsymbol2");
         timeDimensions2.setMinLimit("minLimit");
         timeDimensions2.setMaxLimit("maxLimit");
-        
+
         LayerTemplateModel layerValues3 = new LayerTemplateModel();
         DimensionsTemplateModel timeDimensions3 = new DimensionsTemplateModel();
         layerValues3.setTimeDimensions(timeDimensions3);
@@ -155,11 +156,11 @@ public class MapstoreConfigTest extends WPSTestSupport {
         timeDimensions3.setUnitsymbol("Unitsymbol3");
         timeDimensions3.setMinLimit("minLimit");
         timeDimensions3.setMaxLimit("maxLimit");
-        
+
         list.add(layerValues1);
         list.add(layerValues2);
         list.add(layerValues3);
-        
+
         return list;
     }
 }

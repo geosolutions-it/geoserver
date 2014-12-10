@@ -52,6 +52,11 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
 
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
+                        "test-data/testLiteralResource.xml"), "testLiteralResource.xml");
+        
+        
+        testData.copyTo(
+                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
                         "test-data/tracks_filtered.csv"), "tracks_filtered.csv");
         testData.copyTo(
                 WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(

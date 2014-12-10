@@ -38,11 +38,13 @@ import org.geoserver.gs.mapstoreconfig.MapstoreConfigProcess;
 import org.geoserver.gs.mapstoreconfig.TemplateDirLoader;
 import org.geoserver.gs.mapstoreconfig.ftl.model.DimensionsTemplateModel;
 import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
+import org.geoserver.gs.mapstoreconfig.ftl.model.LiteralDataTemplateModel;
 import org.geoserver.gs.mapstoreconfig.ftl.model.MapTemplateModel;
 import org.geoserver.wps.gs.resource.ResourceLoaderProcess;
 import org.geoserver.wps.gs.resource.model.Dimension;
 import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.Resources;
+import org.geoserver.wps.gs.resource.model.impl.LiteralData;
 import org.geoserver.wps.gs.resource.model.impl.VectorialLayer;
 import org.geotools.geometry.DirectPosition2D;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -105,7 +107,8 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
             throws IOException {
 
         MapTemplateModel map = new MapTemplateModel();
-        List<LayerTemplateModel> layers = new ArrayList<>();
+        List<LiteralDataTemplateModel> rawData = new ArrayList<LiteralDataTemplateModel>();
+        List<LayerTemplateModel> layers = new ArrayList<LayerTemplateModel>();
         InputStream input = null;
         try {
             File dir = templateDirLoader.getTemplateDir();
@@ -152,6 +155,11 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
                     LayerTemplateModel ltm = mapVectorLayer(r, prop, map);
                     layers.add(ltm);
                 }
+                
+                if (r instanceof LiteralData) {
+                    LiteralDataTemplateModel raw = mapLiteralData(r, prop, map);
+                    rawData.add(raw);
+                }
             }
         } catch (IOException e) {
             throw e;
@@ -165,15 +173,26 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
             }
         }
         
+        map.setRawData(rawData);
         map.setLayers(layers);
         
         return map;
     }
 
+    /**
+     * 
+     */
     public String mimeFormatHandled() {
         return "application/xml";
     }
 
+    /**
+     * 
+     * @param r
+     * @param prop
+     * @param map
+     * @return
+     */
     protected LayerTemplateModel mapVectorLayer(Resource r, Properties prop, MapTemplateModel map) {
         VectorialLayer vl = (VectorialLayer) r;
         LayerTemplateModel layerValues = new LayerTemplateModel();
@@ -215,6 +234,31 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
         return layerValues;
     }
 
+    /**
+     * 
+     * @param r
+     * @param prop
+     * @param map
+     * @return
+     */
+    protected LiteralDataTemplateModel mapLiteralData(Resource r, Properties prop,
+            MapTemplateModel map) {
+        LiteralData raw = (LiteralData) r;
+        LiteralDataTemplateModel rawData = new LiteralDataTemplateModel();
+        
+        rawData.setName(raw.getName());
+        rawData.setText(raw.getText());
+        
+        return rawData;
+    }
+    
+    /**
+     * 
+     * @param prop
+     * @param referencedEnvelope
+     * @param dimensions
+     * @param map
+     */
     protected static void decorateCoordinates(Properties prop,
             ReferencedEnvelope referencedEnvelope, List<Dimension> dimensions, MapTemplateModel map) {
         

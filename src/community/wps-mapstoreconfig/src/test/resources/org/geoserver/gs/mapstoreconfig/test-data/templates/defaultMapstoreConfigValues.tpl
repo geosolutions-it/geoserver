@@ -1,6 +1,11 @@
 #mapCenterX=7686755.1552848
 #mapCenterY=3528761.9601233
 
+extentMinX=-20037508.34
+extentMinY=-20037508.34
+extentMaxX=20037508.34
+extentMaxY=20037508.34
+
 maxExtentMinX=-20037508.34
 maxExtentMinY=-20037508.34
 maxExtentMaxX=20037508.34
