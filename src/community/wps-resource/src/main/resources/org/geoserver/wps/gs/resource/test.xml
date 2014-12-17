@@ -90,12 +90,12 @@
 			<item class="dataStore" order="3">
 				<store>
 					<dbtype>postgis</dbtype>
-					<host>172.21.64.40</host>
+					<host>localhost</host>
 					<port>5432</port>
 					<schema>geoserver</schema>
 					<database>geoserver</database>
 					<user>geoserver</user>
-					<passwd>hellasFORever</passwd>
+					<passwd>geoserver</passwd>
 				</store>
 			</item>
 		</translateContext>
@@ -163,12 +163,12 @@
 			<item class="dataStore" order="2">
 				<store>
 					<dbtype>postgis</dbtype>
-					<host>172.21.64.40</host>
+					<host>localhost</host>
 					<port>5432</port>
 					<schema>geoserver</schema>
 					<database>geoserver</database>
 					<user>geoserver</user>
-					<passwd>hellasFORever</passwd>
+					<passwd>geoserver</passwd>
 				</store>
 			</item>
 		</translateContext>

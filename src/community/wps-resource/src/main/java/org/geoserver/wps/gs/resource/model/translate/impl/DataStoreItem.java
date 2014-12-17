@@ -15,15 +15,12 @@ import java.util.logging.Level;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
-import org.geoserver.catalog.DimensionDefaultValueSetting;
-import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
-import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.importer.DataFormat;
 import org.geoserver.importer.Database;
 import org.geoserver.importer.ImportData;
@@ -89,12 +86,13 @@ public class DataStoreItem extends TranslateItem {
                     context.getCatalog(), task);
             if (targetStore != null) {
                 task.setStore(targetStore);
-                NamespaceInfo namespace = context.getCatalog().getNamespaceByPrefix(targetStore.getWorkspace().getName());
+                NamespaceInfo namespace = context.getCatalog().getNamespaceByPrefix(
+                        targetStore.getWorkspace().getName());
                 if (namespace == null) {
-                	namespace = context.getCatalog().getDefaultNamespace();
+                    namespace = context.getCatalog().getDefaultNamespace();
                 }
-				task.getLayer().getResource().setNamespace(namespace);
-				context.getImportContext().setTargetWorkspace(targetStore.getWorkspace());
+                task.getLayer().getResource().setNamespace(namespace);
+                context.getImportContext().setTargetWorkspace(targetStore.getWorkspace());
                 context.getImportContext().setTargetStore(targetStore);
             }
         }
@@ -141,7 +139,7 @@ public class DataStoreItem extends TranslateItem {
      */
     private StoreInfo getDataStore(Resource resource, Catalog catalog, ImportTask task)
             throws MalformedURLException {
-    	VectorialLayer userLayer = (VectorialLayer) resource;
+        VectorialLayer userLayer = (VectorialLayer) resource;
         DataStoreInfo dataStore = catalog.getDataStoreByName(resource.getName());
         if (dataStore != null) {
             task.setUpdateMode(UpdateMode.REPLACE);
@@ -152,14 +150,14 @@ public class DataStoreItem extends TranslateItem {
         dataStore.setName(resource.getName());
         WorkspaceInfo workspace = null;
         if (userLayer.getWorkspace() != null) {
-        	for(WorkspaceInfo wk : catalog.getWorkspaces()) {
-        		if (wk.getName().equalsIgnoreCase(userLayer.getWorkspace())) {
-        			workspace = wk;
-        		}
-        	}
+            for (WorkspaceInfo wk : catalog.getWorkspaces()) {
+                if (wk.getName().equalsIgnoreCase(userLayer.getWorkspace())) {
+                    workspace = wk;
+                }
+            }
         } else {
-        	// the DEFAULT one
-        	workspace = catalog.getDefaultWorkspace();
+            // the DEFAULT one
+            workspace = catalog.getDefaultWorkspace();
         }
         dataStore.setWorkspace(workspace);
         dataStore.getConnectionParameters().putAll(this.store);
@@ -192,22 +190,22 @@ public class DataStoreItem extends TranslateItem {
         VectorialLayer userLayer = (VectorialLayer) originator;
         ResourceInfo resource = layer.getResource();
         if (userLayer.nativeBoundingBox() != null)
-        	resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
+            resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
         if (userLayer.latLonBoundingBox() != null)
-        	resource.setLatLonBoundingBox(userLayer.latLonBoundingBox());
+            resource.setLatLonBoundingBox(userLayer.latLonBoundingBox());
         resource.setNativeCRS(userLayer.nativeCRS());
         resource.setSRS(userLayer.getSrs());
 
         layer.setName(userLayer.getName());
         layer.setAbstract(userLayer.getAbstract());
         layer.setTitle(userLayer.getTitle());
-        
+
         if (originator.getDimensions() != null) {
-        	for (Dimension dim : originator.getDimensions()) {
-        		resource.getMetadata().put(dim.getName(), dim.getDimensionInfo());
-        	}
+            for (Dimension dim : originator.getDimensions()) {
+                resource.getMetadata().put(dim.getName(), dim.getDimensionInfo());
+            }
         }
-        
+
         StyleInfo defaultStyle = userLayer.defaultStyle(catalog);
         if (defaultStyle != null) {
             layer.setDefaultStyle(defaultStyle);
