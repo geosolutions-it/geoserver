@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.geoserver.wps.gs.resource.ResourceLoaderConverter;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItemConverter;
+import org.geotools.jdbc.VirtualTable;
 
 import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
@@ -15,35 +16,35 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 /**
- * {@link ResourceLoaderConverter} extension for the marshalling/unmarshalling of {@link DataStoreItem}s.
+ * {@link ResourceLoaderConverter} extension for the marshalling/unmarshalling of {@link VirtualTable}s.
  * 
  * @author Alessio Fabiani, GeoSolutions
  * 
  */
-public class DataStoreItemConverter extends TranslateItemConverter {
+public class VirtualTableItemConverter extends TranslateItemConverter {
 
-    public DataStoreItemConverter(String type) {
+    public VirtualTableItemConverter(String type) {
         super(type);
     }
 
     @SuppressWarnings("rawtypes")
     @Override
     public boolean canConvert(Class clazz) {
-        return DataStoreItem.class.equals(clazz);
+        return VirtualTableItem.class.equals(clazz);
     }
 
     @Override
     public void marshal(Object value, HierarchicalStreamWriter writer, MarshallingContext context) {
-        DataStoreItem item = (DataStoreItem) value;
+        VirtualTableItem item = (VirtualTableItem) value;
 
         writer.addAttribute("order", String.valueOf(item.getOrder()));
         if (item.getType() != null) {
             writer.addAttribute("class", item.getType());
         }
 
-        if (item.getStore() != null) {
-            writer.startNode("store");
-            context.convertAnother(item.getStore());
+        if (item.getMetadata() != null) {
+            writer.startNode("metadata");
+            context.convertAnother(item.getMetadata());
             writer.endNode();
         }
 
@@ -52,7 +53,7 @@ public class DataStoreItemConverter extends TranslateItemConverter {
     @SuppressWarnings("unchecked")
     @Override
     public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
-        DataStoreItem item = new DataStoreItem();
+        VirtualTableItem item = new VirtualTableItem();
 
         item.setOrder(Integer.parseInt(reader.getAttribute("order")));
         item.setType(reader.getAttribute("class"));
@@ -63,8 +64,8 @@ public class DataStoreItemConverter extends TranslateItemConverter {
             String nodeName = reader.getNodeName(); // nodeName aka element's name
             Object nodeValue = reader.getValue();
 
-            if ("store".equals(nodeName)) {
-                item.setStore((Map<String, String>) context.convertAnother(nodeValue, Map.class));
+            if ("metadata".equals(nodeName)) {
+                item.setMetadata((Map<String, String>) context.convertAnother(nodeValue, Map.class));
             }
 
             reader.moveUp();

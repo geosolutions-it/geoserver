@@ -36,6 +36,7 @@ public class TransformItem extends TranslateItem {
         this.transform = transform;
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     protected TranslateItem execute(TranslateContext context) throws IOException {
         final ImportTask task = context.getImportContext().getTasks().get(0);

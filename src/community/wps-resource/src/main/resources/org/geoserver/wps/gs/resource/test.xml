@@ -173,4 +173,64 @@
 			</item>
 		</translateContext>
 	</resource>
+	<resource class="vectorialLayer">
+		<workspace>it.geosolutions</workspace>
+		<name>OAAWaylines</name>
+		<persistent>true</persistent>
+		<defaultStyle>
+			<name>line</name>
+			<filename>line.sld</filename>
+		</defaultStyle>
+		<title>Optimal Asset Allocator waylines</title>
+		<abstract>Optimal Asset Allocator waylines</abstract>
+		<keywords>
+			<string>Optimal Asset Allocator</string>
+			<string>OAA</string>
+			<string>navigation</string>
+			<string>waypoints</string>
+		</keywords>
+		<nativeCRS>
+			GEOGCS["GCS_WGS_1984",
+			DATUM["WGS_1984",
+			SPHEROID["WGS_1984", 6378137.0, 298.257223563]],
+			PRIMEM["Greenwich",
+			0.0],
+			UNIT["degree", 0.017453292519943295],
+			AXIS["Longitude", EAST],
+			AXIS["Latitude", NORTH]]
+		</nativeCRS>
+		<srs>EPSG:4326</srs>
+		<!-- nativeBoundingBox>
+			<minx>-180</minx>
+			<maxx>-90</maxx>
+			<miny>180</miny>
+			<maxy>90</maxy>
+			<crs>EPSG:4326</crs>
+		</nativeBoundingBox -->
+		<metadata>
+			<cacheAgeMax>3600</cacheAgeMax>
+			<kml.regionateFeatureLimit>10</kml.regionateFeatureLimit>
+			<indexingEnabled>false</indexingEnabled>
+			<cachingEnabled>true</cachingEnabled>
+			<dirName>states</dirName>
+		</metadata>
+		<translateContext>
+			<item class="virtualTable" order="0">
+				<metadata>
+					<dataStore>OAAWaypoints</dataStore>
+					<name>OAAWaylines</name>
+			        <sql>SELECT &quot;SolutionID&quot;, &quot;AssetID&quot;, &#xd;
+					  ST_MakeLine(ARRAY(SELECT location FROM waypoints B WHERE A.&quot;SolutionID&quot;=B.&quot;SolutionID&quot; AND A.&quot;AssetID&quot;=B.&quot;AssetID&quot; ORDER BY B.&quot;Waypoint&quot;)) As the_geom&#xd;
+					  FROM waypoints A&#xd;
+					  GROUP BY &quot;SolutionID&quot;, &quot;AssetID&quot;&#xd;
+					  ORDER BY &quot;SolutionID&quot;, &quot;AssetID&quot;
+					</sql>
+			        <escapeSql>false</escapeSql>
+			        <geometryName>the_geom</geometryName>
+			        <geometryType>Geometry</geometryType>
+			        <geometrySrid>4326</geometrySrid>
+				</metadata>
+			</item>
+		</translateContext>
+	</resource>
 </resources>

@@ -32,6 +32,7 @@ public class TransformItemConverter extends TranslateItemConverter {
         super(type);
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public boolean canConvert(Class clazz) {
         return TransformItem.class.equals(clazz);
@@ -54,6 +55,7 @@ public class TransformItemConverter extends TranslateItemConverter {
 
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
         TransformItem item = new TransformItem();

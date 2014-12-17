@@ -206,7 +206,8 @@ public class TranslateContext {
             }
 
             // lunch the importer
-            importer.run(importContext);
+            if (importContext != null)
+                importer.run(importContext);
         }
     }
 

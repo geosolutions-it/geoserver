@@ -193,8 +193,10 @@ public class DataStoreItem extends TranslateItem {
             resource.setNativeBoundingBox(userLayer.nativeBoundingBox());
         if (userLayer.latLonBoundingBox() != null)
             resource.setLatLonBoundingBox(userLayer.latLonBoundingBox());
-        resource.setNativeCRS(userLayer.nativeCRS());
-        resource.setSRS(userLayer.getSrs());
+        if (userLayer.nativeCRS() != null)
+            resource.setNativeCRS(userLayer.nativeCRS());
+        if (userLayer.getSrs() != null)
+            resource.setSRS(userLayer.getSrs());
 
         layer.setName(userLayer.getName());
         layer.setAbstract(userLayer.getAbstract());
