@@ -242,7 +242,7 @@ public class ResourceLoaderProcess implements GSProcess {
             AbstractMap map = (AbstractMap) value;
             for (Object obj : map.entrySet()) {
                 Map.Entry entry = (Map.Entry) obj;
-                writer.startNode(entry.getKey().toString());
+                writer.startNode(entry.getKey().toString().replaceAll(" ", "___"));
                 writer.setValue(entry.getValue().toString());
                 writer.endNode();
             }
@@ -258,6 +258,7 @@ public class ResourceLoaderProcess implements GSProcess {
                 reader.moveDown();
 
                 String key = reader.getNodeName(); // nodeName aka element's name
+                key = key.replaceAll("___", " ");
                 Object value = reader.getValue();
                 if (AbstractMap.class.isAssignableFrom(value.getClass()))
                     value = unmarshal(reader, context);

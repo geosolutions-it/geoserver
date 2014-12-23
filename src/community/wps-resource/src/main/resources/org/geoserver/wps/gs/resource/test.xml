@@ -26,13 +26,8 @@
 			AXIS["Latitude", NORTH]]
 		</nativeCRS>
 		<srs>EPSG:4326</srs>
-		<!-- nativeBoundingBox>
-			<minx>6.346</minx>
-			<maxx>20.83</maxx>
-			<miny>36.492</miny>
-			<maxy>46.591</maxy>
-			<crs>EPSG:4326</crs>
-		</nativeBoundingBox -->
+		<!-- nativeBoundingBox> <minx>6.346</minx> <maxx>20.83</maxx> <miny>36.492</miny> 
+			<maxy>46.591</maxy> <crs>EPSG:4326</crs> </nativeBoundingBox -->
 		<latLonBoundingBox>
 			<minx>6.346</minx>
 			<maxx>20.83</maxx>
@@ -48,7 +43,7 @@
 			<dirName>states</dirName>
 		</metadata>
 		<dimensions>
-		    <dimension>
+			<dimension>
 				<name>time</name>
 				<description />
 				<min>2014-08-01T00:00:00Z</min>
@@ -60,13 +55,15 @@
 					<resolution>1800000</resolution>
 					<unitSymbol />
 					<units>ISO8601</units>
-	        		<defaultValue/>
+					<defaultValue />
 				</dimensionInfo>
-		    </dimension>
+			</dimension>
 		</dimensions>
 		<translateContext>
 			<item class="dataStore" order="0">
-				<store><url>file:tracks_filtered.csv</url></store>
+				<store>
+					<url>file:tracks_filtered.csv</url>
+				</store>
 			</item>
 			<item class="transform" order="1"
 				type="org.geoserver.importer.transform.AttributesToPointGeometryTransform">
@@ -75,7 +72,8 @@
 					<lngField>Lon</lngField>
 					<pointFieldName>location</pointFieldName>
 					<geometryFactory>
-						<coordinateSequenceFactory class="com.vividsolutions.jts.geom.impl.CoordinateArraySequenceFactory" />
+						<coordinateSequenceFactory
+							class="com.vividsolutions.jts.geom.impl.CoordinateArraySequenceFactory" />
 						<SRID>4326</SRID>
 					</geometryFactory>
 				</transform>
@@ -96,6 +94,28 @@
 					<database>geoserver</database>
 					<user>geoserver</user>
 					<passwd>geoserver</passwd>
+					<!-- additional params: the ___ will become a space -->
+					<Connection___timeout>20</Connection___timeout>
+					<encode___functions>false</encode___functions>
+					<Evictor___run___periodicity>300</Evictor___run___periodicity>
+					<namespace>http://www.cmre.nato.int/remotewps_oaa</namespace>
+					<create___database>false</create___database>
+					<fetch___size>1000</fetch___size>
+					<preparedStatements>false</preparedStatements>
+					<min___connections>1</min___connections>
+					<Evictor___tests___per___run>3</Evictor___tests___per___run>
+					<validate___connections>true</validate___connections>
+					<max___connections>10</max___connections>
+					<Support___on___the___fly___geometry___simplification>true
+					</Support___on___the___fly___geometry___simplification>
+					<Max___connection___idle___time>300
+					</Max___connection___idle___time>
+					<Test___while___idle>true</Test___while___idle>
+					<Loose___bbox>true</Loose___bbox>
+					<Expose___primary___keys>false</Expose___primary___keys>
+					<Max___open___prepared___statements>50
+					</Max___open___prepared___statements>
+					<Estimated___extends>true</Estimated___extends>
 				</store>
 			</item>
 		</translateContext>
@@ -127,13 +147,8 @@
 			AXIS["Latitude", NORTH]]
 		</nativeCRS>
 		<srs>EPSG:4326</srs>
-		<!-- nativeBoundingBox>
-			<minx>-180</minx>
-			<maxx>-90</maxx>
-			<miny>180</miny>
-			<maxy>90</maxy>
-			<crs>EPSG:4326</crs>
-		</nativeBoundingBox -->
+		<!-- nativeBoundingBox> <minx>-180</minx> <maxx>-90</maxx> <miny>180</miny> 
+			<maxy>90</maxy> <crs>EPSG:4326</crs> </nativeBoundingBox -->
 		<metadata>
 			<cacheAgeMax>3600</cacheAgeMax>
 			<kml.regionateFeatureLimit>10</kml.regionateFeatureLimit>
@@ -169,6 +184,28 @@
 					<database>geoserver</database>
 					<user>geoserver</user>
 					<passwd>geoserver</passwd>
+					<!-- additional params: the ___ will become a space -->
+					<Connection___timeout>20</Connection___timeout>
+					<encode___functions>false</encode___functions>
+					<Evictor___run___periodicity>300</Evictor___run___periodicity>
+					<namespace>http://www.cmre.nato.int/remotewps_oaa</namespace>
+					<create___database>false</create___database>
+					<fetch___size>1000</fetch___size>
+					<preparedStatements>false</preparedStatements>
+					<min___connections>1</min___connections>
+					<Evictor___tests___per___run>3</Evictor___tests___per___run>
+					<validate___connections>true</validate___connections>
+					<max___connections>10</max___connections>
+					<Support___on___the___fly___geometry___simplification>true
+					</Support___on___the___fly___geometry___simplification>
+					<Max___connection___idle___time>300
+					</Max___connection___idle___time>
+					<Test___while___idle>true</Test___while___idle>
+					<Loose___bbox>true</Loose___bbox>
+					<Expose___primary___keys>false</Expose___primary___keys>
+					<Max___open___prepared___statements>50
+					</Max___open___prepared___statements>
+					<Estimated___extends>true</Estimated___extends>
 				</store>
 			</item>
 		</translateContext>
@@ -200,13 +237,8 @@
 			AXIS["Latitude", NORTH]]
 		</nativeCRS>
 		<srs>EPSG:4326</srs>
-		<!-- nativeBoundingBox>
-			<minx>-180</minx>
-			<maxx>-90</maxx>
-			<miny>180</miny>
-			<maxy>90</maxy>
-			<crs>EPSG:4326</crs>
-		</nativeBoundingBox -->
+		<!-- nativeBoundingBox> <minx>-180</minx> <maxx>-90</maxx> <miny>180</miny> 
+			<maxy>90</maxy> <crs>EPSG:4326</crs> </nativeBoundingBox -->
 		<metadata>
 			<cacheAgeMax>3600</cacheAgeMax>
 			<kml.regionateFeatureLimit>10</kml.regionateFeatureLimit>
@@ -219,16 +251,19 @@
 				<metadata>
 					<dataStore>OAAWaypoints</dataStore>
 					<name>OAAWaylines</name>
-			        <sql>SELECT &quot;SolutionID&quot;, &quot;AssetID&quot;, &#xd;
-					  ST_MakeLine(ARRAY(SELECT location FROM waypoints B WHERE A.&quot;SolutionID&quot;=B.&quot;SolutionID&quot; AND A.&quot;AssetID&quot;=B.&quot;AssetID&quot; ORDER BY B.&quot;Waypoint&quot;)) As the_geom&#xd;
-					  FROM waypoints A&#xd;
-					  GROUP BY &quot;SolutionID&quot;, &quot;AssetID&quot;&#xd;
-					  ORDER BY &quot;SolutionID&quot;, &quot;AssetID&quot;
-					</sql>
-			        <escapeSql>false</escapeSql>
-			        <geometryName>the_geom</geometryName>
-			        <geometryType>Geometry</geometryType>
-			        <geometrySrid>4326</geometrySrid>
+					<sql>SELECT &quot;SolutionID&quot;, &quot;AssetID&quot;, &#xd;
+						ST_MakeLine(ARRAY(SELECT location FROM waypoints B WHERE
+						A.&quot;SolutionID&quot;=B.&quot;SolutionID&quot; AND
+						A.&quot;AssetID&quot;=B.&quot;AssetID&quot; ORDER BY
+						B.&quot;Waypoint&quot;)) As the_geom&#xd;
+						FROM waypoints A&#xd;
+						GROUP BY &quot;SolutionID&quot;, &quot;AssetID&quot;&#xd;
+						ORDER BY
+						&quot;SolutionID&quot;, &quot;AssetID&quot; </sql>
+					<escapeSql>false</escapeSql>
+					<geometryName>the_geom</geometryName>
+					<geometryType>Geometry</geometryType>
+					<geometrySrid>4326</geometrySrid>
 				</metadata>
 			</item>
 		</translateContext>
