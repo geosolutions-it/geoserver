@@ -9,6 +9,7 @@ import java.awt.RenderingHints;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -54,10 +55,10 @@ import org.geoserver.catalog.impl.ModificationProxy;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.data.util.CoverageStoreUtils;
 import org.geoserver.data.util.CoverageUtils;
-import org.geoserver.feature.retype.RetypingDataStore;
 import org.geoserver.feature.retype.RetypingFeatureSource;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.ServiceException;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.ResourceListener;
 import org.geoserver.platform.resource.ResourceNotification;
@@ -81,6 +82,8 @@ import org.geotools.data.ows.SimpleHttpClient;
 import org.geotools.data.ows.WMSCapabilities;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.store.ContentDataStore;
+import org.geotools.data.store.ContentFeatureSource;
+import org.geotools.data.store.ContentState;
 import org.geotools.data.wms.WebMapServer;
 import org.geotools.factory.Hints;
 import org.geotools.feature.AttributeTypeBuilder;
@@ -858,11 +861,25 @@ public class ResourcePool {
     }
     
     FeatureType getFeatureType( FeatureTypeInfo info, boolean handleProjectionPolicy ) throws IOException {
+        try {
+            return tryGetFeatureType(info, handleProjectionPolicy);
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING,
+                    "Error while getting feature type, flushing cache and retrying: {0}",
+                    ex.getMessage());
+            LOGGER.log(Level.FINE, "", ex);
+            this.clear(info);
+            this.flushDataStore(info);
+            return tryGetFeatureType(info, handleProjectionPolicy);
+        }        
+    }
+    
+    FeatureType tryGetFeatureType( FeatureTypeInfo info, boolean handleProjectionPolicy ) throws IOException {
         boolean cacheable = isCacheable(info) && handleProjectionPolicy;
         return cacheable ? getCacheableFeatureType(info, handleProjectionPolicy): 
                            getNonCacheableFeatureType(info, handleProjectionPolicy);
     }
-    
+
     FeatureType getCacheableFeatureType( FeatureTypeInfo info, boolean handleProjectionPolicy ) throws IOException {
         String key = getFeatureTypeInfoKey(info, handleProjectionPolicy);
         FeatureType ft = featureTypeCache.get( key );
@@ -1249,61 +1266,68 @@ public class ResourcePool {
     }
     
     private Double getTolerance(FeatureTypeInfo info) {
-    	// get the measure, if null, no linearization tolerance is available
-		Measure mt = info.getLinearizationTolerance();
-		if(mt == null) {
-			return null;
-		}
-		
-		// if the user did not specify a unit of measure, we use it as an absolute value
-		if(mt.getUnit() == null) {
-			return mt.doubleValue();
-		}
-		
-		// should not happen, but let's cover all our bases
-		CoordinateReferenceSystem crs = info.getCRS();
-		if(crs == null) {
-			return mt.doubleValue();
-		}
-		
-		// let's get the target unit
-		SingleCRS horizontalCRS = CRS.getHorizontalCRS(crs);
-		Unit targetUnit;
-		if(horizontalCRS != null) {
-			// leap of faith, the first axis is an horizontal one (
-			targetUnit = getFirstAxisUnit(horizontalCRS.getCoordinateSystem());
-		} else {
-			// leap of faith, the first axis is an horizontal one (
-			targetUnit = getFirstAxisUnit(crs.getCoordinateSystem());
-		}
-		
-		if((targetUnit != null && targetUnit == NonSI.DEGREE_ANGLE) || horizontalCRS instanceof GeographicCRS || crs instanceof GeographicCRS) {
-			// assume we're working against a type of geographic crs, must estimate the degrees equivalent
-			// to the measure, we are going to use a very rough estimate (cylindrical earth model)
-			// TODO: maybe look at the layer bbox and get a better estimate computed at the center of the bbox
-			UnitConverter converter = mt.getUnit().getConverterTo(SI.METER);
-			double tolMeters = converter.convert(mt.doubleValue());
-			return tolMeters * OGC_METERS_TO_DEGREES;
-		} else if(targetUnit != null && targetUnit.isCompatible(SI.METER)) {
-			// ok, we assume the target is not a geographic one, but we might
-			// have to convert between meters and feet maybe
-			UnitConverter converter = mt.getUnit().getConverterTo(targetUnit);
-			return converter.convert(mt.doubleValue());
-		} else {
-			return mt.doubleValue();
-		}
-		
-	}
+        // if no curved geometries, do not bother computing a tolerance
+        if (!info.isCircularArcPresent()) {
+            return null;
+        }
 
-	private Unit<?> getFirstAxisUnit(
-			CoordinateSystem coordinateSystem) {
-		if(coordinateSystem == null || coordinateSystem.getDimension() > 0) {
-			return null;
-		}
-		return coordinateSystem.getAxis(0).getUnit();
-	}
+        // get the measure, if null, no linearization tolerance is available
+        Measure mt = info.getLinearizationTolerance();
+        if (mt == null) {
+            return null;
+        }
 
-	public GridCoverageReader getGridCoverageReader(CoverageInfo info, Hints hints) 
+        // if the user did not specify a unit of measure, we use it as an absolute value
+        if (mt.getUnit() == null) {
+            return mt.doubleValue();
+        }
+
+        // should not happen, but let's cover all our bases
+        CoordinateReferenceSystem crs = info.getCRS();
+        if (crs == null) {
+            return mt.doubleValue();
+        }
+
+        // let's get the target unit
+        SingleCRS horizontalCRS = CRS.getHorizontalCRS(crs);
+        Unit targetUnit;
+        if (horizontalCRS != null) {
+            // leap of faith, the first axis is an horizontal one (
+            targetUnit = getFirstAxisUnit(horizontalCRS.getCoordinateSystem());
+        } else {
+            // leap of faith, the first axis is an horizontal one (
+            targetUnit = getFirstAxisUnit(crs.getCoordinateSystem());
+        }
+
+        if ((targetUnit != null && targetUnit == NonSI.DEGREE_ANGLE)
+                || horizontalCRS instanceof GeographicCRS || crs instanceof GeographicCRS) {
+            // assume we're working against a type of geographic crs, must estimate the degrees
+            // equivalent
+            // to the measure, we are going to use a very rough estimate (cylindrical earth model)
+            // TODO: maybe look at the layer bbox and get a better estimate computed at the center
+            // of the bbox
+            UnitConverter converter = mt.getUnit().getConverterTo(SI.METER);
+            double tolMeters = converter.convert(mt.doubleValue());
+            return tolMeters * OGC_METERS_TO_DEGREES;
+        } else if (targetUnit != null && targetUnit.isCompatible(SI.METER)) {
+            // ok, we assume the target is not a geographic one, but we might
+            // have to convert between meters and feet maybe
+            UnitConverter converter = mt.getUnit().getConverterTo(targetUnit);
+            return converter.convert(mt.doubleValue());
+        } else {
+            return mt.doubleValue();
+        }
+
+    }
+
+    private Unit<?> getFirstAxisUnit(CoordinateSystem coordinateSystem) {
+        if (coordinateSystem == null || coordinateSystem.getDimension() > 0) {
+            return null;
+        }
+        return coordinateSystem.getAxis(0).getUnit();
+    }
+
+    public GridCoverageReader getGridCoverageReader(CoverageInfo info, Hints hints)
             throws IOException {
         return getGridCoverageReader(info, (String) null, hints); 
     }
@@ -1721,6 +1745,11 @@ public class ResourcePool {
                 if ( style == null ) {
                     style = dataDir().parsedStyle(info);
 
+                    if (style == null) {
+                        throw new ServiceException("Could not extract a UserStyle definition from "
+                                + info.getName());
+                    }
+
                     // remove this when wms works off style info
                     style.setName( info.getName() );
                     styleCache.put( info, style );
@@ -1944,8 +1973,12 @@ public class ResourcePool {
             String id = key.substring(0, key.indexOf(PROJECTION_POLICY_SEPARATOR));
         	FeatureTypeInfo info = catalog.getFeatureType(id);
             if(info != null){
-                LOGGER.info( "Disposing feature type '" + info.getName() + "'");
+                LOGGER.fine( "Disposing feature type '" + info.getName() + "'/" + id);
                 fireDisposed(info, featureType);
+                if (null != featureTypeAttributeCache.remove(id)) {
+                    LOGGER.fine("AttributeType cache cleared for feature type '" + info.getName()
+                            + "'/" + id + " as a side effect of its cache disposal");
+                }
             }
         }
     }
@@ -1973,7 +2006,7 @@ public class ResourcePool {
             final String name;
             if (info != null) {
                 name = info.getName();
-                LOGGER.info("Disposing datastore '" + name + "'");
+                LOGGER.fine("Disposing datastore '" + name + "'");
                 fireDisposed(info, dataAccess);
             }
             else {
@@ -1981,7 +2014,7 @@ public class ResourcePool {
             }
             final String implementation = dataAccess.getClass().getSimpleName();
             try {
-                LOGGER.info("Dispose data access '" + name + "' "+implementation);
+                LOGGER.fine("Dispose data access '" + name + "' "+implementation);
                 dataAccess.dispose();
             } catch( Exception e ) {
                 LOGGER.warning( "Error occured disposing data access '" + name + "' "+implementation );
@@ -1996,7 +2029,7 @@ public class ResourcePool {
         	CoverageStoreInfo info = catalog.getCoverageStore(id);
         	if(info != null) {
                 String name = info.getName();
-                LOGGER.info( "Disposing coverage store '" + name + "'" );
+                LOGGER.fine( "Disposing coverage store '" + name + "'" );
                 
                 fireDisposed(info, reader);
             }
@@ -2016,7 +2049,7 @@ public class ResourcePool {
         	CoverageStoreInfo info = catalog.getCoverageStore(key.id);
         	if(info != null) {
                 String name = info.getName();
-                LOGGER.info( "Disposing coverage store '" + name + "'" );
+                LOGGER.fine( "Disposing coverage store '" + name + "'" );
                 
                 fireDisposed(info, reader);
             }
@@ -2093,8 +2126,20 @@ public class ResourcePool {
     class WMSCache extends CatalogResourceCache<String, WebMapServer> {
 
         @Override
-        protected void dispose(String key, WebMapServer object) {
-            // nothing to do
+        protected void dispose(String key, WebMapServer server) {
+            HTTPClient client = server.getHTTPClient();
+            if (client instanceof Closeable) {
+                // dispose the client, and the connection pool hosted into it as a consequence
+                // the connection pool additionally holds a few threads that are also getting
+                // disposed with this call
+                Closeable closeable = (Closeable) client;
+                try {
+                    closeable.close();
+                } catch (IOException e) {
+                    LOGGER.log(Level.FINE,
+                            "Failure while disposing the http client for a WMS store", e);
+                }
+            }
         }
 
     }
@@ -2115,7 +2160,12 @@ public class ResourcePool {
         }
 
         public void handleRemoveEvent(CatalogRemoveEvent event) {
-            event.getSource().accept( this );
+            CatalogInfo source = event.getSource();
+            source.accept(this);
+
+            if (source instanceof FeatureTypeInfo) {
+                flushDataStore((FeatureTypeInfo) source);
+            }
         }
 
         public void reloaded() {
@@ -2217,4 +2267,72 @@ public class ResourcePool {
 
     
     
+    /**
+     * Flush the feature type held by the data store associated with a FeatureTypeInfo to be safe in
+     * case the underlying schema has changed.
+     * 
+     * <p>
+     * Implementation note: so far this method only works with {@link ContentDataStore} instances
+     * (i.e. all JDBC ones and others, but not all). This is to avoid calling
+     * {@link DataStore#dispose()} as other threads may be using it and has proved to result in
+     * unpredictable errors. Instead, we're calling the datastore feature type's
+     * {@link ContentState#flush()} method which forces re-loading the native type when next used.
+     */
+    protected void flushDataStore(FeatureTypeInfo ft) {
+        DataStoreInfo ds = ft.getStore();
+        if (ds == null) {
+            return;
+        }
+        if (!dataStoreCache.containsKey(ds.getId())) {
+            return; // don't bother if DataStore not cached            
+        }
+        DataAccess<?, ?> dataStore;
+        try {
+            dataStore = getDataStore(ds);
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Unable to obtain data store '" + ft.getQualifiedNativeName()+"' to flush", e);
+            return;
+        }
+        final int dsFtCount = countFeatureTypesOf(ds);
+        if (dsFtCount == 0) {
+            // clean up cached DataAccess if no longer in use
+            LOGGER.log(Level.FINE, "Feature Type {0} cleared: Disposing DataStore {1} - {2}",
+                    new String[] { ft.getName(), ds.getName(), "Last Feature Type Disposed" });
+            clear(ds);
+        } else {
+            if (dataStore instanceof ContentDataStore) {
+                ContentDataStore contentDataStore = (ContentDataStore) dataStore;
+                try {
+                    // ask ContentDataStore to forget cached column information
+                    String nativeName = ft.getNativeName();
+                    if (nativeName != null) {
+                        flushState(contentDataStore, nativeName);
+                        LOGGER.log(Level.FINE,
+                                "Feature Type {0} cleared from ContentDataStore {1}", new String[] {
+                                        ft.getName(), ds.getName() });
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Unable to flush '" + ft.getQualifiedNativeName(), e);
+                }
+            } else {
+                LOGGER.log(
+                    Level.FINE,
+                    "Unable to clean up cached feature type {0} in data store {1} - not a ContentDataStore",
+                    new String[] { ft.getName(), ds.getName() });
+            }
+        }
+    }
+
+    private int countFeatureTypesOf(DataStoreInfo ds) {
+        Filter filter = Predicates.equal("store.id", ds.getId());
+        int dsTypeCount = catalog.count(FeatureTypeInfo.class, filter);
+        return dsTypeCount;
+    }
+
+    private void flushState(ContentDataStore contentDataStore, String nativeName)
+            throws IOException {
+        ContentFeatureSource featureSource;
+        featureSource = contentDataStore.getFeatureSource(nativeName);
+        featureSource.getState().flush();
+    }
 }

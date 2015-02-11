@@ -11,13 +11,11 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
 import static org.geoserver.data.test.MockData.TASMANIA_DEM;
-import static org.junit.Assert.assertEquals;
 
-import java.util.List;
+import java.io.ByteArrayInputStream;
 
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
-import org.geoserver.catalog.CascadeDeleteVisitor;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
@@ -35,6 +33,8 @@ import org.vfny.geoserver.wcs.WcsException.WcsExceptionCode;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+
+import com.mockrunner.mock.web.MockHttpServletResponse;
 
 public class GetCapabilitiesTest extends WCSTestSupport {
 
@@ -60,8 +60,11 @@ public class GetCapabilitiesTest extends WCSTestSupport {
 
     @Test
     public void testGetBasic() throws Exception {
-        Document dom = getAsDOM(BASEPATH
+        MockHttpServletResponse response = getAsServletResponse(BASEPATH
                 + "?request=GetCapabilities&service=WCS&acceptversions=1.1.1");
+        assertEquals("text/xml", response.getContentType());
+
+        Document dom = dom(new ByteArrayInputStream(response.getOutputStreamContent().getBytes()));
         // print(dom);
         checkValidationErrors(dom, WCS11_SCHEMA);
 
@@ -294,7 +297,7 @@ public class GetCapabilitiesTest extends WCSTestSupport {
 
     @Test
     public void testSectionsAll() throws Exception {
-        Document dom = getAsDOM(BASEPATH + "?request=GetCapabilities&service=WCS&sections=All&version=1.1");
+        Document dom = getAsDOM(BASEPATH + "?request=GetCapabilities&service=WCS&sections=All");
         checkValidationErrors(dom, WCS11_SCHEMA);
         assertXpathEvaluatesTo("1", "count(//ows:ServiceIdentification)", dom);
         assertXpathEvaluatesTo("1", "count(//ows:ServiceProvider)", dom);
@@ -312,7 +315,7 @@ public class GetCapabilitiesTest extends WCSTestSupport {
     @Test
     public void testOneSection() throws Exception {
         Document dom = getAsDOM(BASEPATH
-                + "?request=GetCapabilities&service=WCS&sections=ServiceProvider&version=1.1");
+                + "?request=GetCapabilities&service=WCS&sections=ServiceProvider");
         checkValidationErrors(dom, WCS11_SCHEMA);
         assertXpathEvaluatesTo("0", "count(//ows:ServiceIdentification)", dom);
         assertXpathEvaluatesTo("1", "count(//ows:ServiceProvider)", dom);
@@ -323,7 +326,7 @@ public class GetCapabilitiesTest extends WCSTestSupport {
     @Test
     public void testTwoSection() throws Exception {
         Document dom = getAsDOM(BASEPATH
-                + "?request=GetCapabilities&service=WCS&sections=ServiceProvider,Contents&version=1.1");
+                + "?request=GetCapabilities&service=WCS&sections=ServiceProvider,Contents");
         checkValidationErrors(dom, WCS11_SCHEMA);
         assertXpathEvaluatesTo("0", "count(//ows:ServiceIdentification)", dom);
         assertXpathEvaluatesTo("1", "count(//ows:ServiceProvider)", dom);

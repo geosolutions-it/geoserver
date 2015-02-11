@@ -5,7 +5,7 @@
  */
 package org.geoserver.wfs;
 
-import static org.geoserver.ows.util.ResponseUtils.*;
+import static org.geoserver.ows.util.ResponseUtils.buildURL;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -69,6 +69,8 @@ import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.Id;
 import org.opengis.filter.IncludeFilter;
+import org.opengis.filter.Not;
+import org.opengis.filter.Or;
 import org.opengis.filter.PropertyIsBetween;
 import org.opengis.filter.PropertyIsLike;
 import org.opengis.filter.PropertyIsNull;
@@ -158,8 +160,10 @@ public class GetFeature {
         joinFilterCapabilities.addType(TContains.class);
         joinFilterCapabilities.addType(TEquals.class);
 
-        //we only support simple filters, and any of them And'ed together.
+        // all logical combinations are supported too
         joinFilterCapabilities.addType(And.class);
+        joinFilterCapabilities.addType(Or.class);
+        joinFilterCapabilities.addType(Not.class);
     }
 
     /** The catalog */
@@ -412,18 +416,19 @@ public class GetFeature {
                 if (filter != null) {
                     if (meta.getFeatureType() instanceof SimpleFeatureType) {                
                         if (metas.size() > 1) {
-                            //ensure that the filter is allowable
-                            if (!isValidJoinFilter(filter)) {
-                                throw new WFSException(request, 
-                                        "Unable to preform join with specified filter: " + filter);
-                            }
-                                // join, need to separate the joining filter from other filters
+                            // the join extracting visitor cannot handle negated filters,
+                            // the simplifier handles most common case removing the negation,
+                            // e.g., not(a < 10) -> a >= 10
+                            filter = SimplifyingFilterVisitor.simplify(filter);
+
+                            // join, need to separate the joining filter from other filters
                             JoinExtractingVisitor extractor = 
                                     new JoinExtractingVisitor(metas, query.getAliases());
                             filter.accept(extractor, null);
 
                             primaryAlias = extractor.getPrimaryAlias();
                             primaryMeta = extractor.getPrimaryFeatureType();
+                            metas = extractor.getFeatureTypes();
                             primaryTypeName = new QName(primaryMeta.getNamespace().getURI(),
                                     primaryMeta.getNativeName());
                             joins = extractor.getJoins();
@@ -432,9 +437,15 @@ public class GetFeature {
                                         "join filters were found", metas.size(), extractor.getJoins().size()));
                             }
 
-                            //validate the filter for each join
+                            // validate the filter for each join, as well as the join filter
                             for (int j = 1; j < metas.size(); j++) {
                                 Join join = joins.get(j-1);
+                                    if (!isValidJoinFilter(join.getJoinFilter())) {
+                                        throw new WFSException(request,
+                                                "Unable to perform join with specified join filter: "
+                                                        + filter);
+                                    }
+
                                 if (join.getFilter() != null) {
                                     validateFilter(join.getFilter(), query, metas.get(j), request);
                                 }
@@ -442,7 +453,7 @@ public class GetFeature {
 
                             filter = extractor.getPrimaryFilter();
                             if (filter != null) {
-                                validateFilter(filter, query, meta, request);
+                                    validateFilter(filter, query, primaryMeta, request);
                             }
                         }
                         else {
@@ -542,7 +553,8 @@ public class GetFeature {
                 // collect queries required to return numberMatched/totalSize
                 // check maxFeatures and offset, if they are unset we can use the size we 
                 // calculated above
-                isNumberMatchedSkipped = meta.getSkipNumberMatched();
+                    isNumberMatchedSkipped = meta.getSkipNumberMatched()
+                            && !request.isResultTypeHits();
                 if (!isNumberMatchedSkipped) {
                     if (calculateSize && queryMaxFeatures == Integer.MAX_VALUE && offset == 0) {
                         totalCountExecutors.add(new CountExecutor(size));
