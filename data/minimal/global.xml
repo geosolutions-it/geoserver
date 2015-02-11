@@ -1,5 +1,22 @@
 <global>
-  <contact/>
+  <settings>
+    <id>SettingsInfoImpl-68cca4d:14ae923f364:-8000</id>
+    <contact/>
+    <charset>UTF-8</charset>
+    <numDecimals>8</numDecimals>
+    <onlineResource>http://geoserver.org</onlineResource>
+    <verbose>false</verbose>
+    <verboseExceptions>false</verboseExceptions>
+    <metadata>
+      <map>
+        <entry>
+          <string>quietOnNotFound</string>
+          <boolean>false</boolean>
+        </entry>
+      </map>
+    </metadata>
+    <localWorkspaceIncludesPrefix>false</localWorkspaceIncludesPrefix>
+  </settings>
   <jai>
     <allowInterpolation>false</allowInterpolation>
     <recycling>true</recycling>
@@ -11,11 +28,18 @@
     <pngAcceleration>false</pngAcceleration>
     <jpegAcceleration>false</jpegAcceleration>
     <allowNativeMosaic>false</allowNativeMosaic>
+    <allowNativeWarp>false</allowNativeWarp>
   </jai>
-  <charset>UTF-8</charset>
-  <numDecimals>8</numDecimals>
-  <onlineResource>http://geoserver.org</onlineResource>
-  <verbose>false</verbose>
-  <verboseExceptions>false</verboseExceptions>
-  <updateSequence>0</updateSequence>
+  <coverageAccess>
+    <maxPoolSize>5</maxPoolSize>
+    <corePoolSize>5</corePoolSize>
+    <keepAliveTime>30000</keepAliveTime>
+    <queueType>UNBOUNDED</queueType>
+    <imageIOCacheThreshold>10240</imageIOCacheThreshold>
+  </coverageAccess>
+  <updateSequence>10</updateSequence>
+  <featureTypeCacheSize>0</featureTypeCacheSize>
+  <globalServices>true</globalServices>
+  <xmlPostRequestLogBufferSize>1024</xmlPostRequestLogBufferSize>
+  <xmlExternalEntitiesEnabled>false</xmlExternalEntitiesEnabled>
 </global>
