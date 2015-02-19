@@ -13,6 +13,7 @@ import javax.net.ssl.SSLContext;
 
 import org.opengis.feature.type.Name;
 import org.opengis.util.ProgressListener;
+import org.springframework.beans.factory.DisposableBean;
 
 /**
  * Base class for the remote clients implementations. Those implementations will be plugged into GeoServer through the Spring app-context.
@@ -20,7 +21,7 @@ import org.opengis.util.ProgressListener;
  * @author Alessio Fabiani, GeoSolutions
  * 
  */
-public abstract class RemoteProcessClient {
+public abstract class RemoteProcessClient implements DisposableBean {
 
     /** Whether this client is enabled or not from configuration */
     private boolean enabled;
