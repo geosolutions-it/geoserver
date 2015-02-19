@@ -269,7 +269,7 @@ public class XMPPClient extends RemoteProcessClient {
      */
     public void performLogin(String username, String password) throws Exception {
         if (connection != null && connection.isConnected()) {
-            connection.login(getJID(username), password, getResource(username));
+            connection.login(username, password, getResource(username));
 
             // Create a MultiUserChat using a XMPPConnection for a room
 

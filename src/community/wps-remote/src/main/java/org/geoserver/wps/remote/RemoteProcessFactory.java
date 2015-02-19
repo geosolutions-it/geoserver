@@ -115,6 +115,11 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessFactor
             LOGGER.warning("Unknown process '" + name + "'");
             return false;
         }
+        for (Name registeredService : names) {
+            if (registeredService.getLocalPart().equalsIgnoreCase((name.getLocalPart()))) {
+                return true;
+            }
+        }
 
         return true;
     }
@@ -217,6 +222,12 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessFactor
     public void registerProcess(RemoteServiceDescriptor serviceDescriptor) {
         synchronized (names) {
             Name name = serviceDescriptor.getName();
+            for (Name registeredService : names) {
+                if (registeredService.getLocalPart().equalsIgnoreCase((name.getLocalPart()))) {
+                    LOGGER.warning("Service " + name + " already registered!");
+                    return;
+                }
+            }
             if (!names.contains(name)) {
                 names.add(name);
                 descriptors.put(name, serviceDescriptor);
