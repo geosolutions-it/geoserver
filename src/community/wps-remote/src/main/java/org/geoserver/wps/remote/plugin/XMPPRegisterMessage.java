@@ -49,9 +49,10 @@ public class XMPPRegisterMessage implements XMPPMessage {
             Map<String, String> signalArgs) {
 
         final String serviceName[] = signalArgs.get("service").split("\\.");
-        
-        if (serviceName.length <= 1) return;
-        
+
+        if (serviceName.length <= 1)
+            return;
+
         final Name name = new NameImpl(serviceName[0], serviceName[1]);
 
         try {
@@ -84,9 +85,9 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         inputs.put(
                                 paramName,
                                 new Parameter(paramName, paramTemplate.getClazz(), Text
-                                        .text(paramName), Text.text((String) paramType
-                                        .get("description")), paramType.get("min") == null
-                                        || (Integer) paramType.get("min") > 0,
+                                        .text((String) paramType.get("title")), Text
+                                        .text((String) paramType.get("description")), paramType
+                                        .get("min") == null || (Integer) paramType.get("min") > 0,
                                         paramType.get("min") != null ? (Integer) paramType
                                                 .get("min") : 1,
                                         paramType.get("max") != null ? (Integer) paramType
@@ -115,9 +116,9 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         outputs.put(
                                 paramName,
                                 new Parameter(paramName, paramTemplate.getClazz(), Text
-                                        .text(paramName), Text.text((String) paramType
-                                        .get("description")), paramType.get("min") == null
-                                        || (Integer) paramType.get("min") > 0,
+                                        .text((String) paramType.get("title")), Text
+                                        .text((String) paramType.get("description")), paramType
+                                        .get("min") == null || (Integer) paramType.get("min") > 0,
                                         paramType.get("min") != null ? (Integer) paramType
                                                 .get("min") : 1,
                                         paramType.get("max") != null ? (Integer) paramType
