@@ -25,6 +25,7 @@ import org.geotools.util.logging.Logging;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.opengis.feature.type.Name;
+import org.opengis.util.InternationalString;
 
 /**
  * 
@@ -113,10 +114,10 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         ParameterTemplate paramTemplate = xmppClient.convertToJavaClass(className,
                                 XMPPClient.class.getClassLoader(), paramType.get("default"));
 
+                        InternationalString outputTitle = (Text.text((String) paramType.get("title")) != null ? Text.text((String) paramType.get("title")) : Text.text((String) paramType.get("name")));
                         outputs.put(
                                 paramName,
-                                new Parameter(paramName, paramTemplate.getClazz(), Text
-                                        .text((String) paramType.get("title")), Text
+                                new Parameter(paramName, paramTemplate.getClazz(), outputTitle, Text
                                         .text((String) paramType.get("description")), paramType
                                         .get("min") == null || (Integer) paramType.get("min") > 0,
                                         paramType.get("min") != null ? (Integer) paramType
