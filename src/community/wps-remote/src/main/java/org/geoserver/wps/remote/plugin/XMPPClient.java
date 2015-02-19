@@ -269,7 +269,7 @@ public class XMPPClient extends RemoteProcessClient {
      */
     public void performLogin(String username, String password) throws Exception {
         if (connection != null && connection.isConnected()) {
-            connection.login(username, password);
+            connection.login(getJID(username), password);
 
             // Create a MultiUserChat using a XMPPConnection for a room
 
@@ -280,14 +280,14 @@ public class XMPPClient extends RemoteProcessClient {
 
             mucManagementChannel = new MultiUserChat(connection, managementChannel + "@" + bus
                     + "." + domain);
-            mucManagementChannel.join(getJID(username), managementChannelPassword, history,
-                    connection.getPacketReplyTimeout());
+            mucManagementChannel.join(getJID(username), managementChannelPassword); /*, history,
+                    connection.getPacketReplyTimeout());*/
 
             for (String channel : serviceChannels) {
                 MultiUserChat serviceChannel = new MultiUserChat(connection, channel + "@" + bus
                         + "." + domain);
-                serviceChannel.join(getJID(username), managementChannelPassword, history,
-                        connection.getPacketReplyTimeout());
+                serviceChannel.join(getJID(username), managementChannelPassword); /*, history,
+                        connection.getPacketReplyTimeout());*/
                 mucServiceChannels.add(serviceChannel);
             }
 
