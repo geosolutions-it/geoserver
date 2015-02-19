@@ -269,7 +269,7 @@ public class XMPPClient extends RemoteProcessClient {
      */
     public void performLogin(String username, String password) throws Exception {
         if (connection != null && connection.isConnected()) {
-            connection.login(getJID(username), password);
+            connection.login(getJID(username), password, getResource(username));
 
             // Create a MultiUserChat using a XMPPConnection for a room
 
@@ -300,14 +300,25 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     /**
-     * Generate a unique Server JID
+     * Generate the XMPP JID
      * 
      * @param username
      * @return
      */
     private String getJID(String username) {
         final String id = md5Java(username + "@" + this.domain + "/" + System.nanoTime());
-        return username + "@" + this.domain + "/" + id;
+        return username + "@" + this.domain;
+    }
+
+    /**
+     * Generate a unique Server JID Resource
+     * 
+     * @param username
+     * @return
+     */
+    private String getResource(String username) {
+        final String id = md5Java(username + "@" + this.domain + "/" + System.nanoTime());
+        return this.domain + "/" + id;
     }
 
     /**
