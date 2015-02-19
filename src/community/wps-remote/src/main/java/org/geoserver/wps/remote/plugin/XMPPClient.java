@@ -206,10 +206,10 @@ public class XMPPClient extends RemoteProcessClient {
             // Extract the PID
             metadata.put("serviceJID", serviceJID);
             final Object fixedInputs = getFixedInputs(input);
-            final String pid = md5Java(serviceJID + System.nanoTime() + byteArrayToURLString(P(fixedInputs)));
+            final String pid = md5Java(serviceJID + System.nanoTime() + byteArrayToURLString(pickle(fixedInputs)));
 
             String msg = "topic=request&id=" + pid + "&message="
-                    + byteArrayToURLString(P(fixedInputs));
+                    + byteArrayToURLString(pickle(fixedInputs));
             sendMessage(serviceJID, msg);
 
             return pid;
@@ -280,13 +280,13 @@ public class XMPPClient extends RemoteProcessClient {
 
             mucManagementChannel = new MultiUserChat(connection, managementChannel + "@" + bus
                     + "." + domain);
-            mucManagementChannel.join(username, managementChannelPassword, history,
+            mucManagementChannel.join(getJID(username), managementChannelPassword, history,
                     connection.getPacketReplyTimeout());
 
             for (String channel : serviceChannels) {
                 MultiUserChat serviceChannel = new MultiUserChat(connection, channel + "@" + bus
                         + "." + domain);
-                serviceChannel.join(username, managementChannelPassword, history,
+                serviceChannel.join(getJID(username), managementChannelPassword, history,
                         connection.getPacketReplyTimeout());
                 mucServiceChannels.add(serviceChannel);
             }
@@ -297,6 +297,17 @@ public class XMPPClient extends RemoteProcessClient {
             //
             setupListeners();
         }
+    }
+
+    /**
+     * Generate a unique Server JID
+     * 
+     * @param username
+     * @return
+     */
+    private String getJID(String username) {
+        final String id = md5Java(username + "@" + this.domain + "/" + System.nanoTime());
+        return username + "@" + this.domain + "/" + id;
     }
 
     /**
@@ -707,8 +718,8 @@ public class XMPPClient extends RemoteProcessClient {
      * @throws PickleException
      * @throws IOException
      */
-    static Object U(String strdata) throws PickleException, IOException {
-        return U(PickleUtils.str2bytes(strdata));
+    static Object unPickle(String strdata) throws PickleException, IOException {
+        return unPickle(PickleUtils.str2bytes(strdata));
     }
 
     /**
@@ -718,7 +729,7 @@ public class XMPPClient extends RemoteProcessClient {
      * @throws PickleException
      * @throws IOException
      */
-    static Object U(byte[] data) throws PickleException, IOException {
+    static Object unPickle(byte[] data) throws PickleException, IOException {
         Unpickler u = new Unpickler();
         Object o = u.loads(data);
         u.close();
@@ -731,7 +742,7 @@ public class XMPPClient extends RemoteProcessClient {
      * @return
      * @throws IOException
      */
-    static byte[] B(String s) throws IOException {
+    static byte[] toBytes(String s) throws IOException {
         try {
             byte[] bytes = PickleUtils.str2bytes(s);
             byte[] result = new byte[bytes.length + 3];
@@ -751,7 +762,7 @@ public class XMPPClient extends RemoteProcessClient {
      * @param shorts
      * @return
      */
-    static byte[] B(short[] shorts) {
+    static byte[] toBytes(short[] shorts) {
         byte[] result = new byte[shorts.length + 3];
         result[0] = (byte) Opcodes.PROTO;
         result[1] = 2;
@@ -762,7 +773,7 @@ public class XMPPClient extends RemoteProcessClient {
         return result;
     }
 
-    static byte[] P(Object unpickled) throws PickleException, IOException {
+    static byte[] pickle(Object unpickled) throws PickleException, IOException {
         Pickler p = new Pickler();
         return p.dumps(unpickled);
     }

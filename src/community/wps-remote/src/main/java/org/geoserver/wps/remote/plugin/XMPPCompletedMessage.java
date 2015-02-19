@@ -51,7 +51,7 @@ public class XMPPCompletedMessage implements XMPPMessage {
                 String serviceResultString = URLDecoder.decode(signalArgs.get("result"), "UTF-8");
                 JSONObject serviceResultJSON = (JSONObject) JSONSerializer
                         .toJSON(serviceResultString);
-                outputs = xmppClient.U(xmppClient.P(serviceResultJSON));
+                outputs = xmppClient.unPickle(xmppClient.pickle(serviceResultJSON));
                 for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
                     listener.complete(pID, outputs);
                 }
