@@ -27,7 +27,6 @@ import org.geoserver.importer.ImportData;
 import org.geoserver.importer.ImportTask;
 import org.geoserver.importer.SpatialFile;
 import org.geoserver.importer.UpdateMode;
-import org.geoserver.importer.csv.CSVDataStoreFactory;
 import org.geoserver.wps.gs.resource.model.Dimension;
 import org.geoserver.wps.gs.resource.model.Resource;
 import org.geoserver.wps.gs.resource.model.impl.VectorialLayer;
@@ -36,6 +35,7 @@ import org.geoserver.wps.gs.resource.model.translate.TranslateItem;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItemUtils;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataUtilities;
+import org.geotools.data.csv.CSVDataStoreFactory;
 
 /**
  * Implementation of the {@link TranslateItem} for the management of a GeoServer {@link DataStore}.
