@@ -85,8 +85,8 @@ public class XMPPRegisterMessage implements XMPPMessage {
 
                         inputs.put(
                                 paramName,
-                                new Parameter(paramName, paramTemplate.getClazz(), Text
-                                        .text((String) paramType.get("title")), Text
+                                new Parameter(paramName, paramTemplate.getClazz(), (paramType.get("title") != null ? Text
+                                        .text((String) paramType.get("title")) : Text.text(paramName)), Text
                                         .text((String) paramType.get("description")), paramType
                                         .get("min") == null || (Integer) paramType.get("min") > 0,
                                         paramType.get("min") != null ? (Integer) paramType
@@ -114,7 +114,7 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         ParameterTemplate paramTemplate = xmppClient.convertToJavaClass(className,
                                 XMPPClient.class.getClassLoader(), paramType.get("default"));
 
-                        InternationalString outputTitle = (Text.text((String) paramType.get("title")) != null ? Text.text((String) paramType.get("title")) : Text.text((String) paramType.get("name")));
+                        InternationalString outputTitle = (paramType.get("title") != null ? Text.text((String) paramType.get("title")) : Text.text(paramName));
                         outputs.put(
                                 paramName,
                                 new Parameter(paramName, paramTemplate.getClazz(), outputTitle, Text

@@ -7,6 +7,8 @@ package org.geoserver.wps.remote.plugin;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -318,7 +320,11 @@ public class XMPPClient extends RemoteProcessClient {
      */
     private String getResource(String username) {
         final String id = md5Java(username + "@" + this.domain + "/" + System.nanoTime());
-        return this.domain + "/" + id;
+        try {
+            return /*this.domain + "/" +*/ id + "@" + InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return /*this.domain + "/" +*/ id + "@geoserver";
+        }
     }
 
     /**
@@ -994,6 +1000,15 @@ class XMPPPacketListener implements PacketListener {
                         if (xmppClient.serviceChannels.contains(channel))
                             xmppClient.handleMemberJoin(p);
                     }
+                } else if (!p.isAvailable()) {
+                    /* TODO: how to undertand if there are more master services connected
+                     if (p.getFrom().indexOf("@") > 0 && p.getFrom().indexOf("/master") > 0) {
+                     
+                        final String channel = p.getFrom().substring(0, p.getFrom().indexOf("@"));
+                        if (xmppClient.serviceChannels.contains(channel))
+                            xmppClient.handleMemberJoin(p);
+                    }
+                    */
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, e.getMessage(), e);
