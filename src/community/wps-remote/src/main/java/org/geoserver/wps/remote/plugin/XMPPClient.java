@@ -111,11 +111,14 @@ public class XMPPClient extends RemoteProcessClient {
 
     protected String managementChannel;
 
-    protected List<String> serviceChannels;
-
     /**
      * Private structures
      */
+    protected List<String> serviceChannels;
+
+    /*protected Map<String, List<String>> occupantsList = Collections
+            .synchronizedMap(new HashMap<String, List<String>>());*/
+
     protected List<Name> registeredServices = Collections.synchronizedList(new ArrayList<Name>());
 
     protected List<MultiUserChat> mucServiceChannels = new ArrayList<MultiUserChat>();
@@ -208,7 +211,8 @@ public class XMPPClient extends RemoteProcessClient {
             // Extract the PID
             metadata.put("serviceJID", serviceJID);
             final Object fixedInputs = getFixedInputs(input);
-            final String pid = md5Java(serviceJID + System.nanoTime() + byteArrayToURLString(pickle(fixedInputs)));
+            final String pid = md5Java(serviceJID + System.nanoTime()
+                    + byteArrayToURLString(pickle(fixedInputs)));
 
             String msg = "topic=request&id=" + pid + "&message="
                     + byteArrayToURLString(pickle(fixedInputs));
@@ -282,14 +286,16 @@ public class XMPPClient extends RemoteProcessClient {
 
             mucManagementChannel = new MultiUserChat(connection, managementChannel + "@" + bus
                     + "." + domain);
-            mucManagementChannel.join(getJID(username), managementChannelPassword); /*, history,
-                    connection.getPacketReplyTimeout());*/
+            mucManagementChannel.join(getJID(username), managementChannelPassword); /*
+                                                                                     * , history, connection.getPacketReplyTimeout());
+                                                                                     */
 
             for (String channel : serviceChannels) {
                 MultiUserChat serviceChannel = new MultiUserChat(connection, channel + "@" + bus
                         + "." + domain);
-                serviceChannel.join(getJID(username), managementChannelPassword); /*, history,
-                        connection.getPacketReplyTimeout());*/
+                serviceChannel.join(getJID(username), managementChannelPassword); /*
+                                                                                   * , history, connection.getPacketReplyTimeout());
+                                                                                   */
                 mucServiceChannels.add(serviceChannel);
             }
 
@@ -321,9 +327,9 @@ public class XMPPClient extends RemoteProcessClient {
     private String getResource(String username) {
         final String id = md5Java(username + "@" + this.domain + "/" + System.nanoTime());
         try {
-            return /*this.domain + "/" +*/ id + "@" + InetAddress.getLocalHost().getHostName();
+            return /* this.domain + "/" + */id + "@" + InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
-            return /*this.domain + "/" +*/ id + "@geoserver";
+            return /* this.domain + "/" + */id + "@geoserver";
         }
     }
 
@@ -434,7 +440,7 @@ public class XMPPClient extends RemoteProcessClient {
      * 
      * @return
      */
-    private static NameImpl extractServiceName(String person) throws Exception {
+    static NameImpl extractServiceName(String person) throws Exception {
         String occupantFlatName = null;
         if (person.lastIndexOf("@") < person.indexOf("/")) {
             occupantFlatName = person.substring(person.indexOf("/") + 1);
@@ -447,7 +453,8 @@ public class XMPPClient extends RemoteProcessClient {
             final String serviceName[] = occupantFlatName.split("\\.");
             return new NameImpl(serviceName[0], serviceName[1]);
         } else {
-            return new NameImpl(occupantFlatName, occupantFlatName);
+            final String channel = person.substring(0, person.indexOf("@"));
+            return new NameImpl(channel, occupantFlatName);
         }
     }
 
@@ -996,19 +1003,53 @@ class XMPPPacketListener implements PacketListener {
             try {
                 if (p.isAvailable()) {
                     if (p.getFrom().indexOf("@") > 0) {
+
+                        /**
+                         * Manage the channel occupants list
+                         */
                         final String channel = p.getFrom().substring(0, p.getFrom().indexOf("@"));
+                        /*if (xmppClient.occupantsList.get(channel) == null) {
+                            xmppClient.occupantsList.put(channel, new ArrayList<String>());
+                        }
+                        if (xmppClient.occupantsList.get(channel) != null) {
+                            if (!xmppClient.occupantsList.get(channel).contains(p.getFrom()))
+                                xmppClient.occupantsList.get(channel).add(p.getFrom());
+                        }*/
+
                         if (xmppClient.serviceChannels.contains(channel))
                             xmppClient.handleMemberJoin(p);
                     }
                 } else if (!p.isAvailable()) {
-                    /* TODO: how to undertand if there are more master services connected
-                     if (p.getFrom().indexOf("@") > 0 && p.getFrom().indexOf("/master") > 0) {
-                     
+                    if (p.getFrom().indexOf("@") > 0 && p.getFrom().indexOf("/master") > 0) {
+                        boolean mustDeregisterService = true;
+                        
                         final String channel = p.getFrom().substring(0, p.getFrom().indexOf("@"));
-                        if (xmppClient.serviceChannels.contains(channel))
-                            xmppClient.handleMemberJoin(p);
+                        final NameImpl serviceName = xmppClient.extractServiceName(p.getFrom());
+
+                        for (MultiUserChat mucServiceChannel : xmppClient.mucServiceChannels) {
+                            if (mucServiceChannel.getRoom().startsWith(channel)) {
+                                for (String occupant : mucServiceChannel.getOccupants()) {
+                                    if (!occupant.equals(p.getFrom())) {
+                                        final Name occupantServiceName = xmppClient.extractServiceName(occupant);
+
+                                        // send invitation and register source JID
+                                        String[] serviceJIDParts = occupant.split("/");
+                                        if (serviceJIDParts.length == 3
+                                                && (serviceJIDParts[2].startsWith("master") || serviceJIDParts[2]
+                                                        .indexOf("@") < 0)) {
+                                            if(serviceName.equals(occupantServiceName)) {
+                                                mustDeregisterService = false;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (mustDeregisterService && xmppClient.serviceChannels.contains(channel))
+                            xmppClient.handleMemberLeave(p);
                     }
-                    */
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, e.getMessage(), e);
