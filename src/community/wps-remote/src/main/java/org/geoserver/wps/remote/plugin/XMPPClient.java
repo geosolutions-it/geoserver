@@ -32,7 +32,9 @@ import net.razorvine.pickle.Unpickler;
 
 import org.apache.commons.io.IOUtils;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.StreamRawData;
 import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.remote.RemoteProcessClient;
 import org.geoserver.wps.remote.RemoteProcessFactoryConfigurationWatcher;
@@ -891,7 +893,10 @@ public class XMPPClient extends RemoteProcessClient {
         // Complex and Raw data types
         PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { StringRawData.class,
                 CType.COMPLEX, new StringRawData("", "application/json") });
-
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { FileRawData.class,
+                CType.COMPLEX, new FileRawData(null, "image/geotiff") });
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { StreamRawData.class,
+                CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif") });
     }
 
     /**

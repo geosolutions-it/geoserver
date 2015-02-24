@@ -89,6 +89,7 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         InternationalString inputDescription = (paramType.get("description") != null
                                 && paramType.get("description") instanceof String ? Text
                                 .text((String) paramType.get("description")) : Text.text(paramName));
+                        
                         inputs.put(paramName, new Parameter(paramName, paramTemplate.getClazz(),
                                 inputTitle, inputDescription, paramType.get("min") == null
                                         || (Integer) paramType.get("min") > 0,
@@ -121,6 +122,7 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         InternationalString outputDescription = (paramType.get("description") != null
                                 && paramType.get("description") instanceof String ? Text
                                 .text((String) paramType.get("description")) : Text.text(paramName));
+                        
                         outputs.put(paramName, new Parameter(paramName, paramTemplate.getClazz(),
                                 outputTitle, outputDescription, paramType.get("min") == null
                                         || (Integer) paramType.get("min") > 0,
