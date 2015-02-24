@@ -80,6 +80,7 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         ss = ss.substring(1, ss.length() - 1);
                         JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
                         String className = (String) paramType.get("type");
+                        
                         ParameterTemplate paramTemplate = xmppClient.convertToJavaClass(className,
                                 XMPPClient.class.getClassLoader(), paramType.get("default"));
 
@@ -113,6 +114,7 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         ss = ss.substring(1, ss.length() - 1);
                         JSONObject paramType = (JSONObject) JSONSerializer.toJSON(ss);
                         String className = (String) paramType.get("type");
+                        
                         ParameterTemplate paramTemplate = xmppClient.convertToJavaClass(className,
                                 XMPPClient.class.getClassLoader(), paramType.get("default"));
 
