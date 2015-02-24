@@ -4,9 +4,11 @@
  */
 package org.geoserver.wps.remote.plugin;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,13 +47,22 @@ public class XMPPCompletedMessage implements XMPPMessage {
         final String type = signalArgs.get("message");
 
         // NOTIFY THE LISTENERS
-        if ("textual".equals(type)) {
+        if ("textual".equals(type) || "file".equals(type)) {
             Object outputs;
             try {
                 String serviceResultString = URLDecoder.decode(signalArgs.get("result"), "UTF-8");
                 JSONObject serviceResultJSON = (JSONObject) JSONSerializer
                         .toJSON(serviceResultString);
                 outputs = xmppClient.unPickle(xmppClient.pickle(serviceResultJSON));
+                if ("file".equals(type) && outputs instanceof Map) {
+                    for (Entry<String, Object> entry : ((Map<String, Object>)outputs).entrySet()) {
+                        Object value = entry.getValue();
+                        if (value != null && value instanceof String && !((String)value).isEmpty()) {
+                            value = new File(((String)value));
+                            entry.setValue(value);
+                        }
+                    }
+                }
                 for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
                     listener.complete(pID, outputs);
                 }
