@@ -226,6 +226,12 @@ public class XMPPClient extends RemoteProcessClient {
         return null;
     }
 
+    /**
+     * 
+     * @param input
+     * @return
+     * @throws IOException
+     */
     private Object getFixedInputs(Map<String, Object> input) throws IOException {
         Map<String, Object> fixedInputs = new HashMap<String, Object>();
 
@@ -894,7 +900,7 @@ public class XMPPClient extends RemoteProcessClient {
         PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { StringRawData.class,
                 CType.COMPLEX, new StringRawData("", "application/json") });
         PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { FileRawData.class,
-                CType.COMPLEX, new FileRawData(null, "image/geotiff") });
+                CType.COMPLEX, new FileRawData(null, "image/geotiff", "tif") });
         PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { StreamRawData.class,
                 CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif") });
     }
