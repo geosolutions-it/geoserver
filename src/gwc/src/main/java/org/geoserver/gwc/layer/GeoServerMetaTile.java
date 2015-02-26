@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import javax.media.jai.PlanarImage;
-import javax.media.jai.RenderedOp;
 
 import org.geoserver.gwc.GWC;
 import org.geoserver.ows.Response;
@@ -24,7 +23,7 @@ import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.map.RenderedImageMap;
 import org.geoserver.wms.map.RenderedImageMapResponse;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.image.crop.GTCropDescriptor;
+import org.geotools.image.ImageWorker;
 import org.geotools.resources.i18n.ErrorKeys;
 import org.geotools.resources.i18n.Errors;
 import org.geowebcache.grid.BoundingBox;
@@ -160,11 +159,16 @@ public class GeoServerMetaTile extends MetaTile {
         case 0:
             // do a crop, and then turn it into a buffered image so that we can release
             // the image chain
-            RenderedOp cropped = GTCropDescriptor
-                    .create(metaTileImage, Float.valueOf(x), Float.valueOf(y),
-                            Float.valueOf(tileWidth), Float.valueOf(tileHeight), NO_CACHE);
-            tile = cropped.getAsBufferedImage();
-            disposeLater(cropped);
+            //RenderedOp cropped = GTCropDescriptor
+                    //.create(metaTileImage, Float.valueOf(x), Float.valueOf(y),
+                            //Float.valueOf(tileWidth), Float.valueOf(tileHeight), NO_CACHE);
+            
+            
+            //tile = cropped.getAsBufferedImage();
+            ImageWorker w = new ImageWorker(metaTileImage);
+            w.crop(Float.valueOf(x), Float.valueOf(y), Float.valueOf(tileWidth), Float.valueOf(tileHeight));
+            tile = w.getBufferedImage();
+            disposeLater(w.getRenderedImage());
             break;
         case 1:
             final PlanarImage pImage = (PlanarImage) metaTileImage;

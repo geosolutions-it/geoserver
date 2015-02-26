@@ -251,8 +251,9 @@ public class GeorectifyCoverage implements GSProcess {
     }
 
     GridCoverage2D addLocationProperty(GridCoverage2D coverage, File warpedFile) {
-        Map <String, String> properties = new HashMap<String,String>();
+        Map  properties = new HashMap();
         properties.put(GridCoverage2DReader.FILE_SOURCE_PROPERTY, warpedFile.getAbsolutePath());
+        properties.putAll(coverage.getProperties());
 
         return new GridCoverageFactory().create(coverage.getName(), coverage.getRenderedImage(), 
                 coverage.getGridGeometry(), coverage.getSampleDimensions(), null, properties);

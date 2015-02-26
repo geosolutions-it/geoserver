@@ -17,8 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import javax.media.jai.JAI;
-
 import org.geoserver.config.GeoServer;
 import org.geoserver.platform.OWS20Exception;
 import org.geoserver.wcs.WCSInfo;

@@ -5,7 +5,11 @@
  */
 package org.geoserver.jai;
 
+import it.geosolutions.jaiext.JAIExt;
+
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.media.jai.JAI;
 
@@ -13,7 +17,9 @@ import org.geoserver.config.ConfigurationListenerAdapter;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInfo;
 import org.geoserver.config.GeoServerInitializer;
+import org.geoserver.config.JAIEXTInfo;
 import org.geoserver.config.JAIInfo;
+import org.geotools.coverage.processing.CoverageProcessor;
 import org.geotools.image.jai.Registry;
 
 import com.sun.media.jai.util.SunTileCache;
@@ -47,6 +53,42 @@ public class JAIInitializer implements GeoServerInitializer {
         
         JAI jaiDef = JAI.getDefaultInstance();
         jai.setJAI( jaiDef );
+        //OperationRegistry registry = ConcurrentOperationRegistry.initializeRegistry();
+        //jaiDef.setOperationRegistry(registry);
+        
+        // JAIEXT initialization
+        JAIExt.initJAIEXT();
+        if(jai.getJAIEXTInfo() != null){
+            JAIEXTInfo jaiext = jai.getJAIEXTInfo();
+            Set<String> jaiOperations = jaiext.getJAIOperations();
+            Set<String> jaiExtOperations = jaiext.getJAIEXTOperations();
+            if(jaiOperations != null && !jaiOperations.isEmpty()){
+                JAIExt.registerOperations(jaiOperations, false);
+                for(String opName : jaiOperations){
+                    // Remove operations with old descriptors
+                    CoverageProcessor.removeOperationFromProcessors(opName);
+                    JAIExt.setJAIAcceleration(opName, true);
+                }
+            }
+            if(jaiExtOperations != null && !jaiExtOperations.isEmpty()){
+                Set<String> newJai = new TreeSet<String>(jaiExtOperations);
+                if(jaiOperations != null && !jaiOperations.isEmpty()){
+                    newJai.removeAll(jaiOperations);
+                }
+                for(String opName : newJai){
+                    if(!JAIExt.isJAIExtOperation(opName)){
+                        // Remove operations with old descriptors
+                        CoverageProcessor.removeOperationFromProcessors(opName);
+                    }
+                }
+                JAIExt.registerOperations(newJai, true);
+            }
+            // Update all the CoverageProcessor instances
+            CoverageProcessor.updateProcessors();
+        }
+        
+        //
+        
         
         // setting JAI wide hints
         jaiDef.setRenderingHint(JAI.KEY_CACHED_TILE_RECYCLING_ENABLED, jai.isRecycling());

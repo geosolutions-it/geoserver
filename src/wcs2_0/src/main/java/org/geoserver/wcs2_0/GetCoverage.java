@@ -5,6 +5,8 @@
  */
 package org.geoserver.wcs2_0;
 
+import it.geosolutions.rendered.viewer.RenderedImageBrowser;
+
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
@@ -120,22 +122,27 @@ import org.vfny.geoserver.wcs.WcsException;
  */
 public class GetCoverage {
     
-    private final static Set<String> mdFormats;
+    private static final Hints HINTS = new Hints(
+            Hints.LENIENT_DATUM_SHIFT, Boolean.TRUE);
 
+	private final static Set<String> mdFormats;
+
+    private static final CoverageProcessor processor = CoverageProcessor.getInstance(HINTS);
+    
     static {
         //TODO: This one should be pluggable
         mdFormats = new HashSet<String>();
         mdFormats.add("application/x-netcdf");
-        final CoverageProcessor processor = new CoverageProcessor(new Hints(
-                Hints.LENIENT_DATUM_SHIFT, Boolean.TRUE));
-        MOSAIC_PARAMS = processor.getOperation("Mosaic").getParameters();
+        //final CoverageProcessor processor = new CoverageProcessor(new Hints(
+                //Hints.LENIENT_DATUM_SHIFT, Boolean.TRUE));
+        //MOSAIC_PARAMS = processor.getOperation("Mosaic").getParameters();
     }
     
     /** Cached factory for the {@link Mosaic} operation. */
-    final static Mosaic MOSAIC_FACTORY = new Mosaic();
+    //final static Mosaic MOSAIC_FACTORY = new Mosaic();
 
     /** Parameters used to control the {@link Mosaic} operation. */
-    static ParameterValueGroup MOSAIC_PARAMS;
+    //static ParameterValueGroup MOSAIC_PARAMS;
 
     /** Logger.*/
     private static Logger LOGGER= Logging.getLogger(GetCoverage.class);
@@ -486,10 +493,10 @@ public class GetCoverage {
 
         // mosaic
         try {
-            final ParameterValueGroup param = MOSAIC_PARAMS.clone();
+            final ParameterValueGroup param = processor.getOperation("Mosaic").getParameters().clone();
             param.parameter("sources").setValue(coverages);
             param.parameter("policy").setValue(GridGeometryPolicy.FIRST.name());
-            return (GridCoverage2D) MOSAIC_FACTORY.doOperation(param, hints);
+            return (GridCoverage2D) ((Mosaic)processor.getOperation("Mosaic")).doOperation(param, hints);
         } catch (Exception e) {
             throw new RuntimeException("Failed to mosaic the input coverages", e);
         }

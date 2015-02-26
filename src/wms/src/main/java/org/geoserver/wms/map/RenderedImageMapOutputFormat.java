@@ -5,6 +5,9 @@
  */
 package org.geoserver.wms.map;
 
+import it.geosolutions.jaiext.lookup.LookupTable;
+import it.geosolutions.jaiext.lookup.LookupTableFactory;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -39,10 +42,7 @@ import javax.media.jai.LookupTableJAI;
 import javax.media.jai.PlanarImage;
 import javax.media.jai.ROI;
 import javax.media.jai.ROIShape;
-import javax.media.jai.operator.BandMergeDescriptor;
 import javax.media.jai.operator.ConstantDescriptor;
-import javax.media.jai.operator.FormatDescriptor;
-import javax.media.jai.operator.LookupDescriptor;
 import javax.media.jai.operator.MosaicDescriptor;
 
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -736,9 +736,13 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         layout.setTileWidth(w);
         layout.setTileHeight(h);
         RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT, layout);
+        LookupTable table = LookupTableFactory.create(IDENTITY_TABLE);
         // TODO SIMONE why not format?
-        return LookupDescriptor.create(source, IDENTITY_TABLE, hints);
-
+        //return LookupDescriptor.create(source, IDENTITY_TABLE, hints);
+        ImageWorker worker = new ImageWorker(source);
+        worker.setRenderingHints(hints);
+        worker.looukp(table);
+        return worker.getRenderedImage();
     }
 
     /**
@@ -1032,8 +1036,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                         ImageLayout ilColorModel = new ImageLayout(image);
                         ilColorModel.setColorModel(icm);
                         RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT, ilColorModel);
-                        image = FormatDescriptor.create(image, image.getSampleModel().getDataType(), hints);
-                        worker.setImage(image);
+                        //image = FormatDescriptor.create(image, image.getSampleModel().getDataType(), hints);
+                        //worker.setImage(image);
+                        worker.setRenderingHints(hints);
+                        worker.format(image.getSampleModel().getDataType());
+                        image = worker.getRenderedImage();
                     } 
                     bgColorIndex = ColorUtilities.findColorIndex(bgColor, icm);
                 }
@@ -1045,8 +1052,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 // we need to expand the image to RGB
                 image = worker.forceComponentColorModel().getRenderedImage();
                 if(transparent) {
-                    image = addAlphaChannel(image);
-                    worker.setImage(image);
+                    //image = createAlphaChannel(image);
+                    //worker.setImage(image);
+                    RenderedImage alpha = createAlphaChannel(image);
+                    worker.addBand(alpha, false, true, null);
+                    image = worker.getRenderedImage();
                 }
                 bgValues = new double[] { bgColor.getRed(), bgColor.getGreen(), bgColor.getBlue(),
                         transparent ? 0 : 255 };
@@ -1099,7 +1109,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                     // no transparency in the original data, so no need to expand to RGB
                     if(transparent) {
                         // we need to expand the image with an alpha channel
-                        image = addAlphaChannel(image);
+                        //image = createAlphaChannel(image);
+                        final ImageWorker iw = new ImageWorker(image);
+                        RenderedImage alpha = createAlphaChannel(image);
+                        iw.addBand(alpha, false, true, null);
+                        image = iw.getRenderedImage();
                         bgValues = new double[] { mapToGrayColor(bgColor, ccm), 0 };
                     } else {
                         bgValues = new double[] { mapToGrayColor(bgColor, ccm) };
@@ -1139,7 +1153,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                     }
                 } else {
                     if (transparent) {
-                        image = addAlphaChannel(image);
+                        //image = createAlphaChannel(image);
+                        final ImageWorker iw = new ImageWorker(image);
+                        RenderedImage alpha = createAlphaChannel(image);
+                        iw.addBand(alpha, false, true, null);
+                        image = iw.getRenderedImage();
                         // this will work fine for all situation where the color components are <= 3
                         // e.g., one band rasters with no colormap will have only one usually
                         bgValues = new double[] { 0, 0, 0, 0 };
@@ -1164,10 +1182,20 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
             double[][] thresholds = new double[][] { { ColorUtilities.getThreshold(image
                     .getSampleModel().getDataType()) } };
             // apply the mosaic
-            image = MosaicDescriptor.create(new RenderedImage[] { image },
-                    alphaChannels != null && transparencyType==Transparency.TRANSLUCENT ? MosaicDescriptor.MOSAIC_TYPE_BLEND: MosaicDescriptor.MOSAIC_TYPE_OVERLAY,
-                    alphaChannels, rois, thresholds, bgValues, new RenderingHints(
-                            JAI.KEY_IMAGE_LAYOUT, layout));
+            ImageWorker w = new ImageWorker(image);
+            w.setRenderingHint(JAI.KEY_IMAGE_LAYOUT, layout);
+            w.setDestinationNoData(bgValues);
+            w.mosaic(new RenderedImage[] { image }, 
+                    alphaChannels != null && transparencyType==Transparency.TRANSLUCENT ? MosaicDescriptor.MOSAIC_TYPE_BLEND: MosaicDescriptor.MOSAIC_TYPE_OVERLAY, 
+                    alphaChannels, 
+                    rois, 
+                    thresholds, 
+                    null);
+            image = w.getRenderedImage();
+            //image = MosaicDescriptor.create(new RenderedImage[] { image },
+                    //alphaChannels != null && transparencyType==Transparency.TRANSLUCENT ? MosaicDescriptor.MOSAIC_TYPE_BLEND: MosaicDescriptor.MOSAIC_TYPE_OVERLAY,
+                    //alphaChannels, rois, thresholds, bgValues, new RenderingHints(
+                            //JAI.KEY_IMAGE_LAYOUT, layout));
         } else {
             // Check if we need to crop a subset of the produced image, else return it right away
             if (imageBounds.contains(mapRasterArea) && !imageBounds.equals(mapRasterArea)) { // the produced image does not need a final mosaicking operation but a crop!
@@ -1196,7 +1224,7 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         }
     }
 
-    private RenderedImage addAlphaChannel(RenderedImage image) {
+    private RenderedImage createAlphaChannel(RenderedImage image) {
         final ImageLayout tempLayout= new ImageLayout(image);
         tempLayout.unsetValid(ImageLayout.COLOR_MODEL_MASK).unsetValid(ImageLayout.SAMPLE_MODEL_MASK);                    
         RenderedImage alpha = ConstantDescriptor.create(
@@ -1204,8 +1232,9 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 Float.valueOf(image.getHeight()),
                 new Byte[] { Byte.valueOf((byte) 255) }, 
                 new RenderingHints(JAI.KEY_IMAGE_LAYOUT,tempLayout));
-        image = BandMergeDescriptor.create(image, alpha, null);
-        return image;
+        //image = BandMergeDescriptor.create(image, alpha, null);
+        //return image;
+        return alpha;
     }
 
     /**

@@ -6,6 +6,7 @@
 package org.geoserver.wms.map;
 
 import it.geosolutions.jaiext.colorindexer.ColorIndexerDescriptor;
+import it.geosolutions.rendered.viewer.RenderedImageBrowser;
 
 import java.awt.image.RenderedImage;
 import java.awt.image.SampleModel;
@@ -104,7 +105,8 @@ public class PNGMapResponse extends RenderedImageMapResponse {
         }
         
         // check to see if we have to see a translucent or bitmask quantizer
-        image = applyPalette(image, mapContent, "image/png8", true);
+        image = applyPalette(image, mapContent, "image/png8", true);        
+        
         float quality = (100 - wms.getPngCompression()) / 100.0f;
         JAIInfo.PngEncoderType encoder = wms.getPNGEncoderType();
         if(encoder == JAIInfo.PngEncoderType.PNGJ) {

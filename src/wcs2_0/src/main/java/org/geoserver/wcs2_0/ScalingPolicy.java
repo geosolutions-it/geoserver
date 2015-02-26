@@ -15,9 +15,6 @@ import javax.media.jai.InterpolationNearest;
 import javax.media.jai.JAI;
 import javax.media.jai.Warp;
 import javax.media.jai.WarpAffine;
-import javax.media.jai.operator.AffineDescriptor;
-import javax.media.jai.operator.ScaleDescriptor;
-import javax.media.jai.operator.WarpDescriptor;
 
 import net.opengis.wcs20.ScaleAxisByFactorType;
 import net.opengis.wcs20.ScaleAxisType;
