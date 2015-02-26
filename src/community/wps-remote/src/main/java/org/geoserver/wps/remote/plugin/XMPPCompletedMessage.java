@@ -6,6 +6,7 @@ package org.geoserver.wps.remote.plugin;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -21,10 +22,6 @@ import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
 import org.apache.commons.io.IOUtils;
-import org.geoserver.importer.ImportContext;
-import org.geoserver.importer.ImportTask;
-import org.geoserver.importer.Importer;
-import org.geoserver.importer.SpatialFile;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.StreamRawData;
 import org.geoserver.wps.process.StringRawData;
@@ -44,8 +41,6 @@ public class XMPPCompletedMessage implements XMPPMessage {
     /** The LOGGER */
     public static final Logger LOGGER = Logging.getLogger(XMPPMessage.class.getPackage().getName());
 
-    protected Importer importer;
-    
     @Override
     public boolean canHandle(Map<String, String> signalArgs) {
         if (signalArgs != null && signalArgs.get("topic") != null)
@@ -84,12 +79,16 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                         if (sample instanceof StreamRawData) {
                                             value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(((String) value)), ((StreamRawData) sample).getFileExtension());
                                             if (publish) {
-                                                importLayer(new File(((String) value)));
+                                                final File tempFile = File.createTempFile("wps-remote-str-rawdata", "."+((StreamRawData) sample).getFileExtension());
+                                                FileOutputStream outputFile = new FileOutputStream(tempFile);
+                                                IOUtils.copy(((StreamRawData)value).getInputStream(), outputFile);
+
+                                                xmppClient.importLayer(tempFile);
                                             }
                                         } else if (sample instanceof FileRawData) {
                                             value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
                                             if (publish) {
-                                                importLayer(new File(((String) value)));
+                                                xmppClient.importLayer(((FileRawData)value).getFile());
                                             }
                                         } else if (sample instanceof StringRawData) {
                                             value = new StringRawData((String) value, ((StringRawData) sample).getMimeType());
@@ -98,7 +97,7 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                                 Writer outputFile = new FileWriter(tempFile);
                                                 IOUtils.write((String)value, outputFile);
                                                 
-                                                importLayer(tempFile);
+                                                xmppClient.importLayer(tempFile);
                                             }
                                         }
                                         outputs.put(result.getKey(), value);                                        
@@ -132,22 +131,6 @@ public class XMPPCompletedMessage implements XMPPMessage {
         // NOTIFY THE SERVICE
         final String serviceJID = message.getFrom();
         xmppClient.sendMessage(serviceJID, "topic=finish");
-    }
-
-    /**
-     * @param value
-     * @throws IOException
-     */
-    private void importLayer(File file) throws IOException {
-        ImportContext context = 
-                importer.createContext(new SpatialFile(file));
-        
-        ImportTask task = context.getTasks().get(0);
-        //assertEquals(ImportTask.State.READY, task.getState());
-        
-        //assertEquals("the layer name", task.getLayer().getResource().getName());
-
-        importer.run(context);
     }
 
 }

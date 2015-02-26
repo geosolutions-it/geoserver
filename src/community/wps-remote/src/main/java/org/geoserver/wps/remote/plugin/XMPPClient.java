@@ -4,6 +4,7 @@
  */
 package org.geoserver.wps.remote.plugin;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
@@ -32,6 +33,10 @@ import net.razorvine.pickle.Unpickler;
 
 import org.apache.commons.io.IOUtils;
 import org.geoserver.config.GeoServer;
+import org.geoserver.importer.ImportContext;
+import org.geoserver.importer.ImportTask;
+import org.geoserver.importer.Importer;
+import org.geoserver.importer.SpatialFile;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.RawData;
@@ -119,14 +124,17 @@ public class XMPPClient extends RemoteProcessClient {
      */
     protected List<String> serviceChannels;
 
-    /*protected Map<String, List<String>> occupantsList = Collections
-            .synchronizedMap(new HashMap<String, List<String>>());*/
+    /*
+     * protected Map<String, List<String>> occupantsList = Collections .synchronizedMap(new HashMap<String, List<String>>());
+     */
 
     protected List<Name> registeredServices = Collections.synchronizedList(new ArrayList<Name>());
 
     protected List<MultiUserChat> mucServiceChannels = new ArrayList<MultiUserChat>();
 
     protected MultiUserChat mucManagementChannel;
+
+    private Importer importer;
 
     /**
      * Default Constructor
@@ -152,6 +160,8 @@ public class XMPPClient extends RemoteProcessClient {
         for (int sc = 0; sc < serviceNamespaces.length; sc++) {
             this.serviceChannels.add(serviceNamespaces[sc].trim());
         }
+        
+        this.importer = (Importer) GeoServerExtensions.bean("importer");
     }
 
     @Override
@@ -218,7 +228,7 @@ public class XMPPClient extends RemoteProcessClient {
                     + byteArrayToURLString(pickle(fixedInputs)));
 
             String baseURL = getGeoServer().getGlobal().getSettings().getProxyBaseUrl();
-            String msg = "topic=request&id=" + pid + "&baseURL="+baseURL+"&message="
+            String msg = "topic=request&id=" + pid + "&baseURL=" + baseURL + "&message="
                     + byteArrayToURLString(pickle(fixedInputs));
             sendMessage(serviceJID, msg);
 
@@ -229,12 +239,28 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     /**
+     * @param value
+     * @throws IOException
+     */
+    public void importLayer(File file) throws IOException {
+        ImportContext context = 
+                importer.createContext(new SpatialFile(file));
+        
+        ImportTask task = context.getTasks().get(0);
+        //assertEquals(ImportTask.State.READY, task.getState());
+        
+        //assertEquals("the layer name", task.getLayer().getResource().getName());
+
+        importer.run(context);
+    }
+    
+    /**
      * Accessor for global geoserver instance from the test application context.
      */
     protected GeoServer getGeoServer() {
         return (GeoServer) GeoServerExtensions.bean("geoServer");
     }
-    
+
     /**
      * 
      * @param input
@@ -894,45 +920,57 @@ public class XMPPClient extends RemoteProcessClient {
         SIMPLE, COMPLEX
     }
 
-    static  {
-        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null, "text/plain" });
-        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE, Boolean.TRUE, "" });
+    static {
+        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null,
+                "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE,
+                Boolean.TRUE, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE, null, "" });
-        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null, "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null,
+                "text/plain" });
         PRIMITIVE_NAME_TYPE_MAP.put("short", new Object[] { Short.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("int", new Object[] { Integer.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("long", new Object[] { Long.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("float", new Object[] { Float.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("double", new Object[] { Double.TYPE, CType.SIMPLE, null, "" });
-        PRIMITIVE_NAME_TYPE_MAP.put("datetime", new Object[] { Date.class, CType.SIMPLE, null, "" });
-        
+        PRIMITIVE_NAME_TYPE_MAP
+                .put("datetime", new Object[] { Date.class, CType.SIMPLE, null, "" });
+
         // Complex and Raw data types
-        PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/xml"), "application/xml,text/xml" });
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "text/xml"), "application/xml,text/xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class, CType.COMPLEX,
+                new StringRawData("", "application/xml"), "application/xml,text/xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class, CType.COMPLEX,
+                new StringRawData("", "text/xml"), "application/xml,text/xml" });
 
         PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"), "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
+                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"),
+                "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
         PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"), "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
+                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"),
+                "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
         PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"), "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
+                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"),
+                "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
         PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"), "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
+                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"),
+                "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
 
         PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain" });
+                CType.COMPLEX, new StringRawData("", "application/json"),
+                "application/json,text/plain" });
 
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class,
-                CType.COMPLEX, new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff" });
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX,
+                new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff" });
         PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { RawData.class,
-                CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"), "image/geotiff,image/tiff" });
-        
+                CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"),
+                "image/geotiff,image/tiff" });
+
         PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class,
-                CType.COMPLEX, new FileRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf" });
+                CType.COMPLEX, new FileRawData(null, "application/x-netcdf", "nc"),
+                "application/x-netcdf" });
         PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class,
-                CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"), "application/x-netcdf" });
+                CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"),
+                "application/x-netcdf" });
     }
 
     /**
@@ -1053,13 +1091,11 @@ class XMPPPacketListener implements PacketListener {
                          * Manage the channel occupants list
                          */
                         final String channel = p.getFrom().substring(0, p.getFrom().indexOf("@"));
-                        /*if (xmppClient.occupantsList.get(channel) == null) {
-                            xmppClient.occupantsList.put(channel, new ArrayList<String>());
-                        }
-                        if (xmppClient.occupantsList.get(channel) != null) {
-                            if (!xmppClient.occupantsList.get(channel).contains(p.getFrom()))
-                                xmppClient.occupantsList.get(channel).add(p.getFrom());
-                        }*/
+                        /*
+                         * if (xmppClient.occupantsList.get(channel) == null) { xmppClient.occupantsList.put(channel, new ArrayList<String>()); } if
+                         * (xmppClient.occupantsList.get(channel) != null) { if (!xmppClient.occupantsList.get(channel).contains(p.getFrom()))
+                         * xmppClient.occupantsList.get(channel).add(p.getFrom()); }
+                         */
 
                         if (xmppClient.serviceChannels.contains(channel))
                             xmppClient.handleMemberJoin(p);
@@ -1067,7 +1103,7 @@ class XMPPPacketListener implements PacketListener {
                 } else if (!p.isAvailable()) {
                     if (p.getFrom().indexOf("@") > 0 && p.getFrom().indexOf("/master") > 0) {
                         boolean mustDeregisterService = true;
-                        
+
                         final String channel = p.getFrom().substring(0, p.getFrom().indexOf("@"));
                         final NameImpl serviceName = xmppClient.extractServiceName(p.getFrom());
 
@@ -1075,14 +1111,15 @@ class XMPPPacketListener implements PacketListener {
                             if (mucServiceChannel.getRoom().startsWith(channel)) {
                                 for (String occupant : mucServiceChannel.getOccupants()) {
                                     if (!occupant.equals(p.getFrom())) {
-                                        final Name occupantServiceName = xmppClient.extractServiceName(occupant);
+                                        final Name occupantServiceName = xmppClient
+                                                .extractServiceName(occupant);
 
                                         // send invitation and register source JID
                                         String[] serviceJIDParts = occupant.split("/");
                                         if (serviceJIDParts.length == 3
                                                 && (serviceJIDParts[2].startsWith("master") || serviceJIDParts[2]
                                                         .indexOf("@") < 0)) {
-                                            if(serviceName.equals(occupantServiceName)) {
+                                            if (serviceName.equals(occupantServiceName)) {
                                                 mustDeregisterService = false;
                                                 break;
                                             }
@@ -1091,7 +1128,7 @@ class XMPPPacketListener implements PacketListener {
                                 }
                             }
                         }
-                        
+
                         if (mustDeregisterService && xmppClient.serviceChannels.contains(channel))
                             xmppClient.handleMemberLeave(p);
                     }
@@ -1146,7 +1183,7 @@ class ParameterTemplate {
     private final Class<?> clazz;
 
     private final Object defaultValue;
-    
+
     private final Map<String, String> meta = new HashMap<String, String>();
 
     /**
