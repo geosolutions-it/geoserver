@@ -31,6 +31,7 @@ import net.razorvine.pickle.Pickler;
 import net.razorvine.pickle.Unpickler;
 
 import org.apache.commons.io.IOUtils;
+import org.geoserver.config.GeoServer;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.RawData;
@@ -216,7 +217,8 @@ public class XMPPClient extends RemoteProcessClient {
             final String pid = md5Java(serviceJID + System.nanoTime()
                     + byteArrayToURLString(pickle(fixedInputs)));
 
-            String msg = "topic=request&id=" + pid + "&message="
+            String baseURL = getGeoServer().getGlobal().getSettings().getProxyBaseUrl();
+            String msg = "topic=request&id=" + pid + "&baseURL="+baseURL+"&message="
                     + byteArrayToURLString(pickle(fixedInputs));
             sendMessage(serviceJID, msg);
 
@@ -226,6 +228,13 @@ public class XMPPClient extends RemoteProcessClient {
         return null;
     }
 
+    /**
+     * Accessor for global geoserver instance from the test application context.
+     */
+    protected GeoServer getGeoServer() {
+        return (GeoServer) GeoServerExtensions.bean("geoServer");
+    }
+    
     /**
      * 
      * @param input
@@ -878,31 +887,52 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     /** Primitive type name -> class map. */
-    private static final Map<String, Object> PRIMITIVE_NAME_TYPE_MAP = new HashMap<String, Object>();
+    public static final Map<String, Object> PRIMITIVE_NAME_TYPE_MAP = new HashMap<String, Object>();
 
     /** Setup the primitives map. */
     static enum CType {
         SIMPLE, COMPLEX
     }
 
-    static {
-        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("short", new Object[] { Short.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("int", new Object[] { Integer.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("long", new Object[] { Long.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("float", new Object[] { Float.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("double", new Object[] { Double.TYPE, CType.SIMPLE });
-        PRIMITIVE_NAME_TYPE_MAP.put("datetime", new Object[] { Date.class, CType.SIMPLE });
+    static  {
+        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null, "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE, Boolean.TRUE, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null, "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("short", new Object[] { Short.TYPE, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("int", new Object[] { Integer.TYPE, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("long", new Object[] { Long.TYPE, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("float", new Object[] { Float.TYPE, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("double", new Object[] { Double.TYPE, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("datetime", new Object[] { Date.class, CType.SIMPLE, null, "" });
+        
         // Complex and Raw data types
-        PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { StringRawData.class,
-                CType.COMPLEX, new StringRawData("", "application/json") });
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { FileRawData.class,
-                CType.COMPLEX, new FileRawData(null, "image/geotiff", "tif") });
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { StreamRawData.class,
-                CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif") });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "application/xml"), "application/xml,text/xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "text/xml"), "application/xml,text/xml" });
+
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"), "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"), "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"), "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"), "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
+
+        PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { RawData.class,
+                CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain" });
+
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class,
+                CType.COMPLEX, new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff" });
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { RawData.class,
+                CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"), "image/geotiff,image/tiff" });
+        
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class,
+                CType.COMPLEX, new FileRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class,
+                CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"), "application/x-netcdf" });
     }
 
     /**
@@ -945,6 +975,7 @@ public class XMPPClient extends RemoteProcessClient {
         }
 
         // Retrieve the Class of the parameter through the mapping
+        String mimeTypes = "";
         Class c = null;
         if (name.equalsIgnoreCase("complex") || name.equalsIgnoreCase("complex")) {
             // Is it a complex/raw data type?
@@ -984,7 +1015,10 @@ public class XMPPClient extends RemoteProcessClient {
             sample = null;
         }
 
-        return new ParameterTemplate(c, sample);
+        if (PRIMITIVE_NAME_TYPE_MAP.get(name) != null)
+            mimeTypes = (String) ((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name))[3];
+
+        return new ParameterTemplate(c, sample, mimeTypes);
     }
 }
 
@@ -1112,14 +1146,17 @@ class ParameterTemplate {
     private final Class<?> clazz;
 
     private final Object defaultValue;
+    
+    private final Map<String, String> meta = new HashMap<String, String>();
 
     /**
      * @param clazz
      * @param defaultValue
      */
-    public ParameterTemplate(Class<?> clazz, Object defaultValue) {
+    public ParameterTemplate(Class<?> clazz, Object defaultValue, String mimeTypes) {
         this.clazz = clazz;
         this.defaultValue = defaultValue;
+        this.meta.put("mimeTypes", mimeTypes);
     }
 
     /**
@@ -1134,6 +1171,10 @@ class ParameterTemplate {
      */
     public Object getDefaultValue() {
         return defaultValue;
+    }
+
+    public Map<String, String> getMeta() {
+        return meta;
     }
 
 }

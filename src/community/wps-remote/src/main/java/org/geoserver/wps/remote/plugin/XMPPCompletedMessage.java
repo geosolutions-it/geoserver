@@ -6,7 +6,9 @@ package org.geoserver.wps.remote.plugin;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,8 +20,14 @@ import net.razorvine.pickle.PickleException;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
+import org.apache.commons.io.IOUtils;
+import org.geoserver.importer.ImportContext;
+import org.geoserver.importer.ImportTask;
+import org.geoserver.importer.Importer;
+import org.geoserver.importer.SpatialFile;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.StreamRawData;
+import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.remote.RemoteProcessClientListener;
 import org.geotools.util.logging.Logging;
 import org.jivesoftware.smack.packet.Message;
@@ -36,6 +44,8 @@ public class XMPPCompletedMessage implements XMPPMessage {
     /** The LOGGER */
     public static final Logger LOGGER = Logging.getLogger(XMPPMessage.class.getPackage().getName());
 
+    protected Importer importer;
+    
     @Override
     public boolean canHandle(Map<String, String> signalArgs) {
         if (signalArgs != null && signalArgs.get("topic") != null)
@@ -49,6 +59,7 @@ public class XMPPCompletedMessage implements XMPPMessage {
 
         final String pID = signalArgs.get("id");
         final String type = signalArgs.get("message");
+        final Boolean publish = (signalArgs.get("publish_as_layer") != null ? Boolean.valueOf(signalArgs.get("publish_as_layer")) : false);
 
         // NOTIFY THE LISTENERS
         if (type != null && !type.isEmpty()) {
@@ -67,12 +78,31 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                 Object value = entry.getValue();
                                 if (value != null && value instanceof String
                                         && !((String) value).isEmpty()) {
-                                    if (type.endsWith(";stream")) {
-                                        value = new StreamRawData(type.substring(0, type.indexOf(";stream")), new FileInputStream(((String) value)));
-                                    } else {
-                                        value = new FileRawData(new File(((String) value)), type);                                        
+                                    if (XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type) != null) {
+                                        Object sample = sample = ((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[2];
+                                        
+                                        if (sample instanceof StreamRawData) {
+                                            value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(((String) value)), ((StreamRawData) sample).getFileExtension());
+                                            if (publish) {
+                                                importLayer(new File(((String) value)));
+                                            }
+                                        } else if (sample instanceof FileRawData) {
+                                            value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
+                                            if (publish) {
+                                                importLayer(new File(((String) value)));
+                                            }
+                                        } else if (sample instanceof StringRawData) {
+                                            value = new StringRawData((String) value, ((StringRawData) sample).getMimeType());
+                                            if (publish) {
+                                                final File tempFile = File.createTempFile("wps-remote-str-rawdata", "."+((StringRawData) sample).getFileExtension());
+                                                Writer outputFile = new FileWriter(tempFile);
+                                                IOUtils.write((String)value, outputFile);
+                                                
+                                                importLayer(tempFile);
+                                            }
+                                        }
+                                        outputs.put(result.getKey(), value);                                        
                                     }
-                                    outputs.put(result.getKey(), value);
                                 }
                             }
                         }
@@ -102,6 +132,22 @@ public class XMPPCompletedMessage implements XMPPMessage {
         // NOTIFY THE SERVICE
         final String serviceJID = message.getFrom();
         xmppClient.sendMessage(serviceJID, "topic=finish");
+    }
+
+    /**
+     * @param value
+     * @throws IOException
+     */
+    private void importLayer(File file) throws IOException {
+        ImportContext context = 
+                importer.createContext(new SpatialFile(file));
+        
+        ImportTask task = context.getTasks().get(0);
+        //assertEquals(ImportTask.State.READY, task.getState());
+        
+        //assertEquals("the layer name", task.getLayer().getResource().getName());
+
+        importer.run(context);
     }
 
 }

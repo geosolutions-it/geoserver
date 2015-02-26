@@ -26,7 +26,12 @@
 			<artifactId>gs-wps-core</artifactId>
 			<version>${gs.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.geoserver.importer</groupId>
+			<artifactId>gs-importer-core</artifactId>
+			<version>${gs.version}</version>
+		</dependency>
+		
 		<!-- XMPP APIs -->
 		<dependency>
 			<groupId>org.igniterealtime.smack</groupId>
