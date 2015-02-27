@@ -6,7 +6,6 @@ package org.geoserver.wps.remote.plugin;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -21,6 +20,8 @@ import net.razorvine.pickle.PickleException;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.StreamRawData;
@@ -74,28 +75,36 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                 if (value != null && value instanceof String
                                         && !((String) value).isEmpty()) {
                                     if (XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type) != null) {
-                                        Object sample = sample = ((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[2];
+                                        Object sample = ((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[2];
                                         
                                         if (sample instanceof StreamRawData) {
+                                            final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((StreamRawData) sample).getFileExtension();
                                             value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(((String) value)), ((StreamRawData) sample).getFileExtension());
                                             if (publish) {
-                                                final File tempFile = File.createTempFile("wps-remote-str-rawdata", "."+((StreamRawData) sample).getFileExtension());
-                                                FileOutputStream outputFile = new FileOutputStream(tempFile);
-                                                IOUtils.copy(((StreamRawData)value).getInputStream(), outputFile);
+                                                final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
+                                                FileUtils.copyInputStreamToFile(((StreamRawData)value).getInputStream(), tempFile);
+
+                                                xmppClient.importLayer(tempFile);
+                                                
+                                                // need to re-open the stream
+                                                value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(tempFile), ((StreamRawData) sample).getFileExtension());
+                                            }
+                                        } else if (sample instanceof FileRawData) {
+                                            final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((FileRawData) sample).getFileExtension();
+                                            value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
+                                            if (publish) {
+                                                final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
+                                                FileUtils.copyFile(((FileRawData)value).getFile(), tempFile);
 
                                                 xmppClient.importLayer(tempFile);
                                             }
-                                        } else if (sample instanceof FileRawData) {
-                                            value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
-                                            if (publish) {
-                                                xmppClient.importLayer(((FileRawData)value).getFile());
-                                            }
                                         } else if (sample instanceof StringRawData) {
+                                            final String fileName = "wps-remote-str-rawdata_" + pID + "." + ((StringRawData) sample).getFileExtension();
                                             value = new StringRawData((String) value, ((StringRawData) sample).getMimeType());
                                             if (publish) {
-                                                final File tempFile = File.createTempFile("wps-remote-str-rawdata", "."+((StringRawData) sample).getFileExtension());
+                                                final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
                                                 Writer outputFile = new FileWriter(tempFile);
-                                                IOUtils.write((String)value, outputFile);
+                                                IOUtils.write(((StringRawData)value).getData(), outputFile);
                                                 
                                                 xmppClient.importLayer(tempFile);
                                             }

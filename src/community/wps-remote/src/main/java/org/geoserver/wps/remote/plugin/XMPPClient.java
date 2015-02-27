@@ -160,7 +160,7 @@ public class XMPPClient extends RemoteProcessClient {
         for (int sc = 0; sc < serviceNamespaces.length; sc++) {
             this.serviceChannels.add(serviceNamespaces[sc].trim());
         }
-        
+
         this.importer = (Importer) GeoServerExtensions.bean("importer");
     }
 
@@ -242,18 +242,21 @@ public class XMPPClient extends RemoteProcessClient {
      * @param value
      * @throws IOException
      */
-    public void importLayer(File file) throws IOException {
-        ImportContext context = 
-                importer.createContext(new SpatialFile(file));
-        
-        ImportTask task = context.getTasks().get(0);
-        //assertEquals(ImportTask.State.READY, task.getState());
-        
-        //assertEquals("the layer name", task.getLayer().getResource().getName());
+    public void importLayer(File file) {
+        try {
+            ImportContext context = importer.createContext(new SpatialFile(file));
 
-        importer.run(context);
+            ImportTask task = context.getTasks().get(0);
+            // assertEquals(ImportTask.State.READY, task.getState());
+
+            // assertEquals("the layer name", task.getLayer().getResource().getName());
+
+            importer.run(context);
+        } catch (Exception e) {
+            LOGGER.warning("Issue while trying to publish the Layer through the Importer : " + e.getMessage());
+        }
     }
-    
+
     /**
      * Accessor for global geoserver instance from the test application context.
      */
