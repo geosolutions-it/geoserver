@@ -6,9 +6,7 @@ package org.geoserver.wps.remote.plugin;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +20,7 @@ import net.sf.json.JSONSerializer;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
+import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.StreamRawData;
 import org.geoserver.wps.process.StringRawData;
@@ -84,7 +82,7 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                                 final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
                                                 FileUtils.copyInputStreamToFile(((StreamRawData)value).getInputStream(), tempFile);
 
-                                                xmppClient.importLayer(tempFile);
+                                                xmppClient.importLayer(tempFile, null);
                                                 
                                                 // need to re-open the stream
                                                 value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(tempFile), ((StreamRawData) sample).getFileExtension());
@@ -96,20 +94,24 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                                 final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
                                                 FileUtils.copyFile(((FileRawData)value).getFile(), tempFile);
 
-                                                xmppClient.importLayer(tempFile);
+                                                xmppClient.importLayer(tempFile, null);
                                             }
                                         } else if (sample instanceof StringRawData) {
-                                            final String fileName = "wps-remote-str-rawdata_" + pID + "." + ((StringRawData) sample).getFileExtension();
-                                            value = new StringRawData((String) value, ((StringRawData) sample).getMimeType());
+                                            final String extension = ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[4]);
+                                            final String fileName = "wps-remote-str-rawdata_" + pID + extension;
+                                            final String content = FileUtils.readFileToString(new File((String) value));
+                                            value = new StringRawData(content, ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[3]).split(",")[0]);
                                             if (publish) {
                                                 final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
-                                                Writer outputFile = new FileWriter(tempFile);
-                                                IOUtils.write(((StringRawData)value).getData(), outputFile);
+                                                FileUtils.writeStringToFile(tempFile, ((StringRawData)value).getData());
                                                 
-                                                xmppClient.importLayer(tempFile);
+                                                String wsName = xmppClient.getGeoServer().getCatalog().getDefaultWorkspace().getName();
+                                                DataStoreInfo h2DataStore = xmppClient.createH2DataStore(wsName, FilenameUtils.getBaseName(fileName));
+                                                
+                                                xmppClient.importLayer(tempFile, h2DataStore);
                                             }
                                         }
-                                        outputs.put(result.getKey(), value);                                        
+                                        outputs.put(result.getKey(), value);
                                     }
                                 }
                             }

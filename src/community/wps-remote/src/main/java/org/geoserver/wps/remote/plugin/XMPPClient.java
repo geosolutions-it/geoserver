@@ -32,12 +32,16 @@ import net.razorvine.pickle.Pickler;
 import net.razorvine.pickle.Unpickler;
 
 import org.apache.commons.io.IOUtils;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.importer.ImportContext;
 import org.geoserver.importer.ImportTask;
 import org.geoserver.importer.Importer;
 import org.geoserver.importer.SpatialFile;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.RawData;
 import org.geoserver.wps.process.StreamRawData;
@@ -239,12 +243,19 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     /**
+     * Accessor for global geoserver instance from the test application context.
+     */
+    protected GeoServer getGeoServer() {
+        return (GeoServer) GeoServerExtensions.bean("geoServer");
+    }
+
+    /**
      * @param value
      * @throws IOException
      */
-    public void importLayer(File file) {
+    public void importLayer(File file, DataStoreInfo store) {
         try {
-            ImportContext context = importer.createContext(new SpatialFile(file));
+            ImportContext context = (store != null ? importer.createContext(new SpatialFile(file), store) : importer.createContext(new SpatialFile(file)));
 
             ImportTask task = context.getTasks().get(0);
             // assertEquals(ImportTask.State.READY, task.getState());
@@ -258,12 +269,35 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     /**
-     * Accessor for global geoserver instance from the test application context.
+     * 
+     * @param wsName
+     * @param dsName
+     * @return
      */
-    protected GeoServer getGeoServer() {
-        return (GeoServer) GeoServerExtensions.bean("geoServer");
-    }
+    public DataStoreInfo createH2DataStore(String wsName, String dsName) {
+        //create a datastore to import into
+        Catalog cat = getGeoServer().getCatalog();
 
+        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName) : cat.getDefaultWorkspace();
+        DataStoreInfo ds = cat.getFactory().createDataStore();
+        ds.setWorkspace(ws);
+        ds.setName(dsName);
+        ds.setType("H2");
+
+        GeoServerResourceLoader loader = cat.getResourceLoader();
+        final String dataDir = loader.getBaseDirectory().getAbsolutePath();
+        
+        Map params = new HashMap();
+        params.put("database", dataDir + "/" + dsName);
+        params.put("dbtype", "h2");
+        params.put("namespace", cat.getNamespaceByPrefix(ws.getName()).getURI());
+        ds.getConnectionParameters().putAll(params);
+        ds.setEnabled(true);
+        cat.add(ds);
+        
+        return ds;
+    }
+    
     /**
      * 
      * @param input
@@ -941,26 +975,21 @@ public class XMPPClient extends RemoteProcessClient {
 
         // Complex and Raw data types
         PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class, CType.COMPLEX,
-                new StringRawData("", "application/xml"), "application/xml,text/xml" });
+                new StringRawData("", "application/xml"), "application/xml,text/xml", ".xml" });
         PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class, CType.COMPLEX,
-                new StringRawData("", "text/xml"), "application/xml,text/xml" });
+                new StringRawData("", "text/xml"), "application/xml,text/xml", ".xml" });
 
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1", new Object[] { RawData.class,
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype", new Object[] { RawData.class,
                 CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"),
-                "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"),
-                "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
-        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"),
-                "application/gml-3.1.1,application/xml,text/xml; subtype=gml/3.1.1" });
-        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-2.1.2"),
-                "application/gml-2.1.2,application/xml,text/xml; subtype=gml/2.1.2" });
-
+                "application/xml,application/gml-3.1.1,application/gml-2.1.2,text/xml; subtype=gml/3.1.1,text/xml; subtype=gml/2.1.2", ".xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+                                
         PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { RawData.class,
                 CType.COMPLEX, new StringRawData("", "application/json"),
-                "application/json,text/plain" });
+                "application/json,text/plain", ".json" });
 
         PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX,
                 new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff" });
@@ -1021,7 +1050,7 @@ public class XMPPClient extends RemoteProcessClient {
         if (name.equalsIgnoreCase("complex") || name.equalsIgnoreCase("complex")) {
             // Is it a complex/raw data type?
             c = RawData.class;
-        } else {
+        } else if (PRIMITIVE_NAME_TYPE_MAP.get(name) != null) {
             // Check for a primitive type
             c = (Class) ((Object[]) PRIMITIVE_NAME_TYPE_MAP.get(name))[0];
         }
