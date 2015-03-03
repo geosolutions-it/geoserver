@@ -66,7 +66,7 @@ public class WCSNetCDFTest extends WCSTestSupport {
      * @throws Exception
      */
     @Test
-    public void testCoverageNames() throws Exception {
+    public void testOutputMemoryNotExceeded() throws Exception {
      // Setting of the output limit to 40 Kb
         setOutputLimit(40);
         // http response from the request inside the string

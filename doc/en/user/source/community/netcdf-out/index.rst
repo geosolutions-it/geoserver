@@ -19,9 +19,18 @@ Make sure to specify NetCDF as value of the format parameter within the getCover
 As an instance: 
 http://localhost:8080/geoserver/wcs?request=GetCoverage&service=WCS&version=2.0.1&coverageId=it.geosolutions__V&Format=application/x-netcdf...
 
+
 Current limitations
 -------------------
 
 * Only WGS84 output CRS is supported
 * Input coverages/slices should share the same bounding box (lon/lat coordinates are the same for the whole ND cube)
 * NetCDF output will be produced only when input coverages come from a StructuredGridCoverage2D reader (This will allows to query the GranuleSource to get the list of granules in order to setup dimensions slices for each sub-coverage)
+
+
+Supporting NetCDF4-Classic output file
+--------------------------------------
+Starting with version 2.8 of GeoServer, NetCDF4-Classic output is supported in addition to NetCDF-3.
+NetCDF4-Classic leverages on the simpler data model of NetCDF-3 by supporting the HDF5-based storage capabilities of NetCDF-4. 
+See :ref:`Installing required NetCDF-4 Native libraries <nc4>` for more info on that.
+
