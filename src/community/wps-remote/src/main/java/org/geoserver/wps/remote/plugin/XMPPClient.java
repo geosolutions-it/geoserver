@@ -4,7 +4,6 @@
  */
 package org.geoserver.wps.remote.plugin;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
@@ -32,16 +31,12 @@ import net.razorvine.pickle.Pickler;
 import net.razorvine.pickle.Unpickler;
 
 import org.apache.commons.io.IOUtils;
-import org.geoserver.catalog.Catalog;
-import org.geoserver.catalog.DataStoreInfo;
-import org.geoserver.catalog.WorkspaceInfo;
-import org.geoserver.config.GeoServer;
-import org.geoserver.importer.ImportContext;
-import org.geoserver.importer.ImportTask;
-import org.geoserver.importer.Importer;
-import org.geoserver.importer.SpatialFile;
+import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.Request;
+import org.geoserver.ows.URLMangler.URLType;
+import org.geoserver.ows.util.RequestUtils;
+import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.RawData;
 import org.geoserver.wps.process.StreamRawData;
@@ -138,8 +133,6 @@ public class XMPPClient extends RemoteProcessClient {
 
     protected MultiUserChat mucManagementChannel;
 
-    private Importer importer;
-
     /**
      * Default Constructor
      * 
@@ -164,8 +157,6 @@ public class XMPPClient extends RemoteProcessClient {
         for (int sc = 0; sc < serviceNamespaces.length; sc++) {
             this.serviceChannels.add(serviceNamespaces[sc].trim());
         }
-
-        this.importer = (Importer) GeoServerExtensions.bean("importer");
     }
 
     @Override
@@ -231,8 +222,13 @@ public class XMPPClient extends RemoteProcessClient {
             final String pid = md5Java(serviceJID + System.nanoTime()
                     + byteArrayToURLString(pickle(fixedInputs)));
 
+            Request request = Dispatcher.REQUEST.get();
+            metadata.put("request", request);
             String baseURL = getGeoServer().getGlobal().getSettings().getProxyBaseUrl();
-            String msg = "topic=request&id=" + pid + "&baseURL=" + baseURL + "&message="
+            if (baseURL == null) {
+                baseURL = RequestUtils.baseURL(request.getHttpRequest());
+            }
+            String msg = "topic=request&id=" + pid + "&baseURL=" + ResponseUtils.buildURL(baseURL, "/", null, URLType.SERVICE) + "&message="
                     + byteArrayToURLString(pickle(fixedInputs));
             sendMessage(serviceJID, msg);
 
@@ -242,62 +238,6 @@ public class XMPPClient extends RemoteProcessClient {
         return null;
     }
 
-    /**
-     * Accessor for global geoserver instance from the test application context.
-     */
-    protected GeoServer getGeoServer() {
-        return (GeoServer) GeoServerExtensions.bean("geoServer");
-    }
-
-    /**
-     * @param value
-     * @throws IOException
-     */
-    public void importLayer(File file, DataStoreInfo store) {
-        try {
-            ImportContext context = (store != null ? importer.createContext(new SpatialFile(file), store) : importer.createContext(new SpatialFile(file)));
-
-            ImportTask task = context.getTasks().get(0);
-            // assertEquals(ImportTask.State.READY, task.getState());
-
-            // assertEquals("the layer name", task.getLayer().getResource().getName());
-
-            importer.run(context);
-        } catch (Exception e) {
-            LOGGER.warning("Issue while trying to publish the Layer through the Importer : " + e.getMessage());
-        }
-    }
-
-    /**
-     * 
-     * @param wsName
-     * @param dsName
-     * @return
-     */
-    public DataStoreInfo createH2DataStore(String wsName, String dsName) {
-        //create a datastore to import into
-        Catalog cat = getGeoServer().getCatalog();
-
-        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName) : cat.getDefaultWorkspace();
-        DataStoreInfo ds = cat.getFactory().createDataStore();
-        ds.setWorkspace(ws);
-        ds.setName(dsName);
-        ds.setType("H2");
-
-        GeoServerResourceLoader loader = cat.getResourceLoader();
-        final String dataDir = loader.getBaseDirectory().getAbsolutePath();
-        
-        Map params = new HashMap();
-        params.put("database", dataDir + "/" + dsName);
-        params.put("dbtype", "h2");
-        params.put("namespace", cat.getNamespaceByPrefix(ws.getName()).getURI());
-        ds.getConnectionParameters().putAll(params);
-        ds.setEnabled(true);
-        cat.add(ds);
-        
-        return ds;
-    }
-    
     /**
      * 
      * @param input
@@ -958,51 +898,43 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     static {
-        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null,
-                "text/plain" });
-        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE,
-                Boolean.TRUE, "" });
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null,"text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE,Boolean.TRUE, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE, null, "" });
-        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null,
-                "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null, "text/plain" });
         PRIMITIVE_NAME_TYPE_MAP.put("short", new Object[] { Short.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("int", new Object[] { Integer.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("long", new Object[] { Long.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("float", new Object[] { Float.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("double", new Object[] { Double.TYPE, CType.SIMPLE, null, "" });
-        PRIMITIVE_NAME_TYPE_MAP
-                .put("datetime", new Object[] { Date.class, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("datetime", new Object[] { Date.class, CType.SIMPLE, null, "" });
 
         // Complex and Raw data types
-        PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class, CType.COMPLEX,
-                new StringRawData("", "application/xml"), "application/xml,text/xml", ".xml" });
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class, CType.COMPLEX,
-                new StringRawData("", "text/xml"), "application/xml,text/xml", ".xml" });
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/xml"), "application/xml,text/xml", ".xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "text/xml"), "application/xml,text/xml", ".xml" });
 
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"),
-                "application/xml,application/gml-3.1.1,application/gml-2.1.2,text/xml; subtype=gml/3.1.1,text/xml; subtype=gml/2.1.2", ".xml" });
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"), "application/xml,application/gml-3.1.1,application/gml-2.1.2,text/xml; subtype=gml/3.1.1,text/xml; subtype=gml/2.1.2", ".xml" });
         PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
         PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
         PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
         PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
                                 
-        PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { RawData.class,
-                CType.COMPLEX, new StringRawData("", "application/json"),
-                "application/json,text/plain", ".json" });
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain", ".json" });
 
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX,
-                new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff" });
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { RawData.class,
-                CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"),
-                "image/geotiff,image/tiff" });
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/owc", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain", ".json" });
 
-        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class,
-                CType.COMPLEX, new FileRawData(null, "application/x-netcdf", "nc"),
-                "application/x-netcdf" });
-        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class,
-                CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"),
-                "application/x-netcdf" });
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX, new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff", ".tif" });
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"), "image/geotiff,image/tiff", ".tif" });
+
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class, CType.COMPLEX, new FileRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf", ".nc" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"), "application/x-netcdf", ".nc" });
     }
 
     /**

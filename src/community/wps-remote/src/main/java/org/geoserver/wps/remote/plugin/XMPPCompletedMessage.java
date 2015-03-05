@@ -4,8 +4,6 @@
  */
 package org.geoserver.wps.remote.plugin;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.HashMap;
@@ -18,13 +16,8 @@ import net.razorvine.pickle.PickleException;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.geoserver.catalog.DataStoreInfo;
-import org.geoserver.wps.process.FileRawData;
-import org.geoserver.wps.process.StreamRawData;
-import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.remote.RemoteProcessClientListener;
+import org.geoserver.wps.remote.plugin.output.XMPPOutputDefaultProducer;
 import org.geotools.util.logging.Logging;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
@@ -52,78 +45,45 @@ public class XMPPCompletedMessage implements XMPPMessage {
             Map<String, String> signalArgs) {
 
         final String pID = signalArgs.get("id");
-        final String type = signalArgs.get("message");
-        final Boolean publish = (signalArgs.get("publish_as_layer") != null ? Boolean.valueOf(signalArgs.get("publish_as_layer")) : false);
+        final String msg = signalArgs.get("message");
+        final String baseURL = signalArgs.get("baseURL");
+        final XMPPOutputDefaultProducer outputProducer = new XMPPOutputDefaultProducer();
 
         // NOTIFY THE LISTENERS
-        if (type != null && !type.isEmpty()) {
+        if (msg != null && msg.equals("completed")) {
             Map<String, Object> outputs = new HashMap<String, Object>();
             try {
                 for (Entry<String, String> result : signalArgs.entrySet()) {
                     if (result.getKey().startsWith("result")) {
-                        String serviceResultString = URLDecoder.decode(result.getValue(),
-                                "UTF-8");
-                        JSONObject serviceResultJSON = (JSONObject) JSONSerializer
-                                .toJSON(serviceResultString);
+                        String serviceResultString = URLDecoder.decode(result.getValue(), "UTF-8");
+                        JSONObject serviceResultJSON = (JSONObject) JSONSerializer.toJSON(serviceResultString);
                         Object output = xmppClient.unPickle(xmppClient.pickle(serviceResultJSON));
-                        if (!"textual".equals(type) && output instanceof Map) {
-                            for (Entry<String, Object> entry : ((Map<String, Object>) output)
-                                    .entrySet()) {
-                                Object value = entry.getValue();
-                                if (value != null && value instanceof String
-                                        && !((String) value).isEmpty()) {
-                                    if (XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type) != null) {
-                                        Object sample = ((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[2];
-                                        
-                                        if (sample instanceof StreamRawData) {
-                                            final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((StreamRawData) sample).getFileExtension();
-                                            value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(((String) value)), ((StreamRawData) sample).getFileExtension());
-                                            if (publish) {
-                                                final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
-                                                FileUtils.copyInputStreamToFile(((StreamRawData)value).getInputStream(), tempFile);
+                        
+                        // XMPP Output Visitor
+                        if (output instanceof Map) {
+                            Map<String, Object> resultParams = (Map<String, Object>) output;
+                            // transform the textual value into a real WPS output
+                            try {
+                                final Object value    = (resultParams.get(result.getKey()+"_value") != null ? resultParams.get(result.getKey()+"_value") : null);
+                                final String type     = (String) (resultParams.get(result.getKey()+"_type") != null ? resultParams.get(result.getKey()+"_type") : null);
+                                final Boolean publish = (resultParams.get(result.getKey()+"_pub") != null && resultParams.get(result.getKey()+"_pub") instanceof String ? Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub")) : false);
+                                
+                                Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish);
 
-                                                xmppClient.importLayer(tempFile, null);
-                                                
-                                                // need to re-open the stream
-                                                value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(tempFile), ((StreamRawData) sample).getFileExtension());
-                                            }
-                                        } else if (sample instanceof FileRawData) {
-                                            final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((FileRawData) sample).getFileExtension();
-                                            value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
-                                            if (publish) {
-                                                final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
-                                                FileUtils.copyFile(((FileRawData)value).getFile(), tempFile);
-
-                                                xmppClient.importLayer(tempFile, null);
-                                            }
-                                        } else if (sample instanceof StringRawData) {
-                                            final String extension = ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[4]);
-                                            final String fileName = "wps-remote-str-rawdata_" + pID + extension;
-                                            final String content = FileUtils.readFileToString(new File((String) value));
-                                            value = new StringRawData(content, ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[3]).split(",")[0]);
-                                            if (publish) {
-                                                final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
-                                                FileUtils.writeStringToFile(tempFile, ((StringRawData)value).getData());
-                                                
-                                                String wsName = xmppClient.getGeoServer().getCatalog().getDefaultWorkspace().getName();
-                                                DataStoreInfo h2DataStore = xmppClient.createH2DataStore(wsName, FilenameUtils.getBaseName(fileName));
-                                                
-                                                xmppClient.importLayer(tempFile, h2DataStore);
-                                            }
-                                        }
-                                        outputs.put(result.getKey(), value);
-                                    }
+                                // add the transformed result to the process outputs
+                                if (wpsOutputValue != null) {
+                                    outputs.put(result.getKey(), wpsOutputValue);
+                                } else {
+                                    throw new Exception("All the Oputput Producres failed transforming the WPS Output!");
                                 }
+                            } catch (Exception e) {
+                                LOGGER.log(Level.SEVERE, "Exception occurred while trying to produce the result:", e);
                             }
-                        }
-                        else if (output instanceof Map){
-                            outputs.putAll((Map<String, Object>) output);
                         }
                     }
                 }
                 
-                for (RemoteProcessClientListener listener : xmppClient
-                        .getRemoteClientListeners()) {
+                for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
                     listener.complete(pID, outputs);
                 }
             } catch (PickleException e) {

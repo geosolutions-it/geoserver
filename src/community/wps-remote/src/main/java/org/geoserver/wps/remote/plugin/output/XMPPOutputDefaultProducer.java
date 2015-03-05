@@ -1,0 +1,58 @@
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
+package org.geoserver.wps.remote.plugin.output;
+
+import org.geoserver.wps.remote.plugin.XMPPClient;
+
+/**
+ * @author Alessio
+ * 
+ */
+public class XMPPOutputDefaultProducer {
+
+    /**
+     * 
+     */
+    private final XMPPOutputVisitor visitor;
+
+    /**
+     * 
+     */
+    public static final XMPPOutputType[] outputProducers = { new XMPPTextualOutput(), new XMPPRawDataOutput() };
+
+    /**
+     * 
+     */
+    public XMPPOutputDefaultProducer() {
+        this.visitor = new XMPPOutputDefaultVisitor();
+    }
+
+    /**
+     * 
+     * @param outputs
+     * @param value
+     * @param type
+     * @param pID
+     * @param baseURL 
+     * @param xmppClient
+     * @param publish
+     * @return 
+     * @throws Exception 
+     */
+    public Object produceOutput(Object value, String type, String pID,
+            String baseURL, XMPPClient xmppClient, boolean publish) throws Exception {
+        
+        Object wpsOutputValue = null;
+        
+        for (XMPPOutputType outputProducer : outputProducers) {
+            wpsOutputValue = outputProducer.accept(this.visitor, value, type, pID, baseURL, xmppClient, publish);
+            if (wpsOutputValue != null) {
+                break;
+            }
+        }
+        
+        return wpsOutputValue;
+    }
+}

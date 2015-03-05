@@ -4,13 +4,27 @@
  */
 package org.geoserver.wps.remote;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.ssl.SSLContext;
 
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.config.GeoServer;
+import org.geoserver.importer.ImportContext;
+import org.geoserver.importer.ImportTask;
+import org.geoserver.importer.Importer;
+import org.geoserver.importer.SpatialFile;
+import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerResourceLoader;
 import org.opengis.feature.type.Name;
 import org.opengis.util.ProgressListener;
 import org.springframework.beans.factory.DisposableBean;
@@ -166,5 +180,78 @@ public abstract class RemoteProcessClient implements DisposableBean {
      */
     public abstract String execute(Name name, Map<String, Object> input,
             Map<String, Object> metadata, ProgressListener monitor) throws Exception;
+    
+    
+    /**
+     * Accessor for global geoserver instance from the test application context.
+     */
+    public GeoServer getGeoServer() {
+        return (GeoServer) GeoServerExtensions.bean("geoServer");
+    }
+
+    /**
+     * Accessor for global geoserver instance from the test application context.
+     */
+    public Importer getImporter() {
+        return (Importer) GeoServerExtensions.bean("importer");
+    }
+
+    /**
+     * 
+     * @param wsName
+     * @param dsName
+     * @return
+     */
+    public DataStoreInfo createH2DataStore(String wsName, String dsName) {
+        //create a datastore to import into
+        Catalog cat = getGeoServer().getCatalog();
+
+        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName) : cat.getDefaultWorkspace();
+        DataStoreInfo ds = cat.getFactory().createDataStore();
+        ds.setWorkspace(ws);
+        ds.setName(dsName);
+        ds.setType("H2");
+
+        GeoServerResourceLoader loader = cat.getResourceLoader();
+        final String dataDir = loader.getBaseDirectory().getAbsolutePath();
+        
+        Map params = new HashMap();
+        params.put("database", dataDir + "/" + dsName);
+        params.put("dbtype", "h2");
+        params.put("namespace", cat.getNamespaceByPrefix(ws.getName()).getURI());
+        ds.getConnectionParameters().putAll(params);
+        ds.setEnabled(true);
+        cat.add(ds);
+        
+        return ds;
+    }
+    
+    /**
+     * @param value
+     * @return 
+     * @throws IOException
+     */
+    public LayerInfo importLayer(File file, DataStoreInfo store) throws Exception {
+        Importer importer = getImporter();
+        
+        ImportContext context = (store != null ? importer.createContext(new SpatialFile(file), store) : importer.createContext(new SpatialFile(file)));
+
+        importer.run(context);
+        
+        if(context.getState() == ImportContext.State.COMPLETE) {
+            if (context.getTasks() != null && context.getTasks().size() > 0) {
+                //ImportTask task = context.getTasks().get(0);
+                // assertEquals(ImportTask.State.READY, task.getState());
+
+                // assertEquals("the layer name", task.getLayer().getResource().getName());
+
+                ImportTask task = context.getTasks().get(0);
+                
+                return task.getLayer();
+            }
+        }
+        
+        return null;
+    }
 
 }
