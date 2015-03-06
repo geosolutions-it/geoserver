@@ -53,6 +53,8 @@ import ucar.nc2.Dimension;
 import ucar.nc2.NetcdfFileWriter;
 import ucar.nc2.NetcdfFileWriter.Version;
 import ucar.nc2.Variable;
+import ucar.nc2.write.Nc4Chunking;
+import ucar.nc2.write.Nc4ChunkingDefault;
 
 /**
  * A class which takes care of initializing NetCDF dimension from coverages dimension, variables, values for the NetCDF output file
@@ -63,7 +65,17 @@ import ucar.nc2.Variable;
  */
 public class NetCDFOutputManager {
 
+    public static final String NETCDF_VERSION_KEY = "NetCDFVersion";
+
+    public static final String NETCDF_COMPRESSION_LEVEL_KEY = "CompressionLevel";
+
+    public static final String NETCDF_SHUFFLE_KEY = "Chunking";
+
     public static final Logger LOGGER = Logging.getLogger("org.geoserver.wcs.responses.NetCDFFileManager");
+
+    public static final int DEFAULT_LEVEL = 5;
+
+    public static final boolean DEFAULT_SHUFFLE = true;
 
     /** 
      * A dimension mapping between dimension names and dimension manager instances
@@ -91,9 +103,79 @@ public class NetCDFOutputManager {
      * @throws IOException
      */
     public NetCDFOutputManager(final GranuleStack granuleStack, final File file) throws IOException {
+       this(granuleStack, file, null, null);
+    }
+
+    /**
+     * {@link NetCDFOutputManager} constructor.
+     * @param granuleStack the granule stack to be written
+     * @param file an output file
+     * @param encodingParameters customized encoding params
+     * @throws IOException
+     */
+
+    public NetCDFOutputManager(GranuleStack granuleStack, File file,
+            Map<String, String> encodingParameters, String outputFormat) throws IOException {
         this.granuleStack = granuleStack;
-        this.writer = NetcdfFileWriter.createNew(Version.netcdf3, file.getAbsolutePath());
+        this.writer = getWriter(file, encodingParameters, outputFormat);
         initialize();
+    }
+
+    private NetcdfFileWriter getWriter(File file, Map<String, String> encodingParameters, String outputFormat) throws IOException {
+        if (outputFormat == null || outputFormat.equalsIgnoreCase(NetCDFUtilities.NETCDF3_MIMETYPE) 
+                || encodingParameters == null || encodingParameters.isEmpty()) {
+            return NetcdfFileWriter.createNew(Version.netcdf3, file.getAbsolutePath());
+
+        } else {
+            //TODO properly parse encoding parameters
+            return getCustomWriter(file, outputFormat, encodingParameters);
+        }
+    }
+
+    private NetcdfFileWriter getCustomWriter(File file, String outputFormat,
+            Map<String, String> encodingParameters) throws IOException {
+        NetcdfFileWriter writer = null;
+        Version version = null;
+        if (NetCDFUtilities.NETCDF3_MIMETYPE.equalsIgnoreCase(outputFormat)) {
+            version = Version.netcdf3;
+        } else if (NetCDFUtilities.NETCDF4_MIMETYPE.equalsIgnoreCase(outputFormat)) {
+            version = Version.netcdf4_classic;
+        }
+        if (version == null && encodingParameters.containsKey(NETCDF_VERSION_KEY)) {
+            String versionS = encodingParameters.get(NETCDF_VERSION_KEY);
+            version = NetCDFUtilities.NETCDF_4C.equalsIgnoreCase(versionS) ? Version.netcdf4_classic
+                    : Version.netcdf3;
+        }
+        if (version == Version.netcdf4_classic) {
+            if (!NetCDFUtilities.isNC4CAvailable()) {
+                throw new IOException(NetCDFUtilities.NC4_ERROR_MESSAGE);
+            }
+            Nc4Chunking chunker = null;
+            int level = DEFAULT_LEVEL;
+            if (encodingParameters.containsKey(NETCDF_COMPRESSION_LEVEL_KEY)) {
+                String levelS = encodingParameters.get(NETCDF_COMPRESSION_LEVEL_KEY);
+                if (levelS != null && !levelS.isEmpty()) {
+                    level = Integer.parseInt(levelS);
+                    if (level < 0 && level > 9) {
+                        if (LOGGER.isLoggable(Level.WARNING)) {
+                            LOGGER.warning("NetCDF 4 compression Level not in the proper range [0, 9]: "
+                                    + level + "\nProceeding with default value: " + DEFAULT_LEVEL);
+                        }
+                    }
+                }
+            }
+            boolean shuffle = DEFAULT_SHUFFLE;
+            if (encodingParameters.containsKey(NETCDF_SHUFFLE_KEY)) {
+                String shuffleS = encodingParameters.get(NETCDF_SHUFFLE_KEY);
+                if (shuffleS != null && !shuffleS.isEmpty()) {
+                    shuffle = Boolean.parseBoolean(shuffleS);
+                }
+            }
+            chunker = new Nc4ChunkingDefault(level, shuffle);
+            writer = NetcdfFileWriter.createNew(version, file.getAbsolutePath(), chunker);
+        }
+
+        return writer != null ? writer : NetcdfFileWriter.createNew(Version.netcdf3, file.getAbsolutePath());
     }
 
     /**
