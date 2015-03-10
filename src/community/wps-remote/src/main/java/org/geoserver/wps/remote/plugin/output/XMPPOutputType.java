@@ -26,7 +26,7 @@ public interface XMPPOutputType {
      * @return 
      * @throws Exception 
      */
-    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish) throws Exception;
+    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception;
     
     /**
      * 
@@ -38,5 +38,5 @@ public interface XMPPOutputType {
      * @param publish
      * @throws Exception 
      */
-    public Object produceOutput(Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish) throws Exception;
+    public Object produceOutput(Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception;
 }

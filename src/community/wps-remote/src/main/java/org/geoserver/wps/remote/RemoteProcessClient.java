@@ -17,6 +17,7 @@ import javax.net.ssl.SSLContext;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.importer.ImportContext;
@@ -180,8 +181,7 @@ public abstract class RemoteProcessClient implements DisposableBean {
      */
     public abstract String execute(Name name, Map<String, Object> input,
             Map<String, Object> metadata, ProgressListener monitor) throws Exception;
-    
-    
+
     /**
      * Accessor for global geoserver instance from the test application context.
      */
@@ -203,10 +203,11 @@ public abstract class RemoteProcessClient implements DisposableBean {
      * @return
      */
     public DataStoreInfo createH2DataStore(String wsName, String dsName) {
-        //create a datastore to import into
+        // create a datastore to import into
         Catalog cat = getGeoServer().getCatalog();
 
-        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName) : cat.getDefaultWorkspace();
+        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName) : cat
+                .getDefaultWorkspace();
         DataStoreInfo ds = cat.getFactory().createDataStore();
         ds.setWorkspace(ws);
         ds.setName(dsName);
@@ -214,7 +215,7 @@ public abstract class RemoteProcessClient implements DisposableBean {
 
         GeoServerResourceLoader loader = cat.getResourceLoader();
         final String dataDir = loader.getBaseDirectory().getAbsolutePath();
-        
+
         Map params = new HashMap();
         params.put("database", dataDir + "/" + dsName);
         params.put("dbtype", "h2");
@@ -222,39 +223,60 @@ public abstract class RemoteProcessClient implements DisposableBean {
         ds.getConnectionParameters().putAll(params);
         ds.setEnabled(true);
         cat.add(ds);
-        
+
         return ds;
     }
-    
+
     /**
      * @param value
-     * @return 
+     * @return
      * @throws IOException
      */
-    public LayerInfo importLayer(File file, DataStoreInfo store) throws Exception {
+    public LayerInfo importLayer(File file, DataStoreInfo store, String defaultStyle,
+            String targetWorkspace) throws Exception {
         Importer importer = getImporter();
-        
-        ImportContext context = (store != null ? importer.createContext(new SpatialFile(file), store) : importer.createContext(new SpatialFile(file)));
-        
-        //ImportTask task = context.getTasks().get(0);
-        //context.setTargetWorkspace(targetWorkspace);
-        //task.getLayer().setDefaultStyle(defaultStyle);
 
-        importer.run(context);
-        
-        if(context.getState() == ImportContext.State.COMPLETE) {
-            if (context.getTasks() != null && context.getTasks().size() > 0) {
-                //ImportTask task = context.getTasks().get(0);
-                // assertEquals(ImportTask.State.READY, task.getState());
+        ImportContext context = (store != null ? importer.createContext(new SpatialFile(file),
+                store) : importer.createContext(new SpatialFile(file)));
 
-                // assertEquals("the layer name", task.getLayer().getResource().getName());
+        if (context.getTasks() != null && context.getTasks().size() > 0) {
+            ImportTask task = context.getTasks().get(0);
 
-                ImportTask task = context.getTasks().get(0);
+            if (targetWorkspace != null) {
+                WorkspaceInfo ws = importer.getCatalog().getWorkspaceByName(targetWorkspace);
+                if (ws != null) {
+                    context.setTargetWorkspace(ws);
+                } else {
+                    context.setTargetWorkspace(importer.getCatalog().getDefaultWorkspace());
+                }
+            }
+            
+            if (defaultStyle != null) {
+                StyleInfo style = importer.getCatalog().getStyleByName(defaultStyle);
+                if (style == null && targetWorkspace != null) {
+                    style = importer.getCatalog().getStyleByName(targetWorkspace, defaultStyle);
+                }
                 
-                return task.getLayer();
+                if (style != null) {
+                    task.getLayer().setDefaultStyle(style);
+                }
+            }
+
+            importer.run(context);
+
+            if (context.getState() == ImportContext.State.COMPLETE) {
+                if (context.getTasks() != null && context.getTasks().size() > 0) {
+                    // ImportTask task = context.getTasks().get(0);
+                    // assertEquals(ImportTask.State.READY, task.getState());
+
+                    // assertEquals("the layer name", task.getLayer().getResource().getName());
+
+                    task = context.getTasks().get(0);
+
+                    return task.getLayer();
+                }
             }
         }
-        
         return null;
     }
 

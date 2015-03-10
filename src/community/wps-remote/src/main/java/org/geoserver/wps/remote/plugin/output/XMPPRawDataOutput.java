@@ -54,13 +54,13 @@ public class XMPPRawDataOutput implements XMPPOutputType {
     public static final Logger LOGGER = Logging.getLogger(XMPPRawDataOutput.class.getPackage().getName());
 
     @Override
-    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish) throws Exception {
-        return visitor.visit(this, value, type, pID, baseURL, xmppClient, publish);
+    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
+        return visitor.visit(this, value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
     }
 
     @Override
     public Object produceOutput(Object value, String type, String pID, String baseURL,
-            XMPPClient xmppClient, boolean publish) throws Exception {
+            XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
             if (XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type) != null) {
                 Object sample = ((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[2];
                 
@@ -72,7 +72,7 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                         FileUtils.copyInputStreamToFile(((StreamRawData)value).getInputStream(), tempFile);
 
                         try {
-                            xmppClient.importLayer(tempFile, null);
+                            xmppClient.importLayer(tempFile, null, defaultStyle, targetWorkspace);
                         } catch (Exception e) {
                             LOGGER.log(Level.WARNING, "There was an issue while trying to automatically publish the Layer into the Catalog!", e);
                         }
@@ -90,7 +90,7 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                         FileUtils.copyFile(((FileRawData)value).getFile(), tempFile);
 
                         try {
-                            xmppClient.importLayer(tempFile, null);
+                            xmppClient.importLayer(tempFile, null, defaultStyle, targetWorkspace);
                         } catch (Exception e) {
                             LOGGER.log(Level.WARNING, "There was an issue while trying to automatically publish the Layer into the Catalog!", e);
                         }
@@ -99,9 +99,9 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                     return value;
                 } else if (sample instanceof StringRawData) {
                     if (type.equals("application/owc")) {
-                        value = encodeAsPlainOWCMapContext(value, type, pID, baseURL, xmppClient, publish);
+                        value = encodeAsPlainOWCMapContext(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
                     } else {
-                        value = encodeAsPlainRawSting(value, type, pID, baseURL, xmppClient, publish);                        
+                        value = encodeAsPlainRawSting(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);                        
                     }
                     
                     return value;
@@ -122,7 +122,7 @@ public class XMPPRawDataOutput implements XMPPOutputType {
      * @throws IOException
      */
     private Object encodeAsPlainRawSting(Object value, String type, String pID,
-            String baseURL, XMPPClient xmppClient, boolean publish) throws IOException {
+            String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws IOException {
         final String extension = ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[4]);
         final String fileName = "wps-remote-str-rawdata_" + pID + extension;
         final String content = FileUtils.readFileToString(new File((String) value));
@@ -135,7 +135,7 @@ public class XMPPRawDataOutput implements XMPPOutputType {
             DataStoreInfo h2DataStore = xmppClient.createH2DataStore(wsName, FilenameUtils.getBaseName(fileName));
             
             try {
-                xmppClient.importLayer(tempFile, h2DataStore);
+                xmppClient.importLayer(tempFile, h2DataStore, defaultStyle, targetWorkspace);
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "There was an issue while trying to automatically publish the Layer into the Catalog!", e);
             }
@@ -154,13 +154,16 @@ public class XMPPRawDataOutput implements XMPPOutputType {
      * @throws IOException
      */
     private Object encodeAsPlainOWCMapContext(Object value, String type, String pID,
-            String baseURL, XMPPClient xmppClient, boolean publish) throws IOException {
+            String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws IOException {
         String[] filesToPublish = ((String) value).split(";");
+        String[] styles = (defaultStyle != null ? defaultStyle.split(";") : null);
+        String[] workspaces = (targetWorkspace != null ? targetWorkspace.split(";") : null);
         
         List<LayerInfo> wmc = new ArrayList<LayerInfo>();
         
         if (filesToPublish != null && filesToPublish.length > 0) {
-            for (String filePath : filesToPublish) {
+            for (int fi = 0; fi < filesToPublish.length; fi++) {
+                String filePath = filesToPublish[fi];
                 try {
                     final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + FilenameUtils.getExtension(filePath);
                     final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
@@ -173,7 +176,7 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                         h2DataStore = xmppClient.createH2DataStore(wsName, FilenameUtils.getBaseName(fileName));
                     }
                     
-                    LayerInfo layerInfo = xmppClient.importLayer(tempFile, h2DataStore);
+                    LayerInfo layerInfo = xmppClient.importLayer(tempFile, h2DataStore, (styles != null ? styles[fi] : null), (workspaces != null ? workspaces[fi] : null));
                     
                     if (layerInfo != null) {
                         wmc.add(layerInfo);

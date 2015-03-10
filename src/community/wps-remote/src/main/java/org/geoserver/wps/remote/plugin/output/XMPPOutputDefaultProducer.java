@@ -42,12 +42,12 @@ public class XMPPOutputDefaultProducer {
      * @throws Exception 
      */
     public Object produceOutput(Object value, String type, String pID,
-            String baseURL, XMPPClient xmppClient, boolean publish) throws Exception {
+            String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
         
         Object wpsOutputValue = null;
         
         for (XMPPOutputType outputProducer : outputProducers) {
-            wpsOutputValue = outputProducer.accept(this.visitor, value, type, pID, baseURL, xmppClient, publish);
+            wpsOutputValue = outputProducer.accept(this.visitor, value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
             if (wpsOutputValue != null) {
                 break;
             }

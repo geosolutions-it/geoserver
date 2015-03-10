@@ -19,13 +19,13 @@ public class XMPPTextualOutput implements XMPPOutputType {
     public static final Logger LOGGER = Logging.getLogger(XMPPTextualOutput.class.getPackage().getName());
     
     @Override
-    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish) throws Exception {
-        return visitor.visit(this, value, type, pID, baseURL, xmppClient, publish);
+    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
+        return visitor.visit(this, value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
     }
 
     @Override
     public Object produceOutput(Object value, String type, String pID, String baseURL,
-            XMPPClient xmppClient, boolean publish) throws Exception {
+            XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
         //Do nothing. The output cannot published neither.
         LOGGER.fine("Do nothing. The output cannot published neither.");
         

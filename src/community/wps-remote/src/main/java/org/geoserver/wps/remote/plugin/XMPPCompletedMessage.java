@@ -64,11 +64,13 @@ public class XMPPCompletedMessage implements XMPPMessage {
                             Map<String, Object> resultParams = (Map<String, Object>) output;
                             // transform the textual value into a real WPS output
                             try {
-                                final Object value    = (resultParams.get(result.getKey()+"_value") != null ? resultParams.get(result.getKey()+"_value") : null);
-                                final String type     = (String) (resultParams.get(result.getKey()+"_type") != null ? resultParams.get(result.getKey()+"_type") : null);
-                                final Boolean publish = (resultParams.get(result.getKey()+"_pub") != null && resultParams.get(result.getKey()+"_pub") instanceof String ? Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub")) : false);
+                                final Object value              = (resultParams.get(result.getKey()+"_value") != null ? resultParams.get(result.getKey()+"_value") : null);
+                                final String type               = (String) (resultParams.get(result.getKey()+"_type") != null ? resultParams.get(result.getKey()+"_type") : null);
+                                final Boolean publish           = (resultParams.get(result.getKey()+"_pub") != null && resultParams.get(result.getKey()+"_pub") instanceof String ? Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub")) : false);
+                                final String defaultStyle       = (String) (resultParams.get(result.getKey()+"_style") != null ? resultParams.get(result.getKey()+"_style") : null);
+                                final String targetWorkspace    = (String) (resultParams.get(result.getKey()+"_workspace") != null ? resultParams.get(result.getKey()+"_workspace") : null);
                                 
-                                Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish);
+                                Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
 
                                 // add the transformed result to the process outputs
                                 if (wpsOutputValue != null) {

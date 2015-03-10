@@ -14,9 +14,9 @@ public class XMPPOutputDefaultVisitor implements XMPPOutputVisitor {
 
     @Override
     public Object visit(XMPPTextualOutput visitor, Object value, String type, String pID, String baseURL,
-            XMPPClient xmppClient, boolean publish) throws Exception {
+            XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
         if (type.equals("textual")) {
-            return visitor.produceOutput(value, type, pID, baseURL, xmppClient, publish);
+            return visitor.produceOutput(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
         }
 
         return null;
@@ -24,9 +24,9 @@ public class XMPPOutputDefaultVisitor implements XMPPOutputVisitor {
 
     @Override
     public Object visit(XMPPRawDataOutput visitor, Object value, String type, String pID, String baseURL,
-            XMPPClient xmppClient, boolean publish) throws Exception {
+            XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace) throws Exception {
         if (value != null && value instanceof String && !((String) value).isEmpty()) {
-            return visitor.produceOutput(value, type, pID, baseURL, xmppClient, publish);
+            return visitor.produceOutput(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
         }
 
         return null;
