@@ -235,6 +235,10 @@ public abstract class RemoteProcessClient implements DisposableBean {
         Importer importer = getImporter();
         
         ImportContext context = (store != null ? importer.createContext(new SpatialFile(file), store) : importer.createContext(new SpatialFile(file)));
+        
+        //ImportTask task = context.getTasks().get(0);
+        //context.setTargetWorkspace(targetWorkspace);
+        //task.getLayer().setDefaultStyle(defaultStyle);
 
         importer.run(context);
         

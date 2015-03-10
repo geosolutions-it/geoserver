@@ -264,13 +264,13 @@ public class XMPPRawDataOutput implements XMPPOutputType {
         ft.setBbox(bboxToString(layer.getResource().getNativeBoundingBox()));
         ft.setLatLonBbox(bboxToString(layer.getResource().getLatLonBoundingBox()));
         
-        ft.setGeometryCoords(bboxToJSON(layer.getResource().getNativeBoundingBox()));
+        ft.setGeometryCoords(bboxToJSON(layer.getResource().getLatLonBoundingBox()));
         
         NamespaceInfo namespace = catalog.getNamespace(layer.getResource().getNamespace().getId());
         WorkspaceInfo workspace = catalog.getWorkspaceByName(namespace.getPrefix());
         ft.setWorkspace(workspace.getName());
         
-        SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-DD'T'HH:mm:ss'Z'");
+        SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-dd'T'HH:mm:ss'Z'");
         sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
         ft.setLastUpdated(sdf.format(new Date()));
         
