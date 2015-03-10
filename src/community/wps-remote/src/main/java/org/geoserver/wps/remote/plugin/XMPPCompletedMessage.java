@@ -67,8 +67,8 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                 final Object value              = (resultParams.get(result.getKey()+"_value") != null ? resultParams.get(result.getKey()+"_value") : null);
                                 final String type               = (String) (resultParams.get(result.getKey()+"_type") != null ? resultParams.get(result.getKey()+"_type") : null);
                                 final Boolean publish           = (resultParams.get(result.getKey()+"_pub") != null && resultParams.get(result.getKey()+"_pub") instanceof String ? Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub")) : false);
-                                final String defaultStyle       = (String) (resultParams.get(result.getKey()+"_style") != null ? resultParams.get(result.getKey()+"_style") : null);
-                                final String targetWorkspace    = (String) (resultParams.get(result.getKey()+"_workspace") != null ? resultParams.get(result.getKey()+"_workspace") : null);
+                                final String defaultStyle       = (resultParams.get(result.getKey()+"_style") != null && resultParams.get(result.getKey()+"_style") instanceof String ? (String) resultParams.get(result.getKey()+"_style") : null);
+                                final String targetWorkspace    = (resultParams.get(result.getKey()+"_workspace") != null && resultParams.get(result.getKey()+"_workspace") instanceof String ? (String) resultParams.get(result.getKey()+"_workspace") : null);
                                 
                                 Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
 

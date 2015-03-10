@@ -55,6 +55,7 @@ import org.jivesoftware.smack.PacketCollector;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.SmackConfiguration;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.NotConnectedException;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
@@ -742,6 +743,37 @@ public class XMPPClient extends RemoteProcessClient {
                         }
                     } catch (NotConnectedException e) {
                         LOGGER.log(Level.SEVERE, e.getMessage(), e);
+                    }
+                } else {
+                    // Try to reconnect...
+                    LOGGER.log(Level.FINER, "Try to reconnect...");
+                    try {
+                        connection.connect();
+                        
+                        LOGGER.info("Connected: " + connection.isConnected());
+
+                        // check if the connection to the XMPP server is successful; the login and registration is not yet performed at this time
+                        if (connection.isConnected()) {
+                            chatManager = ChatManager.getInstanceFor(connection);
+                            discoStu = ServiceDiscoveryManager.getInstanceFor(connection);
+
+                            //
+                            discoProperties();
+
+                            //
+                            performLogin(getConfiguration().get("xmpp_manager_username"),
+                                    getConfiguration().get("xmpp_manager_password"));
+
+                            //
+                            startPingTask();
+
+                            //
+                            sendInvitations();
+                        } else {
+                            setEnabled(false);
+                        }
+                    } catch (Exception e) {
+                        LOGGER.log(Level.WARNING, "XMPP Could not reconnect!", e);
                     }
                 }
                 try {
