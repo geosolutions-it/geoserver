@@ -28,13 +28,11 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
 
 import org.geoserver.gs.mapstoreconfig.components.GeoserverTemplateDirLoader;
-import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
 import org.geoserver.gs.mapstoreconfig.ftl.model.MapTemplateModel;
 import org.geoserver.wps.gs.GeoServerProcess;
 import org.geotools.process.factory.DescribeParameter;
@@ -87,6 +85,7 @@ public class MapstoreConfigProcess  implements GeoServerProcess {
 
     @DescribeResult(name = "JSON MapStore configuration file", description = "output result", type=String.class)
     public String execute(
+            @DescribeParameter(name = "metoc", min=0, description="List of Metocs used by the RiskMap") String metoc,
             @DescribeParameter(name = "layerDescriptor", min=1, description="An xml document that provides a description of a set of layers") String layerDescriptor) throws IOException {
         
         //Manage the layerDescriptor and produce the value to substitute in the FTL template

@@ -59,7 +59,7 @@ public class MapstoreConfigTest extends WPSTestSupport {
                 .getCatalog());
         mapstoreProcess.setLayerDescriptorManager(ldm);
         mapstoreProcess.setTemplateDirLoader(new TestTemplateDirLoader());
-        LOGGER.info(mapstoreProcess.execute(getLayerDescriptor()));
+        LOGGER.info(mapstoreProcess.execute(null, getLayerDescriptor()));
     }
 
     private String getLayerDescriptor() throws FileNotFoundException, IOException {
