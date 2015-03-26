@@ -119,6 +119,31 @@
        "llbbox": [${layer.timeDimensions.minX},${layer.timeDimensions.minY},${layer.timeDimensions.maxX},${layer.timeDimensions.maxY}]
       }<#if layer_has_next>,</#if>
       </#list>
+      <#list map.metocs as metoc>
+      {
+        "format": "image/png", 
+        "name": "${metoc.owsResourceIdentifier}", 
+        "opacity": 1, 
+        "selected": false, 
+        "source": "${metoc.sourceId}_${(metoc_index+1)}", 
+        "styles": "", 
+        "title": "${metoc.title}", 
+        "transparent": true, 
+        "visibility": true,
+        "queryable": true,
+        "dimensions":{
+            "time":{
+                "name":"time",
+                "units":"ISO8601",
+                "unitsymbol":"",
+                "nearestVal":false,
+                "multipleVal":false,
+                "current":false,
+                "default":""
+          	}
+        }
+      }<#if metoc_has_next>,</#if>
+      </#list>
       <#list map.rawData as raw>
       ,{"${raw.name}" : "${raw.text}"}
       </#list>
@@ -161,7 +186,21 @@
             "FORMAT":"image/png8"
         }
     }, 
-     
+    <#list map.metocs as metoc>
+    "${metoc.sourceId}_${(metoc_index+1)}": {
+        "ptype": "gxp_wmssource",
+        "title": "${metoc.title}",
+        "projection":"EPSG:4326",
+        "url": "${metoc.owsBaseURL}",
+        "version":"${metoc.owsVersion}",
+        "layersCachedExtent":[-2.003750834E7,-2.003750834E7,2.003750834E7,2.003750834E7],
+                        "useCapabilities":false,
+        "layerBaseParams": {
+            "TILED": true,
+            "FORMAT":"image/png"
+        }
+    }<#if metoc_has_next>,</#if>
+    </#list>,
     "mapquest": {
       "projection": "EPSG:900913", 
       "ptype": "gxp_mapquestsource"

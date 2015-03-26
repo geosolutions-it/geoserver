@@ -41,6 +41,8 @@ public class MapTemplateModel {
 
     private List<LayerTemplateModel> layers;
     
+    private List<MetocTemplateModel> metocs;
+    
     /**
      * @return the centerX
      */
@@ -249,6 +251,20 @@ public class MapTemplateModel {
      */
     public void setLayers(List<LayerTemplateModel> layers) {
         this.layers = layers;
+    }
+
+    /**
+     * @return the metocs
+     */
+    public List<MetocTemplateModel> getMetocs() {
+        return metocs;
+    }
+
+    /**
+     * @param metocs the metocs to set
+     */
+    public void setMetocs(List<MetocTemplateModel> metocs) {
+        this.metocs = metocs;
     }
 
 }

@@ -59,7 +59,8 @@ public class MapstoreConfigTest extends WPSTestSupport {
                 .getCatalog());
         mapstoreProcess.setLayerDescriptorManager(ldm);
         mapstoreProcess.setTemplateDirLoader(new TestTemplateDirLoader());
-        LOGGER.info(mapstoreProcess.execute(null, getLayerDescriptor()));
+        String metocs = "[{\"Metoc\": {\"sourceId\":\"karpathos-dev\",\"title\":\"NOAA Wave Height\",\"owsBaseURL\":\"http://karpathos-dev/geoserver/ows\",\"owsService\":\"WMS\",\"owsVersion\":\"1.3.0\",\"owsResourceIdentifier\":\"oceanmod:NOAAWaveHeight\",\"referenceTimeDim\":true}},{\"Metoc\": {\"sourceId\":\"karpathos-dev\",\"title\":\"NOAA Wind Speed\",\"owsBaseURL\":\"http://karpathos-dev/geoserver/ows\",\"owsService\":\"WMS\",\"owsVersion\":\"1.3.0\",\"owsResourceIdentifier\":\"oceanmod:NOAAWindSpeed\",\"referenceTimeDim\":true}}]";
+        LOGGER.info(mapstoreProcess.execute(metocs, getLayerDescriptor()));
     }
 
     private String getLayerDescriptor() throws FileNotFoundException, IOException {
