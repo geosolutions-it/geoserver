@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.geoserver.wcs.responses.NetCDFCoordinateReferenceSystem.NetCDFCoordinate;
 import org.geoserver.wcs2_0.response.DimensionBean;
 import org.geoserver.wcs2_0.response.DimensionBean.DimensionType;
 import org.geotools.imageio.netcdf.utilities.NetCDFUtilities;
@@ -160,24 +161,32 @@ class NetCDFDimensionManager {
     public void dispose() {
         dimensionValues = null;
         netCDFDimension = null;
-//        coverageDimension = null;
     }
-    
+
     /**
      * Get the values for a Dimension wrapped by its specific DimensionManager and return them as
      * a NetCDF Array object
      * 
      * @param rangeValues specify whether the data should be returned as a 1D array or a 2D array 
      * (the latter for dimensions having ranges)
+     * @param netCDFCoordinates used to check whether a dimension is related to a coordinate. In that case, 
+     * just return the coordinate values.
      * @return
      */
-    public Array getDimensionData(final boolean rangeValues) {
+    public Array getDimensionData(final boolean rangeValues, NetCDFCoordinate[] netCDFCoordinates) {
         final String dimensionName = getName();
-        
+
         // Special management for latitude and logitude
-        if (dimensionName.equalsIgnoreCase(NetCDFUtilities.LAT)) {
-            return (Array) getDimensionValues().getValues();
-        } else if (dimensionName.equalsIgnoreCase(NetCDFUtilities.LON)) {
+        boolean is2DCoordinate = false;
+        if (netCDFCoordinates != null && netCDFCoordinates.length > 0) {
+            for (NetCDFCoordinate coordinate : netCDFCoordinates) {
+                if (dimensionName.equalsIgnoreCase(coordinate.getDimensionName())) {
+                    is2DCoordinate = true;
+                    break;
+                }
+            }
+        }
+        if (is2DCoordinate) {
             return (Array) getDimensionValues().getValues();
         } else {
 
