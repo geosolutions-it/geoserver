@@ -38,6 +38,8 @@ import org.geoserver.gs.mapstoreconfig.components.GeoserverTemplateDirLoader;
 import org.geoserver.gs.mapstoreconfig.ftl.model.MapTemplateModel;
 import org.geoserver.gs.mapstoreconfig.ftl.model.MetocTemplateModel;
 import org.geoserver.wps.gs.GeoServerProcess;
+import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.StringRawData;
 import org.geotools.process.factory.DescribeParameter;
 import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
@@ -98,8 +100,8 @@ public class MapstoreConfigProcess implements GeoServerProcess {
 
     @DescribeResult(name = "JSON MapStore configuration file", description = "output result", type = String.class)
     public String execute(
-            @DescribeParameter(name = "metoc", min = 0, description = "List of Metocs used by the RiskMap") String metoc,
-            @DescribeParameter(name = "layerDescriptor", min = 1, description = "An xml document that provides a description of a set of layers") String layerDescriptor)
+            @DescribeParameter(name = "layerDescriptor", min = 1, description = "An xml document that provides a description of a set of layers") String layerDescriptor,
+            @DescribeParameter(name = "metoc", min = 0, description = "List of Metocs used by the RiskMap", meta = { "mimeTypes=application/json,text/xml" }) final RawData metoc)
             throws IOException {
 
         // Manage the layerDescriptor and produce the value to substitute in the FTL template
@@ -137,7 +139,7 @@ public class MapstoreConfigProcess implements GeoServerProcess {
         // Extracting Metocs from JSON
         List<MetocTemplateModel> metocs = new ArrayList<MetocTemplateModel>();
         JsonFactory jsonF = new JsonFactory();
-        JsonParser jsonP = jsonF.createParser(metoc);
+        JsonParser jsonP = jsonF.createParser(((StringRawData)metoc).getData());
         jsonP.nextToken(); // will return JsonToken.START_ARRAY
         while (jsonP.nextToken() != JsonToken.END_ARRAY) {
             jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY

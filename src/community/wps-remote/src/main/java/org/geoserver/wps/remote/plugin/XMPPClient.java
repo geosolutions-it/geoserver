@@ -932,6 +932,7 @@ public class XMPPClient extends RemoteProcessClient {
     static {
         //----
         PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null,"text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("url", new Object[] { String.class, CType.SIMPLE, null,"text/plain" });
         PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE,Boolean.TRUE, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null, "text/plain" });

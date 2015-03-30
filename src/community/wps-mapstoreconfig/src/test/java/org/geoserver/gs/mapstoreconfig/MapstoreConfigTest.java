@@ -32,6 +32,7 @@ import org.geoserver.gs.mapstoreconfig.components.GeoserverXMLLayerDescriptorMan
 import org.geoserver.gs.mapstoreconfig.ftl.model.DimensionsTemplateModel;
 import org.geoserver.gs.mapstoreconfig.ftl.model.LayerTemplateModel;
 import org.geoserver.wps.WPSTestSupport;
+import org.geoserver.wps.process.StringRawData;
 import org.geotools.test.TestData;
 import org.geotools.util.logging.Logging;
 import org.junit.Test;
@@ -60,7 +61,7 @@ public class MapstoreConfigTest extends WPSTestSupport {
         mapstoreProcess.setLayerDescriptorManager(ldm);
         mapstoreProcess.setTemplateDirLoader(new TestTemplateDirLoader());
         String metocs = "[{\"Metoc\": {\"sourceId\":\"karpathos-dev\",\"title\":\"NOAA Wave Height\",\"owsBaseURL\":\"http://karpathos-dev/geoserver/ows\",\"owsService\":\"WMS\",\"owsVersion\":\"1.3.0\",\"owsResourceIdentifier\":\"oceanmod:NOAAWaveHeight\",\"referenceTimeDim\":true}},{\"Metoc\": {\"sourceId\":\"karpathos-dev\",\"title\":\"NOAA Wind Speed\",\"owsBaseURL\":\"http://karpathos-dev/geoserver/ows\",\"owsService\":\"WMS\",\"owsVersion\":\"1.3.0\",\"owsResourceIdentifier\":\"oceanmod:NOAAWindSpeed\",\"referenceTimeDim\":true}}]";
-        LOGGER.info(mapstoreProcess.execute(metocs, getLayerDescriptor()));
+        LOGGER.info(mapstoreProcess.execute(getLayerDescriptor(), new StringRawData(metocs, "application/json")));
     }
 
     private String getLayerDescriptor() throws FileNotFoundException, IOException {
