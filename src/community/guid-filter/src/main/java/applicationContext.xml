@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2015 - Open Source Geospatial Foundation. All rights reserved. 
+  This code is licensed under the GPL 2.0 license, available at the root application 
+  directory. -->
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+  <bean id="guidTransactionTemplateProvider" class="org.geoserver.security.guid.TransactionTemplateProvider">
+    <constructor-arg ref="dataDirectory"></constructor-arg>
+  </bean>
+  
+  <bean id="jdbcGuidRuleDao" class="org.geoserver.security.guid.JDBCGuidRuleDao">
+    <constructor-arg ref="guidTransactionTemplateProvider" />
+  </bean>
+  
+  <bean id="cachingGuidRuleDao" class="org.geoserver.security.guid.CachingGuidRuleDao" >
+    <constructor-arg ref="jdbcGuidRuleDao"></constructor-arg>
+  </bean>
+  
+  <bean id="guidResourceAccessManager" class="org.geoserver.security.guid.GuidResourceAccessManager">
+    <constructor-arg ref="cachingGuidRuleDao" />
+  </bean>
+
+</beans>

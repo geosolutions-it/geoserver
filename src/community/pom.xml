@@ -412,5 +412,11 @@
           <module>geomesa</module>
         </modules>
     </profile>
+    <profile>
+      <id>guid-filter</id>
+        <modules>
+          <module>guid-filter</module>
+        </modules>
+    </profile>
   </profiles>
 </project>
