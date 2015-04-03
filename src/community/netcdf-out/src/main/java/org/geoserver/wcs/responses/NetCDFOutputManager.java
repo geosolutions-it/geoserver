@@ -1,4 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014-2015 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -29,7 +29,6 @@ import javax.media.jai.iterator.RandomIterFactory;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
-import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wcs.responses.NetCDFDimensionManager.DimensionValuesSet;
@@ -66,8 +65,9 @@ import ucar.nc2.write.Nc4Chunking;
 import ucar.nc2.write.Nc4ChunkingDefault;
 
 /**
- * A class which takes care of initializing NetCDF dimension from coverages dimension, variables, values for the NetCDF output file
- * and finally write them when invoking the write method.
+ * A class which takes care of initializing NetCDF dimension from coverages dimension, 
+ * variables, values for the NetCDF output file and finally write them when invoking 
+ * the write method.
  * 
  * @author Daniele Romagnoli, GeoSolutions SAS
  * 
@@ -115,7 +115,8 @@ public class NetCDFOutputManager {
     /** Bean related to the {@link NetCDFCFParser} */
     private static NetCDFParserBean parserBean;
 
-    private NetCDFCoordinatesManager crsManager;
+    /** The instance of the class delegated to do proper NetCDF coordinates setup*/
+    private NetCDFCoordinatesWriter crsWriter;
 
     static {
         // Getting the NetCDFCFParser bean
@@ -143,7 +144,6 @@ public class NetCDFOutputManager {
      * @param encodingParameters customized encoding params
      * @throws IOException
      */
-
     public NetCDFOutputManager(GranuleStack granuleStack, File file,
             Map<String, String> encodingParameters, String outputFormat) throws IOException {
         this.granuleStack = granuleStack;
@@ -153,12 +153,19 @@ public class NetCDFOutputManager {
         initializeNetCDF();
     }
 
+    /** 
+     * Basic NetCDF Initialization 
+     */
     private void initializeNetCDF() {
+        // Initialize the coordinates writer
+        crsWriter = new NetCDFCoordinatesWriter(writer, sampleGranule);
+
+        // Initialize the Dimensions and coordinates variable
         initializeDimensions();
-        crsManager = new NetCDFCoordinatesManager(writer, sampleGranule);
-        dimensionMapping.putAll(crsManager.getCoordinatesDimensions());
-        Variable var = initializeVariable();
-        crsManager.initializeGridMapping(var);
+
+        // Initialize the variable by setting proper coordinates and attributes
+        initializeVariable();
+
         initializeGlobalAttributes();
     }
 
@@ -328,6 +335,17 @@ public class NetCDFOutputManager {
      */
     private void initializeDimensions() {
 
+        initializeHigherRankDimensions();
+
+        // Initialize the lat,lon/y,x 2D dimensions and coordinates
+        crsWriter.initializeCoordinatesDimensions(dimensionMapping);
+
+    }
+
+    /**
+     * Initialize higher rank dimensions, such as time, elevation, custom, ...
+     */
+    private void initializeHigherRankDimensions() {
         // TODO: Do we support coverages which doesn't share same BBox?
         // I assume they will still have the same bbox, eventually filled with background data/fill value
 
@@ -381,7 +399,7 @@ public class NetCDFOutputManager {
     /**
      * Initialize the NetCDF variables on this writer
      */
-    private Variable initializeVariable() {
+    private void initializeVariable() {
 
         // group the dimensions to be added to the variable
         List<Dimension> netCDFDimensions = new LinkedList<Dimension>();
@@ -396,6 +414,8 @@ public class NetCDFOutputManager {
         DataType varDataType = NetCDFUtilities.transcodeImageDataType(dataType);
         Variable var = writer.addVariable(null, coverageName, varDataType, netCDFDimensions);
         GridSampleDimension[] sampleDimensions = sampleGranule.getSampleDimensions();
+
+        // no data management
         boolean noDataSet = false;
         double noDataValue = Double.NaN;
         if (sampleDimensions != null && sampleDimensions.length > 0) {
@@ -436,7 +456,9 @@ public class NetCDFOutputManager {
             writer.addVariableAttribute(var, new Attribute(NetCDFUtilities.STANDARD_NAME,
                     variableName));
         }
-        return var;
+
+        // Initialize the gridMapping part of the variable
+        crsWriter.initializeGridMapping(var);
     }
 
     
@@ -640,7 +662,7 @@ public class NetCDFOutputManager {
 
         // Setting values
         for (NetCDFDimensionManager manager : dimensionMapping.values()) {
-            crsManager.setCoordinateVariable(manager);
+            crsWriter.setCoordinateVariable(manager);
         }
 
         writeDataValues();

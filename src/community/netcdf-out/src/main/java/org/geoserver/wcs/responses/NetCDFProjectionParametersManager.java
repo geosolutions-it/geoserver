@@ -39,7 +39,11 @@ import ucar.nc2.Variable;
 import ucar.nc2.constants.CF;
 
 /** 
- * Class used to properly setup NetCDF CF Projection parameters. 
+ * Class used to properly setup NetCDF CF Projection parameters. Given a known Projection, 
+ * it will take care of remap the Projection's parameters to NetCDF CF GridMapping parameters.
+ * 
+ * @see <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.6/build/cf-conventions.html#appendix-grid-mappings">NetCDF CF, Appendix
+ *      F: Grid Mappings</a>
  */
 class NetCDFProjectionParametersManager {
 
@@ -133,9 +137,11 @@ class NetCDFProjectionParametersManager {
 
     private Map<String, String> referencingToNetCDFParameters;
 
-    /** 
-     * Currently supported NetCDF projections.
-     * Add more. Check the CF Document
+    /**
+     * Currently supported NetCDF projections. TODO: Add more. Check the CF Document
+     * 
+     * @see <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.6/build/cf-conventions.html#appendix-grid-mappings">NetCDF CF,
+     *      Appendix F: Grid Mappings</a>
      */
     public final static NetCDFProjectionParametersManager TRANSVERSE_MERCATOR_PARAMS;
     public final static NetCDFProjectionParametersManager LAMBERT_CONFORMAL_CONIC_1SP_PARAMS;

@@ -16,8 +16,6 @@
  */
 package org.geoserver.wcs.responses;
 
-import java.awt.geom.AffineTransform;
-
 import org.geotools.imageio.netcdf.utilities.NetCDFUtilities;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.referencing.operation.projection.LambertConformal1SP;
@@ -28,11 +26,20 @@ import org.opengis.referencing.crs.ProjectedCRS;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.Projection;
 
-import ucar.nc2.Attribute;
-import ucar.nc2.NetcdfFileWriter;
-import ucar.nc2.Variable;
 import ucar.nc2.constants.CF;
 
+/**
+ * Enum used to represent different coordinate reference systems stored within a NetCDF dataset.
+ * NetCDF CF supports several types of projections through grid mapping.
+ * 
+ * Unsupported projections will be specified through the spatial_ref and GeoTransform global attributes
+ * defined by GDAL
+ * 
+ * @see <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.6/build/cf-conventions.html#appendix-grid-mappings">NetCDF CF, Appendix
+ *      F: Grid Mappings</a>
+ * 
+ * @author Daniele Romagnoli, GeoSolutions SAS
+ */
 public enum NetCDFCoordinateReferenceSystem {
 
     WGS84 {
@@ -47,11 +54,10 @@ public enum NetCDFCoordinateReferenceSystem {
         };
 
     },
-    NONE {
+    PRJ {
         @Override
         public NetCDFCoordinate[] getCoordinates() {
-            // TODO Auto-generated method stub
-            return null;
+            return NetCDFCoordinate.YX_COORDS;
         }
 
         @Override
@@ -129,7 +135,7 @@ public enum NetCDFCoordinateReferenceSystem {
                 return LAMBERT_CONFORMAL_CONIC_2SP;
             }
         }
-        return NONE;
+        return PRJ;
     }
 
     public abstract NetCDFCoordinate[] getCoordinates();
@@ -138,52 +144,6 @@ public enum NetCDFCoordinateReferenceSystem {
 
     public String getGridMapping() {
         return "";
-    }
-
-    /**
-     * Add GeoReferencing information to the writer, starting from the CoordinateReferenceSystem 
-     * and the MathTransform
-     * 
-     * @param writer
-     * @param crs
-     * @param transform
-     */
-    public void addProjectionInformation(NetcdfFileWriter writer, CoordinateReferenceSystem crs,
-            MathTransform transform) {
-        String gridMapping = getGridMapping();
-        if (!gridMapping.isEmpty()) {
-            NetCDFProjectionParametersManager params = getNetCDFProjectionParametersManager();
-            Variable var = writer.findVariable(gridMapping);
-            params.setProjectionParams(writer, crs, var);
-            addCommonAttributes(writer, crs, transform, var, gridMapping);
-        } else {
-            
-        }
-    }
-
-    /**
-     * 
-     * @param writer
-     * @param crs
-     * @param transform
-     * @param var
-     * @param gridMapping
-     */
-    private void addCommonAttributes(NetcdfFileWriter writer, CoordinateReferenceSystem crs,
-            MathTransform transform, Variable var, String gridMapping) {
-
-        writer.addVariableAttribute(var, new Attribute(NetCDFUtilities.GRID_MAPPING_NAME,
-                gridMapping));
-
-        // Adding GDAL Attributes spatial_ref and GeoTransform
-        String wkt = crs.toWKT().replace("\r\n", "").replace("  ", " ").replace("  ", " ");
-        writer.addVariableAttribute(var, new Attribute(NetCDFUtilities.SPATIAL_REF, wkt));
-        AffineTransform at = (AffineTransform) transform;
-        String geoTransform = Double.toString(at.getTranslateX()) + " "
-                + Double.toString(at.getScaleX()) + " " + Double.toString(at.getShearX()) + " "
-                + Double.toString(at.getTranslateY()) + " " + Double.toString(at.getShearY()) + " "
-                + Double.toString(at.getScaleY());
-        writer.addVariableAttribute(var, new Attribute(NetCDFUtilities.GEO_TRANSFORM, geoTransform));
     }
 
     /** 
