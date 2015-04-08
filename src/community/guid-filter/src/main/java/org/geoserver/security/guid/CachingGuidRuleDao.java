@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.geoserver.platform.exception.GeoServerException;
+import org.geoserver.platform.ServiceException;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -39,21 +39,21 @@ public class CachingGuidRuleDao implements GuidRuleDao {
     }
 
     @Override
-    public List<GuidRule> getRules(String guid) throws GeoServerException {
+    public List<GuidRule> getRules(String guid) {
         try {
             return cache.get(guid);
         } catch (ExecutionException e) {
-            throw new GeoServerException(
+            throw new ServiceException(
                     "Failed to retrieve the list of rules from the cache/database", e);
         }
     }
 
-    public void clearRules() throws GeoServerException {
+    public void clearRules() {
         cache.invalidateAll();
         delegate.clearRules();
     }
 
-    public void addRule(final GuidRule rule) throws GeoServerException {
+    public void addRule(final GuidRule rule) {
         cache.invalidate(rule.getGuid());
         delegate.addRule(rule);
     }

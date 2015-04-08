@@ -8,15 +8,15 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.geoserver.platform.exception.GeoServerException;
-import org.geoserver.security.guid.GuidTransactionTemplate.GuidTransactionCallback;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.text.ecql.ECQL;
 import org.opengis.filter.Filter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.transaction.TransactionException;
-import org.springframework.transaction.TransactionStatus;
 
 /**
  * Spring JDBC implementation of {@link GuidRuleDao}
@@ -47,10 +47,10 @@ public class JDBCGuidRuleDao implements GuidRuleDao {
         }
     };
 
-    private TransactionTemplateProvider ttProvider;
+    private JdbcTemplate jt;
 
-    public JDBCGuidRuleDao(TransactionTemplateProvider ttProvider) {
-        this.ttProvider = ttProvider;
+    public JDBCGuidRuleDao(DataSource dataSource) {
+        this.jt = new JdbcTemplate(dataSource);
     }
 
     /*
@@ -59,39 +59,21 @@ public class JDBCGuidRuleDao implements GuidRuleDao {
      * @see org.geoserver.security.guid.GuidRuleDao#getRules(java.lang.String)
      */
     @Override
-    public List<GuidRule> getRules(final String guid) throws GeoServerException {
-        return ttProvider.getTransactionTemplate().execute(
-                new GuidTransactionCallback<List<GuidRule>>() {
-
-                    @Override
-                    public List<GuidRule> doInTransaction(TransactionStatus status, JdbcTemplate jt)
-                            throws TransactionException {
-                        return jt.query("select * from guids where guid = ?",
-                                new Object[] { guid }, GUID_ROW_MAPPER);
-                    }
-
-                });
+    public List<GuidRule> getRules(final String guid) {
+        return jt.query("select * from guids where guid = ?", new Object[] { guid },
+                GUID_ROW_MAPPER);
     }
 
     /**
      * Adds a rule, added for testing purposes
      */
     @Override
-    public void addRule(final GuidRule rule) throws GeoServerException {
-        ttProvider.getTransactionTemplate().execute(new GuidTransactionCallback<Void>() {
-
-            @Override
-            public Void doInTransaction(TransactionStatus status, JdbcTemplate jt)
-                    throws TransactionException {
-                jt.update(
-                        "insert into guids(guid, layer_name, user_id, filter) values(?, ?, ?, ?)",
-                        new Object[] { rule.getGuid(),
-                        rule.getLayerName(), rule.getUserId(), ECQL.toCQL(rule.getFilter()) },
-                        new int[] {
-                        Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR });
-                return null;
-            }
-        });
+    public void addRule(final GuidRule rule) {
+        jt.update(
+                "insert into guids(guid, layer_name, user_id, filter) values(?, ?, ?, ?)",
+                new Object[] { rule.getGuid(), rule.getLayerName(), rule.getUserId(),
+                        ECQL.toCQL(rule.getFilter()) }, new int[] { Types.VARCHAR, Types.VARCHAR,
+                        Types.VARCHAR, Types.VARCHAR });
 
     }
 
@@ -102,16 +84,8 @@ public class JDBCGuidRuleDao implements GuidRuleDao {
      * @throws TransactionException
      */
     @Override
-    public void clearRules() throws TransactionException, GeoServerException {
-        ttProvider.getTransactionTemplate().execute(new GuidTransactionCallback<Void>() {
-
-            @Override
-            public Void doInTransaction(TransactionStatus status, JdbcTemplate jt)
-                    throws TransactionException {
-                jt.update("delete from guids");
-                return null;
-            }
-        });
+    public void clearRules() {
+        jt.update("delete from guids");
     }
 
 }

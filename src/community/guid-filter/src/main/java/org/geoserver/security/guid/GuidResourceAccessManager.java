@@ -22,7 +22,6 @@ import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.ServiceException;
-import org.geoserver.platform.exception.GeoServerException;
 import org.geoserver.security.CatalogMode;
 import org.geoserver.security.DataAccessLimits;
 import org.geoserver.security.LayerGroupAccessLimits;
@@ -110,7 +109,7 @@ public class GuidResourceAccessManager extends AbstractDispatcherCallback implem
         if (rules == NO_LIMITS) {
             return Filter.INCLUDE;
         }
-        
+
         if (PublishedInfo.class.isAssignableFrom(clazz)
                 || ResourceInfo.class.isAssignableFrom(clazz)) {
             List<Filter> filters = new ArrayList<>();
@@ -127,7 +126,7 @@ public class GuidResourceAccessManager extends AbstractDispatcherCallback implem
         } else {
             return Filter.INCLUDE;
         }
-        
+
     }
 
     private List<GuidRule> getGuidRules() {
@@ -136,7 +135,7 @@ public class GuidResourceAccessManager extends AbstractDispatcherCallback implem
             LOGGER.log(Level.FINE, "Could not find a request, thus assuming no limits");
             return NO_LIMITS;
         }
-        
+
         String guid = KvpUtils.getSingleValue(request.getRawKvp(), GUID);
         if (guid == null) {
             LOGGER.log(Level.FINE,
@@ -144,18 +143,14 @@ public class GuidResourceAccessManager extends AbstractDispatcherCallback implem
             return NO_LIMITS;
         }
 
-        try {
-            List<GuidRule> rules = rulesDao.getRules(guid);
-            // if the guid is specified but not knows, by spec we throw an exception
-            if (rules == null || rules.isEmpty()) {
-                // we have the REQUEST of the OWS dispatcher, so it's a OGC request
-                throw new ServiceException("Invalid guid value '" + guid + "'",
-                        ServiceException.INVALID_PARAMETER_VALUE, "guid");
-            }
-            return rules;
-        } catch (GeoServerException e) {
-            throw new ServiceException(e);
+        List<GuidRule> rules = rulesDao.getRules(guid);
+        // if the guid is specified but not knows, by spec we throw an exception
+        if (rules == null || rules.isEmpty()) {
+            // we have the REQUEST of the OWS dispatcher, so it's a OGC request
+            throw new ServiceException("Invalid guid value '" + guid + "'",
+                    ServiceException.INVALID_PARAMETER_VALUE, "guid");
         }
+        return rules;
     }
 
     @Override

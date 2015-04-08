@@ -55,7 +55,7 @@ public class GuidFilterTest extends GeoServerSystemTestSupport {
 
         // write out the config in a data directory
         GeoServerDataDirectory dd = getDataDirectory();
-        Resource propertiesFile = dd.getRoot(TransactionTemplateProvider.GUID_PROPERTIES);
+        Resource propertiesFile = dd.getRoot(ConfigurableDataSource.GUID_PROPERTIES);
         try (OutputStream os = propertiesFile.out()) {
             props.store(os, "Test connection properties");
         }
@@ -222,7 +222,6 @@ public class GuidFilterTest extends GeoServerSystemTestSupport {
         // print(dom);
         assertEquals(1, getMatchCount("//cite:Buildings", dom));
         assertEquals("123 Main Street", xpath.evaluate("//cite:Buildings/cite:ADDRESS", dom));
-
     }
 
 }

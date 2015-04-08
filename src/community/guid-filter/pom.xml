@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- 
- Copyright (C) 2014 - Open Source Geospatial Foundation. All rights reserved.
- This code is licensed under the GPL 2.0 license, available at the root
- application directory.
- -->
+<!-- Copyright (C) 2014 - Open Source Geospatial Foundation. All rights reserved. 
+  This code is licensed under the GPL 2.0 license, available at the root application 
+  directory. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -26,6 +24,16 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-aop</artifactId>
+      <version>${spring.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
+      <version>1.7.4</version>
+    </dependency>
+    <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
     </dependency>
@@ -41,7 +49,19 @@
       <groupId>org.geoserver</groupId>
       <artifactId>gs-wfs</artifactId>
       <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver</groupId>
+      <artifactId>gs-wfs</artifactId>
+      <version>${project.version}</version>
       <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver</groupId>
+      <artifactId>gs-wms</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
