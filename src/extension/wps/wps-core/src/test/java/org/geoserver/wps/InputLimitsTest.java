@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.net.URLEncoder;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.io.FileUtils;
 import org.custommonkey.xmlunit.XMLAssert;
@@ -545,14 +546,20 @@ public class InputLimitsTest extends WPSTestSupport {
         String fullStatusLocation = xpath.evaluate("//wps:ExecuteResponse/@statusLocation", dom);
         String statusLocation = fullStatusLocation.substring(fullStatusLocation.indexOf('?') - 3);
 
-        // wait for more than the limit for asynch execution
-        Thread.sleep(3000);
+        // wait for end, pinging the process to make it fail
+        dom = waitForProcessEnd(statusLocation, 20, new Callable<Void>() {
 
-        // schedule an update that will make it fail
-        MonkeyProcess.progress("x2", 50f, true);
+            @Override
+            public Void call() throws Exception {
+                // schedule an update that will make it fail. Same progress every time,
+                // happily for the moment we don't have optimizations that would
+                // make this repeated pings be ignored
+                MonkeyProcess.progress("x2", 50f, true);
+                Thread.sleep(100);
+                return null;
+            }
 
-        // make it end
-        dom = waitForProcessEnd(statusLocation, 10);
+        });
         // print(dom);
         XMLAssert.assertXpathExists("//wps:Status/wps:ProcessFailed", dom);
         String message = xpath.evaluate(

@@ -1,9 +1,12 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wms.map;
+
+import it.geosolutions.jaiext.lookup.LookupTable;
+import it.geosolutions.jaiext.lookup.LookupTableFactory;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -39,10 +42,7 @@ import javax.media.jai.LookupTableJAI;
 import javax.media.jai.PlanarImage;
 import javax.media.jai.ROI;
 import javax.media.jai.ROIShape;
-import javax.media.jai.operator.BandMergeDescriptor;
 import javax.media.jai.operator.ConstantDescriptor;
-import javax.media.jai.operator.FormatDescriptor;
-import javax.media.jai.operator.LookupDescriptor;
 import javax.media.jai.operator.MosaicDescriptor;
 
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -333,7 +333,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 && (layout == null || layout.isEmpty())) {
             List<GridCoverage2D> renderedCoverages = new ArrayList<GridCoverage2D>(2);
             try {
-                image = directRasterRender(mapContent, 0, renderedCoverages);
+                Interpolation interpolation = null;
+                if(request.getInterpolations() != null && request.getInterpolations().size() > 0) {
+                    interpolation = request.getInterpolations().get(0);
+                }
+                image = directRasterRender(mapContent, 0, renderedCoverages, interpolation);
             } catch (Exception e) {
                 throw new ServiceException("Error rendering coverage on the fast path", e);
             }
@@ -396,6 +400,8 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
             }
         }
 
+        
+        
         // make sure the hints are set before we start rendering the map
         graphic.setRenderingHints(hintsMap);
 
@@ -464,6 +470,21 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 }
             }
         }
+        
+        if(request.getInterpolations() != null && !request.getInterpolations().isEmpty()) {
+            int count = 0;
+            List<Interpolation> interpolations = request.getInterpolations();
+            for(Layer layer : mapContent.layers()) {
+                if(count < interpolations.size()) {
+                    Interpolation interpolation = interpolations.get(count);
+                    if(interpolation != null) {
+                        layer.getUserData().put(StreamingRenderer.BYLAYER_INTERPOLATION, interpolation);
+                    }
+                }
+                count++;
+            }
+        }
+        
         renderer.setRendererHints(rendererParams);
 
         // if abort already requested bail out
@@ -736,9 +757,12 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         layout.setTileWidth(w);
         layout.setTileHeight(h);
         RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT, layout);
+        LookupTable table = LookupTableFactory.create(IDENTITY_TABLE);
         // TODO SIMONE why not format?
-        return LookupDescriptor.create(source, IDENTITY_TABLE, hints);
-
+        ImageWorker worker = new ImageWorker(source);
+        worker.setRenderingHints(hints);
+        worker.lookup(table);
+        return worker.getRenderedImage();
     }
 
     /**
@@ -755,7 +779,7 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
      * @throws FactoryException
      */
     private RenderedImage directRasterRender(WMSMapContent mapContent, int layerIndex,
-            List<GridCoverage2D> renderedCoverages) throws IOException, FactoryException {
+            List<GridCoverage2D> renderedCoverages, Interpolation layerInterpolation) throws IOException, FactoryException {
         
         //
         // extract the raster symbolizers and the eventual rendering transformation
@@ -804,18 +828,22 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         // Grab the interpolation
         //
         final Interpolation interpolation;
-        if (wms != null) {
-            if (WMSInterpolation.Nearest.equals(wms.getInterpolation())) {
-                interpolation = Interpolation.getInstance(Interpolation.INTERP_NEAREST);
-            } else if (WMSInterpolation.Bilinear.equals(wms.getInterpolation())) {
-                interpolation = Interpolation.getInstance(Interpolation.INTERP_BILINEAR);
-            } else if (WMSInterpolation.Bicubic.equals(wms.getInterpolation())) {
-                interpolation = Interpolation.getInstance(Interpolation.INTERP_BICUBIC);
+        if(layerInterpolation != null) {
+            interpolation = layerInterpolation;
+        } else {
+            if (wms != null) {
+                if (WMSInterpolation.Nearest.equals(wms.getInterpolation())) {
+                    interpolation = Interpolation.getInstance(Interpolation.INTERP_NEAREST);
+                } else if (WMSInterpolation.Bilinear.equals(wms.getInterpolation())) {
+                    interpolation = Interpolation.getInstance(Interpolation.INTERP_BILINEAR);
+                } else if (WMSInterpolation.Bicubic.equals(wms.getInterpolation())) {
+                    interpolation = Interpolation.getInstance(Interpolation.INTERP_BICUBIC);
+                } else {
+                    interpolation = Interpolation.getInstance(Interpolation.INTERP_NEAREST);
+                }
             } else {
                 interpolation = Interpolation.getInstance(Interpolation.INTERP_NEAREST);
             }
-        } else {
-            interpolation = Interpolation.getInstance(Interpolation.INTERP_NEAREST);
         }
       
         // 
@@ -1032,8 +1060,9 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                         ImageLayout ilColorModel = new ImageLayout(image);
                         ilColorModel.setColorModel(icm);
                         RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT, ilColorModel);
-                        image = FormatDescriptor.create(image, image.getSampleModel().getDataType(), hints);
-                        worker.setImage(image);
+                        worker.setRenderingHints(hints);
+                        worker.format(image.getSampleModel().getDataType());
+                        image = worker.getRenderedImage();
                     } 
                     bgColorIndex = ColorUtilities.findColorIndex(bgColor, icm);
                 }
@@ -1164,10 +1193,16 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
             double[][] thresholds = new double[][] { { ColorUtilities.getThreshold(image
                     .getSampleModel().getDataType()) } };
             // apply the mosaic
-            image = MosaicDescriptor.create(new RenderedImage[] { image },
-                    alphaChannels != null && transparencyType==Transparency.TRANSLUCENT ? MosaicDescriptor.MOSAIC_TYPE_BLEND: MosaicDescriptor.MOSAIC_TYPE_OVERLAY,
-                    alphaChannels, rois, thresholds, bgValues, new RenderingHints(
-                            JAI.KEY_IMAGE_LAYOUT, layout));
+            ImageWorker w = new ImageWorker(image);
+            w.setRenderingHint(JAI.KEY_IMAGE_LAYOUT, layout);
+            w.setBackground(bgValues);
+            w.mosaic(new RenderedImage[] { image }, 
+                    alphaChannels != null && transparencyType==Transparency.TRANSLUCENT ? MosaicDescriptor.MOSAIC_TYPE_BLEND: MosaicDescriptor.MOSAIC_TYPE_OVERLAY, 
+                    alphaChannels, 
+                    rois, 
+                    thresholds, 
+                    null);
+            image = w.getRenderedImage();
         } else {
             // Check if we need to crop a subset of the produced image, else return it right away
             if (imageBounds.contains(mapRasterArea) && !imageBounds.equals(mapRasterArea)) { // the produced image does not need a final mosaicking operation but a crop!
@@ -1204,8 +1239,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 Float.valueOf(image.getHeight()),
                 new Byte[] { Byte.valueOf((byte) 255) }, 
                 new RenderingHints(JAI.KEY_IMAGE_LAYOUT,tempLayout));
-        image = BandMergeDescriptor.create(image, alpha, null);
-        return image;
+        // Using an ImageWorker
+        ImageWorker iw =  new ImageWorker(image);
+        // Adding Alpha band
+        iw.addBand(alpha, false, true, null);
+        return iw.getRenderedImage();
     }
 
     /**
