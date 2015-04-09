@@ -14,6 +14,22 @@ public class WmcFeature {
 
     }
 
+    /**
+     * @return the type
+     */
+    public String getType() {
+        return type;
+    }
+
+    /**
+     * @param type the type to set
+     */
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    String type;
+    
     String name;
 
     String title;
@@ -38,6 +54,8 @@ public class WmcFeature {
 
     String geometryCoords;
 
+    private String owcProperties;
+    
     /**
      * @return the srs
      */
@@ -205,4 +223,19 @@ public class WmcFeature {
     public void setLatLonBbox(String latLonBbox) {
         this.latLonBbox = latLonBbox;
     }
+
+    /**
+     * @return the owcProperties
+     */
+    public String getOwcProperties() {
+        return owcProperties;
+    }
+
+    /**
+     * @param owcProperties the owcProperties to set
+     */
+    public void setOwcProperties(String owcProperties) {
+        this.owcProperties = owcProperties;
+    }
+
 }

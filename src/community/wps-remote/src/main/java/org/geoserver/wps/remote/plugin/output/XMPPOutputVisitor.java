@@ -23,6 +23,6 @@ public interface XMPPOutputVisitor {
      * @param publish
      * @throws Exception 
      */
-    public Object visit( XMPPTextualOutput visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace ) throws Exception;
-    public Object visit( XMPPRawDataOutput visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String defaultStyle, String targetWorkspace ) throws Exception;
+    public Object visit( XMPPTextualOutput visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String name, String title, String description, String defaultStyle, String targetWorkspace, String metadata ) throws Exception;
+    public Object visit( XMPPRawDataOutput visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String name, String title, String description, String defaultStyle, String targetWorkspace, String metadata ) throws Exception;
 }

@@ -243,7 +243,7 @@
         "llbbox": [${last_layer.timeDimensions.minX},${last_layer.timeDimensions.minY},${last_layer.timeDimensions.maxX},${last_layer.timeDimensions.maxY}]
       }<#if metoc_has_next>,</#if>
       </#list>
-	  ,
+	  <#if map.metocs?has_content>,</#if>
       <#list map.layers as layer>
       {
         "format": "${layer.format}", 
@@ -339,7 +339,8 @@
             "FORMAT":"image/png"
         }
     }<#if metoc_has_next>,</#if>
-    </#list>,
+    </#list>
+    <#if map.metocs?has_content>,</#if>
     "mapquest": {
       "projection": "EPSG:900913", 
       "ptype": "gxp_mapquestsource"

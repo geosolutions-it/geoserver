@@ -138,28 +138,32 @@ public class MapstoreConfigProcess implements GeoServerProcess {
 
         // Extracting Metocs from JSON
         List<MetocTemplateModel> metocs = new ArrayList<MetocTemplateModel>();
-        JsonFactory jsonF = new JsonFactory();
-        JsonParser jsonP = jsonF.createParser(((StringRawData)metoc).getData());
-        jsonP.nextToken(); // will return JsonToken.START_ARRAY
-        while (jsonP.nextToken() != JsonToken.END_ARRAY) {
-            jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
-
-            JsonToken token = jsonP.getCurrentToken();
-            if (token == JsonToken.END_ARRAY) break;
-            
-            String fieldname = jsonP.getCurrentName();
-
-            // Parsing Metocs
-            if (fieldname != null && fieldname.equalsIgnoreCase("Metoc")) {
+        
+        if (metoc != null && metoc instanceof StringRawData && ((StringRawData)metoc).getData() != null) {
+            JsonFactory jsonF = new JsonFactory();
+            JsonParser jsonP = jsonF.createParser(((StringRawData)metoc).getData());
+            jsonP.nextToken(); // will return JsonToken.START_ARRAY
+            while (jsonP.nextToken() != JsonToken.END_ARRAY) {
                 jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
-                token = jsonP.getCurrentToken();
-                MetocTemplateModel metocObj = extractJsonProperties(jsonP);
 
-                metocs.add(metocObj);
+                JsonToken token = jsonP.getCurrentToken();
+                if (token == JsonToken.END_ARRAY) break;
+                
+                String fieldname = jsonP.getCurrentName();
+
+                // Parsing Metocs
+                if (fieldname != null && fieldname.equalsIgnoreCase("Metoc")) {
+                    jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
+                    token = jsonP.getCurrentToken();
+                    MetocTemplateModel metocObj = extractJsonProperties(jsonP);
+
+                    metocs.add(metocObj);
+                }
             }
-        }
 
-        jsonP.close();
+            jsonP.close();
+        }
+        
         model.setMetocs(metocs);
 
         // input.put("layers", MapstoreConfigTest.produceModel());

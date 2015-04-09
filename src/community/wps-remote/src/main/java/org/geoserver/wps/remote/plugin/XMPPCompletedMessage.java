@@ -66,11 +66,22 @@ public class XMPPCompletedMessage implements XMPPMessage {
                             try {
                                 final Object value              = (resultParams.get(result.getKey()+"_value") != null ? resultParams.get(result.getKey()+"_value") : null);
                                 final String type               = (String) (resultParams.get(result.getKey()+"_type") != null ? resultParams.get(result.getKey()+"_type") : null);
-                                final Boolean publish           = (resultParams.get(result.getKey()+"_pub") != null && resultParams.get(result.getKey()+"_pub") instanceof String ? Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub")) : false);
+                                final String description        = (resultParams.get(result.getKey()+"_description") != null && resultParams.get(result.getKey()+"_description") instanceof String ? (String) resultParams.get(result.getKey()+"_description") : null);
+                                final String title              = (resultParams.get(result.getKey()+"_title") != null && resultParams.get(result.getKey()+"_title") instanceof String ? (String) resultParams.get(result.getKey()+"_title") : null);
+                                final String layerName          = (resultParams.get(result.getKey()+"_layer_name") != null && resultParams.get(result.getKey()+"_layer_name") instanceof String ? (String) resultParams.get(result.getKey()+"_layer_name") : null);
                                 final String defaultStyle       = (resultParams.get(result.getKey()+"_style") != null && resultParams.get(result.getKey()+"_style") instanceof String ? (String) resultParams.get(result.getKey()+"_style") : null);
                                 final String targetWorkspace    = (resultParams.get(result.getKey()+"_workspace") != null && resultParams.get(result.getKey()+"_workspace") instanceof String ? (String) resultParams.get(result.getKey()+"_workspace") : null);
+                                final String metadata           = (resultParams.get(result.getKey()+"_metadata") != null && resultParams.get(result.getKey()+"_metadata") instanceof String ? (String) resultParams.get(result.getKey()+"_metadata") : null);
+
+                                Boolean publish = true;
                                 
-                                Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish, defaultStyle, targetWorkspace);
+                                if(resultParams.get(result.getKey()+"_pub") != null) {
+                                    if(resultParams.get(result.getKey()+"_pub") instanceof String) publish = Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub"));
+                                    else if(resultParams.get(result.getKey()+"_pub") instanceof Boolean) publish = (Boolean) resultParams.get(result.getKey()+"_pub");
+                                }
+
+                                
+                                Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish, layerName, title, description, defaultStyle, targetWorkspace, metadata);
 
                                 // add the transformed result to the process outputs
                                 if (wpsOutputValue != null) {

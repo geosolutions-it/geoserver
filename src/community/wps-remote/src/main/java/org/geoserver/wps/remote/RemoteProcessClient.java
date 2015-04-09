@@ -228,12 +228,13 @@ public abstract class RemoteProcessClient implements DisposableBean {
     }
 
     /**
+     * @param metadata 
      * @param value
      * @return
      * @throws IOException
      */
-    public LayerInfo importLayer(File file, DataStoreInfo store, String defaultStyle,
-            String targetWorkspace) throws Exception {
+    public LayerInfo importLayer(File file, DataStoreInfo store, String name, String title, String description, String defaultStyle,
+            String targetWorkspace, String metadata) throws Exception {
         Importer importer = getImporter();
 
         ImportContext context = (store != null ? importer.createContext(new SpatialFile(file),
@@ -261,7 +262,13 @@ public abstract class RemoteProcessClient implements DisposableBean {
                     task.getLayer().setDefaultStyle(style);
                 }
             }
+            
+            task.getLayer().setName(name);
+            task.getLayer().setTitle(title);
+            task.getLayer().setAbstract(description);
 
+            task.getLayer().getMetadata().put("owc_properties", metadata);
+            
             importer.run(context);
 
             if (context.getState() == ImportContext.State.COMPLETE) {
