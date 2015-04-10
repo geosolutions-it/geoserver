@@ -19,9 +19,21 @@
   </bean>
 
 
-  <bean id="jdbcGuidRuleDao" class="org.geoserver.security.guid.JDBCGuidRuleDao">
+  <bean id="jdbcGuidRuleDaoTarget" class="org.geoserver.security.guid.JDBCGuidRuleDao">
     <constructor-arg ref="dataSource" />
   </bean>
+  
+  <bean id="jdbcGuidRuleDao"
+    class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="proxyInterfaces" value="org.geoserver.security.guid.GuidRuleDao"/>
+
+    <property name="target" ref="jdbcGuidRuleDaoTarget"/>
+    <property name="interceptorNames">
+        <list>
+            <value>jdbcGuidOperations</value>
+        </list>
+    </property>
+</bean>
 
   <!-- the transactional advice -->
   <tx:advice id="txAdvice" transaction-manager="txManager">
@@ -40,7 +52,7 @@
     </property>
     <property name="patterns">
         <list>
-            <value>*</value>
+            <value>.*</value>
         </list>
     </property>
   </bean>
