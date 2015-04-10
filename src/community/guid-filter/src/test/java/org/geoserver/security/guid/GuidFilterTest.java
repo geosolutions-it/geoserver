@@ -12,7 +12,10 @@ import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.custommonkey.xmlunit.exceptions.XpathException;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.data.test.MockData;
@@ -30,6 +33,8 @@ import org.w3c.dom.Document;
 public class GuidFilterTest extends GeoServerSystemTestSupport {
 
     private static final String GUID_ABC = "abc";
+
+    private static final String GROUP = "group";
 
     private GuidRule abcAllPolygons;
 
@@ -78,6 +83,20 @@ public class GuidFilterTest extends GeoServerSystemTestSupport {
         WMSInfo wms = getGeoServer().getService(WMSInfo.class);
         wms.getSRS().add("EPSG:4326");
         getGeoServer().save(wms);
+
+        // create a group, so that we check filtering them out in caps documents
+        Catalog catalog = getCatalog();
+        LayerGroupInfo group = catalog.getFactory().createLayerGroup();
+        LayerInfo lakes = catalog.getLayerByName(getLayerId(MockData.LAKES));
+        LayerInfo forests = catalog.getLayerByName(getLayerId(MockData.FORESTS));
+        if (lakes != null && forests != null) {
+            group.setName(GROUP);
+            group.getLayers().add(lakes);
+            group.getLayers().add(forests);
+            CatalogBuilder cb = new CatalogBuilder(catalog);
+            cb.calculateLayerGroupBounds(group);
+            catalog.add(group);
+        }
     }
 
     @Before

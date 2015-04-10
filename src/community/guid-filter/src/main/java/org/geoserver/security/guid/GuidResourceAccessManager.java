@@ -99,8 +99,20 @@ public class GuidResourceAccessManager extends AbstractDispatcherCallback implem
 
     @Override
     public LayerGroupAccessLimits getAccessLimits(Authentication user, LayerGroupInfo layerGroup) {
-        // no limits
-        return null;
+        // working around https://osgeo-org.atlassian.net/browse/GEOS-6976
+        List<GuidRule> rules = getGuidRules();
+        if (rules == NO_LIMITS) {
+            return null;
+        }
+        String prefixedName = layerGroup.prefixedName();
+        for (GuidRule rule : rules) {
+            if (prefixedName.equals(rule.getLayerName())) {
+                return null;
+            }
+        }
+
+        // hide the group
+        return new LayerGroupAccessLimits(CATALOG_MODE);
     }
 
     @Override
