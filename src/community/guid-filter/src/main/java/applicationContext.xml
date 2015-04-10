@@ -33,11 +33,17 @@
     </tx:attributes>
   </tx:advice>
 
-  <aop:config>
-    <aop:pointcut id="jdbcOperation" 
-      expression="execution(* org.geoserver.security.guid.JDBCGuidRuleDao.*(..))" />
-    <aop:advisor advice-ref="txAdvice" pointcut-ref="jdbcOperation" />
-  </aop:config>
+  <bean id="jdbcGuidOperations"
+        class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+    <property name="advice">
+        <ref bean="txAdvice"/>
+    </property>
+    <property name="patterns">
+        <list>
+            <value>*</value>
+        </list>
+    </property>
+  </bean>
 
   <bean id="cachingGuidRuleDao" class="org.geoserver.security.guid.CachingGuidRuleDao">
     <constructor-arg ref="jdbcGuidRuleDao"></constructor-arg>
