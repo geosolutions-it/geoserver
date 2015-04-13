@@ -1,0 +1,5 @@
+<anonymousAuthentication>
+  <id>68cca4d:14ae923f364:-7ff5</id>
+  <name>anonymous</name>
+  <className>org.geoserver.security.filter.GeoServerAnonymousAuthenticationFilter</className>
+</anonymousAuthentication>

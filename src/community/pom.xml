@@ -361,6 +361,24 @@
         <module>kmlppio</module>
       </modules>
     </profile>
+    <profile>
+      <id>wps-remote</id>
+      <modules>
+        <module>wps-remote</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>wps-resource</id>
+      <modules>
+        <module>wps-resource</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>wps-mapstoreconfig</id>
+      <modules>
+        <module>wps-mapstoreconfig</module>
+      </modules>
+    </profile>
     <profile>      
       <id>wps-download</id>
       <modules>

@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashSet;
@@ -35,8 +34,9 @@ import com.vividsolutions.jts.geom.Geometry;
  * Converts feature between two feature data sources.
  * <p>
  * </p>
+ * 
  * @author Justin Deoliveira, OpenGeo
- *
+ * 
  */
 public class FeatureDataConverter {
 
@@ -46,7 +46,8 @@ public class FeatureDataConverter {
 
     static {
         final HashSet<String> words = new HashSet<String>();
-        final InputStream wordStream = FeatureDataConverter.class.getResourceAsStream("oracle_reserved_words.txt");
+        final InputStream wordStream = FeatureDataConverter.class
+                .getResourceAsStream("oracle_reserved_words.txt");
         final Reader wordReader = new InputStreamReader(wordStream, Charset.forName("UTF-8"));
         final BufferedReader bufferedWordReader = new BufferedReader(wordReader);
 
@@ -68,26 +69,26 @@ public class FeatureDataConverter {
     }
 
     /**
-     * characters we strip out of type names and attribute names because they can't be represented
-     * as xml
+     * characters we strip out of type names and attribute names because they can't be represented as xml
      */
     static final Pattern UNSAFE_CHARS = Pattern.compile("(^[^a-zA-Z\\._]+)|([^a-zA-Z\\._0-9]+)");
 
     private FeatureDataConverter() {
     }
 
-    public SimpleFeatureType convertType(SimpleFeatureType featureType, VectorFormat format, 
-        ImportData data, ImportTask task) {
+    public SimpleFeatureType convertType(SimpleFeatureType featureType, VectorFormat format,
+            ImportData data, ImportTask task) {
 
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
-        typeBuilder.setName(convertTypeName(featureType.getTypeName()));
+        typeBuilder.setName(convertTypeName(task != null && task.getLayer().getName() != null ? task.getLayer()
+                .getName() : featureType.getTypeName()));
 
         AttributeTypeBuilder attBuilder = new AttributeTypeBuilder();
         for (AttributeDescriptor att : featureType.getAttributeDescriptors()) {
             attBuilder.init(att);
             typeBuilder.add(attBuilder.buildDescriptor(convertAttributeName(att.getLocalName())));
         }
-        
+
         return typeBuilder.buildFeatureType();
     }
 
@@ -116,7 +117,8 @@ public class FeatureDataConverter {
     }
 
     protected Set<String> attributeNames(SimpleFeature feature) {
-        List<AttributeDescriptor> attributeDescriptors = feature.getType().getAttributeDescriptors();
+        List<AttributeDescriptor> attributeDescriptors = feature.getType()
+                .getAttributeDescriptors();
         Set<String> attrNames = new HashSet<String>(attributeDescriptors.size());
         for (AttributeDescriptor attr : attributeDescriptors) {
             attrNames.add(attr.getLocalName());
@@ -128,10 +130,10 @@ public class FeatureDataConverter {
 
     public static FeatureDataConverter TO_SHAPEFILE = new FeatureDataConverter() {
         @Override
-        public SimpleFeatureType convertType(SimpleFeatureType featureType, VectorFormat format, 
-            ImportData data, ImportTask item) {
+        public SimpleFeatureType convertType(SimpleFeatureType featureType, VectorFormat format,
+                ImportData data, ImportTask item) {
 
-            //for shapefile we always ensure the geometry is the first type, and we have to deal
+            // for shapefile we always ensure the geometry is the first type, and we have to deal
             // with the max field name length of 10
             SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
             typeBuilder.setName(convertTypeName(featureType.getTypeName()));
@@ -149,8 +151,7 @@ public class FeatureDataConverter {
                                     binding = f.getDefaultGeometry().getClass();
                                 }
                             }
-                        }
-                        finally {
+                        } finally {
                             r.close();
                         }
                     } catch (IOException e) {
@@ -174,16 +175,24 @@ public class FeatureDataConverter {
                 Object obj = from.getAttribute(att.getLocalName());
                 if (att instanceof GeometryDescriptor) {
                     to.setDefaultGeometry(obj);
-                }
-                else {
+                } else if (containsAttribute(to, attName(att.getLocalName()))) {
                     to.setAttribute(attName(att.getLocalName()), obj);
                 }
             }
         }
 
+        private boolean containsAttribute(SimpleFeature ft, String attName) {
+            for (AttributeDescriptor att : ft.getType().getAttributeDescriptors()) {
+                if (att.getLocalName().equals(attName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         String attName(String name) {
             name = convertAttributeName(name);
-            return name.length() > 10 ? name.substring(0,10) : name;
+            return name.length() > 10 ? name.substring(0, 10) : name;
         }
     };
 
@@ -211,7 +220,7 @@ public class FeatureDataConverter {
 
     public static final FeatureDataConverter TO_ORACLE = new FeatureDataConverter() {
         public void convert(SimpleFeature from, SimpleFeature to) {
-            //for oracle the target names are always uppercase
+            // for oracle the target names are always uppercase
             Set<String> fromAttrNames = attributeNames(from);
             Set<String> toAttrNames = attributeNames(to);
             for (String name : fromAttrNames) {
@@ -222,8 +231,8 @@ public class FeatureDataConverter {
             }
         };
 
-        public SimpleFeatureType convertType(SimpleFeatureType featureType, VectorFormat format, 
-            ImportData data, ImportTask task) {
+        public SimpleFeatureType convertType(SimpleFeatureType featureType, VectorFormat format,
+                ImportData data, ImportTask task) {
             SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
             AttributeTypeBuilder attributeBuilder = new AttributeTypeBuilder();
             typeBuilder.setName(ensureOracleSafe(featureType.getTypeName()));

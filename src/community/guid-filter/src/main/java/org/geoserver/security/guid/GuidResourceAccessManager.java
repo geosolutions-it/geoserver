@@ -52,7 +52,7 @@ public class GuidResourceAccessManager extends AbstractDispatcherCallback implem
     static final String GUID = "guid";
 
     static final WorkspaceAccessLimits WS_ACCESS_LIMITS = new WorkspaceAccessLimits(CATALOG_MODE,
-            true, true);
+            true, true, true);
 
     GuidRuleDao rulesDao;
 

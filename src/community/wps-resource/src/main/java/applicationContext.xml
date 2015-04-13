@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+ Copyright (c) 2014 Open Source Geospatial Foundation - all rights reserved.
+ This code is licensed under the GPL 2.0 license, available at the root
+ application directory.
+ -->
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+
+	<bean id="remoteTestProcess" class="org.geoserver.wps.gs.resource.RemoteTestProcess"/>
+    
+	<bean id="resourceLoaderProcess" class="org.geoserver.wps.gs.resource.ResourceLoaderProcess">
+		<constructor-arg index="0" ref="geoServer" />
+		<constructor-arg index="1" ref="wpsResourceManager" />
+	</bean>
+
+	<!-- ResourceLoader Pluggable Converters -->
+	<bean id="vectorialLayerResourceConverter"
+		class="org.geoserver.wps.gs.resource.model.impl.VectorialLayerConverter">
+		<constructor-arg index="0" value="vectorialLayer" />
+	</bean>
+
+	<bean id="literalDataResourceConverter"
+		class="org.geoserver.wps.gs.resource.model.impl.LiteralDataConverter">
+		<constructor-arg index="0" value="literalData" />
+	</bean>
+	
+	<!-- TranslateItems Pluggable Converters -->
+	<bean id="dataStoreItemConverter"
+		class="org.geoserver.wps.gs.resource.model.translate.impl.DataStoreItemConverter">
+		<constructor-arg index="0" value="dataStore" />
+	</bean>
+	
+	<bean id="virtualTableItemConverter"
+		class="org.geoserver.wps.gs.resource.model.translate.impl.VirtualTableItemConverter">
+		<constructor-arg index="0" value="virtualTable" />
+	</bean>
+
+	<bean id="transformItemConverter"
+		class="org.geoserver.wps.gs.resource.model.translate.impl.TransformItemConverter">
+		<constructor-arg index="0" value="transform" />
+	</bean>
+
+</beans>

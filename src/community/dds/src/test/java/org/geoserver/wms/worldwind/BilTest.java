@@ -63,6 +63,39 @@ public class BilTest extends WMSTestSupport {
     }
 
     @Test
+<<<<<<< HEAD
+	public void testStandardRequest() throws Exception {
+	    String layer = getLayerId(AUS_DEM);
+	    
+	    String request = "wms?service=wms&request=GetMap&version=1.1.1" +
+		"&layers=" + layer + "&styles=&bbox=108.3,-46.3,160.3,-4.2&width=64&height=64" + 
+		"&format=application/bil&srs=EPSG:4326";
+		String response = getAsString(request);
+		// Check response length in bytes
+		assertEquals("testStandardRequest",9377,response.getBytes().length);
+	    
+	    
+	    request = "wms?service=wms&request=GetMap&version=1.1.1" +
+	    		"&layers=" + layer + "&styles=&bbox=108.3,-46.3,160.3,-4.2&width=64&height=64" + 
+	    		"&format=application/bil8&srs=EPSG:4326";
+	    response = getAsString(request);
+	    // Check response length in bytes
+	    assertEquals("testStandardRequest",4097,response.getBytes().length);
+	    
+	    request = "wms?service=wms&request=GetMap&version=1.1.1" +
+		"&layers=" + layer + "&styles=&bbox=108.3,-46.3,160.3,-4.2&width=64&height=64" + 
+		"&format=application/bil16&srs=EPSG:4326";
+	    response = getAsString(request);
+	    // Check response length in bytes
+	    assertEquals("testStandardRequest",9355,response.getBytes().length);
+	    
+	    request = "wms?service=wms&request=GetMap&version=1.1.1" +
+		"&layers=" + layer + "&styles=&bbox=108.3,-46.3,160.3,-4.2&width=64&height=64" + 
+		"&format=application/bil32&srs=EPSG:4326";
+	    response = getAsString(request);
+	    // Check response length in bytes
+	    assertEquals("testStandardRequest",16385,response.getBytes().length);
+=======
 	public void testBil() throws Exception {
         byte[] response = getStandardRequest("application/bil");
 
@@ -92,6 +125,7 @@ public class BilTest extends WMSTestSupport {
 
         int expected = width * height * 4; // 4 bytes/pixel
         assertEquals("testStandardRequest", expected, response.length);
+>>>>>>> 74e3b62cc46bf7e321feb3423e93b3cbabd30746
 	}
 
     private byte[] getStandardRequest(String mimeType) throws Exception {

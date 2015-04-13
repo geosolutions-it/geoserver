@@ -1,0 +1,43 @@
+<featureType>
+  <id>FeatureTypeInfoImpl-68cca4d:14ae923f364:-7fea</id>
+  <name>comuni_01</name>
+  <nativeName>comuni_01</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl-78ff667e:12476299803:-8000</id>
+  </namespace>
+  <title>comuni_01</title>
+  <keywords>
+    <string>comuni_01</string>
+    <string>features</string>
+  </keywords>
+  <srs>EPSG:23032</srs>
+  <nativeBoundingBox>
+    <minx>308367.25</minx>
+    <maxx>1317100.5</maxx>
+    <miny>3927281.25</miny>
+    <maxy>5226925.5</maxy>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>6.470410441344758</minx>
+    <maxx>19.68926557405681</maxx>
+    <miny>35.154165541762</miny>
+    <maxy>47.19360282847164</maxy>
+    <crs>GEOGCS[&quot;WGS84(DD)&quot;, &#xd;
+  DATUM[&quot;WGS84&quot;, &#xd;
+    SPHEROID[&quot;WGS84&quot;, 6378137.0, 298.257223563]], &#xd;
+  PRIMEM[&quot;Greenwich&quot;, 0.0], &#xd;
+  UNIT[&quot;degree&quot;, 0.017453292519943295], &#xd;
+  AXIS[&quot;Geodetic longitude&quot;, EAST], &#xd;
+  AXIS[&quot;Geodetic latitude&quot;, NORTH]]</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl-68cca4d:14ae923f364:-7feb</id>
+  </store>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>
