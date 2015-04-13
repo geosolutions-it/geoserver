@@ -1280,5 +1280,15 @@
         </dependency>
       </dependencies>
    </profile>
+    <profile>
+      <id>guid-filter</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-guid-filter</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+   </profile>   
  </profiles>
 </project>

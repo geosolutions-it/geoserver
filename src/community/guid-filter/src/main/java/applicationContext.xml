@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+  xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+  <bean id="dataSource" class="org.geoserver.security.guid.ConfigurableDataSource">
+    <constructor-arg ref="dataDirectory"></constructor-arg>
+  </bean>
+
+  <bean id="txManager"
+    class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <property name="dataSource" ref="dataSource" />
+  </bean>
+
+
+  <bean id="jdbcGuidRuleDaoTarget" class="org.geoserver.security.guid.JDBCGuidRuleDao">
+    <constructor-arg ref="dataSource" />
+  </bean>
+  
+  <bean id="jdbcGuidRuleDao"
+    class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="proxyInterfaces" value="org.geoserver.security.guid.GuidRuleDao"/>
+
+    <property name="target" ref="jdbcGuidRuleDaoTarget"/>
+    <property name="interceptorNames">
+        <list>
+            <value>jdbcGuidOperations</value>
+        </list>
+    </property>
+</bean>
+
+  <!-- the transactional advice -->
+  <tx:advice id="txAdvice" transaction-manager="txManager">
+    <tx:attributes>
+      <!-- all methods starting with 'get' are read-only -->
+      <tx:method name="get*" read-only="true" />
+      <!-- other methods use the default transaction settings (see below) -->
+      <tx:method name="*" />
+    </tx:attributes>
+  </tx:advice>
+
+  <bean id="jdbcGuidOperations"
+        class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+    <property name="advice">
+        <ref bean="txAdvice"/>
+    </property>
+    <property name="patterns">
+        <list>
+            <value>.*</value>
+        </list>
+    </property>
+  </bean>
+
+  <bean id="cachingGuidRuleDao" class="org.geoserver.security.guid.CachingGuidRuleDao">
+    <constructor-arg ref="jdbcGuidRuleDao"></constructor-arg>
+  </bean>
+
+  <bean id="guidResourceAccessManager" class="org.geoserver.security.guid.GuidResourceAccessManager">
+    <constructor-arg ref="cachingGuidRuleDao" />
+  </bean>
+
+</beans>
