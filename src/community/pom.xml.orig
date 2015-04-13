@@ -435,6 +435,10 @@
         <modules>
           <module>guid-filter</module>
         </modules>
+<<<<<<< HEAD
+    </profile>	
+=======
     </profile>
+>>>>>>> c008AA
   </profiles>
 </project>
