@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 import javax.net.ssl.SSLContext;
 
@@ -26,6 +27,8 @@ import org.geoserver.importer.Importer;
 import org.geoserver.importer.SpatialFile;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.wps.remote.plugin.XMPPClient;
+import org.geotools.util.logging.Logging;
 import org.opengis.feature.type.Name;
 import org.opengis.util.ProgressListener;
 import org.springframework.beans.factory.DisposableBean;
@@ -37,6 +40,9 @@ import org.springframework.beans.factory.DisposableBean;
  * 
  */
 public abstract class RemoteProcessClient implements DisposableBean {
+    
+    /** The LOGGER */
+    public static final Logger LOGGER = Logging.getLogger(XMPPClient.class.getPackage().getName());
 
     /** Whether this client is enabled or not from configuration */
     private boolean enabled;
@@ -237,6 +243,9 @@ public abstract class RemoteProcessClient implements DisposableBean {
             String targetWorkspace, String metadata) throws Exception {
         Importer importer = getImporter();
 
+        
+        LOGGER.info(" - TEST - [Remote Process Client - importLayer] Importer Context from Spatial File:"+file.getAbsolutePath());
+        
         ImportContext context = (store != null ? importer.createContext(new SpatialFile(file),
                 store) : importer.createContext(new SpatialFile(file)));
 
@@ -244,10 +253,19 @@ public abstract class RemoteProcessClient implements DisposableBean {
             ImportTask task = context.getTasks().get(0);
 
             if (targetWorkspace != null) {
+                
+                LOGGER.info(" - TEST - [Remote Process Client - importLayer] Looking for Workspace in the catalog:"+targetWorkspace);
+                
                 WorkspaceInfo ws = importer.getCatalog().getWorkspaceByName(targetWorkspace);
                 if (ws != null) {
+                    
+                    LOGGER.info(" - TEST - [Remote Process Client - importLayer] Workspace found:"+ws);
+                    
                     context.setTargetWorkspace(ws);
                 } else {
+                    
+                    LOGGER.info(" - TEST - [Remote Process Client - importLayer] Workspace *NOT* found - using the Default one:"+importer.getCatalog().getDefaultWorkspace());
+                    
                     context.setTargetWorkspace(importer.getCatalog().getDefaultWorkspace());
                 }
             }
@@ -263,11 +281,11 @@ public abstract class RemoteProcessClient implements DisposableBean {
                 }
             }
             
-            task.getLayer().setName(name);
-            task.getLayer().setTitle(title);
-            task.getLayer().setAbstract(description);
+            if (name != null) task.getLayer().setName(name);
+            if (title != null) task.getLayer().setTitle(title);
+            if (description != null) task.getLayer().setAbstract(description);
 
-            task.getLayer().getMetadata().put("owc_properties", metadata);
+            if (metadata != null) task.getLayer().getMetadata().put("owc_properties", metadata);
             
             importer.run(context);
 
@@ -280,10 +298,15 @@ public abstract class RemoteProcessClient implements DisposableBean {
 
                     task = context.getTasks().get(0);
 
+                    LOGGER.info(" - TEST - [Remote Process Client - importLayer] The Importer has finished correctly for Spatial File:"+file.getAbsolutePath());
+
                     return task.getLayer();
                 }
             }
         }
+
+        LOGGER.info(" - TEST - [Remote Process Client - importLayer] The Importer has finished *BUT* did not returned any layer for Spatial File:"+file.getAbsolutePath());
+
         return null;
     }
 

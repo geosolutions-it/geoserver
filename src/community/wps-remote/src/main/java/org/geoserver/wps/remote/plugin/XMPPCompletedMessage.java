@@ -80,14 +80,17 @@ public class XMPPCompletedMessage implements XMPPMessage {
                                     else if(resultParams.get(result.getKey()+"_pub") instanceof Boolean) publish = (Boolean) resultParams.get(result.getKey()+"_pub");
                                 }
 
-                                
                                 Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish, layerName, title, description, defaultStyle, targetWorkspace, metadata);
-
+                                
+                                LOGGER.info(" - TEST - [XMPPCompletedMessage] wpsOutputValue:"+wpsOutputValue);
+                                
                                 // add the transformed result to the process outputs
                                 if (wpsOutputValue != null) {
                                     outputs.put(result.getKey(), wpsOutputValue);
+                                    continue;
                                 } else {
-                                    throw new Exception("All the Oputput Producres failed transforming the WPS Output!");
+                                    //throw new Exception("All the Oputput Producres failed transforming the WPS Output!");
+                                    LOGGER.warning("At least one of the Oputput Producres failed transforming the WPS Output!");
                                 }
                             } catch (Exception e) {
                                 LOGGER.log(Level.SEVERE, "Exception occurred while trying to produce the result:", e);
