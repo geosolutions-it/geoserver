@@ -50,10 +50,10 @@ public class XMPPOutputDefaultProducer {
         for (XMPPOutputType outputProducer : outputProducers) {
             wpsOutputValue = outputProducer.accept(this.visitor, value, type, pID, baseURL, xmppClient, publish, name, title, description, defaultStyle, targetWorkspace, metadata);
             if (wpsOutputValue != null) {
-                break;
+                return wpsOutputValue;
             }
         }
         
-        return wpsOutputValue;
+        return null;
     }
 }

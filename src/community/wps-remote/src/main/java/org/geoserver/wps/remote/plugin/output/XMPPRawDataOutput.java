@@ -63,11 +63,17 @@ public class XMPPRawDataOutput implements XMPPOutputType {
     @Override
     public Object produceOutput(Object value, String type, String pID, String baseURL,
             XMPPClient xmppClient, boolean publish, String name, String title, String description, String defaultStyle, String targetWorkspace, String metadata) throws Exception {
+        
+        LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] "+value+" - type:"+type+" - pID:"+pID+" - name:"+name+" - title:"+title+" - description:"+description+" - style:"+defaultStyle+" - workspace:"+targetWorkspace+" - metadata:"+metadata);
+        
             if (XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type) != null) {
                 Object sample = ((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[2];
                 
                 if (sample instanceof StreamRawData) {
                     final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((StreamRawData) sample).getFileExtension();
+                    
+                    LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] StreamRawData:"+fileName);
+                            
                     value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(((String) value)), ((StreamRawData) sample).getFileExtension());
                     if (publish) {
                         final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
@@ -83,9 +89,14 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                         value = new StreamRawData(((StreamRawData) sample).getMimeType(), new FileInputStream(tempFile), ((StreamRawData) sample).getFileExtension());
                     }
                     
+                    LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] Value:"+value);
+                    
                     return value;
                 } else if (sample instanceof FileRawData) {
                     final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((FileRawData) sample).getFileExtension();
+                    
+                    LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] FileRawData:"+fileName);
+                    
                     value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
                     if (publish) {
                         final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
@@ -98,13 +109,20 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                         }
                     }
                     
+                    LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] Value:"+value);
+                    
                     return value;
                 } else if (sample instanceof StringRawData) {
+                    
+                    LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] StringRawData:"+type);
+                    
                     if (type.equals("application/owc")) {
                         value = encodeAsPlainOWCMapContext(value, type, pID, baseURL, xmppClient, publish, name+"_"+pID, title, description, defaultStyle, targetWorkspace, metadata);
                     } else {
                         value = encodeAsPlainRawData(value, type, pID, baseURL, xmppClient, publish, name+"_"+pID, title, description, defaultStyle, targetWorkspace, metadata);                        
                     }
+                    
+                    LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] Value:"+value);
                     
                     return value;
                 }
@@ -128,9 +146,15 @@ public class XMPPRawDataOutput implements XMPPOutputType {
         final String extension = ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[4]);
         final String fileName = "wps-remote-str-rawdata_" + pID + extension;
         final String content = FileUtils.readFileToString(new File((String) value));
+        
+        LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] encodeAsPlainRawData:"+fileName);
+
         value = new StringRawData(content, ((String)((Object[]) XMPPClient.PRIMITIVE_NAME_TYPE_MAP.get(type))[3]).split(",")[0]);
         if (publish) {
             final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
+
+            LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] encodeAsPlainRawData:"+tempFile.getAbsolutePath());
+
             FileUtils.writeStringToFile(tempFile, ((StringRawData)value).getData());
             
             String wsName = xmppClient.getGeoServer().getCatalog().getDefaultWorkspace().getName();
@@ -160,6 +184,8 @@ public class XMPPRawDataOutput implements XMPPOutputType {
         String[] layerToPublish = ((String) value).split(";");
         String[] styles = (defaultStyle != null ? defaultStyle.split(";") : null);
         String[] workspaces = (targetWorkspace != null ? targetWorkspace.split(";") : null);
+
+        LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] encodeAsPlainOWCMapContext:"+layerToPublish);
         
         List<LayerInfo> wmc = new ArrayList<LayerInfo>();
         
@@ -213,6 +239,8 @@ public class XMPPRawDataOutput implements XMPPOutputType {
     private Object getWmc(XMPPClient xmppClient, List<LayerInfo> wmc, String type, String pID, String baseURL, String metadata) throws IOException {
         final String wmcTemplatePath = xmppClient.getConfiguration().get("owc_wms_json_template");
         
+        LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] wmcTemplatePath:"+wmcTemplatePath);
+        
         String content = "";
         if (wmcTemplatePath != null) {
             try {
@@ -245,6 +273,9 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                 template.process(map, new OutputStreamWriter(buff, Charset.forName("UTF-8")));
                 
                 content = buff.toString();
+                
+                LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] wmcTemplate Processed:"+content);
+                
             } catch (Exception e) {
                 StringWriter errors = new StringWriter();
                 e.printStackTrace(new PrintWriter(errors));
