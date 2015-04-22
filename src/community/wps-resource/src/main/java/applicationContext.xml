@@ -7,7 +7,10 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 <beans>
 
-	<bean id="remoteTestProcess" class="org.geoserver.wps.gs.resource.RemoteTestProcess"/>
+	<bean id="guidUpdateProcess" class="org.geoserver.wps.gs.resource.GuidUpdateProcess">
+	    <constructor-arg index="0" ref="geoServer" />
+		<constructor-arg index="1" ref="cachingGuidRuleDao" />
+	</bean>
     
 	<bean id="resourceLoaderProcess" class="org.geoserver.wps.gs.resource.ResourceLoaderProcess">
 		<constructor-arg index="0" ref="geoServer" />

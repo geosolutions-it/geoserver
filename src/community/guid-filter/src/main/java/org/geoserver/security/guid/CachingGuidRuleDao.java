@@ -48,9 +48,9 @@ public class CachingGuidRuleDao implements GuidRuleDao {
         }
     }
 
-    public void clearRules() {
+    public void clearRules(final String guid) {
         cache.invalidateAll();
-        delegate.clearRules();
+        delegate.clearRules(guid);
     }
 
     public void addRule(final GuidRule rule) {

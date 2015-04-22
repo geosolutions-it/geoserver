@@ -112,7 +112,7 @@ public class GuidFilterTest extends GeoServerSystemTestSupport {
                 ECQL.toFilter("ADDRESS = '123 Main Street'"));
 
         // make sure we start empty
-        dao.clearRules();
+        dao.clearRules(null);
 
         // xpath for assertions
         xpath = XMLUnit.newXpathEngine();

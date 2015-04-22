@@ -84,8 +84,12 @@ public class JDBCGuidRuleDao implements GuidRuleDao {
      * @throws TransactionException
      */
     @Override
-    public void clearRules() {
-        jt.update("delete from guids");
+    public void clearRules(final String guid) {
+        if (guid == null || guid.isEmpty()) {
+            jt.update("delete from guids");
+        } else {
+            jt.update("delete from guids where guid = ?", new Object[] { guid });
+        }
     }
 
 }

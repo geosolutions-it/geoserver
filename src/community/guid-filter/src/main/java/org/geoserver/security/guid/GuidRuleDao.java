@@ -15,7 +15,7 @@ public interface GuidRuleDao {
 
     public List<GuidRule> getRules(String guid);
 
-    public abstract void clearRules();
+    public abstract void clearRules(String guid);
 
     public abstract void addRule(final GuidRule rule);
 

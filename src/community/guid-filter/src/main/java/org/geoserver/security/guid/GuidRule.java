@@ -6,7 +6,7 @@ package org.geoserver.security.guid;
 
 import org.opengis.filter.Filter;
 
-class GuidRule {
+public class GuidRule {
     String guid;
 
     String layerName;
