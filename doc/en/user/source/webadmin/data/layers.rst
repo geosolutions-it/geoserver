@@ -43,13 +43,19 @@ Clicking the :guilabel:`Add a new resource` button brings up a :guilabel:`New La
 
    List of all currently enabled stores
 
-Upon selection of a Store, a view table of existing layers within the selected store will be displayed. In this example, ``giant_polygon``, ``poi``, ``poly_landmarks`` and ``tiger_roads`` are all layers within the NYC store. 
+Upon selection of a Store, a list is displayed of resources within the store.
+Resources which have already been published as layers are listed first, followed by other resources which
+are available to be published.
+In this example, ``giant_polygon``, ``poi``, ``poly_landmarks`` and ``tiger_roads`` are all existing layers within the NYC store. 
 
 .. figure:: ../images/data_layers_add_view.png
    
-   View of all layers
+   *List of published and available resources in a store*
 
-On selecting a layer name, you are redirected to a :ref:`layer edit page <webadmin_layers_edit_data>`. 
+To add a layer for an available resource click :guilabel:`Publish`.
+To add a new layer for a published resource click :guilabel:`Publish Again`. 
+(Note that when re-publishing the name of the new layer may have to be modified to avoid conflict with an existing layer.)
+The actions display an :ref:`Edit Layer<webadmin_layers_edit_data>` page to enter the definition of the new layer.
 
 To delete a layer, click the check box on the left side of each layer row. As shown below, multiple layers can be selected for removal on a single results page. It should be noted, however, that selections for removal will not persist from one results pages to the next. 
   
@@ -165,6 +171,7 @@ The Publishing tab is for configuring HTTP and WMS/WCS settings.
 
      *WMS Settings*
 
+* **Queryable**:—Controls whether the layer is queryable via WMS ``GetFeatureInfo`` requests.
 * **Default style**:—Style that will be used when the client does not specify a named style in GetMap requests.
 * **Additional styles**—Other styles that can be associated with this layer. Some clients (and the GeoServer Layer Preview) will present those as styling alternatives for that layer to the user.
 * **Default rendering buffer**—Default value of the ``buffer`` GetMap/GetFeatureInfo vendor parameter. See the :ref:`wms_vendor_parameters` for more details.

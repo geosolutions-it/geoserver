@@ -102,6 +102,12 @@
    </dependency>
    <dependency>
     <groupId>org.geoserver</groupId>
+    <artifactId>gs-platform</artifactId>
+    <version>${gs.version}</version>
+    <classifier>tests</classifier>
+   </dependency>
+   <dependency>
+    <groupId>org.geoserver</groupId>
     <artifactId>gs-ows</artifactId>
     <version>${gs.version}</version>
    </dependency>
@@ -579,6 +585,14 @@
     <groupId>org.geowebcache</groupId>
     <artifactId>gwc-diskquota-jdbc</artifactId>
     <version>${gwc.version}</version>
+   </dependency>
+
+   <!-- ORACLE -->
+   <!-- Download and install into your own repo -->
+   <dependency>
+     <groupId>com.oracle</groupId>
+     <artifactId>ojdbc7</artifactId>
+     <version>12.1.0.2</version>
    </dependency>
 
    <dependency>
