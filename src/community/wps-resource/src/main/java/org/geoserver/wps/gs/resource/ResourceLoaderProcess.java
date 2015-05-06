@@ -29,6 +29,8 @@ import org.geoserver.wps.gs.resource.model.Resources;
 import org.geoserver.wps.gs.resource.model.translate.TranslateContext;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItem;
 import org.geoserver.wps.gs.resource.model.translate.TranslateItemConverter;
+import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.process.ProcessException;
 import org.geotools.process.factory.DescribeParameter;
@@ -76,15 +78,16 @@ public class ResourceLoaderProcess implements GSProcess {
 
     @DescribeResult(name = "result", description = "XML describing the Resources to load")
     public String execute(
-            @DescribeParameter(name = "resourcesXML", min = 1, description = "XML describing the Resources to load") String resourcesXML,
+            @DescribeParameter(name = "resourcesXML", min = 1, description = "XML describing the Resources to load", meta = { "mimeTypes=application/json,text/xml" }) RawData resourcesXML,
             final ProgressListener progressListener) throws ProcessException {
 
         // Initialize Unmarshaller
         XStream xs = initialize(catalog);
+        final String resourceDescriptor = ((StringRawData)resourcesXML).getData();
 
         // De-serialize resources
         try {
-            Resources resources = (Resources) xs.fromXML(resourcesXML);
+            Resources resources = (Resources) xs.fromXML(resourceDescriptor);
 
             // Create-or-update the resources
             for (Resource resource : resources.getResources()) {
@@ -102,12 +105,12 @@ public class ResourceLoaderProcess implements GSProcess {
 
             // Store XML into the WPS folder
             // storeResourcesXML(xs, resources);
-            storeResourcesXML(resourcesXML);
+            storeResourcesXML(resourceDescriptor);
         } catch (Exception cause) {
             throw new ProcessException(cause);
         }
 
-        return resourcesXML;
+        return resourceDescriptor;
     }
 
     /**
