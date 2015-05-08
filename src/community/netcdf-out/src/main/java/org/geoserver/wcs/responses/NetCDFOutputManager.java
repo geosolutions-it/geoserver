@@ -553,34 +553,55 @@ public class NetCDFOutputManager {
             String definedUnit = unit.getStringValue();
             if (canonical.equalsIgnoreCase(definedUnit)) {
                 validUOM = true;
+                if (LOGGER.isLoggable(Level.FINE)) {
+                    LOGGER.fine("Canonical unit and specified unit are equal. "
+                            + "Proceeding with standard_name set");
+                }
             } else {
+                boolean parseable = false;
                 try {
                     ucar.units.Unit ucarUnit = SUF.parse(definedUnit);
                     ucar.units.Unit canonicalUnit = SUF.parse(canonical);
                     if (ucarUnit.isCompatible(canonicalUnit)) {
                         validUOM = true;
+                        parseable = true;
+                        if (LOGGER.isLoggable(Level.FINE)) {
+                            LOGGER.fine("Canonical unit and specified unit are compatible. "
+                                    + "Proceeding with standard_name set");
+                        }
                     }
                 } catch (NoSuchUnitException e1) {
-                    // TODO Auto-generated catch block
-                    
+                    if (LOGGER.isLoggable(Level.FINE)) {
+                        LOGGER.fine(e1.getLocalizedMessage());
+                    }
                 } catch (UnitParseException e1) {
-                    // TODO Auto-generated catch block
-                    
+                    if (LOGGER.isLoggable(Level.FINE)) {
+                        LOGGER.fine(e1.getLocalizedMessage());
+                    }
                 } catch (SpecificationException e1) {
-                    // TODO Auto-generated catch block
-                    
+                    if (LOGGER.isLoggable(Level.FINE)) {
+                        LOGGER.fine(e1.getLocalizedMessage());
+                    }
                 } catch (UnitDBException e1) {
-                    // TODO Auto-generated catch block
-                    
+                    if (LOGGER.isLoggable(Level.FINE)) {
+                        LOGGER.fine(e1.getLocalizedMessage());
+                    }
                 } catch (PrefixDBException e1) {
-                    // TODO Auto-generated catch block
-                    
+                    if (LOGGER.isLoggable(Level.FINE)) {
+                        LOGGER.fine(e1.getLocalizedMessage());
+                    }
                 } catch (UnitSystemException e1) {
-                    // TODO Auto-generated catch block
-                    
+                    if (LOGGER.isLoggable(Level.FINE)) {
+                        LOGGER.fine(e1.getLocalizedMessage());
+                    }
+                }
+                if (!parseable) {
+                    if (LOGGER.isLoggable(Level.INFO)) {
+                        LOGGER.info("The specified unit " + definedUnit + " can't be converted to a " +
+                                " UCAR unit so it doesn't allow to define a standard name");
+                    }
                 }
 
-                //                } catch ()
             }
         }
                 

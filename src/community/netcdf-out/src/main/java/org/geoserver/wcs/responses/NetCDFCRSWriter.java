@@ -20,9 +20,9 @@ import org.geoserver.wcs.responses.NetCDFDimensionsManager.NetCDFDimensionMappin
 import org.geoserver.wcs.responses.NetCDFDimensionsManager.NetCDFDimensionMapping.DimensionValuesArray;
 import org.geoserver.wcs2_0.response.DimensionBean;
 import org.geotools.coverage.grid.GridCoverage2D;
-import org.geotools.imageio.netcdf.cv.NetCDFCoordinateReferenceSystemType;
-import org.geotools.imageio.netcdf.cv.NetCDFCoordinateReferenceSystemType.NetCDFCoordinate;
-import org.geotools.imageio.netcdf.cv.NetCDFProjection;
+import org.geotools.coverage.io.netcdf.crs.NetCDFCoordinateReferenceSystemType;
+import org.geotools.coverage.io.netcdf.crs.NetCDFCoordinateReferenceSystemType.NetCDFCoordinate;
+import org.geotools.coverage.io.netcdf.crs.NetCDFProjection;
 import org.geotools.imageio.netcdf.utilities.NetCDFUtilities;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;

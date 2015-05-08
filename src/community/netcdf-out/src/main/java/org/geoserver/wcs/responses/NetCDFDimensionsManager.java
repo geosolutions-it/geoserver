@@ -15,7 +15,7 @@ import java.util.Set;
 
 import org.geoserver.wcs2_0.response.DimensionBean;
 import org.geoserver.wcs2_0.response.DimensionBean.DimensionType;
-import org.geotools.imageio.netcdf.cv.NetCDFCoordinateReferenceSystemType.NetCDFCoordinate;
+import org.geotools.coverage.io.netcdf.crs.NetCDFCoordinateReferenceSystemType.NetCDFCoordinate;
 import org.geotools.imageio.netcdf.utilities.NetCDFUtilities;
 import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
