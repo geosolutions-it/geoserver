@@ -14,6 +14,7 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.process.ProcessException;
 import org.junit.Test;
@@ -45,7 +46,7 @@ public class ResourceLoaderProcessTest extends WPSResourceTestSupport {
 
             ResourceLoaderProcess rsp = new ResourceLoaderProcess(getGeoServer(),
                     (WPSResourceManager) applicationContext.getBean("wpsResourceManager"));
-            rsp.execute(dump, null);
+            rsp.execute(new StringRawData(dump, "application/xml"), null);
 
             List<LayerInfo> layers = getGeoServer().getCatalog().getLayers();
             assertNotNull(layers);
@@ -79,7 +80,7 @@ public class ResourceLoaderProcessTest extends WPSResourceTestSupport {
 
             ResourceLoaderProcess rsp = new ResourceLoaderProcess(getGeoServer(),
                     (WPSResourceManager) applicationContext.getBean("wpsResourceManager"));
-            rsp.execute(dump, null);
+            rsp.execute(new StringRawData(dump, "application/xml"), null);
 
             assertNotNull(layers.size() > numLayers);
 
