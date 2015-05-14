@@ -273,6 +273,11 @@ public class NetCDFOutputManager {
         sampleGranule = granuleStack.getGranules().get(0);
     }
 
+    /**
+     * Parse encodingParams
+     * 
+     * @param encodingParameters
+     */
     private void parseParams(Map<String, String> encodingParameters) {
         Set<String> keys = encodingParameters.keySet();
         if (keys != null && !keys.isEmpty() && keys.contains(WCS20GetCoverageResponse.COVERAGE_ID_PARAM)) {
