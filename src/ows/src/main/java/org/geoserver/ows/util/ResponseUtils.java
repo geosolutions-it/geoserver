@@ -16,6 +16,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.validator.UrlValidator;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.platform.GeoServerExtensions;
@@ -396,12 +397,7 @@ public class ResponseUtils {
             params.append("=");
             String value = entry.getValue();
             if (value != null) {
-                /*
-                 * Don't use the URLEncoder class! Despite the name, that class actually does HTML form encoding, not URL encoding. It's not correct
-                 * to concatenate unencoded strings to make an "unencoded" URL and then pass it through a URLEncoder. Doing so will result in problems
-                 * (particularly the aforementioned one regarding spaces and plus signs in the path).
-                 */
-                String encoded = URI.create(value).toASCIIString();
+                String encoded = urlEncode(value);
                 params.append(encoded);
             }
             params.append("&");
@@ -465,9 +461,17 @@ public class ResponseUtils {
      */
     public static String urlEncode(String value) {
         try {
-            // TODO: URLEncoder also encodes ( and ) which are considered safe chars,
-            // see also http://www.w3.org/International/O-URL-code.html
-            return URLEncoder.encode(value, "ISO-8859-1");
+            UrlValidator urlValidator = new UrlValidator();
+            if(urlValidator.isValid(value)) {
+                 // Don't use the URLEncoder class! Despite the name, that class actually does HTML form encoding, not URL encoding. It's not correct
+                 // to concatenate unencoded strings to make an "unencoded" URL and then pass it through a URLEncoder. Doing so will result in problems
+                 // (particularly the aforementioned one regarding spaces and plus signs in the path).
+                return URI.create(value).toASCIIString();                    
+            } else {
+                // TODO: URLEncoder also encodes ( and ) which are considered safe chars,
+                // see also http://www.w3.org/International/O-URL-code.html
+                return URLEncoder.encode(value, "ISO-8859-1");
+            }
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("This is unexpected", e);
         }
