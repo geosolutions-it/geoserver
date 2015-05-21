@@ -173,7 +173,9 @@ public class GuidFilterTest extends GeoServerSystemTestSupport {
         dao.addRule(abcAllPolygons);
 
         Document dom = getAsDOM("wms?request=getCapabilities&version=1.1.0&guid=" + GUID_ABC);
-        // print(dom);
+        print(dom);
+        assertEquals("http://localhost:8080/geoserver/wms?SERVICE=WMS&guid=" + GUID_ABC + "&",
+                xpath.evaluate("//Capability/Request/GetMap//OnlineResource[1]/@xlink:href", dom));
         assertEquals(1, xpath.getMatchingNodes("//Capability/Layer/Layer", dom).getLength());
         assertEquals(getLayerId(MockData.POLYGONS),
                 xpath.evaluate(("//Capability/Layer/Layer/Name"), dom));

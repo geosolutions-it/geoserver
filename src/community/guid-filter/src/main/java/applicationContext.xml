@@ -64,5 +64,7 @@
   <bean id="guidResourceAccessManager" class="org.geoserver.security.guid.GuidResourceAccessManager">
     <constructor-arg ref="cachingGuidRuleDao" />
   </bean>
+  
+  <bean id="guidUrlMangler" class="org.geoserver.security.guid.GuidURLMangler"/>
 
 </beans>
