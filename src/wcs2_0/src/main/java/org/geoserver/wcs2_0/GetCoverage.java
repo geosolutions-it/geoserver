@@ -1,4 +1,4 @@
-/* (c) 2014-2015 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -128,9 +128,10 @@ public class GetCoverage {
     private static final CoverageProcessor processor = CoverageProcessor.getInstance(HINTS);
     
     static {
-        //TODO: This one should be pluggable
+        //TODO: This one should be pluggable through Extensions
         mdFormats = new HashSet<String>();
         mdFormats.add("application/x-netcdf");
+        mdFormats.add("application/x-netcdf4");
     }
 
     /** Logger.*/
@@ -412,6 +413,9 @@ public class GetCoverage {
         if (reader instanceof StructuredGridCoverage2DReader && coverageDimensions != null) {
             // Setting dimensions as properties
             Map map = coverage.getProperties();
+            if (map == null) {
+                map = new HashMap();
+            }
             for (DimensionBean coverageDimension : coverageDimensions) {
                 helper.setCoverageDimensionProperty(map, gridCoverageRequest, coverageDimension);
             }
@@ -773,7 +777,7 @@ public class GetCoverage {
         // leverage GeoTools projection handlers to figure out exactly which areas we should be
         // reading
         ProjectionHandler handler = ProjectionHandlerFinder.getHandler(new ReferencedEnvelope(
-                envelope), readerCRS, false);
+                envelope), readerCRS, true);
         if (handler == null) {
             readEnvelopes.add(new GeneralEnvelope(envelope));
         } else {
