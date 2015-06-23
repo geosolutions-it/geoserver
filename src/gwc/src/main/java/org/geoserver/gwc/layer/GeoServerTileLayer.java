@@ -76,6 +76,7 @@ import org.geowebcache.util.GWCVars;
 import org.geowebcache.util.ServletUtils;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
+import com.google.common.base.Throwables;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 
@@ -157,6 +158,11 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
         return info.getId();
     }
 
+    @Override
+    public String getBlobStoreId(){
+        return info.getBlobStoreId();
+    }
+    
     @Override
     public String getName() {
         return info.getName();
@@ -565,6 +571,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
                     metaTile.setWebMap(map);
                     saveTiles(metaTile, tile, requestTime);
                 } catch (Exception e) {
+                    Throwables.propagateIfInstanceOf(e, GeoWebCacheException.class);
                     throw new GeoWebCacheException("Problem communicating with GeoServer", e);
                 } 
             }
@@ -1193,5 +1200,10 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
     @Override
     public void setTransientLayer(boolean transientLayer){
         return;
+    }
+
+    @Override
+    public void setBlobStoreId(String blobStoreId) {
+        info.setBlobStoreId(blobStoreId);
     }
 }
