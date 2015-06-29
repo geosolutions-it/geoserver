@@ -1,3 +1,7 @@
+/* (c) 2015 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.importer.rest;
 
 import static org.junit.Assert.assertEquals;
@@ -7,8 +11,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-
-import net.sf.json.JSONObject;
 
 import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.FeatureTypeInfo;
@@ -37,6 +39,8 @@ import org.opengis.feature.type.GeometryDescriptor;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Point;
+
+import net.sf.json.JSONObject;
 
 public class ImporterIntegrationTest extends ImporterTestSupport {
 
@@ -219,7 +223,8 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                 "}";
         // @formatter:on 
 
-        JSONObject json = (JSONObject) json(postAsServletResponse("/rest/imports?execute=true"
+        JSONObject json = (JSONObject) json(
+                postAsServletResponse("/rest/imports?exec=true"
                 + (async ? "&async=true" : ""), contextDefinition, "application/json"));
         // print(json);
         String state = null;
