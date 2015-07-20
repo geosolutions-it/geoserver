@@ -5,16 +5,12 @@
  */
 package org.geoserver.importer.transform;
 
-import java.util.logging.Level;
-
 import org.geoserver.importer.ImportTask;
 import org.geotools.data.DataStore;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.geotools.referencing.CRS;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -68,21 +64,9 @@ public class AttributesToPointGeometryTransform extends AbstractTransform implem
         }
         builder.remove(latField);
         builder.remove(lngField);
-		builder.srid(this.geometryFactory.getSRID());
-        if (this.geometryFactory.getSRID() > 0) {
-        	try {
-        		CoordinateReferenceSystem crs = CRS.decode("EPSG:" + this.geometryFactory.getSRID(), true);
-				builder.setCRS(crs);
-        	} catch (Exception e) {
-        		LOGGER.log(Level.WARNING, "Could not set Default Geometry SRID!", e);
-        	}
-        }
         builder.add(pointFieldName, Point.class);
-        builder.setDefaultGeometry(pointFieldName);
 
-        final SimpleFeatureType buildFeatureType = builder.buildFeatureType();
-        
-		return buildFeatureType;
+        return builder.buildFeatureType();
     }
 
     @Override
@@ -97,13 +81,7 @@ public class AttributesToPointGeometryTransform extends AbstractTransform implem
         } else {
             Coordinate coordinate = new Coordinate(lng, lat);
             Point point = geometryFactory.createPoint(coordinate);
-            final String geomAttName = feature.getDefaultGeometryProperty().getName().getLocalPart();
-            if (geomAttName
-                    .equals(pointFieldName)) {
-                feature.setAttribute(pointFieldName, point);
-            } else {
-                feature.setAttribute(geomAttName, point);
-            }
+            feature.setAttribute(pointFieldName, point);
         }
         return feature;
     }

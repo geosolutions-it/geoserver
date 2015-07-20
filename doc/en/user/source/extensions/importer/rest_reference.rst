@@ -46,6 +46,8 @@ Another example of indirect task might involve taking a CSV file as an input, tu
 REST API Reference
 ------------------
 
+.. _importer_rest_reference_imports:
+
 All the imports
 ^^^^^^^^^^^^^^^
 
@@ -269,6 +271,7 @@ and required only if the remote server demands an authentication of sorts.
 In case the referred file is compressed, it will be unpacked as the download completes, and the
 tasks will be created over the result of unpacking.
     
+>>>>>>> 296f581... [GEOS-7049] Allow autonomous and asynchonous data fetching in importer REST api
 Tasks
 ^^^^^
 
@@ -287,14 +290,14 @@ Tasks
      - Retrieve all tasks for import with id <importId>
      - 200
      - n/a
-     - :ref:`Task Collection <tasks>`
+     - :ref:`Task Collection <importer_rest_reference_tasks>`
    * - POST
      - Create a new task
      - 201 with Location header
-     - :ref:`Multipart form data <file_upload>`
-     - :ref:`Tasks <tasks>`
+     - :ref:`Multipart form data <importer_rest_reference_fileupload>`
+     - :ref:`Tasks <importer_rest_reference_tasks>`
 
-.. _file_upload:
+.. _importer_rest_reference_fileupload:
 
 Getting the list of tasks
 """""""""""""""""""""""""
@@ -390,12 +393,12 @@ Single task resource
      - Retrieve task with id <taskId> within import with id <importId>
      - 200
      - n/a
-     - :ref:`Task <tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
    * - PUT
      - Modify task with id <taskId> within import with id <importId>
      - 200
-     - :ref:`Task <tasks>`
-     - :ref:`Task <tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
    * - DELETE
      - Remove task with id <taskId> within import with id <importId>
      - 200
@@ -444,7 +447,7 @@ The following operations are specific to data objects of type ``directory``.
      - Retrieve the list of files for a task with id <taskId> within import with id <importId>
      - 200
      - n/a
-     - :ref:`Task <tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
 
 The response to a GET request will be::
 
@@ -487,7 +490,7 @@ The response to a GET request will be::
      - Retrieve the file with id <fileId> from the data of a task with id <taskId> within import with id <importId>
      - 200
      - n/a
-     - :ref:`Task <tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
    * - DELETE
      - Remove a specific file from the task with id <taskId> within import with id <importId>
      - 200
@@ -656,8 +659,8 @@ The layer defines how the target layer will be created
    * - PUT
      - Modify the target layer for a task with id <taskId> within import with id <importId>
      - 200
-     - :ref:`Task <tasks>`
-     - :ref:`Task <tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
+     - :ref:`Task <importer_rest_reference_tasks>`
 
 
 Requesting the task layer will result in the following::

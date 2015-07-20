@@ -61,9 +61,7 @@ import org.geoserver.security.decorators.SecuredLayerInfo;
 import org.geotools.util.logging.Logging;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.opengis.filter.Filter;
 import org.opengis.filter.sort.SortBy;
@@ -75,10 +73,6 @@ import com.google.common.collect.Iterators;
 public class SecureCatalogImplTest extends AbstractAuthorizationTest {
     
     public final static Logger LOGGER = Logging.getLogger(SecureCatalogImplTest.class);
-    
-    @Rule
-    public GeoServerExtensionsHelper.ExtensionsHelperRule extensions = 
-        new GeoServerExtensionsHelper.ExtensionsHelperRule();
 
     @Before
     public void setUp() throws Exception {
@@ -86,13 +80,7 @@ public class SecureCatalogImplTest extends AbstractAuthorizationTest {
 
         populateCatalog();
         
-        SecurityContextHolder.getContext().setAuthentication(null);
         Dispatcher.REQUEST.remove();
-    }
-    
-    @After
-    public void cleanup() {
-        SecurityContextHolder.getContext().setAuthentication(null);
     }
     
     @Test 
@@ -466,7 +454,7 @@ public class SecureCatalogImplTest extends AbstractAuthorizationTest {
             }
         };
         this.catalog = withLayers;
-        extensions.singleton("catalog", catalog, Catalog.class);
+        GeoServerExtensionsHelper.singleton("catalog", catalog, Catalog.class);
 
         // and the secure catalog with the filter
         buildManager("publicRead.properties", filter);
@@ -582,7 +570,7 @@ public class SecureCatalogImplTest extends AbstractAuthorizationTest {
         expect(eoCatalog.getLayerGroupByName("topp", eoStatesLayerGroup.getName())).andReturn(eoStatesLayerGroup).anyTimes();        
         replay(eoCatalog);
         this.catalog = eoCatalog;
-        extensions.singleton("catalog", eoCatalog, Catalog.class);
+        GeoServerExtensionsHelper.singleton("catalog", eoCatalog, Catalog.class);
         
         buildManager("lockedLayerInLayerGroup.properties");
         SecurityContextHolder.getContext().setAuthentication(roUser);
@@ -1057,8 +1045,8 @@ public class SecureCatalogImplTest extends AbstractAuthorizationTest {
         while (it1.hasNext()) {
             LayerInfo next = it1.next();
             // topp
-            assertNotSame("Unexpectedly found bases with security filter " + security, next, basesLayer);
-            assertNotSame("Unexpectedly found states with security filter " + security, next, statesLayer);
+            assertNotSame(next, basesLayer);
+            assertNotSame(next, statesLayer);
             hasLandmLayer |= next.equals(landmarksLayer);
             hasRoadsLayer |= next.equals(roadsLayer);
             // Nurc

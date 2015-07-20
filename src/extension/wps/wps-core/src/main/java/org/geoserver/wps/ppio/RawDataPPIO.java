@@ -63,6 +63,7 @@ public class RawDataPPIO extends ComplexPPIO {
         } else {
             rd = (RawData) value;
         }
+
         if (rd == null || rd.getFileExtension() == null) {
             return AbstractRawData.DEFAULT_EXTENSION;
         } else {

@@ -2,26 +2,26 @@
 
 This file is a temporary workaround as our issue tracker is currently unavailable. The issues marked have been resolved.
 
-## GeoServer 2.8-beta
+## GeoServer 2.7.1
 
 Bug:
 
- * GEOS-5857 Fix StringIndexOutOfBoundsException on some WFS-T requests
- * GEOS-5393 - Build hangs in ResourceAccessManagerWFSTest.testInsertNoLimits if another GeoServer is listening on localhost:8080
- * GEOS-6870 - Malformed Path to Resource on Windows
- * GEOS-6934 - gwc fails to render 900913 gridset with ImageMosaic store and the contour style
+* GEOS-5857 Fix StringIndexOutOfBoundsException on some WFS-T requests
+* GEOS-6182 - Execute goes NPE if the responseForm is missing in the request
+* GEOS-6769 - WFS 2.0.0 ListStoredQueries response is invalid
+* GEOS-6791 - GeoServerTileLayers are saved even if "Create cached layer" is disabled 
+* GEOS-6875 - SLD Validation fails for mixed mode mark names (dynamic symbolizers)
+* GEOS-6908 - GeoFence probe fails to reproject allowed area if resource is not EPSG:4326
+* GEOS-6943 - 2.7.RC1 Security Regression 
 
 Improvement:
 
-* GEOS-4833 - SetCharacterEncodingFilter is same as SpringFramework CharacterEncodingFilter
-* GEOS-6905 - Support embedding WCS 2.0 requests in WPS
-* GEOS-6946 - Allow cql expressions in ColorMapEntry for GetLegendGraphic
-
-New Feature:
-
- * GEOS-6901 - OGR based WPS output formats
-
+ * GEOS-6658 - MBTiles output format should accept an external file created
+ * GEOS-6672 - Creation of a WPS Process for mbtiles generation
+ * GEOS-6673 - AbstractTilesGetMapOutputFormat should perform cleanup continuously
 
 Task:
 
- * GEOS-6960 - Update GS-code after viewsManager classes cleanup
+ * GEOS-6659 - GeoPackageProcess should support the configuration of an external file
+ * GEOS-6945 - Change JMS clustering groupid to org.geoserver.community
+
