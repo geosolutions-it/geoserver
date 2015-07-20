@@ -1,7 +1,3 @@
-/* (c) 2015 Open Source Geospatial Foundation - all rights reserved
- * This code is licensed under the GPL 2.0 license, available at the root
- * application directory.
- */
 package org.geoserver.importer.rest;
 
 import static org.junit.Assert.assertEquals;
@@ -68,7 +64,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                 "      },\n" + 
                 "      \"data\": {\n" + 
                 "        \"type\": \"file\",\n" + 
-                "        \"file\": \"" + locations.getCanonicalPath() + "\"\n" + 
+                "        \"file\": \"" + jsonSafePath(locations) + "\"\n" + 
                 "      },\n" + 
                 "      targetStore: {\n" + 
                 "        dataStore: {\n" + 
@@ -212,7 +208,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                 "      },\n" + 
                 "      \"data\": {\n" + 
                 "        \"type\": \"file\",\n" + 
-                "        \"file\": \"" + gmlFile.getCanonicalPath() +  "\"\n" + 
+                "        \"file\": \"" + jsonSafePath(gmlFile) +  "\"\n" + 
                 "      }," +
                 "      targetStore: {\n" + 
                 "        dataStore: {\n" + 
@@ -243,6 +239,10 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         }
         assertEquals("COMPLETE", state);
         checkPoiImport();
+    }
+
+    private String jsonSafePath(File gmlFile) throws IOException {
+        return gmlFile.getCanonicalPath().replace('\\', '/');
     }
 
     private void checkPoiImport() throws Exception {
