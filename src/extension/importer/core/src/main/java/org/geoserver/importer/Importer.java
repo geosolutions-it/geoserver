@@ -835,7 +835,7 @@ public class Importer implements DisposableBean, ApplicationListener {
         changed(task.getContext());
     }
 
-    public Long runAsync(final ImportContext context, final ImportFilter filter, final boolean init) {
+    public Long runAsync(final ImportContext context, final ImportFilter filter) {
         return runAsync(context, filter, false);
     }
 

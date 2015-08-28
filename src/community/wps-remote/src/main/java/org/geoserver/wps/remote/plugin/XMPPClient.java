@@ -215,27 +215,41 @@ public class XMPPClient extends RemoteProcessClient {
 
         // Check for a free machine...
         final String serviceJID = getFlattestMachine(name, (String) metadata.get("serviceJID"));
+        
+        LOGGER.info("XMPPClient::execute - trying to send a request message to the service JID [" + serviceJID + "]");
+        
         if (metadata != null && serviceJID != null) {
             // Extract the PID
             metadata.put("serviceJID", serviceJID);
+            
             final Object fixedInputs = getFixedInputs(input);
+            
+            LOGGER.info("XMPPClient::execute - extracting the PID for the service JID [" + serviceJID + "] with inputs [" + fixedInputs + "]");
+            
             final String pid = md5Java(serviceJID + System.nanoTime()
                     + byteArrayToURLString(pickle(fixedInputs)));
 
             Request request = Dispatcher.REQUEST.get();
             metadata.put("request", request);
             String baseURL = getGeoServer().getGlobal().getSettings().getProxyBaseUrl();
-            if (baseURL == null) {
-                baseURL = RequestUtils.baseURL(request.getHttpRequest());
+            
+            try {
+                if (baseURL == null) {
+                    baseURL = RequestUtils.baseURL(request.getHttpRequest());
+                }
+                
+                baseURL = ResponseUtils.buildURL(baseURL, "/", null, URLType.SERVICE);
+            } catch (Exception e) {
+                LOGGER.warning("Could not acquire the GeoServer Base URL!");
             }
-            String msg = "topic=request&id=" + pid + "&baseURL=" + ResponseUtils.buildURL(baseURL, "/", null, URLType.SERVICE) + "&message="
+            String msg = "topic=request&id=" + pid + "&baseURL=" + baseURL + "&message="
                     + byteArrayToURLString(pickle(fixedInputs));
             sendMessage(serviceJID, msg);
 
             return pid;
         }
 
-        return null;
+        throw new Exception("Could not send a Request Message to the Remote XMPP Client!");
     }
 
     /**
@@ -564,6 +578,8 @@ public class XMPPClient extends RemoteProcessClient {
      */
     private String getFlattestMachine(Name name, String candidateServiceJID) {
         final String serviceName = name.getLocalPart();
+        
+        LOGGER.info("XMPPClient::getFlattestMachine - scanning the connected remote services...");
 
         Map<String, List<String>> availableServices = new HashMap<String, List<String>>();
         Map<String, List<String>> availableServiceJIDs = new HashMap<String, List<String>>();
@@ -572,7 +588,9 @@ public class XMPPClient extends RemoteProcessClient {
 
             for (String occupant : muc.getOccupants()) {
 
-                if (occupant.contains(serviceName)) {
+                LOGGER.info("XMPPClient::getFlattestMachine - looking for service [" + serviceName + "] @occupant [" + occupant + "]");
+
+                if (occupant.toLowerCase().contains(serviceName)) {
 
                     // extracting the machine name
                     String[] serviceJIDParts = occupant.split("/");
@@ -604,8 +622,12 @@ public class XMPPClient extends RemoteProcessClient {
             }
         }
 
-        if (availableServices == null || availableServices.isEmpty())
+        if (availableServices == null || availableServices.isEmpty()) {
+            
+            LOGGER.info("XMPPClient::getFlattestMachine - no suitable target JID found, using the default candidate [" + candidateServiceJID + "]");
+            
             return candidateServiceJID;
+        }
 
         String targetMachine = null;
         String targetServiceJID = null;
@@ -619,6 +641,8 @@ public class XMPPClient extends RemoteProcessClient {
             }
         }
 
+        LOGGER.info("XMPPClient::getFlattestMachine - target JID found, using the target [" + targetServiceJID + "]");
+        
         return targetServiceJID;
     }
 
