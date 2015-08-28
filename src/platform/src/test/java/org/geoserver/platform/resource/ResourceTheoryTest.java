@@ -1,4 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014-2015 Open Source Geospatial Foundation - all rights reserved
  * (c) 2014 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -194,23 +194,23 @@ public abstract class ResourceTheoryTest {
     }
     
     @Theory
-    public void theoryLeavesHaveNoListOfChildren(String path) throws Exception {
+    public void theoryLeavesHaveEmptyListOfChildren(String path) throws Exception {
         Resource res = getResource(path);
         assumeThat(res, is(resource()));
         
         Collection<Resource> result = res.list();
         
-        assertThat(result, nullValue());
+        assertThat(result, empty());
     }
     
     @Theory
-    public void theoryUndefinedHaveNullListOfChildren(String path) throws Exception {
+    public void theoryUndefinedHaveEmptyListOfChildren(String path) throws Exception {
         Resource res = getResource(path);
         assumeThat(res, is(undefined()));
         
         Collection<Resource> result = res.list();
         
-        assertThat(result, nullValue());
+        assertThat(result, empty());
     }
     
     @Theory
@@ -484,6 +484,29 @@ public abstract class ResourceTheoryTest {
         // 2 streams being written to concurrently should result in the resource containing 
         // what was written to one of the two streams.
         assertThat(resultContent, anyOf(equalTo(thread1Content), equalTo(thread2Content)));
+        
+    }
+    
+    @Theory
+    public void theoryDoubleClose(String path) throws Exception {
+        final Resource res = getResource(path);
+        assumeThat(res, is(resource()));
+        
+        OutputStream os = res.out();
+        os.close();
+        os.close();
+    }
+    
+    @Theory
+    public void theoryRecursiveDelete(String path) throws Exception {
+        final Resource res = getResource(path);
+        assumeThat(res, is(directory()));
+        assumeThat(res, is(directory()));
+        
+        Collection<Resource> result = res.list();        
+        assumeThat(result.size(), greaterThan(0));
+        
+        assertTrue(res.delete());
         
     }
 }

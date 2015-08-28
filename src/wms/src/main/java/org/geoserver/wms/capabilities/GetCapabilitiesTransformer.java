@@ -75,6 +75,7 @@ import org.geotools.xml.transform.Translator;
 import org.opengis.feature.type.Name;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.operation.TransformException;
+import org.opengis.util.InternationalString;
 import org.springframework.util.Assert;
 import org.vfny.geoserver.util.ResponseUtils;
 import org.xml.sax.Attributes;
@@ -595,11 +596,15 @@ public class GetCapabilitiesTransformer extends TransformerBase {
              * need to output the VendorSpecificCapabilities element. Moreover, the document will
              * not validate if it's there but not declared in the internal DTD
              */
+            int numberRoots = 0;
             for (ExtendedCapabilitiesProvider cp : extCapsProviders) {
                 List<String> roots = cp.getVendorSpecificCapabilitiesRoots(request);
-                if (roots == null || roots.size() == 0) {
-                    return;
+                if (roots != null) {
+                    numberRoots += roots.size();
                 }
+            }
+            if (numberRoots == 0) {
+                return;
             }
 
             start("VendorSpecificCapabilities");
@@ -940,9 +945,11 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                element("Name", defaultStyle.getName());
-                element("Title", ftStyle.getTitle());
-                element("Abstract", ftStyle.getAbstract());
+                element("Name", defaultStyle.prefixedName());
+                if (ftStyle.getDescription() != null) {
+                    element("Title", ftStyle.getDescription().getTitle());
+                    element("Abstract", ftStyle.getDescription().getAbstract());
+                }
                 handleLegendURL(layer, layer.getLegend(), null ,layer.getDefaultStyle());
                 end("Style");
 
@@ -955,9 +962,11 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                         throw new RuntimeException(e);
                     }
                     start("Style");
-                    element("Name", styleInfo.getName());
-                    element("Title", ftStyle.getTitle());
-                    element("Abstract", ftStyle.getAbstract());
+                    element("Name", styleInfo.prefixedName());
+                    if (ftStyle.getDescription() != null) {
+                        element("Title", ftStyle.getDescription().getTitle());
+                        element("Abstract", ftStyle.getDescription().getAbstract());
+                    }
                     handleLegendURL(layer, null, styleInfo, styleInfo);
                     end("Style");
                 }
@@ -969,6 +978,12 @@ public class GetCapabilitiesTransformer extends TransformerBase {
         
 
         
+        private void element(String element, InternationalString is) {
+            if (is != null) {
+                element(element, is.toString());
+            }
+        }
+
         /**
          * Inserts the ScaleHint element in the layer information. 
          * <p>

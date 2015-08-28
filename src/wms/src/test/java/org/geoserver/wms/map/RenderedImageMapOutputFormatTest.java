@@ -5,8 +5,8 @@
  */
 package org.geoserver.wms.map;
 
-import static org.geoserver.data.test.SystemTestData.STREAMS;
-import static org.junit.Assert.assertFalse;
+import static org.geoserver.data.test.CiteTestData.STREAMS;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -17,7 +17,9 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -37,6 +39,7 @@ import org.geoserver.security.decorators.DecoratingFeatureSource;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
+import org.geoserver.wms.WMSPartialMapException;
 import org.geoserver.wms.WMSTestSupport;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.data.FeatureSource;
@@ -51,7 +54,6 @@ import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.FeatureLayer;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.resources.coverage.FeatureUtilities;
-import org.geotools.resources.image.ImageUtilities;
 import org.geotools.styling.Style;
 import org.geotools.util.logging.Logging;
 import org.junit.After;
@@ -121,6 +123,107 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         imageMap.dispose();
         assertNotBlank("testSimpleGetMapQuery", image);
     }
+    
+    @Test
+    public void testTimeoutOption() throws Exception {
+        Catalog catalog = getCatalog();
+        GetMapRequest request = new GetMapRequest();
+        final WMSMapContent map = new WMSMapContent();
+        
+        StyleInfo styleByName = catalog.getStyleByName("Default");
+        Style basicStyle = styleByName.getStyle();
+        
+        //Build up a complex map so that we can reasonably guarantee a 1 ms timout
+        FeatureSource fs = catalog.getFeatureTypeByName(MockData.BASIC_POLYGONS.getPrefix(),
+                MockData.BASIC_POLYGONS.getLocalPart()).getFeatureSource(null, null);
+        Envelope env = fs.getBounds();
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.BRIDGES.getPrefix(),
+                MockData.BRIDGES.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.BUILDINGS.getPrefix(),
+                MockData.BUILDINGS.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.DIVIDED_ROUTES.getPrefix(),
+                MockData.DIVIDED_ROUTES.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.FORESTS.getPrefix(),
+                MockData.FORESTS.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.LAKES.getPrefix(),
+                MockData.LAKES.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.MAP_NEATLINE.getPrefix(),
+                MockData.MAP_NEATLINE.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.NAMED_PLACES.getPrefix(),
+                MockData.NAMED_PLACES.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.PONDS.getPrefix(),
+                MockData.PONDS.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.ROAD_SEGMENTS.getPrefix(),
+                MockData.ROAD_SEGMENTS.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        fs = catalog.getFeatureTypeByName(MockData.STREAMS.getPrefix(),
+                MockData.STREAMS.getLocalPart()).getFeatureSource(null, null);
+        env.expandToInclude(fs.getBounds());
+        map.addLayer(new FeatureLayer(fs, basicStyle));
+        
+        LOGGER.info("about to create map ctx for "+map.layers().size()+" layers with bounds " + env);
+        
+        map.getViewport().setBounds(new ReferencedEnvelope(env, DefaultGeographicCRS.WGS84));
+        map.setMapWidth(1000);
+        map.setMapHeight(1000);
+        map.setRequest(request);
+        
+        request.setFormat(getMapFormat());
+        Map formatOptions = new HashMap();
+        //1 ms timeout
+        formatOptions.put("timeout", 1);
+        request.setFormatOptions(formatOptions);
+        try {
+            RenderedImageMap imageMap = this.rasterMapProducer.produceMap(map);
+            fail("Timeout was not reached");
+        } catch (ServiceException e) {
+            assertTrue(e.getMessage().startsWith("This request used more time than allowed"));
+        }
+        
+        //Test partial image exception format
+        Map rawKvp = new HashMap();
+        rawKvp.put("EXCEPTIONS", "PARTIALMAP");
+        request.setRawKvp(rawKvp);
+        
+        try {
+            RenderedImageMap imageMap = this.rasterMapProducer.produceMap(map);
+            fail("Timeout was not reached");
+        } catch (ServiceException e) {
+            assertTrue(e instanceof WMSPartialMapException);
+            assertTrue(e.getCause().getMessage().startsWith("This request used more time than allowed"));
+            RenderedImageMap partialMap = (RenderedImageMap) ((WMSPartialMapException)e).getMap();
+            assertNotNull(partialMap);
+            assertNotNull(partialMap.getImage());
+        }
+    }
 
     @Test
     public void testDefaultStyle() throws Exception {
@@ -181,9 +284,10 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         super.onSetUp(testData);
         testData.addDefaultRasterLayer(MockData.TASMANIA_DEM, getCatalog());
     }
+
     
     @Test 
-    public void testInterpolationBicubic() throws IOException, IllegalFilterException, Exception {
+    public void testInterpolations() throws IOException, IllegalFilterException, Exception {
         final Catalog catalog = getCatalog();
         CoverageInfo coverageInfo = catalog.getCoverageByName(MockData.TASMANIA_DEM.getNamespaceURI(),
                 MockData.TASMANIA_DEM.getLocalPart());
@@ -195,49 +299,7 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
                 env.getMaxY() + shift);
 
         GetMapRequest request = new GetMapRequest();
-        final WMSMapContent map = new WMSMapContent();
-        int w = 400;
-        int h = (int) Math.round((env.getHeight() * w) / env.getWidth());
-        map.setMapWidth(w);
-        map.setMapHeight(h);
-        map.setBgColor(BG_COLOR);
-        map.setTransparent(true);
-        map.setRequest(request);
-        addRasterToMap(map, MockData.TASMANIA_DEM);
-        
-        map.getViewport().setBounds(new ReferencedEnvelope(env, DefaultGeographicCRS.WGS84));
-        request.setInterpolations(Arrays.asList(Interpolation
-                .getInstance(Interpolation.INTERP_BICUBIC)));
-        request.setFormat(getMapFormat());
-        RenderedImageMap imageMap = this.rasterMapProducer.produceMap(map);
-        RenderedOp op = (RenderedOp)imageMap.getImage();
-        BufferedImage image = op.getAsBufferedImage();
-        imageMap.dispose();
-        
-        assertNotBlank("testInterpolation", image);
-        
-        // bicubic creates shades of gray instead of white
-        assertTrue(getPixelColor(image, 200, 200).getRGB() < Color.DARK_GRAY.getRGB());
-        assertPixelIsTransparent(image, 50 , 650);
-        assertTrue(getPixelColor(image, 200, 200).getRGB() < Color.WHITE.getRGB());
-        
-        ImageUtilities.disposeImage(op);
-    }
-    
-    @Test 
-    public void testInterpolationNearest() throws IOException, IllegalFilterException, Exception {
-        final Catalog catalog = getCatalog();
-        CoverageInfo coverageInfo = catalog.getCoverageByName(MockData.TASMANIA_DEM.getNamespaceURI(),
-                MockData.TASMANIA_DEM.getLocalPart());
-        
-        Envelope env = coverageInfo.boundingBox();
-        double shift = env.getWidth() / 6;
-
-        env = new Envelope(env.getMinX() - shift, env.getMaxX() + shift, env.getMinY() - shift,
-                env.getMaxY() + shift);
-
-        GetMapRequest request = new GetMapRequest();
-        final WMSMapContent map = new WMSMapContent();
+        WMSMapContent map = new WMSMapContent();
         int w = 400;
         int h = (int) Math.round((env.getHeight() * w) / env.getWidth());
         map.setMapWidth(w);
@@ -253,16 +315,34 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         request.setFormat(getMapFormat());
         RenderedImageMap imageMap = this.rasterMapProducer.produceMap(map);
         RenderedOp op = (RenderedOp)imageMap.getImage();
-        BufferedImage image = op.getAsBufferedImage();
+        BufferedImage imageNearest = op.getAsBufferedImage();
         imageMap.dispose();
+        assertNotBlank("testInterpolationsNearest", imageNearest);
         
-        assertNotBlank("testInterpolation", image);
-        // nearest neighbor creates "almost black" / white images
-        assertTrue(getPixelColor(image, 200, 200).getRGB() < Color.DARK_GRAY.getRGB());
-        assertPixelIsTransparent(image, 50 , 650);
-        assertPixel(image, 100, 350, Color.WHITE);
+        request = new GetMapRequest();
+        map = new WMSMapContent();
+        map.setMapWidth(w);
+        map.setMapHeight(h);
+        map.setBgColor(BG_COLOR);
+        map.setTransparent(true);
+        map.setRequest(request);
+        addRasterToMap(map, MockData.TASMANIA_DEM);
         
-        ImageUtilities.disposeImage(op);
+        map.getViewport().setBounds(new ReferencedEnvelope(env, DefaultGeographicCRS.WGS84));
+        request.setInterpolations(Arrays.asList(Interpolation
+                .getInstance(Interpolation.INTERP_BICUBIC)));
+        request.setFormat(getMapFormat());
+
+        imageMap = this.rasterMapProducer.produceMap(map);
+        op = (RenderedOp)imageMap.getImage();
+        BufferedImage imageBicubic = op.getAsBufferedImage();
+        imageMap.dispose();
+        assertNotBlank("testInterpolationsBicubic", imageBicubic);
+        // test some sample pixels to check rendering is different using different interpolations
+        assertNotEquals(getPixelColor(imageNearest, 200, 200).getRGB(),
+                getPixelColor(imageBicubic, 200, 200).getRGB());
+        assertNotEquals(getPixelColor(imageNearest, 300, 300).getRGB(),
+                getPixelColor(imageBicubic, 300, 300).getRGB());
     }
 
     private void addRasterToMap(final WMSMapContent map, final QName typeName) throws IOException, FactoryRegistryException, TransformException, SchemaException {

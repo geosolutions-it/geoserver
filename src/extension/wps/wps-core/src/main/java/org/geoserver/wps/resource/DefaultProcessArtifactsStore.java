@@ -1,4 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014-2015 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -68,7 +68,7 @@ public class DefaultProcessArtifactsStore implements ProcessArtifactsStore {
     @Override
     public void clearArtifacts(String executionId) throws IOException {
         Resource resource = store.get(executionId);
-        Resources.delete(resource);
+        resource.delete();
     }
 
 }

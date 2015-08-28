@@ -31,7 +31,10 @@ import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.SLDHandler;
 import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.StyleGenerator;
+import org.geoserver.catalog.StyleHandler;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.util.XStreamPersister;
@@ -43,6 +46,7 @@ import org.geoserver.importer.job.JobQueue;
 import org.geoserver.importer.job.ProgressMonitor;
 import org.geoserver.importer.job.Task;
 import org.geoserver.importer.mosaic.Mosaic;
+import org.geoserver.importer.transform.ImportTransform;
 import org.geoserver.importer.transform.RasterTransformChain;
 import org.geoserver.importer.transform.ReprojectTransform;
 import org.geoserver.importer.transform.TransformChain;
@@ -100,6 +104,9 @@ public class Importer implements DisposableBean, ApplicationListener {
 
     /** style generator */
     StyleGenerator styleGen;
+    
+    /** style handler */
+    StyleHandler styleHandler = new SLDHandler();
 
     /** job queue */
     JobQueue jobs = new JobQueue();
@@ -116,6 +123,14 @@ public class Importer implements DisposableBean, ApplicationListener {
      */
     public StyleGenerator getStyleGenerator() {
         return styleGen;
+    }
+    
+    public StyleHandler getStyleHandler() {
+        return styleHandler;
+    }
+    
+    public void setStyleHandler(StyleHandler handler) {
+        styleHandler = handler;
     }
 
     ImportStore createContextStore() {
@@ -656,14 +671,14 @@ public class Importer implements DisposableBean, ApplicationListener {
                     FeatureType featureType =
                         (FeatureType) task.getMetadata().get(FeatureType.class);
                     if (featureType != null) {
-                        style = styleGen.createStyle((FeatureTypeInfo) r, featureType);
+                        style = styleGen.createStyle(styleHandler, (FeatureTypeInfo) r, featureType);
                     } else {
                         throw new RuntimeException("Unable to compute style");
                     }
 
                 }
                 else if (r instanceof CoverageInfo) {
-                    style = styleGen.createStyle((CoverageInfo) r);
+                    style = styleGen.createStyle(styleHandler, (CoverageInfo) r);
                 }
                 else {
                     throw new RuntimeException("Unknown resource type :"
@@ -1048,7 +1063,7 @@ public class Importer implements DisposableBean, ApplicationListener {
             throws IOException {
         if (data instanceof SpatialFile) {
             SpatialFile sf = (SpatialFile) data;
-            List<HarvestedSource> harvests = sr.harvest(sr.getGridCoverageNames()[0], sf.getFile(),
+            List<HarvestedSource> harvests = sr.harvest(null, sf.getFile(),
                     null);
             checkSingleHarvest(harvests);
         } else if (data instanceof Directory) {
@@ -1527,6 +1542,13 @@ public class Importer implements DisposableBean, ApplicationListener {
         xs.registerLocalConverter(RemoteData.class, "password", new EncryptedFieldConverter(
                 securityManager));
         
+        // security
+        xs.allowTypes(new Class[] { ImportContext.class, ImportTask.class, File.class });
+        xs.allowTypeHierarchy(TransformChain.class);
+        xs.allowTypeHierarchy(DataFormat.class);
+        xs.allowTypeHierarchy(ImportData.class);
+        xs.allowTypeHierarchy(ImportTransform.class);
+
         return xp;
     }
 

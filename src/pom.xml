@@ -88,20 +88,6 @@
    </repository>
  </repositories>
 
- <pluginRepositories>
-  <pluginRepository>
-   <id>codehaus-snapshot-plugins</id>
-   <name>codehaus-shapshot-plugins</name>
-   <url>http://snapshots.repository.codehaus.org/</url>
-   <snapshots>
-    <enabled>true</enabled>
-   </snapshots>
-   <releases>
-    <enabled>false</enabled>
-   </releases>
-  </pluginRepository>
- </pluginRepositories>
-
  <dependencyManagement>
   <dependencies>
    <dependency>
@@ -593,6 +579,11 @@
    <dependency>
     <groupId>org.geowebcache</groupId>
     <artifactId>gwc-diskquota-jdbc</artifactId>
+    <version>${gwc.version}</version>
+   </dependency>
+   <dependency>
+    <groupId>org.geowebcache</groupId>
+    <artifactId>gwc-aws-s3</artifactId>
     <version>${gwc.version}</version>
    </dependency>
 

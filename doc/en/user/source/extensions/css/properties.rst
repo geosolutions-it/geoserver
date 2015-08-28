@@ -465,6 +465,20 @@ Shared
         provides a geometry for all types of symbology, but can be overridden
         by the symbol-specific geometry properties. 
       * yes
+    - * ``sort-by``
+      * string 
+      * A comma separated list of sorting directives, "att1 A|D, att2 A|D, ..." where ``att?`` are attribute names,
+        and ``A`` or ``D`` are an optional direction specification, 
+        ``A`` is ascending, ``D`` is descending.
+        Determines the loading, and thus painting, order of the features 
+      * false
+    - * ``sort-by-group``
+      * string
+      * Rules with the different z-index but same sort-by-group id have  their features sorted
+        as a single group. Useful to z-order across layers or across different feature groups, like
+        roads and rails, especially when using z-index to support casing 
+      * false
+    
 
 Symbol properties
 -----------------

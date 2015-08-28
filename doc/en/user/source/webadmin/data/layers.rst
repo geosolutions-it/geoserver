@@ -3,13 +3,13 @@
 Layers
 ======
 
-In GeoServer, the term "layer" refers to raster or vector data that contains a collection of geographic features. Vector layers are analogous to "featureTypes" and raster layers are analogous to "coverages". All layers have a source of data, known as a Store.
+In GeoServer, the term "layer" refers to a raster or vector dataset that represents a collection of geographic features. Vector layers are analogous to "featureTypes" and raster layers are analogous to "coverages". All layers have a source of data, known as a Store. The layer is associated with the Workspace in which the Store is defined.
 
-In the Layers section of the web interface, you can view and edit existing layer, add (register) a new layer, or delete (unregister) a layer. The Layers View page displays the not only the list of layers, but the Store and Workspace where those layers are contained. The View page also displays the layer's status and native SRS.
+In the Layers section of the web interface, you can view and edit existing layers, add (register) a new layer, or remove (unregister) a layer. The Layers View page displays the list of layers, and the Store and Workspace in which each layer is contained. The View page also displays the layer's status and native SRS.
 
 .. figure:: ../images/data_layers.png
 
-   Layers View
+   *Layers View*
    
 Layer types
 -----------
@@ -28,106 +28,109 @@ Layers can be divided into two types of data: raster and vector. These two forma
      - vector (feature)  
 
 
-Add or delete a layer
----------------------
+Add a Layer
+-----------
 
-At the upper left-hand corner of the layers view page there are two buttons for the adding and deletion of layers. The green plus button allows you to add a new layer, referred to as resource. The red minus button allows you to remove selected layers. 
+At the upper left-hand corner of the layers view page there are two buttons for the adding and removal of layers. The green plus button allows you to add a new layer (referred to as *resource*). The red minus button allows you to remove selected layers. 
 
 .. figure:: ../images/data_layers_add_remove.png
    
-   Buttons to Add or Remove a Layer
+   *Buttons to Add and Remove a Layer*
 
 Clicking the :guilabel:`Add a new resource` button brings up a :guilabel:`New Layer Chooser` panel. The menu displays all currently enabled stores. From this menu, select the Store where the layer should be added. 
 
 .. figure:: ../images/data_layers_add_chooser.png
 
-   List of all currently enabled stores
+   *List of all currently enabled stores*
 
-Upon selection of a Store, a view table of existing layers within the selected store will be displayed. In this example, ``giant_polygon``, ``poi``, ``poly_landmarks`` and ``tiger_roads`` are all layers within the NYC store. 
+Upon selection of a Store, a list is displayed of resources within the store.
+Resources which have already been published as layers are listed first, followed by other resources which
+are available to be published.
+In this example, ``giant_polygon``, ``poi``, ``poly_landmarks`` and ``tiger_roads`` are all existing layers within the NYC store. 
 
 .. figure:: ../images/data_layers_add_view.png
    
-   View of all layers
+   *List of published and available resources in a store*
 
-On selecting a layer name, you are redirected to a :ref:`layer edit page <webadmin_layers_edit_data>`. 
+To add a layer for an available resource click :guilabel:`Publish`.
+To add a new layer for a published resource click :guilabel:`Publish Again`. 
+(Note that when re-publishing the name of the new layer may have to be modified to avoid conflict with an existing layer.)
+The actions display an :ref:`Edit Layer<webadmin_layers_edit_data>` page to enter the definition of the new layer.
 
-To delete a layer, click the check box on the left side of each layer row. As shown below, multiple layers can be selected for removal on a single results page. It should be noted, however, that selections for removal will not persist from one results pages to the next. 
+Remove a Layer
+--------------
+
+To remove a layer, select it by clicking the checkbox next to the layer. As shown below, multiple layers can be selected for batch removal. Note that selections for removal will not persist from one results pages to the next. 
   
 .. figure:: ../images/data_layers_delete.png
    
-   Some layers selected for deletion
+   *Some layers selected for removal*
 
-All layers can be selected for removal by selecting the check box in the header row. 
+All layers can be selected for removal by clicking the checkbox in the header. 
 
 .. figure:: ../images/data_layers_delete_all.png
    
-   All layers selected for deletion
+   *All layers selected for removal*
 
-Once layer(s) are selected, the :guilabel:`Remove selected resources` link is activated. Once you've clicked the link, you will be asked to confirm or cancel the deletion. Selecting :guilabel:`OK` successfully deletes the layer. 
+Once layer(s) are selected, the :guilabel:`Remove selected resources` link is activated. Once you've clicked the link, you will be asked to confirm or cancel the removal. Selecting :guilabel:`OK` removes the selected layer(s). 
      
 .. _webadmin_layers_edit_data:
 
 Edit Layer: Data 
 ----------------
 
-Clicking the layer name opens a layer configuration panel. The :guilabel:`Data` tab, activated by default, allows you to define and change data parameters for a layer. 
+To view or edit a layer, click the layer name.  A layer configuration page will be displayed. The :guilabel:`Data` tab, activated by default, allows you to define and change data parameters for a layer. 
 
 .. figure:: ../images/data_layers_edit_data.png
    
-   Edit Layer: Data tab
+   *Edit Layer: Data tab*
 
 Basic Info
 ^^^^^^^^^^
 
-The beginning sections—Basic Resource Info, Keywords and Metadata link—are analogous to the :ref:`service_metadata` section for WCS, WFS, and WMS. These sections provide "data about the data," specifically textual information that make the layer data easier to work with it. 
+The beginning sections—Basic Resource Info, Keywords and Metadata link—are analogous to the :ref:`service_metadata` section for WCS, WFS, and WMS. 
+These sections provide "data about the data," specifically textual information that make the layer data easier to understand and work with.
+The metadata information will appear in the capabilities documents which refer to the layer.
 
-* **Name**—Identifier used to reference the layer in WMS requests 
+* **Name**—Identifier used to reference the layer in WMS requests.  (Note that for a new layer for an already-published resource, the name must be changed to avoid conflict.)
 * **Title**—Human-readable description to briefly identify the layer to clients (required)   
-* **Abstract**—Describes the layer
+* **Abstract**—Describes the layer in detail
 * **Keywords**—List of short words associated with the layer to assist catalog searching
-* **Metadata Link**—Allows linking to external documents that describe the data layer. Currently only two standard format types are valid: TC211 and FGDC. TC211 refers to the metadata structure established by the `ISO Technical Committee for Geographic Information/Geomatics <http://www.isotc211.org/>`_ (ISO/TC 211) while FGDC refers to those set out by the `Federal Geographic Data Committee <http://www.fgdc.gov/>`_ (FGDC) of the United States. 
+* **Metadata Links**—Allows linking to external documents that describe the data layer. Currently only two standard format types are valid: TC211 and FGDC. TC211 refers to the metadata structure established by the `ISO Technical Committee for Geographic Information/Geomatics <http://www.isotc211.org/>`_ (ISO/TC 211) while FGDC refers to those set out by the `Federal Geographic Data Committee <http://www.fgdc.gov/>`_ (FGDC) of the United States. 
 
   .. figure:: ../images/data_layers_meta.png
 
-     Adding a metadata link n FGDC format
+     *Adding a metadata link in FGDC format*
    
 Coordinate Reference Systems
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A coordinate reference system (CRS) defines how your georeferenced spatial data relates to real locations on the Earth’s surface. CRSs are part of a more general model called Spatial Reference Systems (SRS), which includes referencing by coordinates and geographic identifiers. GeoServer needs to know the Coordinate Reference System of your data. This information is used for computing the latitude/longitude bounding box and reprojecting the data during both WMS and WFS requests.
+A coordinate reference system (CRS) defines how georeferenced spatial data relates to real locations on the Earth’s surface. CRSes are part of a more general model called Spatial Reference Systems (SRS), which includes referencing by coordinates and geographic identifiers. GeoServer needs to know the Coordinate Reference System of your data. This information is used for computing the latitude/longitude bounding box and reprojecting the data during both WMS and WFS requests.
 
 .. figure:: ../images/data_layers_CRS.png
    
-   *Coordinate reference system of the layer*  
+   *Coordinate reference system of a layer*  
 
-* **Native SRS**—Refers to the projection the layer is stored in. Clicking the projection link displays a description of the SRS.
-* **Declared SRS**—Refers to what GeoServer publishes to clients 
-* **SRS Handling:**—Determines how GeoServer should handle projection when the two SRS differ 
+* **Native SRS**—Specifies the coordinate system the layer is stored in. Clicking the projection link displays a description of the SRS.
+* **Declared SRS**—Specifies the coordinate system GeoServer publishes to clients 
+* **SRS Handling**—Determines how GeoServer should handle projection when the two SRSes differ 
 
 Bounding Boxes
 ^^^^^^^^^^^^^^
 
-The bounding box determines the extent of a layer. The :guilabel:`Native Bounding Box` is the bounds of the data projected in the Native SRS. You can generate these bounds by clicking the :guilabel:`Compute from data` button. The :guilabel:`Lat/Long Bounding Box` computes the bounds based on the standard lat/lon. These bounds can be generated by clicking the :guilabel:`Compute from native bounds` button.
+The bounding box determines the extent of the data within a layer. 
+
+* **Native Bounding Box**—The bounds of the data specified in the Native SRS. These bounds can be generated by clicking the :guilabel:`Compute from data` button. 
+* **Lat/Lon Bounding Box**—The bounds specified in geographic coordinates. These bounds can be calculated by clicking the :guilabel:`Compute from native bounds` button.
 
 .. figure:: ../images/data_layers_BB.png
    
-   Bounding Box
+   *Bounding Boxes of a layer*
 
 Coverage Parameters (Raster)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Optional coverage parameters are possible for certain types of raster data. For example, WorldImage formats request a valid range of grid coordinates in two dimensions known as a :guilabel:`ReadGridGeometry2D.` For ImageMosaic, you can use :guilabel:`InputImageThresholdValue`, :guilabel:`InputTransparentColor`, and :guilabel:`OutputTransparentColor` to control the rendering of the mosaic in terms of thresholding and transparency.
-
-Feature Type Details (Vector)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Vector layers have a list of the :guilabel:`Feature Type Details`. These include the :guilabel:`Property` and :guilabel:`Type` of a data source. For example, the ``sf:archsites`` layer shown below includes a geometry (``the_geom``) of type "point". 
-
-.. figure:: ../images/data_layers_feature.png
-
-   Feature Type Details
-
-The :guilabel:`Nillable` option refers to whether the property requires a value or may be flagged as being null. Meanwhile :guilabel:`Min/Max Occurrences` refers to how many values a field is allowed to have. Currently both :guilabel:`Nillable` and :guilabel:`Min/Max Occurrences` are set to ``true`` and ``0/1`` but may be extended with future work on complex features.
 
 Curves support (Vector)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -143,14 +146,42 @@ There are two options pertaining the circular arcs:
 
 .. figure:: ../images/curved.png
 
-   Curved geometry control
+   *Curved geometry control*
 
 .. _webadmin_layers_edit_publishing:
+
+Feature Type Details (Vector)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Vector layers have a list of the :guilabel:`Feature Type Details`. These include the :guilabel:`Property` and :guilabel:`Type` of a data source. For example, the ``sf:archsites`` layer shown below includes a geometry (``the_geom``) of type "point". 
+
+.. figure:: ../images/data_layers_feature.png
+
+   *Feature Type Details*
+
+The :guilabel:`Nillable` option refers to whether the property requires a value or may be flagged as being null. Meanwhile :guilabel:`Min/Max Occurrences` refers to how many values a field is allowed to have. Currently both :guilabel:`Nillable` and :guilabel:`Min/Max Occurrences` are set to ``true`` and ``0/1`` but may be extended with future work on complex features.
+
+Restricting features showing up in the layer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default GeoServer will publish all the features available in the layer. It is possible
+to restrict the features to a subset by specyfing a CQL filter in the configuration: 
+
+.. figure:: ../images/data_layers_cql.png
+
+   *Restrict the features on layer by CQL filter*
+
+.. note::
+
+     It is recommended to use this setting for layers that are not meant to be edited. The filter  
+     is only applied to reads, if a WFS-T insert adds a feature not matching the filter, it will 
+     be added to the store anyways, but won't show up in any of the outputs. 
+
 
 Edit Layer: Publishing 
 ----------------------
 
-The Publishing tab is for configuring HTTP and WMS/WCS settings.
+The Publishing tab configures HTTP and WMS/WFS/WCS settings.
 
 .. figure:: ../images/data_layers_edit_publish.png
    
@@ -158,28 +189,44 @@ The Publishing tab is for configuring HTTP and WMS/WCS settings.
    
 * **Enabled**—A layer that is not enabled won't be available to any kind of request, it will just show up in the configuration (and in REST config)
 * **Advertised**—A layer is advertised by default. A non-advertised layer will be available in all data access requests (for example, WMS GetMap, WMS GetFeature) but won't appear in any capabilities document or in the layer preview. 
-* **HTTP Settings**—Cache parameters that apply to the HTTP response from client requests. If :guilabel:`Response Cache Headers` is selected, GeoServer will not request the same tile twice within the time specified in :guilabel:`Cache Time`. One hour measured in seconds (3600), is the default value for :guilabel:`Cache Time`.
-* **WMS Settings**—Sets the WMS specific publishing parameters.
+
+HTTP Settings
+^^^^^^^^^^^^^
+Cache parameters that apply to the HTTP response from client requests.
+
+* **Response Cache Headers**— If selected, GeoServer will not request the same tile twice within the time specified in :guilabel:`Cache Time`. One hour measured in seconds (3600), is the default value for :guilabel:`Cache Time`.
+
+WMS Settings
+^^^^^^^^^^^^
+Sets the WMS specific publishing parameters.
 
   .. figure:: ../images/wms_settings.png
 
      *WMS Settings*
 
-* **Default style**:—Style that will be used when the client does not specify a named style in GetMap requests.
+* **Queryable**—Controls whether the layer is queryable via WMS ``GetFeatureInfo`` requests.
+* **Default style**—Style that will be used when the client does not specify a named style in GetMap requests.
 * **Additional styles**—Other styles that can be associated with this layer. Some clients (and the GeoServer Layer Preview) will present those as styling alternatives for that layer to the user.
 * **Default rendering buffer**—Default value of the ``buffer`` GetMap/GetFeatureInfo vendor parameter. See the :ref:`wms_vendor_parameters` for more details.
 * **Default WMS path**—Location of the layer in the WMS capabilities layer tree. Useful for building non-opaque layer groups
-* **WMS Attribution**—Sets publishing information about data providers
+
+WMS Attribution
+^^^^^^^^^^^^^^^
+Sets publishing information about data providers.
 
   .. figure:: ../images/data_layers_WMS.png
    
-     WMS Attribution
+     *WMS Attribution*
 
 * **Attribution Text**—Human-readable text describing the data provider. This might be used as the text for a hyperlink to the data provider's web site.
 * **Attribution Link**—URL to the data provider's website.
 * **Logo URL**—URL to an image that serves as a logo for the data provider.
 * **Logo Content Type, Width, and Height**—These fields provide information about the logo image that clients may use to assist with layout. GeoServer will auto-detect these values if you click the :guilabel:`Auto-detect image size and type` link at the bottom of the section. The text, link, and URL are each advertised in the WMS Capabilities document if they are provided. Some WMS clients will display this information to advise users which providers provide a particular dataset. If you omit some of the fields, those that are provided will be published and those that are not will be omitted from the Capabilities document.
-* **WFS Settings**—Sets the maximum number of features for a layer a WFS GetFeature operation should generate (regardless of the actual number of query hits) and the maximum number of decimals in GML output.
+
+WFS Settings
+^^^^^^^^^^^^
+* **Per-Request Feature Limit**—Sets the maximum number of features for a layer a WFS GetFeature operation should generate (regardless of the actual number of query hits)
+* **Maximum number of decimals**—Sets the maximum number of decimals in GML output.
 
   .. note::
 
@@ -187,15 +234,23 @@ The Publishing tab is for configuring HTTP and WMS/WCS settings.
 
      .. figure:: ../images/data_layers_WFS.png
 
-        WFS otherSRS/otherCRS override
+        *WFS otherSRS/otherCRS override*
 
      The list will be used only for the capabilities document generation, but will not be used to limit the actual target SRS usage in GetFeature requests.
 
-* **WCS Settings**—Provides a list of SRSs the layer can be converted to. :guilabel:`New Request SRS` allows you to add an SRS to that list. 
+WCS Settings
+^^^^^^^^^^^^
+* **Request SRS**—Provides a list of SRSs the layer can be converted to. :guilabel:`New Request SRS` allows you to add an SRS to that list. 
 * **Interpolation Methods**—Sets the raster rendering process, if applicable.
 * **Formats**—Lists which output formats a layers supports.
 * **GeoSearch**—When enabled, allows the Google Geosearch crawler to index from this particular layer. See `What is a Geo Sitemap? <http://www.google.com/support/webmasters/bin/answer.py?hl=en&answer=94554>`_ for more information.
-* **KML Format Settings**—Limits features based on certain criteria, otherwise known as **regionation**. Choose which feature should show up more prominently than others with the :guilabel:`Default Regionating Attribute`. There are four types of :guilabel:`Regionating Methods`:
+
+KML Format Settings
+^^^^^^^^^^^^^^^^^^^
+Limits features based on certain criteria, otherwise known as **regionation**. 
+
+* **Default Regionating Attribute**—Choose which feature should show up more prominently than others. 
+* **Regionating Methods**—There are four types of regionating methods:
 
   * *external-sorting*—Creates a temporary auxiliary database within GeoServer. The first request to build an index takes longer than subsequent requests. 
   * *geometry*—Externally sorts by length (if lines) or area (if polygons)
@@ -213,7 +268,7 @@ These dimensions can be enabled and configured on the Dimensions tab.
 
 .. figure:: ../images/data_layers_dimension_editor_time.png
    
-   TIME dimension enabled for a WMS layer
+   *TIME dimension enabled for a WMS layer*
 
 For each enabled dimension the following configuration options are available:
 
