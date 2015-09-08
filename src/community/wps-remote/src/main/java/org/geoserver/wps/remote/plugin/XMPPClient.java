@@ -634,7 +634,7 @@ public class XMPPClient extends RemoteProcessClient {
         int targetMachineCounter = Integer.MAX_VALUE;
         for (String machine : availableServices.keySet()) {
             if (targetMachine == null
-                    || targetMachineCounter < availableServices.get(machine).size()) {
+                    || targetMachineCounter > availableServices.get(machine).size()) {
                 targetMachine = machine;
                 targetServiceJID = availableServiceJIDs.get(machine).get(0);
                 targetMachineCounter = availableServices.get(machine).size();
