@@ -597,9 +597,9 @@ public class XMPPClient extends RemoteProcessClient {
                     if (serviceJIDParts.length > 1) {
                         String[] localizedServiceJID = serviceJIDParts[1].split("@");
 
-                        LOGGER.info(" --- TEST --- : [localizedServiceJID.length] -> " + localizedServiceJID.length);
-                        LOGGER.info(" --- TEST --- : [localizedServiceJID[0].contains(serviceName)] -> " + localizedServiceJID[0].contains(serviceName));
-                        LOGGER.info(" --- TEST --- : [localizedServiceJID] -> " + localizedServiceJID[0] + " @ " + localizedServiceJID[1]);
+                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID.length] -> " + localizedServiceJID.length);
+                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID[0].contains(serviceName)] -> " + localizedServiceJID[0].contains(serviceName));
+                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID] -> " + localizedServiceJID[0] + " @ " + localizedServiceJID[1]);
 
                         if (localizedServiceJID.length == 2
                                 && localizedServiceJID[0].toLowerCase().contains(serviceName.toLowerCase())) {
