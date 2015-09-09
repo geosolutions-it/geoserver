@@ -590,15 +590,19 @@ public class XMPPClient extends RemoteProcessClient {
 
                 LOGGER.info("XMPPClient::getFlattestMachine - looking for service [" + serviceName + "] @occupant [" + occupant + "]");
 
-                if (occupant.toLowerCase().contains(serviceName)) {
+                if (occupant.toLowerCase().contains(serviceName.toLowerCase())) {
 
                     // extracting the machine name
                     String[] serviceJIDParts = occupant.split("/");
                     if (serviceJIDParts.length > 1) {
                         String[] localizedServiceJID = serviceJIDParts[1].split("@");
 
+                        LOGGER.info(" --- TEST --- : [localizedServiceJID.length] -> " + localizedServiceJID.length);
+                        LOGGER.info(" --- TEST --- : [localizedServiceJID[0].contains(serviceName)] -> " + localizedServiceJID[0].contains(serviceName));
+                        LOGGER.info(" --- TEST --- : [localizedServiceJID] -> " + localizedServiceJID[0] + " @ " + localizedServiceJID[1]);
+
                         if (localizedServiceJID.length == 2
-                                && localizedServiceJID[0].contains(serviceName)) {
+                                && localizedServiceJID[0].toLowerCase().contains(serviceName.toLowerCase())) {
                             // final String machine = localizedServiceJID[1];
                             final String machine = occupant
                                     .substring(occupant.lastIndexOf("@") + 1);
