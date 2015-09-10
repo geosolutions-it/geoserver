@@ -60,6 +60,7 @@
           <descriptor>release/ext-solr.xml</descriptor>		  
           <descriptor>release/ext-geofence.xml</descriptor>
           <descriptor>release/ext-sldservice.xml</descriptor>
+          <descriptor>release/ext-wps-jdbc.xml</descriptor>
         </descriptors>
       </configuration>
      </plugin>
@@ -398,5 +399,11 @@
           <module>hz-cluster</module>
         </modules>
     </profile>
-  </profiles>
+    <profile>
+      <id>wps-jdbc</id>
+      <modules>
+        <module>wps-jdbc</module>
+      </modules>
+    </profile>
+  </profiles>   
 </project>
