@@ -36,6 +36,10 @@
       <factoryClass>org.geotools.process.vector.VectorProcessFactory</factoryClass>
       <enabled>true</enabled>
     </processGroup>
+    <processGroup>
+      <factoryClass>org.geoserver.wps.remote.RemoteProcessFactory</factoryClass>
+      <enabled>true</enabled>
+    </processGroup>
   </processGroups>
   <maxComplexInputSize>0</maxComplexInputSize>
   <maxSynchronousExecutionTime>0</maxSynchronousExecutionTime>

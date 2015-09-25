@@ -21,6 +21,14 @@
           <string>quietOnNotFound</string>
           <boolean>false</boolean>
         </entry>
+        <entry>
+          <string>NetCDFOutput.Key</string>
+          <netCDFSettings>
+            <compressionLevel>0</compressionLevel>
+            <shuffle>true</shuffle>
+            <dataPacking>NONE</dataPacking>
+          </netCDFSettings>
+        </entry>
       </map>
     </metadata>
     <localWorkspaceIncludesPrefix>false</localWorkspaceIncludesPrefix>
