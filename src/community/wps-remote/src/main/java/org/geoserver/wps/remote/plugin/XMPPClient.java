@@ -37,8 +37,8 @@ import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.wps.process.FileRawData;
 import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.ResourceRawData;
 import org.geoserver.wps.process.StreamRawData;
 import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.remote.RemoteProcessClient;
@@ -989,11 +989,11 @@ public class XMPPClient extends RemoteProcessClient {
         PRIMITIVE_NAME_TYPE_MAP.put("application/owc", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain", ".json" });
 
         //----
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX, new FileRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff", ".tif" });
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff", ".tif" });
         PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"), "image/geotiff,image/tiff", ".tif" });
 
         //----
-        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class, CType.COMPLEX, new FileRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf", ".nc" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf", ".nc" });
         PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"), "application/x-netcdf", ".nc" });
     }
 

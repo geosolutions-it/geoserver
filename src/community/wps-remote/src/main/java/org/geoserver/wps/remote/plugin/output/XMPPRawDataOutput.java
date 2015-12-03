@@ -35,7 +35,8 @@ import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
-import org.geoserver.wps.process.FileRawData;
+import org.geoserver.platform.resource.Files;
+import org.geoserver.wps.process.ResourceRawData;
 import org.geoserver.wps.process.StreamRawData;
 import org.geoserver.wps.process.StringRawData;
 import org.geoserver.wps.remote.WmcFeature;
@@ -92,15 +93,15 @@ public class XMPPRawDataOutput implements XMPPOutputType {
                     LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] Value:"+value);
                     
                     return value;
-                } else if (sample instanceof FileRawData) {
-                    final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((FileRawData) sample).getFileExtension();
+                } else if (sample instanceof ResourceRawData) {
+                    final String fileName = FilenameUtils.getBaseName(((String) value)) + "_" + pID + "." + ((ResourceRawData) sample).getFileExtension();
                     
                     LOGGER.info(" - TEST - [XMPP Raw Data Output - ProduceOutput] FileRawData:"+fileName);
                     
-                    value = new FileRawData(new File(((String) value)), ((FileRawData) sample).getMimeType(), ((FileRawData) sample).getFileExtension()); 
+                    value = new ResourceRawData(Files.asResource(new File(((String) value))), ((ResourceRawData) sample).getMimeType(), ((ResourceRawData) sample).getFileExtension()); 
                     if (publish) {
                         final File tempFile = new File(FileUtils.getTempDirectory(), fileName); 
-                        FileUtils.copyFile(((FileRawData)value).getFile(), tempFile);
+                        FileUtils.copyFile(((ResourceRawData)value).getResource().file(), tempFile);
 
                         try {
                             xmppClient.importLayer(tempFile, null, name+"_"+pID, title, description, defaultStyle, targetWorkspace, metadata);
