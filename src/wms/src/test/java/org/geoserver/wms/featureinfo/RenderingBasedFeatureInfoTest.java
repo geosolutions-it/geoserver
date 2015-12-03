@@ -1,3 +1,8 @@
+/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2013 OpenPlans
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.wms.featureinfo;
 
 import static org.junit.Assert.assertEquals;
@@ -324,6 +329,25 @@ public class RenderingBasedFeatureInfoTest extends WMSTestSupport {
         assertEquals(1, result.getJSONArray("features").size());
     }
     
+            String disableRequest = request + "&format_options=mapWrapping:false";
+            result = (JSONObject) getAsJSON(disableRequest);
+            // with wrapping disabled we should not get any hits
+            assertEquals(0, result.getJSONArray("features").size());
+
+            String enableRequest = request + "&format_options=mapWrapping:true";
+            result = (JSONObject) getAsJSON(enableRequest);
+            // with wrapping enabled we should get the giant polygon on the other side too
+            assertEquals(1, result.getJSONArray("features").size());
+
+
+            result = (JSONObject) getAsJSON(disableRequest);
+            // with wrapping disabled in the config, the request param should be ignored
+            assertEquals(0, result.getJSONArray("features").size());
+
+            result = (JSONObject) getAsJSON(enableRequest);
+            // with wrapping disabled in the config, the request param should be ignored
+            assertEquals(0, result.getJSONArray("features").size());
+
     /**
      * Tests GEOS-7020: imprecise scale calculation in StreamingRenderer 
      * with VectorRenderingLayerIdentifier, due to 1 pixel missing

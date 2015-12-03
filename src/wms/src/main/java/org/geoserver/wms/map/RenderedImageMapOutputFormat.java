@@ -21,7 +21,6 @@ import java.awt.image.ComponentColorModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -146,6 +145,9 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
 
     private final static List<String> AA_SETTINGS = Arrays.asList(new String[] { AA_NONE, AA_TEXT,
             AA_FULL });
+
+    private static final String MAP_WRAPPING_FORMAT_OPTION = "mapWrapping";
+    private static final String ADV_PROJECTION_HANDLING_FORMAT_OPTION = "advancedProjectionHandling";
 
     /**
      * The size of a megabyte
@@ -442,7 +444,15 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
             }
         }
 
-        
+        if (getFormatOptionAsBoolean(request, ADV_PROJECTION_HANDLING_FORMAT_OPTION) == false) {
+            rendererParams.put(StreamingRenderer.ADVANCED_PROJECTION_HANDLING_KEY, false);
+            rendererParams.put(StreamingRenderer.CONTINUOUS_MAP_WRAPPING, false);
+        }
+
+        if (getFormatOptionAsBoolean(request, MAP_WRAPPING_FORMAT_OPTION) == false) {
+            rendererParams.put(StreamingRenderer.CONTINUOUS_MAP_WRAPPING, false);
+        }
+
         // see if the user specified a dpi
         if (request.getFormatOptions().get("dpi") != null) {
             rendererParams.put(StreamingRenderer.DPI_KEY, (request
@@ -589,6 +599,16 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         }
         throw serviceException;
     }
+
+    private boolean getFormatOptionAsBoolean(final GetMapRequest request, final String formatOptionKey) {
+        if (request.getFormatOptions().get(formatOptionKey) != null) {
+            String formatOptionValue = (String)request.getFormatOptions().get(formatOptionKey);
+            return (!"false".equalsIgnoreCase(formatOptionValue));
+        }
+        // else key not present
+        return true;
+    }
+
     private RenderedImageMap optimizeAndBuildMap(IndexColorModel palette, RenderedImage preparedImage, WMSMapContent mapContent) {
         RenderedImage image;
         if (palette != null && palette.getMapSize() < 256) {
@@ -655,11 +675,9 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 Resource layouts = loader.get("layouts");
                 if (layouts.getType() == Type.DIRECTORY ) {
                     Resource layoutConfig = layouts.get(layoutName+".xml");
-                    //File layoutConfig = new File(layoutDir, layoutName + ".xml");
 
                     if( layoutConfig.getType() == Type.RESOURCE ){
-                        File layoutConfigFile = layoutConfig.file();
-                        layout = MapDecorationLayout.fromFile(layoutConfigFile, tiled);
+                        layout = MapDecorationLayout.fromFile(layoutConfig, tiled);
                     } else {
                         LOGGER.log(Level.WARNING, "Unknown layout requested: " + layoutName);
                     }

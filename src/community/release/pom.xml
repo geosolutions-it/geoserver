@@ -30,11 +30,6 @@
    </dependency>   
    <dependency>
      <groupId>org.geoserver.community</groupId>
-     <artifactId>gs-netcdf</artifactId>
-     <version>${project.version}</version>
-   </dependency>
-   <dependency>
-     <groupId>org.geoserver.community</groupId>
      <artifactId>gs-wps-download</artifactId>
      <version>${project.version}</version>
    </dependency>   
@@ -43,11 +38,6 @@
      <artifactId>gs-wps-remote</artifactId>
      <version>${project.version}</version>
    </dependency>   
-   <dependency>
-     <groupId>org.geoserver.community</groupId>
-     <artifactId>gs-netcdf-out</artifactId>
-     <version>${project.version}</version>
-   </dependency>
    <dependency>
      <groupId>org.geoserver.community</groupId>
      <artifactId>gs-ftp</artifactId>
@@ -106,11 +96,6 @@
    <dependency>
      <groupId>org.geoserver.community</groupId>
      <artifactId>gs-mbtiles</artifactId>
-     <version>${project.version}</version>
-   </dependency>
-   <dependency>
-     <groupId>org.geoserver.community</groupId>
-     <artifactId>gs-grib</artifactId>
      <version>${project.version}</version>
    </dependency>
     <dependency>
@@ -217,7 +202,7 @@
       <!-- remove some unwanted dependencies that get pulled over -->
        <tasks>
         <delete>
-         <fileset dir="${project.build.directory}/dependency" includes="servlet-api-2.4.jar,core*.jar"/>
+         <fileset dir="${project.build.directory}/dependency" includes="servlet-api-*.jar,core*.jar"/>
         </delete>
        </tasks>
       </configuration>

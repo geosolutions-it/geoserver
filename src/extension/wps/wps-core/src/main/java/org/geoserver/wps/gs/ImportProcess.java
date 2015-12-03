@@ -28,6 +28,8 @@ import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.platform.resource.Paths;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.wps.WPSException;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
@@ -142,8 +144,7 @@ public class ImportProcess implements GSProcess {
                         throw new ProcessException("Could not find a default store in workspace "
                                 + ws.getName());
                     }
-                }
-                else if (coverage != null) {
+                } else if (coverage != null) {
                     // since the store doesn't exist, create it
                     // mirroring "create a new coverage store" below
                     storeInfo = cb.buildCoverageStore((store));
@@ -294,9 +295,9 @@ public class ImportProcess implements GSProcess {
             }
         } else if (coverage != null) {
             try {
-                final File directory = catalog.getResourceLoader().findOrCreateDirectory("data",
-                        workspace, store);
-                final File file = File.createTempFile(store, ".tif", directory);
+                final Resource directory = catalog.getResourceLoader().get(
+                        Paths.path("data", workspace, store));
+                final File file = File.createTempFile(store, ".tif", directory.dir());
                 ((CoverageStoreInfo) storeInfo).setURL(file.toURL().toExternalForm());
                 ((CoverageStoreInfo) storeInfo).setType("GeoTIFF");
 

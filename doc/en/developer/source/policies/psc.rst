@@ -136,15 +136,17 @@ Current PSC
 * Christian Mueller
 * Jody Garnett
 * Jukka Rahkonen
-* Phil Scadden
+* Kevin Smith
 * Simone Giannecchini
 
 We would like to thank prior PSC members:
 
+* Rob Atkinson
+* Justin Deoliveira
 * Chris Holmes
 * Brent Owens
 * Gabriel Roldan
-* Justin Deoliveira
+* Phil Scadden
 
 PSC Voting procedure
 --------------------
