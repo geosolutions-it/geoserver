@@ -40,12 +40,21 @@ public class XMPPLogMessage implements XMPPMessage {
         metadata.put("serviceJID", packet.getFrom());
 
         try {
-			final String pID = (signalArgs != null ? signalArgs.get("id") : null);
-			
-			LOGGER.log(Level.parse(signalArgs.get("level")), "[" + pID + "]" + URLDecoder.decode(signalArgs.get("message"), "UTF-8"));
-		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, "Error while trying to decode Log message: " + message.getBody(), e);
-		}
+            final String pID = (signalArgs != null ? signalArgs.get("id") : null);
+
+            Level logLevel = Level.INFO;
+            try {
+                logLevel = Level.parse(signalArgs.get("level"));
+            } catch (Exception e) {
+                LOGGER.fine(
+                        "Could not correctly parse the Log level; using the default one 'INFO'.");
+            }
+            LOGGER.log(logLevel,
+                    "[" + pID + "]" + URLDecoder.decode(signalArgs.get("message"), "UTF-8"));
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE,
+                    "Error while trying to decode Log message: " + message.getBody(), e);
+        }
     }
 
 }

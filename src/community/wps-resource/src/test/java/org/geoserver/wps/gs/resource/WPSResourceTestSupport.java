@@ -37,36 +37,26 @@ public abstract class WPSResourceTestSupport extends WPSTestSupport {
         super.setUpTestData(testData);
 
         // add limits properties file
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/test1.xml"), "test1.xml");
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/test2.xml"), "test2.xml");
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/test3.xml"), "test3.xml");
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/test4.xml"), "test4.xml");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/test1.xml"), "test1.xml");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/test2.xml"), "test2.xml");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/test3.xml"), "test3.xml");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/test4.xml"), "test4.xml");
 
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/testLiteralResource.xml"), "testLiteralResource.xml");
-        
-        
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/tracks_filtered.csv"), "tracks_filtered.csv");
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/tracks_filtered.prj"), "tracks_filtered.prj");
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/waypoints.csv"), "waypoints.csv");
-        testData.copyTo(
-                WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
-                        "test-data/waypoints.prj"), "waypoints.prj");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader().getResourceAsStream(
+                "test-data/testLiteralResource.xml"), "testLiteralResource.xml");
+
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/tracks_filtered.csv"), "tracks_filtered.csv");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/tracks_filtered.prj"), "tracks_filtered.prj");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/waypoints.csv"), "waypoints.csv");
+        testData.copyTo(WPSResourceTestSupport.class.getClassLoader()
+                .getResourceAsStream("test-data/waypoints.prj"), "waypoints.prj");
     }
 
     protected void cleanCatalog() throws IOException {

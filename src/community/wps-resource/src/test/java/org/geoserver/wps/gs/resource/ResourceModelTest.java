@@ -74,8 +74,8 @@ public class ResourceModelTest extends WPSResourceTestSupport {
             TranslateContext txContext = layer.getTranslateContext();
             assertNotNull(txContext);
 
-            assertEquals("Number of un-marshalled resource translate items", txContext.getItems()
-                    .size(), 3);
+            assertEquals("Number of un-marshalled resource translate items",
+                    txContext.getItems().size(), 3);
             final TranslateItem txCtxFirstItem = txContext.getFirst();
             final TranslateItem txCtxLastItem = txContext.getLast();
 
@@ -105,7 +105,8 @@ public class ResourceModelTest extends WPSResourceTestSupport {
         // De-serialize resources
         File testXML;
         try {
-            testXML = new File(testData.getDataDirectoryRoot().getAbsolutePath(), "testLiteralResource.xml");
+            testXML = new File(testData.getDataDirectoryRoot().getAbsolutePath(),
+                    "testLiteralResource.xml");
             assertTrue(testXML.exists());
 
             String dump = null;
@@ -120,7 +121,7 @@ public class ResourceModelTest extends WPSResourceTestSupport {
             assertNotNull(resources);
 
             assertEquals("Number of un-marshalled resources", resources.getResources().size(), 1);
-            
+
             // Create-or-update the resources
             for (Resource resource : resources.getResources()) {
 
@@ -132,7 +133,7 @@ public class ResourceModelTest extends WPSResourceTestSupport {
             assertTrue(layer instanceof LiteralData);
             assertEquals("test", layer.getName());
             assertTrue(((LiteralData) layer).getText().startsWith("Lorem ipsum dolor sit amet"));
-            
+
         } catch (Exception cause) {
             fail(cause.getMessage());
             throw new ProcessException(cause);

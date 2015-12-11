@@ -50,7 +50,7 @@ public class ResourceLoaderProcessTest extends WPSResourceTestSupport {
 
             List<LayerInfo> layers = getGeoServer().getCatalog().getLayers();
             assertNotNull(layers);
-            
+
             assertTrue(!layers.isEmpty());
 
             // cleanup

@@ -51,7 +51,9 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
     /** The progess listrener. */
     private ProgressListener listener;
 
-    /** Whether the remote service raised and exception or not. This property contains the cause and is instantiated by the {@link RemoteProcessClient} */
+    /**
+     * Whether the remote service raised and exception or not. This property contains the cause and is instantiated by the {@link RemoteProcessClient}
+     */
     private Exception exception;
 
     /** The semaphore */
@@ -65,7 +67,8 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
      * @param remoteClient
      * @param metadata
      */
-    public RemoteProcess(Name name, RemoteProcessClient remoteClient, Map<String, Object> metadata) {
+    public RemoteProcess(Name name, RemoteProcessClient remoteClient,
+            Map<String, Object> metadata) {
         this.name = name;
         this.remoteClient = remoteClient;
         this.metadata = metadata;
@@ -76,16 +79,19 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
 
         try {
             // Generating a unique Process ID
-            
-            LOGGER.info("Generating a unique Process ID for Remote Process [" + name + "] with the following parameters:");
+
+            LOGGER.info("Generating a unique Process ID for Remote Process [" + name
+                    + "] with the following parameters:");
             LOGGER.info(" - name: " + name);
             LOGGER.info(" - input: " + input);
             LOGGER.info(" - metadata: " + metadata);
             LOGGER.info(" - monitor: " + monitor);
-            
+
             if (remoteClient == null) {
-                LOGGER.log(Level.SEVERE, "Cannot execute Remote Process [" + name + "] since the RemoteClient is not available!");
-                throw new Exception("Cannot execute Remote Process [" + name + "] since the RemoteClient is not available!");
+                LOGGER.log(Level.SEVERE, "Cannot execute Remote Process [" + name
+                        + "] since the RemoteClient is not available!");
+                throw new Exception("Cannot execute Remote Process [" + name
+                        + "] since the RemoteClient is not available!");
             }
             listener = monitor;
             pid = remoteClient.execute(name, input, metadata, monitor);
@@ -102,7 +108,8 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             if (listener != null) {
                 listener.exceptionOccurred(e);
             }
-            LOGGER.log(Level.SEVERE, "The Remote Process with pId [" + pid + "] rasied an Exeption", e);
+            LOGGER.log(Level.SEVERE, "The Remote Process with pId [" + pid + "] rasied an Exeption",
+                    e);
             throw new ProcessException(e);
         } finally {
             remoteClient.deregisterProcessClientListener(this);
@@ -110,8 +117,8 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
 
         // forward the Exception if necessary
         if (exception != null) {
-            LOGGER.log(Level.SEVERE, "The Remote Service associated to the Process with pId ["
-                    + pid + "] rasied an Exeption", exception);
+            LOGGER.log(Level.SEVERE, "The Remote Service associated to the Process with pId [" + pid
+                    + "] rasied an Exeption", exception);
             throw new ProcessException(exception);
         }
 
@@ -122,7 +129,7 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
             throw new ProcessException("The Remote Service associated to the Process with pId ["
                     + pid + "] has been cancelled");
         }
-        
+
         return outputs;
     }
 
@@ -169,16 +176,18 @@ public class RemoteProcess implements Process, RemoteProcessClientListener {
     public void complete(String pId, Object outputs) {
         if (pId.equals(pid)) {
             listener.complete();
-            
+
             try {
                 this.outputs = (Map<String, Object>) outputs;
             } catch (Exception e) {
                 exception = e;
-                LOGGER.log(Level.SEVERE, "The Remote Service associated to the Process with pId ["
-                        + pid + "] rasied an Exeption while setting the outputs on completion", exception);
+                LOGGER.log(Level.SEVERE,
+                        "The Remote Service associated to the Process with pId [" + pid
+                                + "] rasied an Exeption while setting the outputs on completion",
+                        exception);
                 this.outputs = null;
             }
-            
+
             running = false;
             doneSignal.countDown();
         }

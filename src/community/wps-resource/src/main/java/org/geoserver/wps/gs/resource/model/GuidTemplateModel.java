@@ -26,9 +26,9 @@ package org.geoserver.wps.gs.resource.model;
 public class GuidTemplateModel {
 
     private String layerName;
-    
+
     private String userId;
-    
+
     private String filter;
 
     private String guid;

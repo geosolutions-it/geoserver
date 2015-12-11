@@ -15,87 +15,86 @@ import org.geotools.util.logging.Logging;
  */
 public class Dimension implements Serializable {
 
-	static protected Logger LOGGER = Logging.getLogger(Dimension.class);
+    static protected Logger LOGGER = Logging.getLogger(Dimension.class);
 
     private String name;
-    
+
     private String description;
-    
+
     private String min;
-    
+
     private String max;
-    
+
     private DimensionInfo dimensionInfo;
 
-	/**
-	 * @return the name
-	 */
-	public String getName() {
-		return name;
-	}
+    /**
+     * @return the name
+     */
+    public String getName() {
+        return name;
+    }
 
-	/**
-	 * @param name the name to set
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
+    /**
+     * @param name the name to set
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	/**
-	 * @return the description
-	 */
-	public String getDescription() {
-		return description;
-	}
+    /**
+     * @return the description
+     */
+    public String getDescription() {
+        return description;
+    }
 
-	/**
-	 * @param description the description to set
-	 */
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    /**
+     * @param description the description to set
+     */
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-	/**
-	 * @return the min
-	 */
-	public String getMin() {
-		return min;
-	}
+    /**
+     * @return the min
+     */
+    public String getMin() {
+        return min;
+    }
 
-	/**
-	 * @param min the min to set
-	 */
-	public void setMin(String min) {
-		this.min = min;
-	}
+    /**
+     * @param min the min to set
+     */
+    public void setMin(String min) {
+        this.min = min;
+    }
 
-	/**
-	 * @return the max
-	 */
-	public String getMax() {
-		return max;
-	}
+    /**
+     * @return the max
+     */
+    public String getMax() {
+        return max;
+    }
 
-	/**
-	 * @param max the max to set
-	 */
-	public void setMax(String max) {
-		this.max = max;
-	}
+    /**
+     * @param max the max to set
+     */
+    public void setMax(String max) {
+        this.max = max;
+    }
 
-	/**
-	 * @return the dimensionInfo
-	 */
-	public DimensionInfo getDimensionInfo() {
-		return dimensionInfo;
-	}
+    /**
+     * @return the dimensionInfo
+     */
+    public DimensionInfo getDimensionInfo() {
+        return dimensionInfo;
+    }
 
-	/**
-	 * @param dimensionInfo the dimensionInfo to set
-	 */
-	public void setDimensionInfo(DimensionInfo dimensionInfo) {
-		this.dimensionInfo = dimensionInfo;
-	}
-    
-    
+    /**
+     * @param dimensionInfo the dimensionInfo to set
+     */
+    public void setDimensionInfo(DimensionInfo dimensionInfo) {
+        this.dimensionInfo = dimensionInfo;
+    }
+
 }

@@ -79,28 +79,32 @@ public class VirtualTableItem extends TranslateItem {
                     // the DEFAULT one
                     workspace = catalog.getDefaultWorkspace();
                 }
-                
+
                 builder.setWorkspace(workspace);
-                
-                DataAccess<? extends FeatureType, ? extends Feature> dataAccess = dataStore.getDataStore(null);
-                
+
+                DataAccess<? extends FeatureType, ? extends Feature> dataAccess = dataStore
+                        .getDataStore(null);
+
                 if (dataAccess instanceof JDBCDataStore) {
                     JDBCDataStore jstore = (JDBCDataStore) dataAccess;
-                    
+
                     // set Virtual Table metadata and save to the catalog
-                    VirtualTable virtualTable = new VirtualTable(metadata.get("name"), metadata.get("sql"), Boolean.valueOf(metadata.get("escapeSql")));
+                    VirtualTable virtualTable = new VirtualTable(metadata.get("name"),
+                            metadata.get("sql"), Boolean.valueOf(metadata.get("escapeSql")));
                     Geometries geomType = Geometries.getForName(metadata.get("geometryType"));
                     Class binding = geomType == null ? Geometry.class : geomType.getBinding();
-                    virtualTable.addGeometryMetadatata(metadata.get("geometryName"), binding, Integer.valueOf(metadata.get("geometrySrid")));
-                    
+                    virtualTable.addGeometryMetadatata(metadata.get("geometryName"), binding,
+                            Integer.valueOf(metadata.get("geometrySrid")));
+
                     jstore.createVirtualTable(virtualTable);
-                    //jstore.addVirtualTable(virtualTable);
+                    // jstore.addVirtualTable(virtualTable);
 
                     builder.setStore(dataStore);
-                    FeatureTypeInfo fti = builder.buildFeatureType(jstore.getFeatureSource(virtualTable.getName()));
+                    FeatureTypeInfo fti = builder
+                            .buildFeatureType(jstore.getFeatureSource(virtualTable.getName()));
                     fti.getMetadata().put(FeatureTypeInfo.JDBC_VIRTUAL_TABLE, virtualTable);
                     LayerInfo layerInfo = builder.buildLayer(fti);
-                    
+
                     // Set Resource and Layer Info
                     ResourceInfo resource = layerInfo.getResource();
                     if (userLayer.nativeBoundingBox() != null)
@@ -114,10 +118,10 @@ public class VirtualTableItem extends TranslateItem {
                     NamespaceInfo nameSpace = catalog.getNamespaceByPrefix(workspace.getName());
                     if (nameSpace != null)
                         resource.setNamespace(nameSpace);
-//                    resource.setStore(dataStore);
-//                    resource.setName(userLayer.getName());
-//                    resource.setNativeName(userLayer.getName());
-                    
+                    // resource.setStore(dataStore);
+                    // resource.setName(userLayer.getName());
+                    // resource.setNativeName(userLayer.getName());
+
                     layerInfo.setName(userLayer.getName());
                     layerInfo.setAbstract(userLayer.getAbstract());
                     layerInfo.setTitle(userLayer.getTitle());
@@ -132,7 +136,7 @@ public class VirtualTableItem extends TranslateItem {
                     if (defaultStyle != null) {
                         layerInfo.setDefaultStyle(defaultStyle);
                     }
-                    
+
                     // Add to the Catalog
                     catalog.add(fti);
                     catalog.add(layerInfo);

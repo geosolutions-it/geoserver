@@ -78,12 +78,13 @@ public class ResourceLoaderProcess implements GSProcess {
 
     @DescribeResult(name = "result", description = "XML describing the Resources to load")
     public String execute(
-            @DescribeParameter(name = "resourcesXML", min = 1, description = "XML describing the Resources to load", meta = { "mimeTypes=application/json,text/xml" }) RawData resourcesXML,
+            @DescribeParameter(name = "resourcesXML", min = 1, description = "XML describing the Resources to load", meta = {
+                    "mimeTypes=application/json,text/xml" }) RawData resourcesXML,
             final ProgressListener progressListener) throws ProcessException {
 
         // Initialize Unmarshaller
         XStream xs = initialize(catalog);
-        final String resourceDescriptor = ((StringRawData)resourcesXML).getData();
+        final String resourceDescriptor = ((StringRawData) resourcesXML).getData();
 
         // De-serialize resources
         try {
@@ -114,7 +115,7 @@ public class ResourceLoaderProcess implements GSProcess {
     }
 
     /**
-     * @param catalog2 
+     * @param catalog2
      * @return
      * @throws IllegalArgumentException
      */
@@ -127,11 +128,11 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.alias("resource", Resource.class);
         xs.alias("dimension", Dimension.class);
         xs.alias("dimensionInfo", DimensionInfo.class);
-        
+
         xs.aliasField("abstract", Resource.class, "abstractTxt");
         xs.aliasField("dimensionInfo", Dimension.class, "dimensionInfo");
         xs.aliasField("translateContext", Resource.class, "translateContext");
-        
+
         xs.aliasAttribute(Resource.class, "type", "class");
 
         xs.alias("nativeBoundingBox", Map.class);
@@ -147,7 +148,7 @@ public class ResourceLoaderProcess implements GSProcess {
 
         // Default Implementations
         xs.addDefaultImplementation(DimensionInfoImpl.class, DimensionInfo.class);
-        
+
         // Converters
         xs.addImplicitCollection(Resources.class, "resources");
         xs.addImplicitCollection(Resource.class, "dimensions");
@@ -156,8 +157,9 @@ public class ResourceLoaderProcess implements GSProcess {
         xs.registerConverter(new MapEntryConverter());
         xs.registerConverter(new ResourceConverter(catalog));
         xs.registerConverter(new ResourceItemConverter());
-        xs.registerConverter(new ReflectionConverter(xs.getMapper(),
-                new PureJavaReflectionProvider()), XStream.PRIORITY_VERY_LOW);
+        xs.registerConverter(
+                new ReflectionConverter(xs.getMapper(), new PureJavaReflectionProvider()),
+                XStream.PRIORITY_VERY_LOW);
 
         return xs;
     }
@@ -173,16 +175,16 @@ public class ResourceLoaderProcess implements GSProcess {
             throws IllegalArgumentException, IOException, FileNotFoundException {
         final String executionId = resourceManager.getExecutionId(null);
         GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        File wpsProcessFolder = new File(loader.getBaseDirectory().getCanonicalPath(), "/temp/wps/"
-                + executionId);
+        File wpsProcessFolder = new File(loader.getBaseDirectory().getCanonicalPath(),
+                "/temp/wps/" + executionId);
 
         if (!wpsProcessFolder.exists()) {
             wpsProcessFolder.mkdirs();
         }
 
         if (wpsProcessFolder.exists() && wpsProcessFolder.isDirectory()) {
-            final File wpsResourceLoaderOutput = new File(wpsProcessFolder, "resources_"
-                    + executionId + ".xml");
+            final File wpsResourceLoaderOutput = new File(wpsProcessFolder,
+                    "resources_" + executionId + ".xml");
             final FileOutputStream fos = new FileOutputStream(wpsResourceLoaderOutput);
             try {
                 xs.toXML(resources, fos);
@@ -201,20 +203,20 @@ public class ResourceLoaderProcess implements GSProcess {
      * @throws IOException
      * @throws FileNotFoundException
      */
-    protected void storeResourcesXML(String data) throws IllegalArgumentException, IOException,
-            FileNotFoundException {
+    protected void storeResourcesXML(String data)
+            throws IllegalArgumentException, IOException, FileNotFoundException {
         final String executionId = resourceManager.getExecutionId(null);
         GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        File wpsProcessFolder = new File(loader.getBaseDirectory().getCanonicalPath(), "/temp/wps/"
-                + executionId);
+        File wpsProcessFolder = new File(loader.getBaseDirectory().getCanonicalPath(),
+                "/temp/wps/" + executionId);
 
         if (!wpsProcessFolder.exists()) {
             wpsProcessFolder.mkdirs();
         }
 
         if (wpsProcessFolder.exists() && wpsProcessFolder.isDirectory()) {
-            final File wpsResourceLoaderOutput = new File(wpsProcessFolder, "resources_"
-                    + executionId + ".xml");
+            final File wpsResourceLoaderOutput = new File(wpsProcessFolder,
+                    "resources_" + executionId + ".xml");
             try {
                 FileUtils.writeStringToFile(wpsResourceLoaderOutput, data, "UTF-8", false);
             } catch (Exception cause) {
@@ -328,7 +330,7 @@ public class ResourceLoaderProcess implements GSProcess {
                         resource.getTranslateContext().setCatalog(catalog);
                         resource.getTranslateContext().setOriginator(resource);
                     }
-                    
+
                     return resource;
                 }
             }

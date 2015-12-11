@@ -85,15 +85,19 @@ public class XMPPRegisterMessage implements XMPPMessage {
                                 XMPPClient.class.getClassLoader(), paramType.get("default"));
 
                         InternationalString inputTitle = (paramType.get("title") != null
-                                && paramType.get("title") instanceof String ? Text
-                                .text((String) paramType.get("title")) : Text.text(paramName));
+                                && paramType.get("title") instanceof String
+                                        ? Text.text((String) paramType.get("title"))
+                                        : Text.text(paramName));
                         InternationalString inputDescription = (paramType.get("description") != null
-                                && paramType.get("description") instanceof String ? Text
-                                .text((String) paramType.get("description")) : Text.text(paramName));
+                                && paramType.get("description") instanceof String
+                                        ? Text.text((String) paramType.get("description"))
+                                        : Text.text(paramName));
 
-                        inputs.put(paramName, new Parameter(paramName, paramTemplate.getClazz(),
-                                inputTitle, inputDescription, paramType.get("min") == null
-                                        || (Integer) paramType.get("min") > 0,
+                        inputs.put(paramName,
+                                new Parameter(paramName, paramTemplate.getClazz(), inputTitle,
+                                        inputDescription,
+                                        paramType.get("min") == null
+                                                || (Integer) paramType.get("min") > 0,
                                 paramType.get("min") != null ? (Integer) paramType.get("min") : 1,
                                 paramType.get("max") != null ? (Integer) paramType.get("max") : -1,
                                 paramTemplate.getDefaultValue(), null));
@@ -121,25 +125,32 @@ public class XMPPRegisterMessage implements XMPPMessage {
                         final String choosenOutputMimeTypeParam = paramName + "OutputMimeType";
                         if (paramTemplate.getMeta() != null
                                 && paramTemplate.getMeta().get("mimeTypes") != null
-                                && (paramType.get("output_mime_type") instanceof String))
-                        {
-                            paramTemplate.getMeta().put("chosenMimeType", choosenOutputMimeTypeParam);
-                            
-                            final Parameter outputChoosenMimeTypeParam = new Parameter(choosenOutputMimeTypeParam, String.class, Text.text(""), Text.text(""),
-                                    false, 0, 1, paramType.get("output_mime_type").toString(), null);
+                                && (paramType.get("output_mime_type") instanceof String)) {
+                            paramTemplate.getMeta().put("chosenMimeType",
+                                    choosenOutputMimeTypeParam);
+
+                            final Parameter outputChoosenMimeTypeParam = new Parameter(
+                                    choosenOutputMimeTypeParam, String.class, Text.text(""),
+                                    Text.text(""), false, 0, 1,
+                                    paramType.get("output_mime_type").toString(), null);
                             inputs.put(choosenOutputMimeTypeParam, outputChoosenMimeTypeParam);
                         }
-                        
-                        InternationalString outputTitle = (paramType.get("title") != null
-                                && paramType.get("title") instanceof String ? Text
-                                .text((String) paramType.get("title")) : Text.text(paramName));
-                        InternationalString outputDescription = (paramType.get("description") != null
-                                && paramType.get("description") instanceof String ? Text
-                                .text((String) paramType.get("description")) : Text.text(paramName));
 
-                        outputs.put(paramName, new Parameter(paramName, paramTemplate.getClazz(),
-                                outputTitle, outputDescription, paramType.get("min") == null
-                                        || (Integer) paramType.get("min") > 0,
+                        InternationalString outputTitle = (paramType.get("title") != null
+                                && paramType.get("title") instanceof String
+                                        ? Text.text((String) paramType.get("title"))
+                                        : Text.text(paramName));
+                        InternationalString outputDescription = (paramType
+                                .get("description") != null
+                                && paramType.get("description") instanceof String
+                                        ? Text.text((String) paramType.get("description"))
+                                        : Text.text(paramName));
+
+                        outputs.put(paramName,
+                                new Parameter(paramName, paramTemplate.getClazz(), outputTitle,
+                                        outputDescription,
+                                        paramType.get("min") == null
+                                                || (Integer) paramType.get("min") > 0,
                                 paramType.get("min") != null ? (Integer) paramType.get("min") : 1,
                                 paramType.get("max") != null ? (Integer) paramType.get("max") : 0,
                                 paramTemplate.getDefaultValue(), paramTemplate.getMeta()));

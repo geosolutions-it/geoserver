@@ -35,8 +35,8 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessFactor
     public static final String WPS_VERSION = "1.0.0";
 
     /** The LOGGER */
-    public static final Logger LOGGER = Logging.getLogger(RemoteProcessFactory.class.getPackage()
-            .getName());
+    public static final Logger LOGGER = Logging
+            .getLogger(RemoteProcessFactory.class.getPackage().getName());
 
     /** Names of the available {@link RemoteProcess}; they are created dynamically as stubs accordingly to the remote services presentation */
     private Set<Name> names = Collections.newSetFromMap(new ConcurrentHashMap<Name, Boolean>());
@@ -133,8 +133,8 @@ public class RemoteProcessFactory implements ProcessFactory, RemoteProcessFactor
         synchronized (remoteInstances) {
             if (checkName(name)) {
                 try {
-                    RemoteProcess process = new RemoteProcess(name, remoteClient, descriptors.get(
-                            name).getMetadata());
+                    RemoteProcess process = new RemoteProcess(name, remoteClient,
+                            descriptors.get(name).getMetadata());
                     remoteInstances.put(name, process);
                     return process;
                 } catch (Exception e) {

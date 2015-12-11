@@ -25,7 +25,6 @@ import org.geoserver.importer.ImportContext;
 import org.geoserver.importer.ImportTask;
 import org.geoserver.importer.Importer;
 import org.geoserver.importer.SpatialFile;
-import org.geoserver.importer.transform.TransformChain;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.wps.remote.plugin.XMPPClient;
@@ -41,7 +40,7 @@ import org.springframework.beans.factory.DisposableBean;
  * 
  */
 public abstract class RemoteProcessClient implements DisposableBean {
-    
+
     /** The LOGGER */
     public static final Logger LOGGER = Logging.getLogger(XMPPClient.class.getPackage().getName());
 
@@ -213,8 +212,8 @@ public abstract class RemoteProcessClient implements DisposableBean {
         // create a datastore to import into
         Catalog cat = getGeoServer().getCatalog();
 
-        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName) : cat
-                .getDefaultWorkspace();
+        WorkspaceInfo ws = wsName != null ? cat.getWorkspaceByName(wsName)
+                : cat.getDefaultWorkspace();
         DataStoreInfo ds = cat.getFactory().createDataStore();
         ds.setWorkspace(ws);
         ds.setName(dsName);
@@ -235,59 +234,69 @@ public abstract class RemoteProcessClient implements DisposableBean {
     }
 
     /**
-     * @param metadata 
+     * @param metadata
      * @param value
      * @return
      * @throws IOException
      */
-    public LayerInfo importLayer(File file, DataStoreInfo store, String name, String title, String description, String defaultStyle,
-            String targetWorkspace, String metadata) throws Exception {
+    public LayerInfo importLayer(File file, DataStoreInfo store, String name, String title,
+            String description, String defaultStyle, String targetWorkspace, String metadata)
+                    throws Exception {
         Importer importer = getImporter();
 
-        
-        LOGGER.info(" - TEST - [Remote Process Client - importLayer] Importer Context from Spatial File:"+file.getAbsolutePath());
-        
-        ImportContext context = (store != null ? importer.createContext(new SpatialFile(file),
-                store) : importer.createContext(new SpatialFile(file)));
+        LOGGER.fine(" - [Remote Process Client - importLayer] Importer Context from Spatial File:"
+                + file.getAbsolutePath());
+
+        ImportContext context = (store != null
+                ? importer.createContext(new SpatialFile(file), store)
+                : importer.createContext(new SpatialFile(file)));
 
         if (context.getTasks() != null && context.getTasks().size() > 0) {
             ImportTask task = context.getTasks().get(0);
 
             if (targetWorkspace != null) {
-                
-                LOGGER.info(" - TEST - [Remote Process Client - importLayer] Looking for Workspace in the catalog:"+targetWorkspace);
-                
+
+                LOGGER.fine(
+                        " - [Remote Process Client - importLayer] Looking for Workspace in the catalog:"
+                                + targetWorkspace);
+
                 WorkspaceInfo ws = importer.getCatalog().getWorkspaceByName(targetWorkspace);
                 if (ws != null) {
-                    
-                    LOGGER.info(" - TEST - [Remote Process Client - importLayer] Workspace found:"+ws);
-                    
+
+                    LOGGER.fine(" - [Remote Process Client - importLayer] Workspace found:" + ws);
+
                     context.setTargetWorkspace(ws);
                 } else {
-                    
-                    LOGGER.info(" - TEST - [Remote Process Client - importLayer] Workspace *NOT* found - using the Default one:"+importer.getCatalog().getDefaultWorkspace());
-                    
+
+                    LOGGER.fine(
+                            " - [Remote Process Client - importLayer] Workspace *NOT* found - using the Default one:"
+                                    + importer.getCatalog().getDefaultWorkspace());
+
                     context.setTargetWorkspace(importer.getCatalog().getDefaultWorkspace());
                 }
             }
-            
+
             if (defaultStyle != null) {
                 StyleInfo style = importer.getCatalog().getStyleByName(defaultStyle);
                 if (style == null && targetWorkspace != null) {
                     style = importer.getCatalog().getStyleByName(targetWorkspace, defaultStyle);
                 }
-                
+
                 if (style != null) {
                     task.getLayer().setDefaultStyle(style);
                 }
             }
-            
-            if (name != null) task.getLayer().setName(name);
-            if (title != null) task.getLayer().setTitle(title);
-            if (description != null) task.getLayer().setAbstract(description);
 
-            if (metadata != null) task.getLayer().getMetadata().put("owc_properties", metadata);
-            
+            if (name != null)
+                task.getLayer().setName(name);
+            if (title != null)
+                task.getLayer().setTitle(title);
+            if (description != null)
+                task.getLayer().setAbstract(description);
+
+            if (metadata != null)
+                task.getLayer().getMetadata().put("owc_properties", metadata);
+
             importer.run(context);
 
             if (context.getState() == ImportContext.State.COMPLETE) {
@@ -299,14 +308,18 @@ public abstract class RemoteProcessClient implements DisposableBean {
 
                     task = context.getTasks().get(0);
 
-                    LOGGER.info(" - TEST - [Remote Process Client - importLayer] The Importer has finished correctly for Spatial File:"+file.getAbsolutePath());
+                    LOGGER.fine(
+                            " - [Remote Process Client - importLayer] The Importer has finished correctly for Spatial File:"
+                                    + file.getAbsolutePath());
 
                     return task.getLayer();
                 }
             }
         }
 
-        LOGGER.info(" - TEST - [Remote Process Client - importLayer] The Importer has finished *BUT* did not returned any layer for Spatial File:"+file.getAbsolutePath());
+        LOGGER.fine(
+                " - [Remote Process Client - importLayer] The Importer has finished *BUT* did not returned any layer for Spatial File:"
+                        + file.getAbsolutePath());
 
         return null;
     }

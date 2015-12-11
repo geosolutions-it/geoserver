@@ -19,16 +19,19 @@ public interface XMPPOutputType {
      * @param value
      * @param type
      * @param pID
-     * @param baseURL 
+     * @param baseURL
      * @param xmppClient
      * @param publish
-     * @param metadata 
-     * @param wpsOutputValue 
-     * @return 
-     * @throws Exception 
+     * @param metadata
+     * @param wpsOutputValue
+     * @return
+     * @throws Exception
      */
-    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String name, String title, String description, String defaultStyle, String targetWorkspace, String metadata) throws Exception;
-    
+    public Object accept(XMPPOutputVisitor visitor, Object value, String type, String pID,
+            String baseURL, XMPPClient xmppClient, boolean publish, String name, String title,
+            String description, String defaultStyle, String targetWorkspace, String metadata)
+                    throws Exception;
+
     /**
      * 
      * @param outputs
@@ -37,7 +40,9 @@ public interface XMPPOutputType {
      * @param pID
      * @param xmppClient
      * @param publish
-     * @throws Exception 
+     * @throws Exception
      */
-    public Object produceOutput(Object value, String type, String pID, String baseURL, XMPPClient xmppClient, boolean publish, String name, String title, String description,String defaultStyle, String targetWorkspace, String metadata) throws Exception;
+    public Object produceOutput(Object value, String type, String pID, String baseURL,
+            XMPPClient xmppClient, boolean publish, String name, String title, String description,
+            String defaultStyle, String targetWorkspace, String metadata) throws Exception;
 }

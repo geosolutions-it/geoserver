@@ -55,7 +55,8 @@ public class GuidUpdateProcess implements GSProcess {
     @DescribeResult(name = "result", description = "XML describing the Resources to load", type = String.class)
     public String execute(
             @DescribeParameter(name = "guid", min = 1, description = "The GUID to be used") String guid,
-            @DescribeParameter(name = "layer", min = 0, description = "List of Layers and Filters associated with the GUID", meta = { "mimeTypes=application/json,text/xml" }, collectionType = RawData.class) final List<RawData> layers,
+            @DescribeParameter(name = "layer", min = 0, description = "List of Layers and Filters associated with the GUID", meta = {
+                    "mimeTypes=application/json,text/xml" }, collectionType = RawData.class) final List<RawData> layers,
             final ProgressListener progressListener) throws ProcessException {
 
         try {
@@ -88,7 +89,7 @@ public class GuidUpdateProcess implements GSProcess {
 
                                 encodedLayers.add(layerObj);
                             }
-                        }                        
+                        }
 
                         jsonP.close();
                     }

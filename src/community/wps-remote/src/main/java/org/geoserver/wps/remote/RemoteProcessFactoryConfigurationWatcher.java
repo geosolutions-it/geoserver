@@ -30,8 +30,8 @@ import org.geotools.util.logging.Logging;
  * @author Alessio Fabiani, GeoSolutions
  * 
  */
-public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implements
-        RemoteProcessFactoryConfigurationGenerator {
+public class RemoteProcessFactoryConfigurationWatcher extends TimerTask
+        implements RemoteProcessFactoryConfigurationGenerator {
 
     public static final String REMOTE_PROCESS_DIR = "remote-process";
 
@@ -162,8 +162,8 @@ public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implemen
             } else {
                 if (LOGGER.isLoggable(Level.INFO)) {
                     LOGGER.info("Unable to read confguration file for remote process factory: "
-                            + file.getAbsolutePath()
-                            + " continuing with default configuration-->\n" + configuration);
+                            + file.getAbsolutePath() + " continuing with default configuration-->\n"
+                            + configuration);
                 }
             }
         } catch (Exception e) {
@@ -180,7 +180,7 @@ public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implemen
         return newConfiguration;
 
     }
-    
+
     /**
      * Parses the properties file for the remote process factory configuration. When it runs into problems it uses default values
      * 
@@ -225,10 +225,10 @@ public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implemen
                     }
                 }
                 if (LOGGER.isLoggable(Level.FINE)) {
-                    LOGGER.fine("remoteProcessStubCycleSleepTime assigned to " + remoteProcessStubCycleSleepTime);
+                    LOGGER.fine("remoteProcessStubCycleSleepTime assigned to "
+                            + remoteProcessStubCycleSleepTime);
                 }
-            }
-            else {
+            } else {
                 configKvPs.put(prop, remoteProcessFactoryProperties.getProperty(prop));
             }
         }
@@ -236,7 +236,7 @@ public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implemen
         // create the configuration object
         return new RemoteProcessFactoryConfiguration(remoteProcessStubCycleSleepTime, configKvPs);
     }
-    
+
     @Override
     public void run() {
         if (watcher.isStale()) {
@@ -253,7 +253,7 @@ public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implemen
             }
         }
     }
-    
+
     /**
      * Stop the configuration watcher.
      */
@@ -266,7 +266,7 @@ public class RemoteProcessFactoryConfigurationWatcher extends TimerTask implemen
             }
         }
     }
-    
+
     @Override
     public RemoteProcessFactoryConfiguration getConfiguration() {
         return configuration;

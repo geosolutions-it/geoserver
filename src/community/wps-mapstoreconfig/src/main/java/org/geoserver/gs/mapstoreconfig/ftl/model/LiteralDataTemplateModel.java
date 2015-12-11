@@ -23,7 +23,7 @@ package org.geoserver.gs.mapstoreconfig.ftl.model;
 public class LiteralDataTemplateModel {
 
     private String name;
-    
+
     private String text;
 
     /**
@@ -53,5 +53,5 @@ public class LiteralDataTemplateModel {
     public void setText(String text) {
         this.text = text;
     }
-    
+
 }

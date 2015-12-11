@@ -50,7 +50,7 @@ public class LayerTemplateModel {
     private String queryable;
 
     private DimensionsTemplateModel timeDimensions;
-    
+
     /**
      * @return the format
      */

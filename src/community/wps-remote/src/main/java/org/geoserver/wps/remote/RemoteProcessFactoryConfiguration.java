@@ -16,7 +16,7 @@ public class RemoteProcessFactoryConfiguration {
 
     /** Configuration Default Values */
     public static final long DEFAULT_SLEEP_TIME = 100;
-    
+
     public static final String DEFAULT_SLEEP_TIME_NAME = "remoteProcessStubCycleSleepTime";
 
     private long remoteProcessStubCycleSleepTime;
@@ -24,10 +24,11 @@ public class RemoteProcessFactoryConfiguration {
     private final Map<String, String> configKvPs;
 
     /** Constructor */
-    public RemoteProcessFactoryConfiguration(long remoteProcessStubCycleSleepTime, Map<String, String> configKvPs) {
+    public RemoteProcessFactoryConfiguration(long remoteProcessStubCycleSleepTime,
+            Map<String, String> configKvPs) {
         this.remoteProcessStubCycleSleepTime = remoteProcessStubCycleSleepTime;
-        
-        this.configKvPs = configKvPs; 
+
+        this.configKvPs = configKvPs;
     }
 
     /**
@@ -50,7 +51,7 @@ public class RemoteProcessFactoryConfiguration {
     public Map<String, String> getConfigKvPs() {
         return configKvPs;
     }
-    
+
     /**
      * A method to access generic parsed property keys from the properties configuration file
      * 

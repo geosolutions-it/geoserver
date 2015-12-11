@@ -56,49 +56,104 @@ public class XMPPCompletedMessage implements XMPPMessage {
                 for (Entry<String, String> result : signalArgs.entrySet()) {
                     if (result.getKey().startsWith("result")) {
                         String serviceResultString = URLDecoder.decode(result.getValue(), "UTF-8");
-                        JSONObject serviceResultJSON = (JSONObject) JSONSerializer.toJSON(serviceResultString);
+                        JSONObject serviceResultJSON = (JSONObject) JSONSerializer
+                                .toJSON(serviceResultString);
                         Object output = xmppClient.unPickle(xmppClient.pickle(serviceResultJSON));
-                        
+
                         // XMPP Output Visitor
                         if (output instanceof Map) {
                             Map<String, Object> resultParams = (Map<String, Object>) output;
                             // transform the textual value into a real WPS output
                             try {
-                                final Object value              = (resultParams.get(result.getKey()+"_value") != null ? resultParams.get(result.getKey()+"_value") : null);
-                                final String type               = (String) (resultParams.get(result.getKey()+"_type") != null ? resultParams.get(result.getKey()+"_type") : null);
-                                final String description        = (resultParams.get(result.getKey()+"_description") != null && resultParams.get(result.getKey()+"_description") instanceof String ? (String) resultParams.get(result.getKey()+"_description") : null);
-                                final String title              = (resultParams.get(result.getKey()+"_title") != null && resultParams.get(result.getKey()+"_title") instanceof String ? (String) resultParams.get(result.getKey()+"_title") : null);
-                                final String layerName          = (resultParams.get(result.getKey()+"_layer_name") != null && resultParams.get(result.getKey()+"_layer_name") instanceof String ? (String) resultParams.get(result.getKey()+"_layer_name") : null);
-                                final String defaultStyle       = (resultParams.get(result.getKey()+"_style") != null && resultParams.get(result.getKey()+"_style") instanceof String ? (String) resultParams.get(result.getKey()+"_style") : null);
-                                final String targetWorkspace    = (resultParams.get(result.getKey()+"_workspace") != null && resultParams.get(result.getKey()+"_workspace") instanceof String ? (String) resultParams.get(result.getKey()+"_workspace") : null);
-                                final String metadata           = (resultParams.get(result.getKey()+"_metadata") != null && resultParams.get(result.getKey()+"_metadata") instanceof String ? (String) resultParams.get(result.getKey()+"_metadata") : null);
+                                final Object value = (resultParams
+                                        .get(result.getKey() + "_value") != null
+                                                ? resultParams.get(result.getKey() + "_value")
+                                                : null);
+                                final String type = (String) (resultParams
+                                        .get(result.getKey() + "_type") != null
+                                                ? resultParams.get(result.getKey() + "_type")
+                                                : null);
+                                final String description = (resultParams
+                                        .get(result.getKey() + "_description") != null
+                                        && resultParams.get(
+                                                result.getKey() + "_description") instanceof String
+                                                        ? (String) resultParams.get(
+                                                                result.getKey() + "_description")
+                                                        : null);
+                                final String title = (resultParams
+                                        .get(result.getKey() + "_title") != null
+                                        && resultParams
+                                                .get(result.getKey() + "_title") instanceof String
+                                                        ? (String) resultParams
+                                                                .get(result.getKey() + "_title")
+                                                        : null);
+                                final String layerName = (resultParams
+                                        .get(result.getKey() + "_layer_name") != null
+                                        && resultParams.get(
+                                                result.getKey() + "_layer_name") instanceof String
+                                                        ? (String) resultParams.get(
+                                                                result.getKey() + "_layer_name")
+                                                        : null);
+                                final String defaultStyle = (resultParams
+                                        .get(result.getKey() + "_style") != null
+                                        && resultParams
+                                                .get(result.getKey() + "_style") instanceof String
+                                                        ? (String) resultParams
+                                                                .get(result.getKey() + "_style")
+                                                        : null);
+                                final String targetWorkspace = (resultParams
+                                        .get(result.getKey() + "_workspace") != null
+                                        && resultParams.get(
+                                                result.getKey() + "_workspace") instanceof String
+                                                        ? (String) resultParams
+                                                                .get(result.getKey() + "_workspace")
+                                                        : null);
+                                final String metadata = (resultParams
+                                        .get(result.getKey() + "_metadata") != null
+                                        && resultParams.get(
+                                                result.getKey() + "_metadata") instanceof String
+                                                        ? (String) resultParams
+                                                                .get(result.getKey() + "_metadata")
+                                                        : null);
 
                                 Boolean publish = true;
-                                
-                                if(resultParams.get(result.getKey()+"_pub") != null) {
-                                    if(resultParams.get(result.getKey()+"_pub") instanceof String) publish = Boolean.valueOf((String) resultParams.get(result.getKey()+"_pub"));
-                                    else if(resultParams.get(result.getKey()+"_pub") instanceof Boolean) publish = (Boolean) resultParams.get(result.getKey()+"_pub");
+
+                                if (resultParams.get(result.getKey() + "_pub") != null) {
+                                    if (resultParams
+                                            .get(result.getKey() + "_pub") instanceof String)
+                                        publish = Boolean.valueOf((String) resultParams
+                                                .get(result.getKey() + "_pub"));
+                                    else if (resultParams
+                                            .get(result.getKey() + "_pub") instanceof Boolean)
+                                        publish = (Boolean) resultParams
+                                                .get(result.getKey() + "_pub");
                                 }
 
-                                Object wpsOutputValue = outputProducer.produceOutput(value, type, pID, baseURL, xmppClient, publish, layerName, title, description, defaultStyle, targetWorkspace, metadata);
-                                
-                                LOGGER.info(" - TEST - [XMPPCompletedMessage] wpsOutputValue:"+wpsOutputValue);
-                                
+                                Object wpsOutputValue = outputProducer.produceOutput(value, type,
+                                        pID, baseURL, xmppClient, publish, layerName, title,
+                                        description, defaultStyle, targetWorkspace, metadata);
+
+                                LOGGER.info(" - TEST - [XMPPCompletedMessage] wpsOutputValue:"
+                                        + wpsOutputValue);
+
                                 // add the transformed result to the process outputs
                                 if (wpsOutputValue != null) {
                                     outputs.put(result.getKey(), wpsOutputValue);
                                     continue;
                                 } else {
-                                    //throw new Exception("All the Oputput Producres failed transforming the WPS Output!");
-                                    LOGGER.warning("At least one of the Oputput Producres failed transforming the WPS Output!");
+                                    // throw new Exception("All the Oputput Producres failed transforming the WPS Output!");
+                                    LOGGER.warning(
+                                            "At least one of the Oputput Producres failed transforming the WPS Output!");
                                 }
                             } catch (Exception e) {
-                                LOGGER.log(Level.SEVERE, "Exception occurred while trying to produce the result:", e);
+                                LOGGER.log(Level.SEVERE,
+                                        "Exception occurred while trying to produce the result:",
+                                        e);
                             }
                         }
                     }
                 }
-                
+
                 for (RemoteProcessClientListener listener : xmppClient.getRemoteClientListeners()) {
                     listener.complete(pID, outputs);
                 }

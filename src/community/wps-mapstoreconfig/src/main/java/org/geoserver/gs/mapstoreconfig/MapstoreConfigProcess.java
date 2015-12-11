@@ -101,8 +101,9 @@ public class MapstoreConfigProcess implements GeoServerProcess {
     @DescribeResult(name = "JSON MapStore configuration file", description = "output result", type = String.class)
     public String execute(
             @DescribeParameter(name = "layerDescriptor", min = 1, description = "An xml document that provides a description of a set of layers") String layerDescriptor,
-            @DescribeParameter(name = "metoc", min = 0, description = "List of Metocs used by the RiskMap", meta = { "mimeTypes=application/json,text/xml" }) final RawData metoc)
-            throws IOException {
+            @DescribeParameter(name = "metoc", min = 0, description = "List of Metocs used by the RiskMap", meta = {
+                    "mimeTypes=application/json,text/xml" }) final RawData metoc)
+                            throws IOException {
 
         // Manage the layerDescriptor and produce the value to substitute in the FTL template
         layerDescriptorManager.loadDocument(layerDescriptor, true);
@@ -138,17 +139,19 @@ public class MapstoreConfigProcess implements GeoServerProcess {
 
         // Extracting Metocs from JSON
         List<MetocTemplateModel> metocs = new ArrayList<MetocTemplateModel>();
-        
-        if (metoc != null && metoc instanceof StringRawData && ((StringRawData)metoc).getData() != null) {
+
+        if (metoc != null && metoc instanceof StringRawData
+                && ((StringRawData) metoc).getData() != null) {
             JsonFactory jsonF = new JsonFactory();
-            JsonParser jsonP = jsonF.createParser(((StringRawData)metoc).getData());
+            JsonParser jsonP = jsonF.createParser(((StringRawData) metoc).getData());
             jsonP.nextToken(); // will return JsonToken.START_ARRAY
             while (jsonP.nextToken() != JsonToken.END_ARRAY) {
                 jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
 
                 JsonToken token = jsonP.getCurrentToken();
-                if (token == JsonToken.END_ARRAY) break;
-                
+                if (token == JsonToken.END_ARRAY)
+                    break;
+
                 String fieldname = jsonP.getCurrentName();
 
                 // Parsing Metocs
@@ -163,7 +166,7 @@ public class MapstoreConfigProcess implements GeoServerProcess {
 
             jsonP.close();
         }
-        
+
         model.setMetocs(metocs);
 
         // input.put("layers", MapstoreConfigTest.produceModel());
@@ -193,56 +196,56 @@ public class MapstoreConfigProcess implements GeoServerProcess {
      * @throws IOException
      * @throws JsonParseException
      */
-    private static MetocTemplateModel extractJsonProperties(JsonParser jsonP) throws IOException,
-            JsonParseException {
+    private static MetocTemplateModel extractJsonProperties(JsonParser jsonP)
+            throws IOException, JsonParseException {
         ObjectMapper mapper = new ObjectMapper();
         MetocTemplateModel metoc = mapper.readValue(jsonP, MetocTemplateModel.class);
-        
-//        StringBuilder metoc = new StringBuilder();
-//
-//        metoc.append("{");
-//
-//        while (jsonP.nextToken() != JsonToken.END_OBJECT) {
-//            String propertyname = jsonP.getCurrentName();
-//            jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
-//
-//            if (jsonP.getCurrentToken() != JsonToken.START_OBJECT) {
-//
-//                metoc.append("\"").append(propertyname).append("\":");
-//
-//                final String value = jsonP.getText();
-//                if (!isNumeric(value))
-//                    metoc.append("\"");
-//                metoc.append(value);
-//                if (!isNumeric(value))
-//                    metoc.append("\"");
-//                metoc.append(",");
-//            } else if (jsonP.getCurrentToken() == JsonToken.START_OBJECT) {
-//
-//                metoc.append("{\"").append(propertyname).append("\": {");
-//
-//                while (jsonP.nextToken() != JsonToken.END_OBJECT) {
-//                    propertyname = jsonP.getCurrentName();
-//                    jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
-//
-//                    metoc.append("\"").append(propertyname).append("\":");
-//
-//                    final String value = jsonP.getText();
-//                    if (!isNumeric(value))
-//                        metoc.append("\"");
-//                    metoc.append(value);
-//                    if (!isNumeric(value))
-//                        metoc.append("\"");
-//                    metoc.append(",");
-//                }
-//
-//                metoc.deleteCharAt(metoc.length() - 1);
-//                metoc.append("}");
-//            }
-//        }
-//
-//        metoc.deleteCharAt(metoc.length() - 1);
-//        metoc.append("}");
+
+        // StringBuilder metoc = new StringBuilder();
+        //
+        // metoc.append("{");
+        //
+        // while (jsonP.nextToken() != JsonToken.END_OBJECT) {
+        // String propertyname = jsonP.getCurrentName();
+        // jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
+        //
+        // if (jsonP.getCurrentToken() != JsonToken.START_OBJECT) {
+        //
+        // metoc.append("\"").append(propertyname).append("\":");
+        //
+        // final String value = jsonP.getText();
+        // if (!isNumeric(value))
+        // metoc.append("\"");
+        // metoc.append(value);
+        // if (!isNumeric(value))
+        // metoc.append("\"");
+        // metoc.append(",");
+        // } else if (jsonP.getCurrentToken() == JsonToken.START_OBJECT) {
+        //
+        // metoc.append("{\"").append(propertyname).append("\": {");
+        //
+        // while (jsonP.nextToken() != JsonToken.END_OBJECT) {
+        // propertyname = jsonP.getCurrentName();
+        // jsonP.nextToken(); // move to value, or START_OBJECT/START_ARRAY
+        //
+        // metoc.append("\"").append(propertyname).append("\":");
+        //
+        // final String value = jsonP.getText();
+        // if (!isNumeric(value))
+        // metoc.append("\"");
+        // metoc.append(value);
+        // if (!isNumeric(value))
+        // metoc.append("\"");
+        // metoc.append(",");
+        // }
+        //
+        // metoc.deleteCharAt(metoc.length() - 1);
+        // metoc.append("}");
+        // }
+        // }
+        //
+        // metoc.deleteCharAt(metoc.length() - 1);
+        // metoc.append("}");
 
         return metoc;
     }

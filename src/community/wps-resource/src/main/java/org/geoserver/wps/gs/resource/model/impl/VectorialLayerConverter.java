@@ -52,7 +52,7 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             context.convertAnother(resource.getDefaultStyle());
             writer.endNode();
         }
-        
+
         if (resource.getTitle() != null) {
             writer.startNode("workspace");
             writer.setValue(resource.getWorkspace());
@@ -106,7 +106,7 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             context.convertAnother(resource.getMetadata());
             writer.endNode();
         }
-        
+
         if (resource.getDimensions() != null) {
             writer.startNode("dimensions");
             context.convertAnother(resource.getDimensions());
@@ -121,7 +121,7 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
     }
 
     @SuppressWarnings("unchecked")
-	@Override
+    @Override
     public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
         VectorialLayer resource = new VectorialLayer();
 
@@ -142,7 +142,7 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             if ("workspace".equals(nodeName)) {
                 resource.setWorkspace((String) nodeValue);
             }
-            
+
             if ("title".equals(nodeName)) {
                 resource.setTitle((String) nodeValue);
             }
@@ -152,8 +152,8 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             }
 
             if ("defaultStyle".equals(nodeName)) {
-                resource.setDefaultStyle((Map<String, String>) context.convertAnother(nodeValue,
-                        Map.class));
+                resource.setDefaultStyle(
+                        (Map<String, String>) context.convertAnother(nodeValue, Map.class));
             }
 
             if ("keywords".equals(nodeName)) {
@@ -169,24 +169,25 @@ public class VectorialLayerConverter extends ResourceLoaderConverter {
             }
 
             if ("nativeBoundingBox".equals(nodeName)) {
-                resource.setNativeBoundingBox((Map<String, String>) context.convertAnother(
-                        nodeValue, Map.class));
+                resource.setNativeBoundingBox(
+                        (Map<String, String>) context.convertAnother(nodeValue, Map.class));
             }
-            
+
             if ("latLonBoundingBox".equals(nodeName)) {
-                resource.setLatLonBoundingBox((Map<String, String>) context.convertAnother(
-                        nodeValue, Map.class));
+                resource.setLatLonBoundingBox(
+                        (Map<String, String>) context.convertAnother(nodeValue, Map.class));
             }
 
             if ("metadata".equals(nodeName)) {
-                resource.setMetadata((Map<String, String>) context.convertAnother(nodeValue,
-                        Map.class));
+                resource.setMetadata(
+                        (Map<String, String>) context.convertAnother(nodeValue, Map.class));
             }
 
             if ("dimensions".equals(nodeName)) {
-                resource.setDimensions((List<Dimension>) context.convertAnother(nodeValue, List.class));
+                resource.setDimensions(
+                        (List<Dimension>) context.convertAnother(nodeValue, List.class));
             }
-            
+
             if ("translateContext".equals(nodeName)) {
                 resource.setTranslateContext((TranslateContext) context.convertAnother(nodeValue,
                         TranslateContext.class));

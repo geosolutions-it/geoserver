@@ -40,7 +40,8 @@ public class XMPPUnRegisterMessage implements XMPPMessage {
             xmppClient.handleMemberLeave(packet);
         } catch (Exception e) {
             // NOTIFY LISTENERS
-            final Set<RemoteProcessClientListener> remoteClientListeners = xmppClient.getRemoteClientListeners();
+            final Set<RemoteProcessClientListener> remoteClientListeners = xmppClient
+                    .getRemoteClientListeners();
             synchronized (remoteClientListeners) {
                 for (RemoteProcessClientListener listener : remoteClientListeners) {
 

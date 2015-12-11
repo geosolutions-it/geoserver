@@ -60,8 +60,8 @@ import org.opengis.feature.type.Name;
  */
 public class RemoteProcessTest extends WPSTestSupport {
 
-    private static final boolean DISABLE = "true".equalsIgnoreCase(System.getProperty(
-            "disableTest", "true"));
+    private static final boolean DISABLE = "true"
+            .equalsIgnoreCase(System.getProperty("disableTest", "true"));
 
     private RemoteProcessFactory factory;
 
@@ -80,13 +80,11 @@ public class RemoteProcessTest extends WPSTestSupport {
     protected void setUpTestData(SystemTestData testData) throws Exception {
         super.setUpTestData(testData);
         // add limits properties file
-        testData.copyTo(
-                RemoteProcessTest.class.getClassLoader().getResourceAsStream(
-                        "remote-process/remoteProcess.properties"), "remoteProcess.properties");
+        testData.copyTo(RemoteProcessTest.class.getClassLoader().getResourceAsStream(
+                "remote-process/remoteProcess.properties"), "remoteProcess.properties");
 
-        testData.copyTo(
-                RemoteProcessTest.class.getClassLoader().getResourceAsStream(
-                        "remote-process/bogus_mina_tls.cert"), "bogus_mina_tls.cert");
+        testData.copyTo(RemoteProcessTest.class.getClassLoader()
+                .getResourceAsStream("remote-process/bogus_mina_tls.cert"), "bogus_mina_tls.cert");
     }
 
     @Test
@@ -99,8 +97,8 @@ public class RemoteProcessTest extends WPSTestSupport {
         assertTrue(names.size() == 0);
 
         final NameImpl name = new NameImpl("default", "Service");
-        factory.registerProcess(new RemoteServiceDescriptor(name, "Service", "A test service",
-                null, null, null));
+        factory.registerProcess(
+                new RemoteServiceDescriptor(name, "Service", "A test service", null, null, null));
         assertTrue(names.size() == 1);
         assertTrue(names.contains(name));
 
@@ -158,8 +156,8 @@ public class RemoteProcessTest extends WPSTestSupport {
             final String xmppUserName = configuration.get("xmpp_manager_username");
             final String xmppUserPassword = configuration.get("xmpp_manager_password");
 
-            if (!accountManagement.verifyAccountExists(EntityImpl.parse(xmppUserName + "@"
-                    + xmppDomain))) {
+            if (!accountManagement
+                    .verifyAccountExists(EntityImpl.parse(xmppUserName + "@" + xmppDomain))) {
                 accountManagement.addUser(EntityImpl.parse(xmppUserName + "@" + xmppDomain),
                         xmppUserPassword);
             }
@@ -244,9 +242,8 @@ public class RemoteProcessTest extends WPSTestSupport {
          * "{\"type\": \"string\", \"description\": \"A simple string parameter\", \"max\": 1}"], ["complexType",
          * "{\"type\": \"complex\", \"description\": \"A complex parameter\", \"min\": 1, \"max\": 10}"] ] }
          */
-        signalArgs
-                .put("message",
-                        "%7B%0A%20%20%22title%22%3A%20%22test.Service%22%2C%0A%20%20%22description%22%3A%20%22This%20is%20a%20test%20Service!%22%2C%0A%20%20%22input%22%3A%20%5B%0A%20%20%20%20%5B%22simpleType%22%2C%20%22%7B%5C%22type%5C%22%3A%20%5C%22string%5C%22%2C%20%5C%22description%5C%22%3A%20%5C%22A%20simple%20string%20parameter%5C%22%2C%20%5C%22max%5C%22%3A%201%7D%22%5D%2C%0A%20%20%20%20%5B%22complexType%22%2C%20%22%7B%5C%22type%5C%22%3A%20%5C%22complex%5C%22%2C%20%5C%22description%5C%22%3A%20%5C%22A%20complex%20parameter%5C%22%2C%20%5C%22min%5C%22%3A%201%2C%20%5C%22max%5C%22%3A%2010%7D%22%5D%0A%20%20%5D%0A%7D");
+        signalArgs.put("message",
+                "%7B%0A%20%20%22title%22%3A%20%22test.Service%22%2C%0A%20%20%22description%22%3A%20%22This%20is%20a%20test%20Service!%22%2C%0A%20%20%22input%22%3A%20%5B%0A%20%20%20%20%5B%22simpleType%22%2C%20%22%7B%5C%22type%5C%22%3A%20%5C%22string%5C%22%2C%20%5C%22description%5C%22%3A%20%5C%22A%20simple%20string%20parameter%5C%22%2C%20%5C%22max%5C%22%3A%201%7D%22%5D%2C%0A%20%20%20%20%5B%22complexType%22%2C%20%22%7B%5C%22type%5C%22%3A%20%5C%22complex%5C%22%2C%20%5C%22description%5C%22%3A%20%5C%22A%20complex%20parameter%5C%22%2C%20%5C%22min%5C%22%3A%201%2C%20%5C%22max%5C%22%3A%2010%7D%22%5D%0A%20%20%5D%0A%7D");
 
         // handle signal
         Packet packet = new Packet() {

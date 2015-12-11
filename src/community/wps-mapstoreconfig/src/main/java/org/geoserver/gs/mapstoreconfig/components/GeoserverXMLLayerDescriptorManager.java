@@ -89,7 +89,8 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
         isValidated = false;
         isValid = false;
         if (document != null && !forceReload) {
-            LOGGER.warning("loadDocument method doesn't have any effect since the document has been already loaded and force reload is set to false...");
+            LOGGER.warning(
+                    "loadDocument method doesn't have any effect since the document has been already loaded and force reload is set to false...");
             return;
         }
         XStream xs = ResourceLoaderProcess.initialize(catalog);
@@ -123,39 +124,39 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
             map.setProjection(prop.getProperty("mapProj"));
             map.setUnits(prop.getProperty("mapUnits"));
             map.setZoom(Integer.parseInt(prop.getProperty("mapZoom")));
-            
+
             if (prop.containsKey("mapCenterX") && prop.containsKey("mapCenterY")) {
                 map.setCenterX(Double.parseDouble(prop.getProperty("mapCenterX")));
                 map.setCenterY(Double.parseDouble(prop.getProperty("mapCenterY")));
             }
 
-            if (prop.containsKey("maxExtentMinX") && prop.containsKey("maxExtentMinY") &&
-                    prop.containsKey("maxExtentMaxX") && prop.containsKey("maxExtentMaxY")) {
+            if (prop.containsKey("maxExtentMinX") && prop.containsKey("maxExtentMinY")
+                    && prop.containsKey("maxExtentMaxX") && prop.containsKey("maxExtentMaxY")) {
                 map.setMaxExtentMinX(Double.parseDouble(prop.getProperty("maxExtentMinX")));
                 map.setMaxExtentMinY(Double.parseDouble(prop.getProperty("maxExtentMinY")));
                 map.setMaxExtentMaxX(Double.parseDouble(prop.getProperty("maxExtentMaxX")));
                 map.setMaxExtentMaxY(Double.parseDouble(prop.getProperty("maxExtentMaxY")));
-//                map.setExtentMinX(Double.parseDouble(prop.getProperty("maxExtentMinX")));
-//                map.setExtentMinY(Double.parseDouble(prop.getProperty("maxExtentMinY")));
-//                map.setExtentMaxX(Double.parseDouble(prop.getProperty("maxExtentMaxX")));
-//                map.setExtentMaxY(Double.parseDouble(prop.getProperty("maxExtentMaxY")));
+                // map.setExtentMinX(Double.parseDouble(prop.getProperty("maxExtentMinX")));
+                // map.setExtentMinY(Double.parseDouble(prop.getProperty("maxExtentMinY")));
+                // map.setExtentMaxX(Double.parseDouble(prop.getProperty("maxExtentMaxX")));
+                // map.setExtentMaxY(Double.parseDouble(prop.getProperty("maxExtentMaxY")));
             }
-            
-            if (prop.containsKey("extentMinX") && prop.containsKey("extentMinY") &&
-                    prop.containsKey("extentMaxX") && prop.containsKey("extentMaxY")) {
+
+            if (prop.containsKey("extentMinX") && prop.containsKey("extentMinY")
+                    && prop.containsKey("extentMaxX") && prop.containsKey("extentMaxY")) {
                 map.setExtentMinX(Double.parseDouble(prop.getProperty("extentMinX")));
                 map.setExtentMinY(Double.parseDouble(prop.getProperty("extentMinY")));
                 map.setExtentMaxX(Double.parseDouble(prop.getProperty("extentMaxX")));
                 map.setExtentMaxY(Double.parseDouble(prop.getProperty("extentMaxY")));
             }
-            
+
             // layers meta-model
             for (Resource r : document.getResources()) {
                 if (r instanceof VectorialLayer) {
                     LayerTemplateModel ltm = mapVectorLayer(r, prop, map);
                     layers.add(ltm);
                 }
-                
+
                 if (r instanceof LiteralData) {
                     LiteralDataTemplateModel raw = mapLiteralData(r, prop, map);
                     rawData.add(raw);
@@ -172,10 +173,10 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
                 }
             }
         }
-        
+
         map.setRawData(rawData);
         map.setLayers(layers);
-        
+
         return map;
     }
 
@@ -202,10 +203,12 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
         layerValues.setFormat(StringUtils.defaultString(prop.getProperty("format")));
         layerValues.setFixed(StringUtils.defaultString(prop.getProperty("fixed")));
         layerValues.setGroup(StringUtils.defaultString(prop.getProperty("group")));
-        layerValues.setName(StringUtils.defaultString(vl.getWorkspace() + ":" + vl.getName(), prop.getProperty("name")));
+        layerValues.setName(StringUtils.defaultString(vl.getWorkspace() + ":" + vl.getName(),
+                prop.getProperty("name")));
         layerValues.setOpacity(StringUtils.defaultString(prop.getProperty("opacity")));
         layerValues.setSelected(StringUtils.defaultString(prop.getProperty("selected")));
-        layerValues.setStyles(StringUtils.defaultString(vl.getDefaultStyle().get("name"), prop.getProperty("styles")));
+        layerValues.setStyles(StringUtils.defaultString(vl.getDefaultStyle().get("name"),
+                prop.getProperty("styles")));
         layerValues.setSource(StringUtils.defaultString(prop.getProperty("source")));
         layerValues.setTitle(StringUtils.defaultString(vl.getTitle(), prop.getProperty("title")));
         layerValues.setVisibility(StringUtils.defaultString(prop.getProperty("visibility")));
@@ -245,13 +248,13 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
             MapTemplateModel map) {
         LiteralData raw = (LiteralData) r;
         LiteralDataTemplateModel rawData = new LiteralDataTemplateModel();
-        
+
         rawData.setName(raw.getName());
         rawData.setText(raw.getText());
-        
+
         return rawData;
     }
-    
+
     /**
      * 
      * @param prop
@@ -260,20 +263,21 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
      * @param map
      */
     protected static void decorateCoordinates(Properties prop,
-            ReferencedEnvelope referencedEnvelope, List<Dimension> dimensions, MapTemplateModel map) {
-        
+            ReferencedEnvelope referencedEnvelope, List<Dimension> dimensions,
+            MapTemplateModel map) {
+
         MathTransform tx = new AffineTransform2D(new AffineTransform());
         try {
             CoordinateReferenceSystem mapProjection = CRS.decode(map.getProjection(), true);
             CoordinateReferenceSystem layerCRS = referencedEnvelope.getCoordinateReferenceSystem();
-            
+
             if (!CRS.equalsIgnoreMetadata(mapProjection, layerCRS)) {
                 tx = CRS.findMathTransform(layerCRS, mapProjection, true);
             }
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Could not decode Map projection.", e);
         }
-        
+
         // Temporal Limits
         if (dimensions != null) {
             for (Dimension dim : dimensions) {
@@ -290,7 +294,7 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
                     // Dimension Info
                     final DimensionInfo dimInfo = dim.getDimensionInfo();
                     if (dim.getDimensionInfo() != null) {
-                        //prop.setProperty("name", dimInfo.getAttribute());
+                        // prop.setProperty("name", dimInfo.getAttribute());
                         prop.setProperty("name", dim.getName());
                         prop.setProperty("units", dimInfo.getUnits());
                         prop.setProperty("unitsymbol", dimInfo.getUnitSymbol());
@@ -301,8 +305,8 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
 
                         if (dimInfo.getDefaultValue() != null
                                 && dimInfo.getDefaultValue().getReferenceValue() != null)
-                            prop.setProperty("defaultVal", dimInfo.getDefaultValue()
-                                    .getReferenceValue());
+                            prop.setProperty("defaultVal",
+                                    dimInfo.getDefaultValue().getReferenceValue());
                     }
                 }
             }
@@ -311,18 +315,20 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
         // Spatial Limits
         String minX = null;
         boolean centerFlag = (map.getCenterX() == null || map.getCenterY() == null);
-        boolean maxExtentFlag = (map.getMaxExtentMinX() == null || map.getMaxExtentMinY() == null || map.getMaxExtentMaxX() == null || map.getMaxExtentMaxY() == null);
-        boolean extentFlag = (map.getExtentMinX() == null || map.getExtentMinY() == null || map.getExtentMaxX() == null || map.getExtentMaxY() == null);
+        boolean maxExtentFlag = (map.getMaxExtentMinX() == null || map.getMaxExtentMinY() == null
+                || map.getMaxExtentMaxX() == null || map.getMaxExtentMaxY() == null);
+        boolean extentFlag = (map.getExtentMinX() == null || map.getExtentMinY() == null
+                || map.getExtentMaxX() == null || map.getExtentMaxY() == null);
         try {
             if (referencedEnvelope != null) {
                 minX = Double.toString(referencedEnvelope.getLowerCorner().getOrdinate(0));
                 prop.setProperty("minX", minX);
-                
-                if (map.getMaxExtentMinX() == null ) {
+
+                if (map.getMaxExtentMinX() == null) {
                     map.setMaxExtentMinX(referencedEnvelope.getLowerCorner().getOrdinate(0));
                 }
-                
-                if (map.getExtentMinX() == null ) {
+
+                if (map.getExtentMinX() == null) {
                     map.setExtentMinX(referencedEnvelope.getLowerCorner().getOrdinate(0));
                 }
             }
@@ -335,11 +341,11 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
                 minY = Double.toString(referencedEnvelope.getLowerCorner().getOrdinate(1));
                 prop.setProperty("minY", minY);
 
-                if (map.getMaxExtentMinY() == null ) {
+                if (map.getMaxExtentMinY() == null) {
                     map.setMaxExtentMinY(referencedEnvelope.getLowerCorner().getOrdinate(1));
                 }
-                
-                if (map.getExtentMinY() == null ) {
+
+                if (map.getExtentMinY() == null) {
                     map.setExtentMinY(referencedEnvelope.getLowerCorner().getOrdinate(1));
                 }
             }
@@ -352,11 +358,11 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
                 maxX = Double.toString(referencedEnvelope.getUpperCorner().getOrdinate(0));
                 prop.setProperty("maxX", maxX);
 
-                if (map.getMaxExtentMaxX() == null ) {
+                if (map.getMaxExtentMaxX() == null) {
                     map.setMaxExtentMaxX(referencedEnvelope.getUpperCorner().getOrdinate(0));
                 }
-                
-                if (map.getExtentMaxX() == null ) {
+
+                if (map.getExtentMaxX() == null) {
                     map.setExtentMaxX(referencedEnvelope.getUpperCorner().getOrdinate(0));
                 }
             }
@@ -369,11 +375,11 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
                 maxY = Double.toString(referencedEnvelope.getUpperCorner().getOrdinate(1));
                 prop.setProperty("maxY", maxY);
 
-                if (map.getMaxExtentMaxY() == null ) {
+                if (map.getMaxExtentMaxY() == null) {
                     map.setMaxExtentMaxY(referencedEnvelope.getUpperCorner().getOrdinate(1));
                 }
-                
-                if (map.getExtentMaxY() == null ) {
+
+                if (map.getExtentMaxY() == null) {
                     map.setExtentMaxY(referencedEnvelope.getUpperCorner().getOrdinate(1));
                 }
             }
@@ -383,57 +389,67 @@ public class GeoserverXMLLayerDescriptorManager implements LayerDescriptorManage
 
         if (map.getCenterX() == null) {
             if (map.getExtentMinX() != null && map.getExtentMaxX() != null) {
-                map.setCenterX(map.getExtentMinX() + (map.getExtentMaxX() - map.getExtentMinX()) / 2.0);
+                map.setCenterX(
+                        map.getExtentMinX() + (map.getExtentMaxX() - map.getExtentMinX()) / 2.0);
             } else if (map.getMaxExtentMinX() != null && map.getMaxExtentMaxX() != null) {
-                map.setCenterX(map.getMaxExtentMinX() + (map.getMaxExtentMaxX() - map.getMaxExtentMinX()) / 2.0);
-            } 
+                map.setCenterX(map.getMaxExtentMinX()
+                        + (map.getMaxExtentMaxX() - map.getMaxExtentMinX()) / 2.0);
+            }
         }
 
         if (map.getCenterY() == null) {
             if (map.getExtentMinY() != null && map.getExtentMaxY() != null) {
-                map.setCenterY(map.getExtentMinY() + (map.getExtentMaxY() - map.getExtentMinY()) / 2.0);
+                map.setCenterY(
+                        map.getExtentMinY() + (map.getExtentMaxY() - map.getExtentMinY()) / 2.0);
             } else if (map.getMaxExtentMinY() != null && map.getMaxExtentMaxY() != null) {
-                map.setCenterY(map.getMaxExtentMinY() + (map.getMaxExtentMaxY() - map.getMaxExtentMinY()) / 2.0);
-            } 
+                map.setCenterY(map.getMaxExtentMinY()
+                        + (map.getMaxExtentMaxY() - map.getMaxExtentMinY()) / 2.0);
+            }
         }
-        
+
         // Fix coordinates
         if (!tx.isIdentity()) {
             try {
                 // Map Center
                 if (centerFlag) {
-                    DirectPosition center = new DirectPosition2D(map.getCenterX(), map.getCenterY());
+                    DirectPosition center = new DirectPosition2D(map.getCenterX(),
+                            map.getCenterY());
                     tx.transform(center, center);
                     map.setCenterX(center.getOrdinate(0));
                     map.setCenterY(center.getOrdinate(1));
                 }
-                
+
                 // Map Extents
                 if (extentFlag) {
-                    DirectPosition ll = new DirectPosition2D(map.getExtentMinX(), map.getExtentMinY());
+                    DirectPosition ll = new DirectPosition2D(map.getExtentMinX(),
+                            map.getExtentMinY());
                     tx.transform(ll, ll);
                     map.setExtentMinX(ll.getOrdinate(0));
                     map.setExtentMinY(ll.getOrdinate(1));
 
-                    DirectPosition ur = new DirectPosition2D(map.getExtentMaxX(), map.getExtentMaxY());
+                    DirectPosition ur = new DirectPosition2D(map.getExtentMaxX(),
+                            map.getExtentMaxY());
                     tx.transform(ur, ur);
                     map.setExtentMaxX(ur.getOrdinate(0));
                     map.setExtentMaxY(ur.getOrdinate(1));
                 }
 
                 if (maxExtentFlag) {
-                    DirectPosition maxLl = new DirectPosition2D(map.getMaxExtentMinX(), map.getMaxExtentMinY());
+                    DirectPosition maxLl = new DirectPosition2D(map.getMaxExtentMinX(),
+                            map.getMaxExtentMinY());
                     tx.transform(maxLl, maxLl);
                     map.setMaxExtentMinX(maxLl.getOrdinate(0));
                     map.setMaxExtentMinY(maxLl.getOrdinate(1));
 
-                    DirectPosition maxUr = new DirectPosition2D(map.getMaxExtentMaxX(), map.getMaxExtentMaxY());
+                    DirectPosition maxUr = new DirectPosition2D(map.getMaxExtentMaxX(),
+                            map.getMaxExtentMaxY());
                     tx.transform(maxUr, maxUr);
                     map.setMaxExtentMaxX(maxUr.getOrdinate(0));
                     map.setMaxExtentMaxY(maxUr.getOrdinate(1));
                 }
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Could not reproject coordinates to the Map Projection!", e);
+                LOGGER.log(Level.SEVERE, "Could not reproject coordinates to the Map Projection!",
+                        e);
             }
         }
     }

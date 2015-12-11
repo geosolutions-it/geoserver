@@ -26,9 +26,9 @@ package org.geoserver.gs.mapstoreconfig.ftl.model;
 public class MetocTemplateModel {
 
     private String sourceId;
-    
+
     private String title;
-    
+
     private String owsBaseURL;
 
     private String owsService;
@@ -136,6 +136,5 @@ public class MetocTemplateModel {
     public void setReferenceTimeDim(String referenceTimeDim) {
         this.referenceTimeDim = referenceTimeDim;
     }
-
 
 }

@@ -29,7 +29,7 @@ public class WmcFeature {
     }
 
     String type;
-    
+
     String name;
 
     String title;
@@ -55,7 +55,7 @@ public class WmcFeature {
     String geometryCoords;
 
     private String owcProperties;
-    
+
     /**
      * @return the srs
      */

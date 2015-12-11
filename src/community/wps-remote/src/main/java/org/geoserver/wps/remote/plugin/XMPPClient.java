@@ -164,12 +164,13 @@ public class XMPPClient extends RemoteProcessClient {
 
         // Initializes the XMPP Client and starts the communication. It also register GeoServer as "manager" to the service channels on the MUC (Multi
         // User Channel) Rooms
-        LOGGER.info(String.format("Initializing connection to server %1$s port %2$d", server, port));
+        LOGGER.info(
+                String.format("Initializing connection to server %1$s port %2$d", server, port));
 
         int packetReplyTimeout = DEFAULT_PACKET_REPLY_TIMEOUT;
         if (getConfiguration().get("xmpp_packet_reply_timeout") != null) {
-            packetReplyTimeout = Integer.parseInt(getConfiguration().get(
-                    "xmpp_packet_reply_timeout"));
+            packetReplyTimeout = Integer
+                    .parseInt(getConfiguration().get("xmpp_packet_reply_timeout"));
         }
         SmackConfiguration.setDefaultPacketReplyTimeout(packetReplyTimeout);
 
@@ -215,29 +216,31 @@ public class XMPPClient extends RemoteProcessClient {
 
         // Check for a free machine...
         final String serviceJID = getFlattestMachine(name, (String) metadata.get("serviceJID"));
-        
-        LOGGER.info("XMPPClient::execute - trying to send a request message to the service JID [" + serviceJID + "]");
-        
+
+        LOGGER.info("XMPPClient::execute - trying to send a request message to the service JID ["
+                + serviceJID + "]");
+
         if (metadata != null && serviceJID != null) {
             // Extract the PID
             metadata.put("serviceJID", serviceJID);
-            
+
             final Object fixedInputs = getFixedInputs(input);
-            
-            LOGGER.info("XMPPClient::execute - extracting the PID for the service JID [" + serviceJID + "] with inputs [" + fixedInputs + "]");
-            
-            final String pid = md5Java(serviceJID + System.nanoTime()
-                    + byteArrayToURLString(pickle(fixedInputs)));
+
+            LOGGER.info("XMPPClient::execute - extracting the PID for the service JID ["
+                    + serviceJID + "] with inputs [" + fixedInputs + "]");
+
+            final String pid = md5Java(
+                    serviceJID + System.nanoTime() + byteArrayToURLString(pickle(fixedInputs)));
 
             Request request = Dispatcher.REQUEST.get();
             metadata.put("request", request);
             String baseURL = getGeoServer().getGlobal().getSettings().getProxyBaseUrl();
-            
+
             try {
                 if (baseURL == null) {
                     baseURL = RequestUtils.baseURL(request.getHttpRequest());
                 }
-                
+
                 baseURL = ResponseUtils.buildURL(baseURL, "/", null, URLType.SERVICE);
             } catch (Exception e) {
                 LOGGER.warning("Could not acquire the GeoServer Base URL!");
@@ -275,8 +278,8 @@ public class XMPPClient extends RemoteProcessClient {
                     fixedValue = new ArrayList<String>();
 
                     for (Object o : values) {
-                        ((List<String>) fixedValue).add(IOUtils.toString(
-                                ((RawData) o).getInputStream(), "UTF-8"));
+                        ((List<String>) fixedValue)
+                                .add(IOUtils.toString(((RawData) o).getInputStream(), "UTF-8"));
                     }
                 }
             }
@@ -318,15 +321,15 @@ public class XMPPClient extends RemoteProcessClient {
             DiscussionHistory history = new DiscussionHistory();
             history.setMaxStanzas(5);
 
-            mucManagementChannel = new MultiUserChat(connection, managementChannel + "@" + bus
-                    + "." + domain);
+            mucManagementChannel = new MultiUserChat(connection,
+                    managementChannel + "@" + bus + "." + domain);
             mucManagementChannel.join(getJID(username), managementChannelPassword); /*
                                                                                      * , history, connection.getPacketReplyTimeout());
                                                                                      */
 
             for (String channel : serviceChannels) {
-                MultiUserChat serviceChannel = new MultiUserChat(connection, channel + "@" + bus
-                        + "." + domain);
+                MultiUserChat serviceChannel = new MultiUserChat(connection,
+                        channel + "@" + bus + "." + domain);
                 serviceChannel.join(getJID(username), managementChannelPassword); /*
                                                                                    * , history, connection.getPacketReplyTimeout());
                                                                                    */
@@ -505,9 +508,8 @@ public class XMPPClient extends RemoteProcessClient {
 
                     // send invitation and register source JID
                     String[] serviceJIDParts = occupant.split("/");
-                    if (serviceJIDParts.length == 3
-                            && (serviceJIDParts[2].startsWith("master") || serviceJIDParts[2]
-                                    .indexOf("@") < 0)) {
+                    if (serviceJIDParts.length == 3 && (serviceJIDParts[2].startsWith("master")
+                            || serviceJIDParts[2].indexOf("@") < 0)) {
                         sendMessage(occupant, "topic=invite");
                     }
                     // register service on listeners
@@ -534,8 +536,8 @@ public class XMPPClient extends RemoteProcessClient {
             // send invitation and register source JID
             String[] serviceJIDParts = p.getFrom().split("/");
 
-            if (serviceJIDParts.length == 3
-                    && (serviceJIDParts[2].startsWith("master") || serviceJIDParts[2].indexOf("@") < 0)) {
+            if (serviceJIDParts.length == 3 && (serviceJIDParts[2].startsWith("master")
+                    || serviceJIDParts[2].indexOf("@") < 0)) {
                 sendMessage(p.getFrom(), "topic=invite");
             }
 
@@ -578,7 +580,7 @@ public class XMPPClient extends RemoteProcessClient {
      */
     private String getFlattestMachine(Name name, String candidateServiceJID) {
         final String serviceName = name.getLocalPart();
-        
+
         LOGGER.info("XMPPClient::getFlattestMachine - scanning the connected remote services...");
 
         Map<String, List<String>> availableServices = new HashMap<String, List<String>>();
@@ -588,7 +590,8 @@ public class XMPPClient extends RemoteProcessClient {
 
             for (String occupant : muc.getOccupants()) {
 
-                LOGGER.info("XMPPClient::getFlattestMachine - looking for service [" + serviceName + "] @occupant [" + occupant + "]");
+                LOGGER.info("XMPPClient::getFlattestMachine - looking for service [" + serviceName
+                        + "] @occupant [" + occupant + "]");
 
                 if (occupant.toLowerCase().contains(serviceName.toLowerCase())) {
 
@@ -597,12 +600,17 @@ public class XMPPClient extends RemoteProcessClient {
                     if (serviceJIDParts.length > 1) {
                         String[] localizedServiceJID = serviceJIDParts[1].split("@");
 
-                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID.length] -> " + localizedServiceJID.length);
-                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID[0].contains(serviceName)] -> " + localizedServiceJID[0].contains(serviceName));
-                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID] -> " + localizedServiceJID[0] + " @ " + localizedServiceJID[1]);
+                        LOGGER.info(
+                                "XMPPClient::getFlattestMachine - [localizedServiceJID.length] -> "
+                                        + localizedServiceJID.length);
+                        LOGGER.info(
+                                "XMPPClient::getFlattestMachine - [localizedServiceJID[0].contains(serviceName)] -> "
+                                        + localizedServiceJID[0].contains(serviceName));
+                        LOGGER.info("XMPPClient::getFlattestMachine - [localizedServiceJID] -> "
+                                + localizedServiceJID[0] + " @ " + localizedServiceJID[1]);
 
-                        if (localizedServiceJID.length == 2
-                                && localizedServiceJID[0].toLowerCase().contains(serviceName.toLowerCase())) {
+                        if (localizedServiceJID.length == 2 && localizedServiceJID[0].toLowerCase()
+                                .contains(serviceName.toLowerCase())) {
                             // final String machine = localizedServiceJID[1];
                             final String machine = occupant
                                     .substring(occupant.lastIndexOf("@") + 1);
@@ -616,8 +624,8 @@ public class XMPPClient extends RemoteProcessClient {
 
                             availableServices.get(machine).add(occupant);
                             if (serviceJIDParts.length == 3
-                                    && (serviceJIDParts[2].startsWith("master") || serviceJIDParts[2]
-                                            .indexOf("@") < 0)) {
+                                    && (serviceJIDParts[2].startsWith("master")
+                                            || serviceJIDParts[2].indexOf("@") < 0)) {
                                 availableServiceJIDs.get(machine).add(occupant);
                             }
                         }
@@ -627,9 +635,11 @@ public class XMPPClient extends RemoteProcessClient {
         }
 
         if (availableServices == null || availableServices.isEmpty()) {
-            
-            LOGGER.info("XMPPClient::getFlattestMachine - no suitable target JID found, using the default candidate [" + candidateServiceJID + "]");
-            
+
+            LOGGER.info(
+                    "XMPPClient::getFlattestMachine - no suitable target JID found, using the default candidate ["
+                            + candidateServiceJID + "]");
+
             return candidateServiceJID;
         }
 
@@ -645,8 +655,9 @@ public class XMPPClient extends RemoteProcessClient {
             }
         }
 
-        LOGGER.info("XMPPClient::getFlattestMachine - target JID found, using the target [" + targetServiceJID + "]");
-        
+        LOGGER.info("XMPPClient::getFlattestMachine - target JID found, using the target ["
+                + targetServiceJID + "]");
+
         return targetServiceJID;
     }
 
@@ -701,14 +712,14 @@ public class XMPPClient extends RemoteProcessClient {
 
             this.timeout = DEFAULT_PING_TIMEOUT;
             if (getConfiguration().get("xmpp_connection_ping_timeout") != null) {
-                this.timeout = Long.parseLong(getConfiguration()
-                        .get("xmpp_connection_ping_timeout"));
+                this.timeout = Long
+                        .parseLong(getConfiguration().get("xmpp_connection_ping_timeout"));
             }
 
             this.start_delay = DEFAULT_INITIAL_PING_DELAY;
             if (getConfiguration().get("xmpp_connection_ping_initial_delay") != null) {
-                this.start_delay = Long.parseLong(getConfiguration().get(
-                        "xmpp_connection_ping_initial_delay"));
+                this.start_delay = Long
+                        .parseLong(getConfiguration().get("xmpp_connection_ping_initial_delay"));
             }
         }
 
@@ -776,7 +787,7 @@ public class XMPPClient extends RemoteProcessClient {
                     LOGGER.log(Level.FINER, "Try to reconnect...");
                     try {
                         connection.connect();
-                        
+
                         LOGGER.info("Connected: " + connection.isConnected());
 
                         // check if the connection to the XMPP server is successful; the login and registration is not yet performed at this time
@@ -957,48 +968,85 @@ public class XMPPClient extends RemoteProcessClient {
     }
 
     static {
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("string", new Object[] { String.class, CType.SIMPLE, null,"text/plain" });
-        PRIMITIVE_NAME_TYPE_MAP.put("url", new Object[] { String.class, CType.SIMPLE, null,"text/plain" });
-        PRIMITIVE_NAME_TYPE_MAP.put("boolean", new Object[] { Boolean.TYPE, CType.SIMPLE,Boolean.TRUE, "" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("string",
+                new Object[] { String.class, CType.SIMPLE, null, "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("url",
+                new Object[] { String.class, CType.SIMPLE, null, "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("boolean",
+                new Object[] { Boolean.TYPE, CType.SIMPLE, Boolean.TRUE, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("byte", new Object[] { Byte.TYPE, CType.SIMPLE, null, "" });
-        PRIMITIVE_NAME_TYPE_MAP.put("char", new Object[] { Character.TYPE, CType.SIMPLE, null, "text/plain" });
+        PRIMITIVE_NAME_TYPE_MAP.put("char",
+                new Object[] { Character.TYPE, CType.SIMPLE, null, "text/plain" });
         PRIMITIVE_NAME_TYPE_MAP.put("short", new Object[] { Short.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("int", new Object[] { Integer.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("long", new Object[] { Long.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("float", new Object[] { Float.TYPE, CType.SIMPLE, null, "" });
         PRIMITIVE_NAME_TYPE_MAP.put("double", new Object[] { Double.TYPE, CType.SIMPLE, null, "" });
-        PRIMITIVE_NAME_TYPE_MAP.put("datetime", new Object[] { Date.class, CType.SIMPLE, null, "" });
+        PRIMITIVE_NAME_TYPE_MAP.put("datetime",
+                new Object[] { Date.class, CType.SIMPLE, null, "" });
 
         // Complex and Raw data types
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("application/xml", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/xml"), "application/xml,text/xml", ".xml" });
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "text/xml"), "application/xml,text/xml", ".xml" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/xml",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new StringRawData("", "application/xml"), "application/xml,text/xml",
+                        ".xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml", new Object[] { RawData.class, CType.COMPLEX,
+                new StringRawData("", "text/xml"), "application/xml,text/xml", ".xml" });
 
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/gml-3.1.1"), "application/xml,application/gml-3.1.1,application/gml-2.1.2,text/xml; subtype=gml/3.1.1,text/xml; subtype=gml/2.1.2", ".xml" });
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
-        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
-        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
-        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2", PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
-                                
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("application/json", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain", ".json" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new StringRawData("", "application/gml-3.1.1"),
+                        "application/xml,application/gml-3.1.1,application/gml-2.1.2,text/xml; subtype=gml/3.1.1,text/xml; subtype=gml/2.1.2",
+                        ".xml" });
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/3.1.1",
+                PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+        PRIMITIVE_NAME_TYPE_MAP.put("text/xml;subtype=gml/2.1.2",
+                PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-3.1.1",
+                PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
+        PRIMITIVE_NAME_TYPE_MAP.put("application/gml-2.1.2",
+                PRIMITIVE_NAME_TYPE_MAP.get("text/xml;subtype"));
 
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("application/owc", new Object[] { RawData.class, CType.COMPLEX, new StringRawData("", "application/json"), "application/json,text/plain", ".json" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/json",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new StringRawData("", "application/json"), "application/json,text/plain",
+                        ".json" });
 
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "image/geotiff", "tif"), "image/geotiff,image/tiff", ".tif" });
-        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("image/geotiff", null, "tif"), "image/geotiff,image/tiff", ".tif" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/owc",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new StringRawData("", "application/json"), "application/json,text/plain",
+                        ".json" });
 
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf", ".nc" });
-        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"), "application/x-netcdf", ".nc" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new ResourceRawData(null, "image/geotiff", "tif"),
+                        "image/geotiff,image/tiff", ".tif" });
+        PRIMITIVE_NAME_TYPE_MAP.put("image/geotiff;stream",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new StreamRawData("image/geotiff", null, "tif"), "image/geotiff,image/tiff",
+                        ".tif" });
 
-        //----
-        PRIMITIVE_NAME_TYPE_MAP.put("video/mp4", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "video/mp4", "mp4"), "video/mp4", ".mp4" });
-        PRIMITIVE_NAME_TYPE_MAP.put("video/mp4;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("video/mp4", null, "mp4"), "video/mp4", ".mp4" });
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new ResourceRawData(null, "application/x-netcdf", "nc"),
+                        "application/x-netcdf", ".nc" });
+        PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream",
+                new Object[] { RawData.class, CType.COMPLEX,
+                        new StreamRawData("application/x-netcdf", null, "nc"),
+                        "application/x-netcdf", ".nc" });
+
+        // ----
+        PRIMITIVE_NAME_TYPE_MAP.put("video/mp4", new Object[] { RawData.class, CType.COMPLEX,
+                new ResourceRawData(null, "video/mp4", "mp4"), "video/mp4", ".mp4" });
+        PRIMITIVE_NAME_TYPE_MAP.put("video/mp4;stream", new Object[] { RawData.class, CType.COMPLEX,
+                new StreamRawData("video/mp4", null, "mp4"), "video/mp4", ".mp4" });
     }
 
     /**
@@ -1097,8 +1145,8 @@ public class XMPPClient extends RemoteProcessClient {
 class XMPPPacketListener implements PacketListener {
 
     /** The LOGGER */
-    public static final Logger LOGGER = Logging.getLogger(XMPPPacketListener.class.getPackage()
-            .getName());
+    public static final Logger LOGGER = Logging
+            .getLogger(XMPPPacketListener.class.getPackage().getName());
 
     private XMPPClient xmppClient;
 
@@ -1145,8 +1193,8 @@ class XMPPPacketListener implements PacketListener {
                                         // send invitation and register source JID
                                         String[] serviceJIDParts = occupant.split("/");
                                         if (serviceJIDParts.length == 3
-                                                && (serviceJIDParts[2].startsWith("master") || serviceJIDParts[2]
-                                                        .indexOf("@") < 0)) {
+                                                && (serviceJIDParts[2].startsWith("master")
+                                                        || serviceJIDParts[2].indexOf("@") < 0)) {
                                             if (serviceName.equals(occupantServiceName)) {
                                                 mustDeregisterService = false;
                                                 break;

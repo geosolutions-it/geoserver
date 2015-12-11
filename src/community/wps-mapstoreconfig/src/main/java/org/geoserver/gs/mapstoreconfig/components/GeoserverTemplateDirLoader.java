@@ -31,7 +31,7 @@ import org.geoserver.platform.GeoServerResourceLoader;
 public class GeoserverTemplateDirLoader implements TemplateDirLoader {
 
     private GeoServerResourceLoader loader;
-    
+
     // The path related to gs datadir in which search for templates
     private final static String TEMPLATE_DIR = "templates";
 
@@ -42,10 +42,11 @@ public class GeoserverTemplateDirLoader implements TemplateDirLoader {
         this.loader = loader;
     }
 
-    public GeoserverTemplateDirLoader(){}
-    
+    public GeoserverTemplateDirLoader() {
+    }
+
     @Override
     public File getTemplateDir() {
-        return new File(loader.getBaseDirectory(),TEMPLATE_DIR);
+        return new File(loader.getBaseDirectory(), TEMPLATE_DIR);
     }
 }

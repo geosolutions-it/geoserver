@@ -20,7 +20,7 @@ import org.geotools.util.logging.Logging;
  */
 public abstract class Resource implements Serializable {
 
-	static protected Logger LOGGER = Logging.getLogger(Resource.class);
+    static protected Logger LOGGER = Logging.getLogger(Resource.class);
 
     private String type;
 
@@ -75,19 +75,19 @@ public abstract class Resource implements Serializable {
     }
 
     /**
-	 * @return the dimensions
-	 */
-	public List<Dimension> getDimensions() {
-		return dimensions;
-	}
+     * @return the dimensions
+     */
+    public List<Dimension> getDimensions() {
+        return dimensions;
+    }
 
-	/**
-	 * @param dimensions the dimensions to set
-	 */
-	public void setDimensions(List<Dimension> dimensions) {
-		this.dimensions = dimensions;
-	}
-    
+    /**
+     * @param dimensions the dimensions to set
+     */
+    public void setDimensions(List<Dimension> dimensions) {
+        this.dimensions = dimensions;
+    }
+
     /**
      * @return the translateContext
      */

@@ -36,8 +36,8 @@ public class TranslateItemUtils {
     public static File getFileFromUrl(TranslateContext context, Map<String, String> store)
             throws MalformedURLException, IOException {
 
-        final GeoServerDataDirectory dd = new GeoServerDataDirectory(context.getCatalog()
-                .getResourceLoader());
+        final GeoServerDataDirectory dd = new GeoServerDataDirectory(
+                context.getCatalog().getResourceLoader());
 
         File file = null;
 
@@ -59,8 +59,7 @@ public class TranslateItemUtils {
 
         // trying to download a resource from an HTTP Stream (or FTP simple mode)
         /**
-         * The FTP url must be something like 
-         *   <url>ftp://tom:secret@www.myserver.com/project/2014/Project.zip;type=i</url>
+         * The FTP url must be something like <url>ftp://tom:secret@www.myserver.com/project/2014/Project.zip;type=i</url>
          */
         else if (urlTxt.startsWith("http:") || urlTxt.startsWith("ftp:")) {
             final File parent = dd.findOrCreateDataDir("wps-resource_" + System.nanoTime());
@@ -85,12 +84,8 @@ public class TranslateItemUtils {
          * 
          * else if (urlTxt.startsWith("ftp:")) {
          *
-         *   final FTPClient ftp = new FTPClient();
-         *   String host;
-         *   String port;
-         *   String username;
-         *   String password;
-         *     
+         * final FTPClient ftp = new FTPClient(); String host; String port; String username; String password;
+         * 
          * }
          */
 

@@ -41,17 +41,17 @@ public class LiteralDataConverter extends ResourceLoaderConverter {
         writer.startNode("persistent");
         writer.setValue(String.valueOf(resource.isPersistent()));
         writer.endNode();
-        
+
         if (resource.getText() != null) {
             writer.startNode("text");
             writer.setValue("<[CDATA[" + resource.getText() + "]]>");
             writer.endNode();
         }
-        
+
     }
 
     @SuppressWarnings("unchecked")
-	@Override
+    @Override
     public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
         LiteralData resource = new LiteralData();
 

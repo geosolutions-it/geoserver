@@ -56,12 +56,13 @@ public class MapstoreConfigTest extends WPSTestSupport {
     public void basicTest() throws NoSuchAuthorityCodeException, FactoryException,
             FileNotFoundException, IOException {
         mapstoreProcess = new MapstoreConfigProcess();
-        LayerDescriptorManager ldm = new GeoserverXMLLayerDescriptorManager(getGeoServer()
-                .getCatalog());
+        LayerDescriptorManager ldm = new GeoserverXMLLayerDescriptorManager(
+                getGeoServer().getCatalog());
         mapstoreProcess.setLayerDescriptorManager(ldm);
         mapstoreProcess.setTemplateDirLoader(new TestTemplateDirLoader());
         String metocs = "[{\"Metoc\": {\"sourceId\":\"karpathos-dev\",\"title\":\"NOAA Wave Height\",\"owsBaseURL\":\"http://karpathos-dev/geoserver/ows\",\"owsService\":\"WMS\",\"owsVersion\":\"1.3.0\",\"owsResourceIdentifier\":\"oceanmod:NOAAWaveHeight\",\"referenceTimeDim\":true}},{\"Metoc\": {\"sourceId\":\"karpathos-dev\",\"title\":\"NOAA Wind Speed\",\"owsBaseURL\":\"http://karpathos-dev/geoserver/ows\",\"owsService\":\"WMS\",\"owsVersion\":\"1.3.0\",\"owsResourceIdentifier\":\"oceanmod:NOAAWindSpeed\",\"referenceTimeDim\":true}}]";
-        LOGGER.info(mapstoreProcess.execute(getLayerDescriptor(), new StringRawData(metocs, "application/json")));
+        LOGGER.info(mapstoreProcess.execute(getLayerDescriptor(),
+                new StringRawData(metocs, "application/json")));
     }
 
     private String getLayerDescriptor() throws FileNotFoundException, IOException {

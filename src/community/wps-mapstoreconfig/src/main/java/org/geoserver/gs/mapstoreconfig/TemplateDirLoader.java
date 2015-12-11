@@ -30,7 +30,7 @@ public interface TemplateDirLoader {
 
     /**
      * 
-     * @return a {@link File} instance representing the directory where the template are stored 
+     * @return a {@link File} instance representing the directory where the template are stored
      */
     public File getTemplateDir() throws IOException;
 }

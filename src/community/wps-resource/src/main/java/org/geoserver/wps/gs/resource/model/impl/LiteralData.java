@@ -34,5 +34,5 @@ public class LiteralData extends Resource {
     protected boolean resourcePropertiesConsistencyCheck() {
         return true;
     }
-    
+
 }

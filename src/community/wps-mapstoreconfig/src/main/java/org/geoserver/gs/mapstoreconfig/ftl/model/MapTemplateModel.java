@@ -36,13 +36,13 @@ public class MapTemplateModel {
     private String units;
 
     private Integer zoom;
-    
+
     private List<LiteralDataTemplateModel> rawData;
 
     private List<LayerTemplateModel> layers;
-    
+
     private List<MetocTemplateModel> metocs;
-    
+
     /**
      * @return the centerX
      */

@@ -28,13 +28,13 @@ import org.geotools.test.TestData;
  * @author DamianoG
  *
  */
-public class TestTemplateDirLoader  implements TemplateDirLoader {
+public class TestTemplateDirLoader implements TemplateDirLoader {
 
     // The path related to gs datadir in which search for templates
     private final static String TEMPLATE_DIR = "templates";
-    
+
     @Override
-    public File getTemplateDir() throws IOException{
+    public File getTemplateDir() throws IOException {
         try {
             return TestData.file(this, TEMPLATE_DIR);
         } catch (Exception e) {

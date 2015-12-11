@@ -65,7 +65,8 @@ public class VirtualTableItemConverter extends TranslateItemConverter {
             Object nodeValue = reader.getValue();
 
             if ("metadata".equals(nodeName)) {
-                item.setMetadata((Map<String, String>) context.convertAnother(nodeValue, Map.class));
+                item.setMetadata(
+                        (Map<String, String>) context.convertAnother(nodeValue, Map.class));
             }
 
             reader.moveUp();

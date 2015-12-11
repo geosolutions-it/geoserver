@@ -86,8 +86,8 @@ public class DataStoreItem extends TranslateItem {
                     context.getCatalog(), task);
             if (targetStore != null) {
                 task.setStore(targetStore);
-                NamespaceInfo namespace = context.getCatalog().getNamespaceByPrefix(
-                        targetStore.getWorkspace().getName());
+                NamespaceInfo namespace = context.getCatalog()
+                        .getNamespaceByPrefix(targetStore.getWorkspace().getName());
                 if (namespace == null) {
                     namespace = context.getCatalog().getDefaultNamespace();
                 }
@@ -107,15 +107,16 @@ public class DataStoreItem extends TranslateItem {
      * @throws URISyntaxException
      * @throws IOException
      */
-    private ImportData convertToImprtData(TranslateContext context) throws URISyntaxException,
-            IOException {
+    private ImportData convertToImprtData(TranslateContext context)
+            throws URISyntaxException, IOException {
         if (this.store.containsKey("url") && this.store.get("url").startsWith("file:")) {
             // CSV or Shape
             final File file = TranslateItemUtils.getFileFromUrl(context, this.store);
             DataFormat dataFormat = DataFormat.lookup(file);
             CSVDataStoreFactory csvDataStoreFactory = new CSVDataStoreFactory();
-            if ((dataFormat.getName().equals("CSV") && csvDataStoreFactory.canProcess(DataUtilities
-                    .fileToURL(file))) || dataFormat.getName().equals("Shapefile")) {
+            if ((dataFormat.getName().equals("CSV")
+                    && csvDataStoreFactory.canProcess(DataUtilities.fileToURL(file)))
+                    || dataFormat.getName().equals("Shapefile")) {
                 SpatialFile spatialData = new SpatialFile(file);
                 spatialData.prepare();
                 return spatialData;

@@ -199,8 +199,8 @@ public class TranslateContext {
             while (next != null) {
 
                 if (LOGGER.isLoggable(Level.FINE)) {
-                    LOGGER.log(Level.FINE, "Running Resource Translation Item {" + next.getOrder()
-                            + "}");
+                    LOGGER.log(Level.FINE,
+                            "Running Resource Translation Item {" + next.getOrder() + "}");
                 }
                 next = next.run(this);
             }

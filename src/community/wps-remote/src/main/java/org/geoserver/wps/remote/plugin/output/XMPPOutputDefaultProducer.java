@@ -20,7 +20,8 @@ public class XMPPOutputDefaultProducer {
     /**
      * 
      */
-    public static final XMPPOutputType[] outputProducers = { new XMPPTextualOutput(), new XMPPRawDataOutput() };
+    public static final XMPPOutputType[] outputProducers = { new XMPPTextualOutput(),
+            new XMPPRawDataOutput() };
 
     /**
      * 
@@ -35,25 +36,28 @@ public class XMPPOutputDefaultProducer {
      * @param value
      * @param type
      * @param pID
-     * @param baseURL 
+     * @param baseURL
      * @param xmppClient
      * @param publish
-     * @param metadata 
-     * @return 
-     * @throws Exception 
+     * @param metadata
+     * @return
+     * @throws Exception
      */
-    public Object produceOutput(Object value, String type, String pID,
-            String baseURL, XMPPClient xmppClient, boolean publish, String name, String title, String description, String defaultStyle, String targetWorkspace, String metadata) throws Exception {
-        
+    public Object produceOutput(Object value, String type, String pID, String baseURL,
+            XMPPClient xmppClient, boolean publish, String name, String title, String description,
+            String defaultStyle, String targetWorkspace, String metadata) throws Exception {
+
         Object wpsOutputValue = null;
-        
+
         for (XMPPOutputType outputProducer : outputProducers) {
-            wpsOutputValue = outputProducer.accept(this.visitor, value, type, pID, baseURL, xmppClient, publish, name, title, description, defaultStyle, targetWorkspace, metadata);
+            wpsOutputValue = outputProducer.accept(this.visitor, value, type, pID, baseURL,
+                    xmppClient, publish, name, title, description, defaultStyle, targetWorkspace,
+                    metadata);
             if (wpsOutputValue != null) {
                 return wpsOutputValue;
             }
         }
-        
+
         return null;
     }
 }
