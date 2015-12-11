@@ -995,6 +995,10 @@ public class XMPPClient extends RemoteProcessClient {
         //----
         PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "application/x-netcdf", "nc"), "application/x-netcdf", ".nc" });
         PRIMITIVE_NAME_TYPE_MAP.put("application/x-netcdf;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("application/x-netcdf", null, "nc"), "application/x-netcdf", ".nc" });
+
+        //----
+        PRIMITIVE_NAME_TYPE_MAP.put("video/mp4", new Object[] { RawData.class, CType.COMPLEX, new ResourceRawData(null, "video/mp4", "mp4"), "video/mp4", ".mp4" });
+        PRIMITIVE_NAME_TYPE_MAP.put("video/mp4;stream", new Object[] { RawData.class, CType.COMPLEX, new StreamRawData("video/mp4", null, "mp4"), "video/mp4", ".mp4" });
     }
 
     /**
