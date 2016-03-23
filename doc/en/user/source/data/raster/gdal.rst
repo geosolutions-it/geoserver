@@ -45,9 +45,9 @@ Moreover, in order for GeoServer to leverage these libraries, the GDAL (binary) 
 Installing GDAL native libraries
 ++++++++++++++++++++++++++++++++
 
-The ImageIO-Ext GDAL plugin for geoserver master uses ImageIO-Ext 1.1.12 whose artifacts can be downloaded from `here <http://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.12/>`_.
+The ImageIO-Ext GDAL plugin for geoserver master uses ImageIO-Ext 1.1.13 whose artifacts can be downloaded from `here <http://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.13/>`_.
 
-Browse to the native and then gdal directory for the `Image IO-Ext download link <http://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.12/>`_. Now you should see a list of artifacts that can be downloaded. We need to download two things now:
+Browse to the native and then gdal directory for the `Image IO-Ext download link <http://demo.geo-solutions.it/share/github/imageio-ext/releases/1.1.X/1.1.13/native/gdal/>`_. Now you should see a list of artifacts that can be downloaded. We need to download two things now:
 
   #. The CRS definitions
   #. The native libraries matching the target operating system
@@ -171,4 +171,142 @@ Configuring a NITF data store
 
    *Configuring a NITF data store*
 
+Supporting vector footprints
+----------------------------
+| Starting with version 2.9.0 is it possible to support vector footprints.
+| Footprint is a shape used as a mask to hide those pixels that are outside of the mask itself (making them transparent). 
+| Currently supported footprints formats are WKB, WKT and Shapefile. 
+| By convention, user should put a footprint file right beside the raster data itself in order to associate a vector mask for that.
 
+.. note:: In the examples of this section and related subsections, we will always use .wkt as extension, representing a WKT footprint, although both .wkb and .shp are supported too.
+
+
+| Supposing you have a MrSID file located at
+| :file:`/mnt/storage/data/landsat/N-32-40_2000.sid` 
+| to be masked, you just need to place a WKT file on the same folder, as 
+| :file:`/mnt/storage/data/landsat/N-32-40_2000.wkt`
+| Note the footprint needs to have same path and name of the original data file, with .wkt extension.
+|
+
+This is how the sample footprint geometry looks like:
+
+.. figure:: images/masking.png
+   :align: center
+
+   *A sample geometry stored as WKT, rendered on OpenJump*
+
+Once footprint has been placed, you need to change the FootprintBehavior parameter from None (the default value) to Transparent, from the layer configuration.
+
+.. figure:: images/footprintbehavior.png
+   :align: center
+
+   *Setting the FootprintBehavior parameter*
+   
+The next image depicts 2 layerPreviews made on the same layer: the left one having no footprint being used, the right one with footprint available and FootprintBehavior set to transparent.
+
+.. figure:: images/gdalmasks.png
+   :align: center
+
+   *Setting the FootprintBehavior parameter*
+
+External Footprints data dir
+++++++++++++++++++++++++++++
+By convention, the footprint file should be placed beside the raster file.
+So that a footprint with path :file:`/mnt/storage/data/landsat/N-32-40_2000.wkt` will be used as mask for the raster with path :file:`/mnt/storage/data/landsat/N-32-40_2000.sid`
+
+| However, is it also possible to put footprints into a different common location, the **footprints data dir**, as an instance in case the folder containing raster data is read only.
+| The footprints data dir is a common base folder where masks can be placed, provided that their paths replicate the original raster path.
+| The footprints data dir is specified as a Java System Property or an Environment Variable, by setting the `FOOTPRINTS_DATA_DIR` property/variable to the dir to be used as base folder.
+|
+
+
+Example
+^^^^^^^
+Suppose you have 3 raster files with the following paths:
+
+* :file:`/data/raster/charts/nitf/italy_2015.ntf`
+* :file:`/data/raster/satellite/ecw/orthofoto_2014.ecw`
+* :file:`/data/raster/satellite/landsat/mrsid/N-32-40_2000.sid`
+
+They can be represented by this tree:
+
+.. code-block:: xml
+
+   /data
+    \---raster
+        +---charts
+        |   \---nitf
+        |           italy_2015.ntf
+        |
+        \---satellite
+            +---ecw
+            |       orthofoto_2014.ecw
+            |
+            \---landsat
+                \---mrsid
+                        N-32-40_2000.sid
+
+In order to support external footprints you should
+
+#. Create a :file:`/footprints` (as an instance) directory on disk having set the :file:`FOOTPRINTS_DATA_DIR=/footprints` variable/property.
+#. Replicate the rasters folder hierarchy inside the specified folder, using the full paths.
+#. Put the 3 WKT files in the proper locations: 
+ 
+* :file:`/footprints/data/raster/charts/nitf/italy_2015.wkt`
+* :file:`/footprints/data/raster/satellite/ecw/orthofoto_2014.wkt`
+* :file:`/footprints/data/raster/satellite/landsat/mrsid/N-32-40_2000.wkt`
+
+Which can be represented by this tree:
+
+.. code-block:: xml
+
+   /footprints
+    \---data
+        \---raster
+            +---charts
+            |   \---nitf
+            |           italy_2015.wkt
+            |
+            \---satellite
+                +---ecw
+                |       orthofoto_2014.wkt
+                |
+                \---landsat
+                    \---mrsid
+                            N-32-40_2000.wkt
+
+So that, at the end, you will have the following folders hierarchy tree:
+
+.. code-block:: xml
+
+   +---data
+   |   \---raster
+   |       +---charts
+   |       |   \---nitf
+   |       |           italy_2015.ntf
+   |       |
+   |       \---satellite
+   |           +---ecw
+   |           |       orthofoto_2014.ecw
+   |           |
+   |           \---landsat
+   |               \---mrsid
+   |                       N-32-40_2000.sid
+   |
+   \---footprints
+       \---data
+           \---raster
+               +---charts
+               |   \---nitf
+               |           italy_2015.wkt
+               |
+               \---satellite
+                   +---ecw
+                   |       orthofoto_2014.wkt
+                   |
+                   \---landsat
+                       \---mrsid
+                               N-32-40_2000.wkt
+
+
+Note the parallel mirrored folder hierarchy, with the only difference of having a :file:`/footprints` prefix at the beginning of the path.
