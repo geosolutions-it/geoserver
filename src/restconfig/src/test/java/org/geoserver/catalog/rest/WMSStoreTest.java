@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -23,7 +24,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import com.mockrunner.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 
 public class WMSStoreTest extends CatalogRESTTestSupport {
@@ -81,12 +82,12 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
     
     @Test
     public void testPutAllUnauthorized() throws Exception {
-        assertEquals( 405, putAsServletResponse("/rest/workspaces/sf/wmsstores").getStatusCode() );
+        assertEquals( 405, putAsServletResponse("/rest/workspaces/sf/wmsstores").getStatus() );
     }
 
     @Test
     public void testDeleteAllUnauthorized() throws Exception {
-        assertEquals( 405, deleteAsServletResponse("/rest/workspaces/sf/wmsstores").getStatusCode() );
+        assertEquals( 405, deleteAsServletResponse("/rest/workspaces/sf/wmsstores").getStatus() );
     }
 
     @Test
@@ -115,6 +116,29 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
             assertTrue( link.getAttribute("href").endsWith( wl.getName() + ".html") );
         }
     }
+    
+    @Test
+    public void testGetWrongWMSStore() throws Exception {
+        // Parameters for the request
+        String ws = "sf";
+        String wms = "sfssssss";
+        // Request path
+        String requestPath = "/rest/workspaces/" + ws + "/wmsstores/" + wms + ".html";
+        // Exception path
+        String exception = "No such wms store: " + ws + "," + wms;
+        // First request should thrown an exception
+        MockHttpServletResponse response = getAsServletResponse(requestPath);
+        assertEquals(404, response.getStatus());
+        assertTrue(response.getContentAsString().contains(
+                exception));
+        // Same request with ?quietOnNotFound should not throw an exception
+        response = getAsServletResponse(requestPath + "?quietOnNotFound=true");
+        assertEquals(404, response.getStatus());
+        assertFalse(response.getContentAsString().contains(
+                exception));
+        // No exception thrown
+        assertTrue(response.getContentAsString().isEmpty());
+    }
    
     @Test
     public void testPostAsXML() throws Exception {
@@ -128,7 +152,7 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         MockHttpServletResponse response = 
             postAsServletResponse( "/rest/workspaces/sf/wmsstores", xml, "text/xml" );
         
-        assertEquals( 201, response.getStatusCode() );
+        assertEquals( 201, response.getStatus() );
         assertNotNull( response.getHeader( "Location") );
         assertTrue( response.getHeader("Location").endsWith( "/workspaces/sf/wmsstores/newWMSStore" ) );
 
@@ -163,7 +187,7 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         MockHttpServletResponse response = 
             postAsServletResponse( "/rest/workspaces/sf/wmsstores", json, "text/json" );
         
-        assertEquals( 201, response.getStatusCode() );
+        assertEquals( 201, response.getStatus() );
         assertNotNull( response.getHeader( "Location") );
         assertTrue( response.getHeader("Location").endsWith( "/workspaces/sf/wmsstores/newWMSStore" ) );
 
@@ -183,7 +207,7 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         
         MockHttpServletResponse response = 
             postAsServletResponse( "/rest/workspaces/sf/wmsstores/demo", xml, "text/xml");
-        assertEquals( 405, response.getStatusCode() );
+        assertEquals( 405, response.getStatus() );
     }
 
     @Test
@@ -199,7 +223,7 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         
         MockHttpServletResponse response = 
             putAsServletResponse( "/rest/workspaces/sf/datastores/sf", xml, "text/xml");
-        assertEquals( 200, response.getStatusCode() );
+        assertEquals( 200, response.getStatus() );
 
         dom = getAsDOM( "/rest/workspaces/sf/datastores/sf.xml");
         assertXpathEvaluatesTo("false", "/dataStore/enabled", dom );
@@ -216,12 +240,12 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
 
         MockHttpServletResponse response = 
             putAsServletResponse("/rest/workspaces/sf/wmsstores/nonExistant", xml, "text/xml" );
-        assertEquals( 404, response.getStatusCode() );
+        assertEquals( 404, response.getStatus() );
     }
 
     @Test
     public void testDeleteNonExistant() throws Exception {
-        assertEquals( 404, deleteAsServletResponse("/rest/workspaces/sf/datastores/nonExistant").getStatusCode() );
+        assertEquals( 404, deleteAsServletResponse("/rest/workspaces/sf/datastores/nonExistant").getStatus() );
     }
 
     @Test
@@ -230,7 +254,7 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         testPostAsXML();
         assertNotNull( catalog.getStoreByName("sf", "newWMSStore", WMSStoreInfo.class));
         
-        assertEquals( 200, deleteAsServletResponse("/rest/workspaces/sf/wmsstores/newWMSStore").getStatusCode());
+        assertEquals( 200, deleteAsServletResponse("/rest/workspaces/sf/wmsstores/newWMSStore").getStatus());
         assertNull( catalog.getStoreByName("sf", "newWMSStore", WMSStoreInfo.class));
     }
     
@@ -243,7 +267,7 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         String xml = "<wmsStore>" +
             "<name>newName</name>" + 
             "</wmsStore>";
-        assertEquals( 403, putAsServletResponse("/rest/workspaces/sf/wmsstores/demo", xml, "text/xml").getStatusCode());
+        assertEquals( 403, putAsServletResponse("/rest/workspaces/sf/wmsstores/demo", xml, "text/xml").getStatus());
     }
 
     @Test
@@ -251,6 +275,6 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
         String xml = "<wmsStore>" +
         "<workspace>gs</workspace>" + 
         "</wmsStore>";
-        assertEquals( 403, putAsServletResponse("/rest/workspaces/sf/wmsstores/demo", xml, "text/xml").getStatusCode());
+        assertEquals( 403, putAsServletResponse("/rest/workspaces/sf/wmsstores/demo", xml, "text/xml").getStatus());
     }
 }

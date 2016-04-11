@@ -40,6 +40,20 @@ where ``<format>`` is one of the following options:
      
 .. _wfs_outputformat_shapezip:
 
+Shapefile output
+----------------
+
+The shapefile format has a number of limitations that would prevent turning data sources into an equivalent shapefile. In order to abide with such limitations
+the shape-zip output format will automatically apply some transformations on the source data, and eventually split the single colleciton into multiple
+shapefiles. In particular, the shape-zip format will:
+
+* Reduce attribute names to the DBF accepted length, making sure there are not conflicts (counters being added at the end of the attribute name to handle this).
+* Fan out multiple geometry type into parallel shapefiles, named after the original feature type, plus the geometry type as a suffix.
+* Fan out multiple shapefiles in case the maximum size is reached
+
+The default max size for both .shp and .dbf file is 2GB, it's possible to modify those limits by setting the GS_SHP_MAX_SIZE and 
+GS_DBF_MAX_SIZE system variables to a different value (as a byte count, the default value being 2147483647).
+
 Shapefile output customization
 ------------------------------
 
@@ -73,4 +87,5 @@ GeoServer provides the ``format_options`` vendor-specific parameter to specify p
 The currently supported format option in WFS output is:
 
   * ``filename``—Applies only to the SHAPE-ZIP output format. If a file name is provided, the name is used as the output file name. For example, ``format_options=filename:roads.zip``. If a file name is not specified, the output file name is inferred from the requested feature type name.
-
+  * ``callback``—Applies only to the JSONP output format. See :ref:`wms_vendor_parameters` to change the callback name. Note that this format is disabled by default (See :ref:`wms_global_variables`).  
+  * ``id_policy``—Applies only to the JSON output format and is used to determine if the id values are included in output. If an attribute name is provided it will be used. For example, ``format_options=id_policy:reference_no``. Use ``true`` for feature id generation. To avoid any feature id output use ``false``. If ``id_policy`` is not specified feature id generation is used.

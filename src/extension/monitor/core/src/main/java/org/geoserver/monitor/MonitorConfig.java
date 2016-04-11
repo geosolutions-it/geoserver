@@ -1,15 +1,19 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.monitor;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.geoserver.data.util.IOUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Paths;
+import org.geoserver.platform.resource.Resource;
+import org.geoserver.platform.resource.Resources;
 import org.geoserver.security.PropertyFileWatcher;
 import org.geotools.factory.Hints;
 import org.geotools.referencing.CRS;
@@ -22,6 +26,7 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 /**
@@ -45,7 +50,7 @@ public class MonitorConfig implements ApplicationContextAware {
         NONE, NO_WFS, FULL;
     }
     
-    Properties props;
+    protected Properties props;
     PropertyFileWatcher fw;
     ApplicationContext context;
     boolean enabled = true;
@@ -64,10 +69,10 @@ public class MonitorConfig implements ApplicationContextAware {
     }
     
     public MonitorConfig(GeoServerResourceLoader loader) throws IOException {
-        File f = loader.find("monitoring", "monitor.properties");
-        if (f == null) {
-            f = loader.createFile("monitoring", "monitor.properties");
-            loader.copyFromClassPath("monitor.properties", f, MonitorConfig.class);
+        Resource f = loader.get(Paths.path("monitoring", "monitor.properties"));
+        if (!Resources.exists(f)) {
+            IOUtils.copy(MonitorConfig.class.getResourceAsStream("monitor.properties"), 
+                    f.out());
         }
         
         fw = new PropertyFileWatcher(f);
@@ -180,11 +185,10 @@ public class MonitorConfig implements ApplicationContextAware {
      * Allows to retrieve a generic property from the configuration. Extensions and plugins are
      * supposed to use the plugin.property naming convention, passing both a prefix and a name
      * 
-     * @param <T>
-     * @param prefix
-     * @param name
-     * @param target
-     * @return
+     * @param prefix namespace prefix
+     * @param name name
+     * @param target Class for conversion
+     *
      */
     public <T> T getProperty(String prefix, String name, Class<T> target) {
         String key = prefix == null ? name : prefix + "." + name;

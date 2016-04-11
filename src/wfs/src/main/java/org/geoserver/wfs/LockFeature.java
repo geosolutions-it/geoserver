@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -350,8 +351,6 @@ public class LockFeature {
      * This is the implementation for the Admin "free lock" action, transaction
      * locks are not released.
      * </p>
-     *
-     * @return Number of locks released
      */
     public void releaseAll() throws WFSException {
         try {

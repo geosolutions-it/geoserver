@@ -9,6 +9,25 @@ is a great way to give back to the project.
 
 This document is a guide designed to help users through the process of successfully submitting a patch.
 
+.. note:: 
+
+   We would like to see all fixes applied to master first, and then back ported to the stable and maintenance branches. 
+   
+   We require the following for fixes submitted via pull requests or patch:
+
+   1. Required: Prepare your fix for the master branch
+   2. Required: Check the following (and comment in your pull request, or jira issue):
+      
+      * Investigate if the issue impact all the active branches (master / stable / maintenance)
+      * Investigate the your fix can be backported to all the active branches (master / stable / maintenance)
+      
+   3. Recommended: Actual backport to stable and maintenance is optional but highly recommended.
+
+   We require the following for new features submitted via pull request or patch:
+   
+   1. Required: Prepare your feature for the master branch.
+   2. Optional: If the new feature is suitable for backport you may ask on the developer list after a 1 month.
+
 Source code
 -----------
 
@@ -51,7 +70,11 @@ Assuming that ``origin`` points to your github repo the the patch workflow then 
 #. Visit your github repo page and issue the pull request. 
 
 At this point the core developers will be notified of the pull request and review it at the earliest 
-convenience. 
+convenience. Core developers will review the patch and might require changes or improvements to it, it
+will be up to the submitter to amend the pull request and keep it alive until it gets merged.
+Please be patient, pull requests are often reviewed in spare time so turn-around can be a little slow.
+If a pull request becomes stale with no feedback from the submitter for a couple of months long, it will linked 
+form a JIRA issue (to avoid losing the partial work) and then be closed.
 
 Git diff
 ^^^^^^^^
@@ -67,7 +90,7 @@ a simple workflow for generating a patch is as follows.
 
      git diff master > my_bugfix.patch
      
-#. Open a `JIRA <https://jira.codehaus.org/browse/GEOS>`_ ticket and attach the patch file to the ticket. 
+#. Open a `JIRA <https://osgeo-org.atlassian.net/projects/GEOS>`_ ticket and attach the patch file to the ticket. 
 
 At this point the core developers will be notified of the ticket t and review it at the earliest 
 convenience. 
@@ -92,7 +115,7 @@ manually generate a patch with unix diff tools.
 
      diff -ru geoserver.orig geoserver > my_bugfix.patch
 
-#. Open a `JIRA <https://jira.codehaus.org/browse/GEOS>`_ ticket and attach the patch file to the ticket. 
+#. Open a `JIRA <https://osgeo-org.atlassian.net/projects/GEOS>`_ ticket and attach the patch file to the ticket. 
 
 At this point the core developers will be notified of the ticket t and review it at the earliest 
 convenience. 
@@ -130,3 +153,10 @@ Be patient
 The core developers review community patches in spare time. Be cognizant of this and realize that just 
 as you are contributing your own free time to the project, so is the developer who is reviewing and 
 applying your patch.
+
+Tips
+^^^^
+
+Include a test case that shows your patch fixes an issue (or adds new functionality). If you do not include a test case the developer reviewing your work will need to create one.
+
+`JIRA Issue <https://osgeo-org.atlassian.net/projects/GEOS>`_ are used to list your fix in the release notes each release. You can link to the JIRA ticket in your pull request description.

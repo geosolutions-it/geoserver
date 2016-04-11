@@ -191,7 +191,26 @@ extended
 The ``extended`` attribute specifies whether the color map gradient uses 256 (8-bit) or 65536 (16-bit) colors. 
 The value ``false`` (the default) specifies that the color scale is calculated using 8-bit color, and ``true`` specifies using 16-bit color.  
 
+.. _sld_reference_rastersymbolizer_colormap_cql:
 
+CQL Expressions
+"""""""""""""""
+
+Most of the ColorMapEntry attributes (color, quantity and opacity) can be defined using ``cql expressions``, with the ${...expression...} syntax.
+
+CQL expressions are useful to make the color map dynamic, using values taken from the client:    
+
+.. code-block:: xml
+
+    <ColorMapEntry color="#00FF00" quantity="${env('low',3)}" label="Low" opacity="1"/>
+    <ColorMapEntry color="#FFFF00" quantity="${env('medium',10)}" label="Medium" opacity="1"/>
+    <ColorMapEntry color="#FF0000" quantity="${env('high',1000)}" label="High" opacity="1"/>
+
+In this example quantity values are not fixed, but can be specified by the client using the ENV request parameter:
+    
+    http://localhost:8080/geoserver/wms?REQUEST=GetMap&VERSION=1.0.0&...&ENV=low:10;medium:100;high:500
+
+For a complete reference of CQL capabilities, see :ref:`here <filter_ecql_reference>`
    
 ChannelSelection
 ^^^^^^^^^^^^^^^^
@@ -284,6 +303,85 @@ This example increases the brightness of the image by a factor of two.
 	</ContrastEnhancement>
 
 
+It is also possible to customize Normalize Contrast Enhancement element for the RasterSymbolizer.
+3 new VendorOptions are supported:
+
+* <VendorOption name="algorithm">ALGORITHM_NAME</VendorOption> to control the algorithm to apply
+* <VendorOption name="minValue">MIN_VALUE</VendorOption> to control the min value for the algorithm
+* <VendorOption name="maxValue">MAX_VALUE</VendorOption> to control the max value for the algorithm
+
+Supported algorithms are:
+
+* **StretchToMinimumMaximum** it will linearly stretch the source raster by linearly mapping values within the [MIN_VALUE, MAX_VALUE] range to [0,255]. This will also automatically result into a clip of the values outside the specified input range.
+* **ClipToMinimumMaximum** it will result into a clamp operation. Values smaller than MIN_VALUE will be forced to MIN_VALUE. Values greater than MAX_VALUE will be forced to MAX_VALUE. Values in the [MIN_VALUE, MAX_VALUE] range will passthrough unchanged.
+* **ClipToZero** is similar to ClipToMinimumMaximum. However, values outside the [MIN_VALUE, MAX_VALUE] range will be forced to be 0.
+
+.. note:: The target data type for the stretch algorithm is **always** byte (this might change in the future). This means that if the MAX_VALUE for the Clip oriented algorithms is greater than 255 an implicit clamp will apply anyway to clamp to 255.
+
+Here below some examples
+
+.. code-block:: xml
+
+    <ContrastEnhancement>
+      <Normalize>
+       <VendorOption name="algorithm">StretchToMinimumMaximum</VendorOption>
+       <VendorOption name="minValue">50</VendorOption>
+       <VendorOption name="maxValue">100</VendorOption>
+      </Normalize>
+    </ContrastEnhancement>
+
+This example will apply a Normalized ContrastEnhancement by linearly stretch from pixel values [50, 100] to [0, 255]
+	
+.. code-block:: xml
+
+    <ContrastEnhancement>
+      <Normalize>
+       <VendorOption name="algorithm">ClipToMinimumMaximum</VendorOption>
+       <VendorOption name="minValue">50</VendorOption>
+       <VendorOption name="maxValue">100</VendorOption>
+      </Normalize>
+    </ContrastEnhancement>
+
+.. code-block:: xml
+
+    <ContrastEnhancement>
+      <Normalize>
+       <VendorOption name="algorithm">ClipToMinimumMaximum</VendorOption>
+       <VendorOption name="minValue">50</VendorOption>
+       <VendorOption name="maxValue">100</VendorOption>
+      </Normalize>
+    </ContrastEnhancement>	
+	
+Here below a more complex example that shows the possibility to control the values from a client using env functions.
+This is extremely interesting for interactive applications.
+
+.. code-block:: xml	
+	
+	...
+	<ContrastEnhancement>
+		<Normalize>
+		 <VendorOption name="algorithm">
+		   <ogc:Function name="env">
+			 <ogc:Literal>algorithm</ogc:Literal>
+			 <ogc:Literal>StretchToMinimumMaximum</ogc:Literal>
+		   </ogc:Function>                                       
+		 </VendorOption>
+		 <VendorOption name='minValue'>
+		   <ogc:Function name="env">
+			 <ogc:Literal>minValue</ogc:Literal>
+			 <ogc:Literal>10</ogc:Literal>
+		   </ogc:Function>
+		 </VendorOption>
+		 <VendorOption name='maxValue'>
+		   <ogc:Function name="env">
+			 <ogc:Literal>maxValue</ogc:Literal>
+			 <ogc:Literal>1200</ogc:Literal>
+		   </ogc:Function>                                       
+		 </VendorOption>
+		</Normalize>
+	</ContrastEnhancement>
+	...
+	
 ShadedRelief
 ^^^^^^^^^^^^
 

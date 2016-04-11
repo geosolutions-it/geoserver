@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -29,6 +30,7 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.geoserver.config.util.XStreamPersister;
+import org.geoserver.platform.resource.Resource;
 import org.geotools.util.logging.Logging;
 
 /**
@@ -37,7 +39,7 @@ import org.geotools.util.logging.Logging;
  * @author Andrea Aime - TOPP
  * 
  */
-public class IOUtils {
+public final class IOUtils {
     private static final Logger LOGGER = Logging.getLogger(IOUtils.class);
     
     private IOUtils() {
@@ -52,10 +54,18 @@ public class IOUtils {
      * @throws IOException
      */
     public static void copy(InputStream from, File to) throws IOException {
-        OutputStream out = null;
-        try {
-            out = new FileOutputStream(to);
-
+        copy(from, new FileOutputStream(to));
+    }
+    
+    /**
+     * Copies the provided input stream onto an outputstream
+     * 
+     * @param from
+     * @param to
+     * @throws IOException
+     */
+    public static void copy(InputStream from, OutputStream out) throws IOException {
+        try {        
             byte[] buffer = new byte[1024 * 16];
             int bytes = 0;
             while ((bytes = from.read(buffer)) != -1)
@@ -173,7 +183,7 @@ public class IOUtils {
      * 
      * @param basePath
      * @param prefix
-     * @return
+     *
      * @throws IOException
      */
     public static File createRandomDirectory(String baseDir, String prefix, String suffix)
@@ -189,7 +199,7 @@ public class IOUtils {
      * Creates a temporary directory whose name will start by prefix
      *
      * Strategy is to leverage the system temp directory, then create a sub-directory.
-     * @return
+     *
      */
     public static File createTempDirectory(String prefix) throws IOException {
         File dummyTemp = File.createTempFile("blah", null);
@@ -207,7 +217,7 @@ public class IOUtils {
      * and finally wipes out the directory itself. For each
      * file that cannot be deleted a warning log will be issued. 
      * 
-     * @param dir
+     * @param directory Directory to delete
      * @throws IOException
      * @returns true if the directory could be deleted, false otherwise
      */
@@ -283,7 +293,9 @@ public class IOUtils {
             if (file.exists()) {
                 if(file.isDirectory()) {
                     // recurse and append
-                    zipDirectory(file, prefix + file.getName() + "/", zipout, filter);
+                    String newPrefix = prefix + file.getName() + "/";
+                    zipout.putNextEntry(new ZipEntry(newPrefix));
+                    zipDirectory(file, newPrefix, zipout, filter);
                 } else {
                     ZipEntry entry = new ZipEntry(prefix  + file.getName());
                     zipout.putNextEntry(entry);
@@ -372,7 +384,6 @@ public class IOUtils {
      * @param len 
      * @param stream
      * @param fos
-     * @return 
      * @throws IOException
      */
     public static void saveCompressedStream(final byte[] buffer, final OutputStream out, final int len) throws IOException {
@@ -383,41 +394,63 @@ public class IOUtils {
             out.flush();
             out.close();
             IOException ioe = new IOException("Not valid archive file type.");
-            ioe.initCause(e);
-            throw ioe;
-        }
+        ioe.initCause(e);
+        throw ioe;
     }
+}
 
     /**
-     * Performs serialization with an {@link XStreamPersister} in a safe manner in which a temp
-     * file is used for the serialization so that the true destination file is not partially 
-     * written in the case of an error. 
+     * Performs serialization with an {@link XStreamPersister} in a safe manner in
+     * which a temp file is used for the serialization so that the true destination
+     * file is not partially written in the case of an error.
      * 
-     * @param f The file to write to, only modified if the temp file serialization was error free.
+     * @param f The file to write to, only modified if the temp file serialization
+     *        was error free.
      * @param obj The object to serialize.
      * @param xp The persister.
-     * 
-     * @throws Exception
      */
-    public static void xStreamPersist(File f, Object obj, XStreamPersister xp) throws IOException {
-        //first save to a temp file
-        File temp = new File(f.getParentFile(),f.getName()+".tmp");
-        if ( temp.exists() ) {
-            temp.delete();
-        }
-        
+    public static void xStreamPersist(File f, Object obj, XStreamPersister xp)
+            throws IOException {
+        // first save to a temp file
+        final File temp = File.createTempFile(f.getName(), null, f.getParentFile());
+    
         BufferedOutputStream out = null;
-        try{
-            out=new BufferedOutputStream( new FileOutputStream( temp ) );
-            xp.save( obj, out );
+        try {
+            out = new BufferedOutputStream(new FileOutputStream(temp));
+            xp.save(obj, out);
             out.flush();
         } finally {
             if (out != null)
                 org.apache.commons.io.IOUtils.closeQuietly(out);
         }
+    
+        // no errors, overwrite the original file
+        try {
+            rename(temp, f);
+        } finally {
+            if (temp.exists()) {
+                temp.delete();
+            }
+        }
+    }
+    
+    /**
+     * Performs serialization with an {@link XStreamPersister} in a safe manner in
+     * which a temp file is used for the serialization so that the true destination
+     * file is not partially written in the case of an error.
+     * 
+     * @param r The resource to write to, only modified if the temp file serialization
+     *        was error free.
+     * @param obj The object to serialize.
+     * @param xp The persister.
+     */
+    public static void xStreamPersist(Resource r, Object obj, XStreamPersister xp)
+            throws IOException {
         
-        //no errors, overwrite the original file
-        rename(temp,f);
+        try(OutputStream out = r.out()) {
+            xp.save(obj, out);
+            out.flush();
+        }
     }
 
     /**
@@ -454,18 +487,24 @@ public class IOUtils {
         if (source.getCanonicalPath().equalsIgnoreCase(dest.getCanonicalPath()))
             return;
 
-        // different path
+        // windows needs special treatment, we cannot rename onto an existing file
         boolean win = System.getProperty("os.name").startsWith("Windows");
         if ( win && dest.exists() ) {
-            //windows does not do atomic renames, and can not rename a file if the dest file
+            // windows does not do atomic renames, and can not rename a file if the dest file
             // exists
             if (!dest.delete()) {
                 throw new IOException("Could not delete: " + dest.getCanonicalPath());
             }
-            source.renameTo(dest);
         }
-        else {
-            source.renameTo(dest);
+        // make sure the rename actually succeeds
+        if(!source.renameTo(dest)) {
+            FileUtils.deleteQuietly(dest);
+            if( source.isDirectory() ){
+                FileUtils.moveDirectory(source, dest );
+            }
+            else {
+                FileUtils.moveFile(source, dest);
+            }
         }
     }
 }

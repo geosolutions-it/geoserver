@@ -1,56 +1,63 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wms.web.data;
 
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
+import java.io.StringReader;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.wicket.Component;
+import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.Session;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.ajax.AjaxRequestTarget;
-import org.apache.wicket.ajax.IAjaxCallDecorator;
-import org.apache.wicket.ajax.calldecorator.AjaxCallDecorator;
-import org.apache.wicket.ajax.calldecorator.AjaxPreprocessingCallDecorator;
+import org.apache.wicket.ajax.attributes.AjaxCallListener;
+import org.apache.wicket.ajax.attributes.AjaxRequestAttributes;
 import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
-import org.apache.wicket.ajax.markup.html.AjaxLink;
-import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink;
+import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.form.ChoiceRenderer;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.Form;
-import org.apache.wicket.markup.html.form.FormComponentPanel;
-import org.apache.wicket.markup.html.form.IFormSubmittingComponent;
-import org.apache.wicket.markup.html.form.ListMultipleChoice;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.form.upload.FileUpload;
 import org.apache.wicket.markup.html.form.upload.FileUploadField;
+import org.apache.wicket.markup.html.image.Image;
 import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.model.CompoundPropertyModel;
-import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
+import org.apache.wicket.request.resource.AbstractResource;
 import org.apache.wicket.util.lang.Bytes;
-import org.geoserver.catalog.Keyword;
-import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.ResourcePool;
+import org.geoserver.catalog.StyleGenerator;
+import org.geoserver.catalog.StyleHandler;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.StyleType;
 import org.geoserver.catalog.Styles;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.catalog.impl.StyleInfoImpl;
+import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.web.ComponentAuthorizer;
 import org.geoserver.web.GeoServerSecuredPage;
 import org.geoserver.web.data.style.StyleDetachableModel;
@@ -58,15 +65,14 @@ import org.geoserver.web.data.workspace.WorkspaceChoiceRenderer;
 import org.geoserver.web.data.workspace.WorkspacesModel;
 import org.geoserver.web.wicket.CodeMirrorEditor;
 import org.geoserver.web.wicket.GeoServerAjaxFormLink;
-import org.geoserver.web.wicket.LiveCollectionModel;
 import org.geoserver.web.wicket.ParamResourceModel;
+import org.geoserver.wms.GetLegendGraphicRequest;
+import org.geoserver.wms.legendgraphic.BufferedImageLegendGraphicBuilder;
 import org.geoserver.wms.web.publish.StyleChoiceRenderer;
+import org.geoserver.wms.web.publish.StyleTypeChoiceRenderer;
+import org.geoserver.wms.web.publish.StyleTypeModel;
 import org.geoserver.wms.web.publish.StylesModel;
-import org.geotools.renderer.lite.gridcoverage2d.StyleVisitorAdapter;
-import org.geotools.styling.ExternalGraphic;
-import org.geotools.styling.StyledLayerDescriptor;
-import org.geotools.styling.visitor.DuplicatingStyleVisitor;
-import org.opengis.metadata.citation.OnLineResource;
+import org.geotools.styling.Style;
 import org.xml.sax.SAXParseException;
 
 /**
@@ -75,9 +81,15 @@ import org.xml.sax.SAXParseException;
 @SuppressWarnings("serial")
 public abstract class AbstractStylePage extends GeoServerSecuredPage {
 
+    protected String format;
+
     protected TextField nameTextField;
 
     protected FileUploadField fileUploadField;
+
+    protected DropDownChoice templates;
+
+    protected AjaxSubmitLink generateLink;
 
     protected DropDownChoice styles;
 
@@ -85,11 +97,24 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
 
     protected Form uploadForm;
 
+    protected Form generateForm;
+
     protected Form styleForm;
 
     protected CodeMirrorEditor editor;
-    
-    String rawSLD;
+
+    protected MarkupContainer formatReadOnlyMessage;
+
+    String rawStyle;
+
+    private Image legendImg;
+
+    String lastStyle;
+
+    private WebMarkupContainer legendContainer;
+
+    private DropDownChoice<WorkspaceInfo> wsChoice;
+    DropDownChoice<String> formatChoice;
 
     public AbstractStylePage() {
     }
@@ -99,9 +124,17 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
     }
 
     protected void initUI(StyleInfo style) {
-        IModel<StyleInfo> styleModel = new CompoundPropertyModel(style != null ? 
+        CompoundPropertyModel<StyleInfo> styleModel = new CompoundPropertyModel(style != null ? 
             new StyleDetachableModel(style) : getCatalog().getFactory().createStyle());
         
+        format = style != null ? style.getFormat() : getCatalog().getFactory().createStyle()
+                .getFormat();
+
+        // Make sure the legend object isn't null
+        if (null == styleModel.getObject().getLegend()) {
+            styleModel.getObject().setLegend(getCatalog().getFactory().createLegend());
+        }
+
         styleForm = new Form("form", styleModel) {
             @Override
             protected void onSubmit() {
@@ -115,8 +148,8 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
         styleForm.add(nameTextField = new TextField("name"));
         nameTextField.setRequired(true);
         
-        DropDownChoice<WorkspaceInfo> wsChoice = 
-            new DropDownChoice("workspace", new WorkspacesModel(), new WorkspaceChoiceRenderer());
+        wsChoice = 
+            new DropDownChoice<WorkspaceInfo>("workspace", new WorkspacesModel(), new WorkspaceChoiceRenderer());
         wsChoice.setNullValid(true);
         if (!isAuthenticatedAsAdmin()) {
             wsChoice.setNullValid(false);
@@ -124,32 +157,81 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
         }
 
         styleForm.add(wsChoice);
-        styleForm.add( editor = new CodeMirrorEditor("SLD", new PropertyModel(this, "rawSLD")) );
+
+        formatChoice = new DropDownChoice<String>("format", new PropertyModel(this, "format"),
+                new StyleFormatsModel(), new ChoiceRenderer<String>() {
+            @Override
+            public String getIdValue(String object, int index) {
+                return object;
+            }
+
+            @Override
+            public Object getDisplayValue(String object) {
+                return Styles.handler(object).getName();
+            }
+        });
+        formatChoice.add(new AjaxFormComponentUpdatingBehavior("change") {
+            @Override
+            protected void onUpdate(AjaxRequestTarget target) {
+                target.appendJavaScript(String.format(
+                    "if (document.gsEditors) { document.gsEditors.editor.setOption('mode', '%s'); }", styleHandler().getCodeMirrorEditMode()));
+            }
+        });
+        styleForm.add(formatChoice);
+
+        formatReadOnlyMessage = new WebMarkupContainer("formatReadOnly", new Model());
+        formatReadOnlyMessage.setVisible(false);
+        styleForm.add(formatReadOnlyMessage);
+
+        styleForm.add(editor = new CodeMirrorEditor("styleEditor", styleHandler()
+                .getCodeMirrorEditMode(), new PropertyModel(this, "rawStyle")));
         // force the id otherwise this blasted thing won't be usable from other forms
         editor.setTextAreaMarkupId("editor");
         editor.setOutputMarkupId(true);
         editor.setRequired(true);
         styleForm.add(editor);
 
+        // add the Legend fields        
+        ExternalGraphicPanel legendPanel = new ExternalGraphicPanel("legendPanel", styleModel, styleForm);
+        legendPanel.setOutputMarkupId(true);
+        styleForm.add(legendPanel);
+
         if (style != null) {
             try {
-                setRawSLD(readFile(style));
+                setRawStyle(readFile(style));
             } catch (IOException e) {
                 // ouch, the style file is gone! Register a generic error message
-                Session.get().error(new ParamResourceModel("sldNotFound", this, style.getFilename()).getString());
+                Session.get().error(new ParamResourceModel("styleNotFound", this, style.getFilename()).getString());
             }
         }
+        
+        // style generation functionality
+        templates = new DropDownChoice("templates", new Model(), new StyleTypeModel(), new StyleTypeChoiceRenderer());
+        templates.setOutputMarkupId(true);
+        templates.add(new AjaxFormComponentUpdatingBehavior("change") {
+
+            @Override
+            protected void onUpdate(AjaxRequestTarget target) {
+                templates.validate();
+                generateLink.setEnabled(templates.getConvertedInput() != null);
+                target.add(generateLink);
+            }
+        });
+        styleForm.add(templates);
+        generateLink = generateLink();
+        generateLink.setEnabled(false);
+        styleForm.add(generateLink);
 
         // style copy functionality
         styles = new DropDownChoice("existingStyles", new Model(), new StylesModel(), new StyleChoiceRenderer());
         styles.setOutputMarkupId(true);
-        styles.add(new AjaxFormComponentUpdatingBehavior("onchange") {
+        styles.add(new AjaxFormComponentUpdatingBehavior("change") {
 
             @Override
             protected void onUpdate(AjaxRequestTarget target) {
                 styles.validate();
                 copyLink.setEnabled(styles.getConvertedInput() != null);
-                target.addComponent(copyLink);
+                target.add(copyLink);
             }
         });
         styleForm.add(styles);
@@ -168,6 +250,7 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
         
 
         add(validateLink());
+        add(previewLink());
         Link cancelLink = new Link("cancel") {
             @Override
             public void onClick() {
@@ -175,6 +258,72 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
             }
         };
         add(cancelLink);
+
+        legendContainer = new WebMarkupContainer("legendContainer");
+        legendContainer.setOutputMarkupId(true);
+        add(legendContainer);
+        this.legendImg = new Image("legendImg", new AbstractResource() {
+            
+            @Override
+            protected ResourceResponse newResourceResponse(Attributes attributes) {
+                ResourceResponse rr = new ResourceResponse();
+                rr.setContentType("image/png");
+                rr.setWriteCallback(new WriteCallback() {
+                    
+                    @Override
+                    public void writeData(Attributes attributes) throws IOException {
+                        GeoServerDataDirectory dd = GeoServerExtensions.bean(GeoServerDataDirectory.class, getGeoServerApplication().getApplicationContext());
+                        StyleInfo si = new StyleInfoImpl(getCatalog());
+                        String styleName = "tmp" + UUID.randomUUID().toString();
+                        String styleFileName =  styleName + ".sld";
+                        si.setFilename(styleFileName);
+                        si.setName(styleName);
+                        si.setWorkspace(wsChoice.getModel().getObject());
+                        Resource styleResource = null;
+                        try {
+                            styleResource = dd.style(si);
+                            try(OutputStream os = styleResource.out()) {
+                                IOUtils.write(lastStyle, os);
+                            }
+                            Style style = dd.parsedStyle(si);
+                            if (style != null) {
+                                GetLegendGraphicRequest request = new GetLegendGraphicRequest();
+                                request.setLayer(null);
+                                request.setStyle(style);
+                                request.setStrict(false);
+                                Map<String, String> legendOptions = new HashMap<String, String>();
+                                legendOptions.put("forceLabels", "on");
+                                legendOptions.put("fontAntiAliasing", "true");
+                                request.setLegendOptions(legendOptions);
+                                BufferedImageLegendGraphicBuilder builder = new BufferedImageLegendGraphicBuilder();
+                                BufferedImage image = builder.buildLegendGraphic(request);
+
+                                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+
+                                ImageIO.write(image, "PNG", attributes.getResponse().getOutputStream());
+                            }
+
+                            error("Failed to build legend preview");
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        } finally {
+                            if(styleResource != null) {
+                                styleResource.delete();
+                            }
+                        }
+                        
+                    }
+                });
+                return rr;
+            }});
+        legendContainer.add(this.legendImg);
+        this.legendImg.setVisible(false);
+        this.legendImg.setOutputMarkupId(true);
+    }
+
+    StyleHandler styleHandler() {
+        String modelObject = formatChoice.getModelObject();
+        return Styles.handler(modelObject);
     }
 
     Form uploadForm(final Form form) {
@@ -190,8 +339,8 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
 
                 try {
                     IOUtils.copy(upload.getInputStream(), bout);
-                    setRawSLD(new InputStreamReader(new ByteArrayInputStream(bout.toByteArray()), "UTF-8"));
-                    editor.setModelObject(rawSLD);
+                    setRawStyle(new InputStreamReader(new ByteArrayInputStream(bout.toByteArray()), "UTF-8"));
+                    editor.setModelObject(rawStyle);
                 } catch (IOException e) {
                     throw new WicketRuntimeException(e);
                 }
@@ -200,8 +349,8 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
                 StyleInfo s = (StyleInfo) form.getModelObject();
                 if (s.getName() == null || "".equals(s.getName().trim())) {
                     // set it
-                    nameTextField.setModelValue(ResponseUtils.stripExtension(upload
-                            .getClientFileName()));
+                    nameTextField.setModelValue(new String[] {ResponseUtils.stripExtension(upload
+                            .getClientFileName())});
                     nameTextField.modelChanged();
                 }
             }
@@ -214,6 +363,7 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
             @Override
             protected void onClick(AjaxRequestTarget target, Form form) {
                 editor.processInput();
+
                 List<Exception> errors = validateSLD();
                 
                 if ( errors.isEmpty() ) {
@@ -226,12 +376,34 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
             }
             
             @Override
-            protected IAjaxCallDecorator getAjaxCallDecorator() {
-                return editor.getSaveDecorator();
-            };
+            protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+                super.updateAjaxAttributes(attributes);
+                attributes.getAjaxCallListeners().add(editor.getSaveDecorator());
+            }
         };
     }
     
+    Component previewLink() {
+        return new GeoServerAjaxFormLink("preview", styleForm) {
+
+            @Override
+            protected void onClick(AjaxRequestTarget target, Form form) {
+                editor.processInput();
+                wsChoice.processInput();
+                lastStyle = editor.getInput();
+
+                legendImg.setVisible(true);
+                target.add(legendContainer);
+            }
+
+            @Override
+            protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+                super.updateAjaxAttributes(attributes);
+                attributes.getAjaxCallListeners().add(editor.getSaveDecorator());
+            }
+        };
+    }
+
     private String sldErrorWithLineNo(Exception e) {
         if (e instanceof SAXParseException) {
             SAXParseException se = (SAXParseException) e;
@@ -247,13 +419,64 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
     
     List<Exception> validateSLD() {
         try {
-            final String sld = editor.getInput();            
+            final String sld = editor.getInput();
             ByteArrayInputStream input = new ByteArrayInputStream(sld.getBytes());
-            List<Exception> validationErrors = Styles.validate(input, null);
+            List<Exception> validationErrors = styleHandler().validate(input, null, null);
             return validationErrors;
         } catch( Exception e ) {
             return Arrays.asList( e );
         }
+    }
+
+    AjaxSubmitLink generateLink() {
+        return new AjaxSubmitLink("generate") {
+
+            @Override
+            protected void onSubmit(AjaxRequestTarget target, Form form) {
+                // we need to force validation or the value won't be converted
+                templates.processInput();
+                StyleType template = (StyleType) templates.getConvertedInput();
+                StyleGenerator styleGen = new StyleGenerator(getCatalog());
+                styleGen.setWorkspace(wsChoice.getModel().getObject());
+
+                if (template != null) {
+                    try {
+                        // same here, force validation or the field won't be updated
+                        editor.reset();
+                        setRawStyle(new StringReader(styleGen.generateStyle(styleHandler(), template, nameTextField.getInput())));
+                        target.appendJavaScript(String
+                                .format("if (document.gsEditors) { document.gsEditors.editor.setOption('mode', '%s'); }", styleHandler().getCodeMirrorEditMode()));
+
+                    } catch (Exception e) {
+                        error("Errors occurred generating the style");
+                    }
+                    target.add(styleForm);
+                }
+            }
+            
+            @Override
+            protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+                super.updateAjaxAttributes(attributes);
+                attributes.getAjaxCallListeners().add(new AjaxCallListener() {
+                    @Override
+                    public CharSequence getPrecondition(Component component) {
+                        return "var val = attrs.event.view.document.gsEditors ? "
+                                + "attrs.event.view.document.gsEditors." + editor.getTextAreaMarkupId() + ".getValue() : "
+                                + "attrs.event.view.document.getElementById(\"" + editor.getTextAreaMarkupId() + "\").value; "
+                                + "if(val != '' &&"
+                                + "!confirm('"
+                                + new ParamResourceModel("confirmOverwrite", AbstractStylePage.this)
+                                        .getString() + "')) return false;";
+                    }
+                });
+            }
+
+            @Override
+            public boolean getDefaultFormProcessing() {
+                return false;
+            }
+
+        };
     }
 
     AjaxSubmitLink copyLink() {
@@ -269,28 +492,33 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
                     try {
                         // same here, force validation or the field won't be udpated
                         editor.reset();
-                        setRawSLD(readFile(style));
+                        setRawStyle(readFile(style));
+                        formatChoice.setModelObject(style.getFormat());
+                        target.appendJavaScript(String
+                                .format("if (document.gsEditors) { document.gsEditors.editor.setOption('mode', '%s'); }", styleHandler().getCodeMirrorEditMode()));
+
                     } catch (Exception e) {
                         error("Errors occurred loading the '" + style.getName() + "' style");
                     }
-                    target.addComponent(styleForm);
+                    target.add(styleForm);
                 }
             }
-
+            
             @Override
-            protected IAjaxCallDecorator getAjaxCallDecorator() {
-                return new AjaxPreprocessingCallDecorator(super.getAjaxCallDecorator()) {
-
+            protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+                super.updateAjaxAttributes(attributes);
+                attributes.getAjaxCallListeners().add(new AjaxCallListener() {
                     @Override
-                    public CharSequence preDecorateScript(CharSequence script) {
-                        return "if(event.view.document.gsEditors."
-                                + editor.getTextAreaMarkupId()
-                                + ".getCode() != '' &&"
+                    public CharSequence getPrecondition(Component component) {
+                        return "var val = attrs.event.view.document.gsEditors ? "
+                                + "attrs.event.view.document.gsEditors." + editor.getTextAreaMarkupId() + ".getValue() : "
+                                + "attrs.event.view.document.getElementById(\"" + editor.getTextAreaMarkupId() + "\").value; "
+                                + "if(val != '' &&"
                                 + "!confirm('"
                                 + new ParamResourceModel("confirmOverwrite", AbstractStylePage.this)
-                                        .getString() + "')) return false;" + script;
+                                        .getString() + "')) return false;";
                     }
-                };
+                });
             }
 
             @Override
@@ -306,7 +534,7 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
         return pool.readStyle(style);
     }
     
-    public void setRawSLD(Reader in) throws IOException {
+    public void setRawStyle(Reader in) throws IOException {
         BufferedReader bin = null;
         if ( in instanceof BufferedReader ) {
             bin = (BufferedReader) in;
@@ -321,8 +549,8 @@ public abstract class AbstractStylePage extends GeoServerSecuredPage {
             builder.append(line).append("\n");
         }
 
-        this.rawSLD = builder.toString();
-        editor.setModelObject(rawSLD);
+        this.rawStyle = builder.toString();
+        editor.setModelObject(rawStyle);
         in.close();
     }
 

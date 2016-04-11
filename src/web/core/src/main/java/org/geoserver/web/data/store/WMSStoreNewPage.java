@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -6,20 +7,22 @@ package org.geoserver.web.data.store;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Collections;
 import java.util.logging.Level;
 
 import javax.management.RuntimeErrorException;
 
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.validation.IValidatable;
-import org.apache.wicket.validation.validator.AbstractValidator;
+import org.apache.wicket.validation.IValidationError;
+import org.apache.wicket.validation.IValidator;
+import org.apache.wicket.validation.ValidationError;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.web.data.layer.NewLayerPage;
 import org.geotools.data.ows.HTTPClient;
 import org.geotools.data.ows.SimpleHttpClient;
 import org.geotools.data.wms.WebMapServer;
+import org.geotools.ows.ServiceException;
 
 public class WMSStoreNewPage extends AbstractWMSStorePage {
 
@@ -49,6 +52,7 @@ public class WMSStoreNewPage extends AbstractWMSStorePage {
         // case of a failure!... strange, why a save can't fail?
         // Still, be cautious and wrap it in a try/catch block so the page does not blow up
         try {
+            getCatalog().validate(savedStore, false).throwIfInvalid();
             getCatalog().save(savedStore);
         } catch (RuntimeException e) {
             LOGGER.log(Level.INFO, "Adding the store for " + info.getCapabilitiesURL(), e);
@@ -76,10 +80,10 @@ public class WMSStoreNewPage extends AbstractWMSStorePage {
         setResponsePage(layerChooserPage);
     }
     
-    final class WMSCapabilitiesURLValidator extends AbstractValidator {
+    final class WMSCapabilitiesURLValidator implements IValidator {
 
         @Override
-        protected void onValidate(IValidatable validatable) {
+        public void validate(IValidatable validatable) {
             String url = (String) validatable.getValue();
             try {
                 HTTPClient client = new SimpleHttpClient();
@@ -93,9 +97,11 @@ public class WMSStoreNewPage extends AbstractWMSStorePage {
                 }
                 WebMapServer server = new WebMapServer(new URL(url), client);
                 server.getCapabilities();
-            } catch(Exception e) {
-                error(validatable, "WMSCapabilitiesValidator.connectionFailure", 
-                        Collections.singletonMap("error", e.getMessage()));
+            } catch(IOException | ServiceException e) {
+                IValidationError err = new ValidationError("WMSCapabilitiesValidator.connectionFailure")
+                        .addKey("WMSCapabilitiesValidator.connectionFailure")
+                        .setVariable("error", e.getMessage());
+                validatable.error(err);
             }
         }
         

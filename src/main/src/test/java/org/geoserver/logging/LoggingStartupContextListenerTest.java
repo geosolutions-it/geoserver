@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -21,7 +22,7 @@ import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.mockrunner.mock.web.MockServletContext;
+import org.springframework.mock.web.MockServletContext;
 
 public class LoggingStartupContextListenerTest {
 
@@ -61,6 +62,6 @@ public class LoggingStartupContextListenerTest {
         assertNotNull(appender);
         assertTrue(appender instanceof FileAppender);
 
-        assertEquals(new File(tmp, "foo.log").getCanonicalPath(), ((FileAppender)appender).getFile());
+        assertEquals(new File(tmp, "foo.log").getCanonicalPath().toLowerCase(), ((FileAppender)appender).getFile().toLowerCase());
     }
 }

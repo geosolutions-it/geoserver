@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -150,7 +151,7 @@ public class InsertElementHandler extends AbstractTransactionElementHandler {
                     // Need to use the namespace here for the
                     // lookup, due to our weird
                     // prefixed internal typenames. see
-                    // http://jira.codehaus.org/secure/ViewIssue.jspa?key=GEOS-143
+                    // https://osgeo-org.atlassian.net/browse/GEOS-143
 
                     // Once we get our datastores making features
                     // with the correct namespaces

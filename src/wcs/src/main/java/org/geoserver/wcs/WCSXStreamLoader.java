@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -38,7 +39,7 @@ public class WCSXStreamLoader extends XStreamServiceLoader<WCSInfo> {
     }
 
     @Override
-    protected void initXStreamPersister(XStreamPersister xp, GeoServer gs) {
+    public void initXStreamPersister(XStreamPersister xp, GeoServer gs) {
         super.initXStreamPersister(xp, gs);
         xp.getXStream().alias("wcs", WCSInfo.class, WCSInfoImpl.class);
     }
