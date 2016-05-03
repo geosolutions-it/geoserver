@@ -421,5 +421,11 @@
         <module>ysld</module>
       </modules>
     </profile>
+    <profile>
+      <id>backup-restore</id>
+      <modules>
+        <module>backup-restore</module>
+      </modules>
+    </profile>
   </profiles>
 </project>

@@ -85,11 +85,13 @@ public class DataAccessNewPage extends AbstractDataAccessPage {
         }
         
         final Catalog catalog = getCatalog();
+        DataStoreInfo expandedStore = catalog.getFactory().createDataStore();
+        clone(info, expandedStore);
 
         DataAccess<? extends FeatureType, ? extends Feature> dataStore;
         try {
             // REVISIT: this may need to be done after saveing the DataStoreInfo
-            dataStore = info.getDataStore(new NullProgressListener());
+            dataStore = expandedStore.getDataStore(new NullProgressListener());
             dataStore.dispose();
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Error obtaining new data store", e);

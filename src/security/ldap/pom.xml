@@ -31,6 +31,20 @@
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-ldap</artifactId>
       <version>${spring.security.version}</version>
+      <exclusions>
+      	<exclusion>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-core</artifactId>
+		</exclusion>
+		<exclusion>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-infrastructure</artifactId>
+		</exclusion>
+		<exclusion>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-integration</artifactId>
+      	</exclusion>
+      </exclusions>
     </dependency>
     <dependency>
     		<groupId>org.slf4j</groupId>
@@ -39,6 +53,20 @@
     <dependency>
       <groupId>org.springframework.ldap</groupId>
       <artifactId>spring-ldap-test</artifactId>
+      <exclusions>
+      	<exclusion>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-core</artifactId>
+		</exclusion>
+		<exclusion>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-infrastructure</artifactId>
+		</exclusion>
+		<exclusion>
+			<groupId>org.springframework.batch</groupId>
+			<artifactId>spring-batch-integration</artifactId>
+      	</exclusion>
+      </exclusions>
       <scope>test</scope>
     </dependency>
     <dependency>
