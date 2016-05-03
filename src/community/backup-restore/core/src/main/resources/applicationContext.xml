@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd"> -->
+<!-- Copyright (C) 2015 - 2016 - Open Source Geospatial Foundation. All rights 
+	reserved. This code is licensed under the GPL 2.0 license, available at the 
+	root application directory. -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+        http://www.springframework.org/schema/batch
+        http://www.springframework.org/schema/batch/spring-batch-3.0.xsd
+        http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util-4.0.xsd">
+
+	<!-- core backup/restore setup -->
+
+	<import resource="backup-batch-context.xml" />
+
+	<bean id="backupFacade" class="org.geoserver.backuprestore.Backup">
+		<constructor-arg ref="catalog" />
+		<constructor-arg ref="resourceLoader" />
+	</bean>
+	
+	<!-- Main Backup BATCH Flow -->
+
+	<bean id="backupJobExecutionListener" class="org.geoserver.backuprestore.listener.BackupJobExecutionListener">
+		<constructor-arg ref="backupFacade"/>
+	</bean>
+
+	<batch:job id="backupJob" restartable="true">
+	
+	    <batch:listeners>
+	        <!-- Any job specific listeners here -->
+	        <batch:listener ref="backupJobExecutionListener" />
+	    </batch:listeners>
+    	
+		<!-- Backup WorkspaceInfos -->
+		<batch:step id="backupWorkspaceInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/workspace.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+			
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupNamespaceInfos"/>
+		</batch:step>
+
+		<!-- Backup NamespaceInfos -->
+		<batch:step id="backupNamespaceInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/namespace.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+			
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupStoreInfos"/>
+		</batch:step>
+		
+		<!-- Backup StoreInfos -->
+		<batch:step id="backupStoreInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.StoreInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/store.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+			
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupResourceInfos"/>
+		</batch:step>
+		
+		<!-- Backup ResourceInfos -->
+		<batch:step id="backupResourceInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/resource.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+			
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupLayerInfos"/>
+		</batch:step>
+
+		<!-- Backup LayerInfos -->
+		<batch:step id="backupLayerInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.LayerInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.LayerInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.LayerInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/layer.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+			
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupLayerGroupInfos"/>
+		</batch:step>
+
+		<!-- Backup LayerGroupInfos -->
+		<batch:step id="backupLayerGroupInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/layerGroup.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+			
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupStyleInfos"/>
+		</batch:step>
+
+		<!-- Backup StyleInfos -->
+		<batch:step id="backupStyleInfos">
+			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
+							<constructor-arg value="org.geoserver.catalog.StyleInfo" />
+							<constructor-arg ref="catalog" />
+						</bean>
+					</batch:reader>
+					
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.StyleInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemWriter" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.writer.CatalogFileWriter" scope="step">
+									<constructor-arg value="org.geoserver.catalog.StyleInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+									<property name="appendAllowed" value="false" />
+								</bean>
+							</property>
+							<property name="itemCountLimitPerResource" value="1" />
+							<property name="resource" value="#{jobParameters['output.file.path']}/style.dat" />
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+
+	</batch:job>
+
+	<!-- Main Restore BATCH Flow -->
+
+	<bean id="restoreJobExecutionListener" class="org.geoserver.backuprestore.listener.RestoreJobExecutionListener">
+		<constructor-arg ref="backupFacade"/>
+	</bean>
+
+	<bean id="restoreExecutionPromotionListener" 
+			class="org.springframework.batch.core.listener.ExecutionContextPromotionListener">
+    	<property name="keys" value="restore.catalog"/>
+	</bean>
+	
+	<batch:job id="restoreJob" restartable="true">
+	
+	    <batch:listeners>
+	        <!-- Any job specific listeners here -->
+	        <batch:listener ref="restoreJobExecutionListener" />
+	    </batch:listeners>
+
+		<!-- Restore NamespaceInfos -->
+		<batch:step id="restoreNamespaceInfos">
+			<batch:tasklet allow-start-if-complete="true">
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemReader" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.reader.CatalogFileReader" scope="step">
+									<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+        							<property name="strict" value="true" />
+        							<property name="fragmentRootElementName" value="namespace"/>
+								</bean>
+							</property>
+							<property name="resources" value="#{jobParameters['input.file.path']}/namespace.dat.*" />
+						</bean>
+					</batch:reader>
+
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.geoserver.backuprestore.writer.CatalogItemWriter" scope="step">
+							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+        				
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="restoreWorkspaceInfos"/>
+
+			<batch:listeners>
+            	<batch:listener ref="restoreExecutionPromotionListener"/>
+        	</batch:listeners>
+
+		</batch:step>
+		    	
+		<!-- Restore WorkspaceInfos -->
+		<batch:step id="restoreWorkspaceInfos">
+			<batch:tasklet allow-start-if-complete="true">
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemReader" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.reader.CatalogFileReader" scope="step">
+									<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+        							<property name="strict" value="true" />
+        							<property name="fragmentRootElementName" value="workspace"/>
+								</bean>
+							</property>
+							<property name="resources" value="#{jobParameters['input.file.path']}/workspace.dat.*" />
+						</bean>
+					</batch:reader>
+
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.geoserver.backuprestore.writer.CatalogItemWriter" scope="step">
+							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+        				
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="restoreStoreInfos"/>
+
+			<batch:listeners>
+            	<batch:listener ref="restoreExecutionPromotionListener"/>
+        	</batch:listeners>
+        				
+		</batch:step>
+
+		<!-- Restore StoreInfos -->
+		<batch:step id="restoreStoreInfos">
+			<batch:tasklet allow-start-if-complete="true">
+				<batch:chunk commit-interval="1">
+					<batch:reader>
+						<bean class="org.springframework.batch.item.file.MultiResourceItemReader" scope="step">
+							<property name="delegate">
+								<bean class="org.geoserver.backuprestore.reader.CatalogFileReader" scope="step">
+									<constructor-arg value="org.geoserver.catalog.StoreInfo" />
+									<constructor-arg ref="xstreamPersisterFactory" />
+        							<property name="strict" value="true" />
+        							<property name="fragmentRootElementNames">
+        								 <list>
+										 	<value>dataStore</value>
+										 	<value>coverageStore</value>
+										 </list>
+        							</property>
+								</bean>
+							</property>
+							<property name="resources" value="#{jobParameters['input.file.path']}/store.dat.*" />
+						</bean>
+					</batch:reader>
+
+					<batch:processor>
+						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
+							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:processor>
+					
+					<batch:writer>
+						<bean class="org.geoserver.backuprestore.writer.CatalogItemWriter" scope="step">
+							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
+							<constructor-arg ref="backupFacade"/>
+						</bean>
+					</batch:writer>
+				</batch:chunk>
+			</batch:tasklet>
+        				
+			<!-- batch:fail on="FAILED"/>
+			<batch:next on="*" to="restoreNamespaceInfos"/ -->
+
+			<!-- batch:listeners>
+            	<batch:listener ref="restoreExecutionPromotionListener"/>
+        	</batch:listeners -->
+
+		</batch:step>
+
+	</batch:job>
+	
+</beans>

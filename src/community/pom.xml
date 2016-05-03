@@ -191,11 +191,12 @@
         <module>wps-remote</module>
         <module>wps-jdbc</module>
         <module>release</module>
-	<module>gwc-distributed</module>
-	<module>jdbcstore</module>
-	<module>gdal</module>
-	<module>gwc-s3</module>
-	<module>ysld</module>
+		<module>gwc-distributed</module>
+		<module>jdbcstore</module>
+		<module>gdal</module>
+		<module>gwc-s3</module>
+		<module>ysld</module>
+		<module>backup-restore</module>
       </modules>
     </profile>
     <profile>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+  <bean class="org.geoserver.platform.ModuleStatusImpl">
+    <constructor-arg index="0" value="gs-backup-restore-rest,"/>
+    <constructor-arg index="1" value="Backup Rstore REST"/>
+  </bean>
+  <!--
+   rest bindings
+    -->
+  <bean id="backupResource" class="org.geoserver.backuprestore.rest.BackupResource" scope="prototype">
+    <constructor-arg ref="backupFacade"/>
+  </bean>
+  <bean id="backupContextFinder" class="org.geoserver.rest.BeanResourceFinder">
+      <constructor-arg value="backupResource"/>
+  </bean>
+  
+  <bean id="backupRestoreRestMapping" class="org.geoserver.rest.RESTMapping">
+    <property name="routes">
+      <map>
+        <entry>
+          <key>
+            <value>/br/backup</value>
+          </key>
+          <value>backupContextFinder</value>
+        </entry>
+        <entry>
+          <key>
+            <value>/br/backup/{backupId}</value>
+          </key>
+          <value>backupContextFinder</value>
+        </entry>
+      </map>
+    </property>
+  </bean>
+</beans>
