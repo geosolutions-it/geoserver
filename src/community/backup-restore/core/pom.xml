@@ -72,6 +72,16 @@
 			<version>${spring.batch.version}</version>
 		</dependency>
 		
+		<!-- Other Dependencies -->
+	    <dependency>
+	      	<groupId>org.apache.commons</groupId>
+	      	<artifactId>commons-exec</artifactId>
+	    </dependency>
+	    <dependency>
+			<groupId>org.apache.commons</groupId>
+	    	<artifactId>commons-vfs2</artifactId>
+	    </dependency>
+    
 	</dependencies>
 
 </project>

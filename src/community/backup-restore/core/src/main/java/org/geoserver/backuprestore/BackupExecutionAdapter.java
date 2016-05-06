@@ -5,8 +5,7 @@
  */
 package org.geoserver.backuprestore;
 
-import java.util.zip.ZipOutputStream;
-
+import org.geoserver.platform.resource.Resource;
 import org.springframework.batch.core.JobExecution;
 
 /**
@@ -17,24 +16,24 @@ import org.springframework.batch.core.JobExecution;
  */
 public class BackupExecutionAdapter extends AbstractExecutionAdapter {
 
-    private ZipOutputStream outputStream;
-
+    private Resource archiveFile;
+    
     public BackupExecutionAdapter(JobExecution jobExecution) {
         super(jobExecution);
     }
 
     /**
-     * @return the outputStream
+     * @return the archiveFile
      */
-    public ZipOutputStream getOutputStream() {
-        return outputStream;
+    public Resource getArchiveFile() {
+        return archiveFile;
     }
 
     /**
-     * @param outputStream the outputStream to set
+     * @param archiveFile the archiveFile to set
      */
-    public void setOutputStream(ZipOutputStream outputStream) {
-        this.outputStream = outputStream;
+    public void setArchiveFile(Resource archiveFile) {
+        this.archiveFile = archiveFile;
     }
 
 }

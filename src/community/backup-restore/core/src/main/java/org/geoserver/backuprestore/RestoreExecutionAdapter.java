@@ -5,9 +5,8 @@
  */
 package org.geoserver.backuprestore;
 
-import java.util.zip.ZipInputStream;
-
 import org.geoserver.catalog.Catalog;
+import org.geoserver.platform.resource.Resource;
 import org.springframework.batch.core.JobExecution;
 
 /**
@@ -18,26 +17,12 @@ import org.springframework.batch.core.JobExecution;
  */
 public class RestoreExecutionAdapter extends AbstractExecutionAdapter {
 
-    private ZipInputStream inputStream;
-    
     private Catalog restoreCatalog;
+    
+    private Resource archiveFile;
 
     public RestoreExecutionAdapter(JobExecution jobExecution) {
         super(jobExecution);
-    }
-
-    /**
-     * @return the inputStream
-     */
-    public ZipInputStream getInputStream() {
-        return inputStream;
-    }
-
-    /**
-     * @param inputStream the inputStream to set
-     */
-    public void setInputStream(ZipInputStream inputStream) {
-        this.inputStream = inputStream;
     }
 
     /**
@@ -52,6 +37,20 @@ public class RestoreExecutionAdapter extends AbstractExecutionAdapter {
      */
     public void setRestoreCatalog(Catalog catalog) {
         this.restoreCatalog = catalog;
+    }
+
+    /**
+     * @return the archiveFile
+     */
+    public Resource getArchiveFile() {
+        return archiveFile;
+    }
+
+    /**
+     * @param archiveFile the archiveFile to set
+     */
+    public void setArchiveFile(Resource archiveFile) {
+        this.archiveFile = archiveFile;
     }
 
 }

@@ -5,13 +5,17 @@
  */
 package org.geoserver.backuprestore.reader;
 
+import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.util.CloseableIterator;
+import org.geoserver.config.util.XStreamPersisterFactory;
 import org.opengis.filter.Filter;
+import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.NonTransientResourceException;
 import org.springframework.batch.item.ParseException;
 import org.springframework.batch.item.UnexpectedInputException;
+import org.springframework.core.io.Resource;
 
 /**
  * Concrete Spring Batch {@link ItemReader}.
@@ -21,15 +25,16 @@ import org.springframework.batch.item.UnexpectedInputException;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public class CatalogItemReader<T> implements ItemReader<T> {
+public class CatalogItemReader<T> extends CatalogReader<T> {
 
-    Class clazz;
-    Catalog catalog;
     CloseableIterator<T> catalogIterator;
     
-    public CatalogItemReader(Class<T> clazz, Catalog catalog) {
-        this.clazz = clazz;
-        this.catalog = catalog;
+    public CatalogItemReader(Class<T> clazz, Backup backupFacade,
+            XStreamPersisterFactory xStreamPersisterFactory) {
+        super(clazz, backupFacade, xStreamPersisterFactory);
+    }
+    
+    protected void beforeStep(StepExecution stepExecution) {
         this.catalogIterator = (CloseableIterator<T>) catalog.list(this.clazz, Filter.INCLUDE);
     }
     
@@ -41,6 +46,36 @@ public class CatalogItemReader<T> implements ItemReader<T> {
         }
         
         return null;
+    }
+
+    @Override
+    public void setResource(Resource resource) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    protected T doRead() throws Exception {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    protected void doOpen() throws Exception {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        // TODO Auto-generated method stub
+        
     }
 
 }

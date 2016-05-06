@@ -5,21 +5,29 @@
  */
 package org.geoserver.backuprestore;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.custommonkey.xmlunit.SimpleNamespaceContext;
 import org.custommonkey.xmlunit.XMLUnit;
+import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.data.test.SystemTestData;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.junit.After;
 import org.junit.Before;
+
+import com.google.common.io.Files;
 
 /**
  * 
@@ -27,37 +35,38 @@ import org.junit.Before;
  *
  */
 public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
-    
-    static final Set<String> DEFAULT_STYLEs = new HashSet<String>() {{
-        add(StyleInfo.DEFAULT_POINT);
-        add(StyleInfo.DEFAULT_LINE);
-        add(StyleInfo.DEFAULT_GENERIC);
-        add(StyleInfo.DEFAULT_POLYGON);
-        add(StyleInfo.DEFAULT_RASTER);
-    }};
-    
+
+    static final Set<String> DEFAULT_STYLEs = new HashSet<String>() {
+        {
+            add(StyleInfo.DEFAULT_POINT);
+            add(StyleInfo.DEFAULT_LINE);
+            add(StyleInfo.DEFAULT_GENERIC);
+            add(StyleInfo.DEFAULT_POLYGON);
+            add(StyleInfo.DEFAULT_RASTER);
+        }
+    };
 
     protected Backup backupFacade;
-    
+
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
-        
+
         // init xmlunit
         Map<String, String> namespaces = new HashMap<String, String>();
         namespaces.put("xlink", "http://www.w3.org/1999/xlink");
         namespaces.put("xsi", "http://www.w3.org/2001/XMLSchema-instance");
         namespaces.put("wms", "http://www.opengis.net/wms");
-        
+
         XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
     }
-    
+
     @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
         // no pre-existing test data needed
         testData.setUpSecurity();
     }
-    
+
     @After
     public void cleanCatalog() throws IOException {
         for (StoreInfo s : getCatalog().getStores(StoreInfo.class)) {
@@ -65,20 +74,39 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
         }
         for (StyleInfo s : getCatalog().getStyles()) {
             String styleName = s.getName();
-            if(!DEFAULT_STYLEs.contains(styleName)) {
+            if (!DEFAULT_STYLEs.contains(styleName)) {
                 removeStyle(null, styleName);
             }
         }
     }
-    
+
     @Before
     public void setupBackupField() {
         backupFacade = (Backup) applicationContext.getBean("backupFacade");
     }
-    
+
     @Override
     protected boolean isMemoryCleanRequired() {
         return SystemUtils.IS_OS_WINDOWS;
     }
-    
+
+    public static Resource file(String path) throws Exception {
+        return file(path, BackupUtils.tmpDir());
+    }
+
+    public static Resource file(String path, Resource dir) throws IOException {
+        String filename = new File(path).getName();
+        InputStream in = BackupRestoreTestSupport.class.getResourceAsStream("test-data/" + path);
+
+        File file = new File(dir.dir(), filename);
+
+        FileOutputStream out = new FileOutputStream(file);
+        IOUtils.copy(in, out);
+        in.close();
+        out.flush();
+        out.close();
+
+        return org.geoserver.platform.resource.Files.asResource(file);
+    }
+
 }

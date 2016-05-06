@@ -17,36 +17,31 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.WriteFailedException;
 import org.springframework.batch.item.WriterNotOpenException;
-import org.springframework.batch.item.file.ResourceAwareItemWriterItemStream;
 import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
 import org.springframework.batch.item.util.FileUtils;
 import org.springframework.batch.support.transaction.TransactionAwareBufferedWriter;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
-
-import com.thoughtworks.xstream.XStream;
 
 /**
  * Concrete Spring Batch {@link AbstractItemStreamItemWriter}.
  * 
- * Streams {@link Catalog} resource items to JSON via {@link XStreamPersister} 
- * on mass storage.
+ * Streams {@link Catalog} resource items to JSON via {@link XStreamPersister} on mass storage.
  * 
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public class CatalogFileWriter<T> extends AbstractItemStreamItemWriter<T>
-        implements ResourceAwareItemWriterItemStream<T>, InitializingBean {
+public class CatalogFileWriter<T> extends CatalogWriter<T> {
 
     private static final boolean DEFAULT_TRANSACTIONAL = false;
 
@@ -55,12 +50,6 @@ public class CatalogFileWriter<T> extends AbstractItemStreamItemWriter<T>
     private static final String WRITTEN_STATISTICS_NAME = "written";
 
     private static final String RESTART_DATA_NAME = "current.count";
-
-    Class clazz;
-
-    private XStreamPersister xstream;
-
-    private XStream xp;
 
     private Resource resource;
 
@@ -78,17 +67,20 @@ public class CatalogFileWriter<T> extends AbstractItemStreamItemWriter<T>
 
     private boolean append = false;
 
-    public CatalogFileWriter(Class<T> clazz, XStreamPersisterFactory xStreamPersisterFactory) {
-        this.clazz = clazz;
-        // this.xstream = new SecureXStream();
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
-        this.xstream.setReferenceByName(true);
-        this.xp = this.xstream.getXStream();
-        this.setExecutionContextName(ClassUtils.getShortName(clazz));
+    public CatalogFileWriter(Class<T> clazz, Backup backupFacade,
+            XStreamPersisterFactory xStreamPersisterFactory) {
+        super(clazz, backupFacade, xStreamPersisterFactory);
     }
 
     protected String getItemName(XStreamPersister xp) {
         return xp.getClassAliasingMapper().serializedClass(clazz);
+    }
+
+    @Override
+    protected void beforeStep(StepExecution stepExecution) {
+        if (this.getXp() == null) {
+            setXp(this.xstream.getXStream());
+        }
     }
 
     @Override
@@ -122,7 +114,7 @@ public class CatalogFileWriter<T> extends AbstractItemStreamItemWriter<T>
     protected String doWrite(T item) {
         // unwrap dynamic proxies
         item = (T) xstream.unwrapProxies(item);
-        return xp.toXML(item) + "\n";
+        return getXp().toXML(item) + "\n";
     }
 
     @Override

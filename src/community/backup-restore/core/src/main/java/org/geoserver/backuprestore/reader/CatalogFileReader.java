@@ -28,22 +28,18 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.geoserver.backuprestore.Backup;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.item.xml.StaxUtils;
 import org.springframework.batch.item.xml.stax.DefaultFragmentEventReader;
 import org.springframework.batch.item.xml.stax.FragmentEventReader;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
-import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
-
-import com.thoughtworks.xstream.XStream;
 
 /**
  * Item reader for reading XML input based on StAX.
@@ -59,8 +55,7 @@ import com.thoughtworks.xstream.XStream;
  * @author Alessio Fabiani, GeoSolutions
  * 
  */
-public class CatalogFileReader<T> extends AbstractItemCountingItemStreamItemReader<T>
-        implements ResourceAwareItemReaderItemStream<T>, InitializingBean {
+public class CatalogFileReader<T> extends CatalogReader<T> {
 
     private static final Log logger = LogFactory.getLog(StaxEventItemReader.class);
 
@@ -78,21 +73,18 @@ public class CatalogFileReader<T> extends AbstractItemCountingItemStreamItemRead
 
     private boolean strict = true;
 
-    Class clazz;
-
-    private XStreamPersister xstream;
-
-    private XStream xp;
-
-    public CatalogFileReader(Class<T> clazz, XStreamPersisterFactory xStreamPersisterFactory) {
-        this.clazz = clazz;
-        // this.xstream = new SecureXStream();
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
-        this.xstream.setReferenceByName(true);
-        this.xp = this.xstream.getXStream();
-        this.setExecutionContextName(ClassUtils.getShortName(clazz));
+    public CatalogFileReader(Class<T> clazz, Backup backupFacade,
+            XStreamPersisterFactory xStreamPersisterFactory) {
+        super(clazz, backupFacade, xStreamPersisterFactory);
     }
-
+    
+    @Override
+    protected void beforeStep(StepExecution stepExecution) {
+        if(this.getXp() == null) {
+            setXp(this.xstream.getXStream());
+        }
+    }
+    
     /**
      * In strict mode the reader will throw an exception on {@link #open(org.springframework.batch.item.ExecutionContext)} if the input resource does
      * not exist.
@@ -268,7 +260,8 @@ public class CatalogFileReader<T> extends AbstractItemCountingItemStreamItemRead
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         Result result = new StreamResult(os);
         t.transform(source, result);
-        return xstream.unwrapProxies(xp.fromXML(new ByteArrayInputStream(os.toByteArray())));
+
+        return this.getXp().fromXML(new ByteArrayInputStream(os.toByteArray()));
     }
 
     /*
@@ -343,4 +336,5 @@ public class CatalogFileReader<T> extends AbstractItemCountingItemStreamItemRead
         }
         return new QName(nameSpace, name, "");
     }
+
 }

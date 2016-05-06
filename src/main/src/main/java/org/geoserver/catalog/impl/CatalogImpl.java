@@ -680,13 +680,15 @@ public class CatalogImpl implements Catalog {
         
         // clean up eventual dangling references to missing alternate styles
         Set<StyleInfo> styles = layer.getStyles();
-        for (Iterator it = styles.iterator(); it.hasNext();) {
-            StyleInfo styleInfo = (StyleInfo) it.next();
-            if(styleInfo == null) {
-                it.remove();
+        if (styles != null) {
+            for (Iterator it = styles.iterator(); it.hasNext();) {
+                StyleInfo styleInfo = (StyleInfo) it.next();
+                if(styleInfo == null) {
+                    it.remove();
+                }
             }
         }
-
+        
         return postValidate(layer, isNew);
     }
    

@@ -5,13 +5,13 @@
  */
 package org.geoserver.backuprestore;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
+import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerDataDirectory;
@@ -204,12 +204,15 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
     /**
      * @return 
+     * @throws IOException 
      * 
      */
-    public BackupExecutionAdapter runBackupAsync(ZipOutputStream zout) {
-        // TODO: Create Temp Folder Here...
+    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile) throws IOException {
+        // Write flat files into a temporary folder
+        Resource tmpDir = BackupUtils.tmpDir();
+
         JobParameters params = new JobParametersBuilder()
-                .addString(PARAM_OUTPUT_FILE_PATH, "file://F:/tmp/xml/outputs/")
+                .addString(PARAM_OUTPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
                 .addLong(PARAM_TIME, System.currentTimeMillis())
                 .toJobParameters();
 
@@ -219,7 +222,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                 if(getRestoreRunningExecutions().isEmpty() && 
                         getBackupRunningExecutions().isEmpty()) {
                     backupExecution = new BackupExecutionAdapter(jobLauncher.run(backupJob, params));
-                    backupExecution.setOutputStream(zout);
+                    backupExecution.setArchiveFile(archiveFile);
                     backupExecutions.put(backupExecution.getId(), backupExecution);
 
                     LOGGER.fine("Status : " + backupExecution.getStatus());
@@ -241,13 +244,16 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     /**
      * @return 
      * @return 
+     * @throws IOException 
      * 
      */
-    public RestoreExecutionAdapter runRestoreAsync(ZipInputStream zin) {
-        // TODO: Create Temp Folder Here...
+    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile) throws IOException {
+        // Extract archive into a temporary folder
+        Resource tmpDir = BackupUtils.tmpDir();
+        BackupUtils.extractTo(archiveFile, tmpDir);
+        
         JobParameters params = new JobParametersBuilder()
-                .addString(PARAM_INPUT_FILE_PATH, "file://F:/tmp/xml/outputs/")
-                .addString(PARAM_OUTPUT_FILE_PATH, "file://F:/tmp/xml/outputs/")
+                .addString(PARAM_INPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
                 .addLong(PARAM_TIME, System.currentTimeMillis())
                 .toJobParameters();
 
@@ -257,7 +263,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                 if(getRestoreRunningExecutions().isEmpty() && 
                         getBackupRunningExecutions().isEmpty()) {
                     restoreExecution = new RestoreExecutionAdapter(jobLauncher.run(restoreJob, params));
-                    restoreExecution.setInputStream(zin);
+                    restoreExecution.setArchiveFile(archiveFile);
                     
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
 
