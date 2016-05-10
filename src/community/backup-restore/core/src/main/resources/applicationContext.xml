@@ -29,6 +29,12 @@
 
 	<bean id="backupJobExecutionListener" class="org.geoserver.backuprestore.listener.BackupJobExecutionListener">
 		<constructor-arg ref="backupFacade"/>
+		<constructor-arg ref="configurationLock"/>
+	</bean>
+
+	<bean id="catalogBackupTasklet" class="org.geoserver.backuprestore.tasklet.CatalogBackupTasklet">
+		<constructor-arg ref="backupFacade" />
+		<constructor-arg ref="xstreamPersisterFactory" />
 	</bean>
 
 	<batch:job id="backupJob" restartable="true">
@@ -37,6 +43,14 @@
 	        <!-- Any job specific listeners here -->
 	        <batch:listener ref="backupJobExecutionListener" />
 	    </batch:listeners>
+    	
+    	<!-- Backup GeoServer Globals/Logging/Services -->
+    	<batch:step id="backupGeoServerInfos">
+    		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
+    		
+    		<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupWorkspaceInfos"/>
+    	</batch:step>
     	
 		<!-- Backup WorkspaceInfos -->
 		<batch:step id="backupWorkspaceInfos">
@@ -342,6 +356,7 @@
 
 	<bean id="restoreJobExecutionListener" class="org.geoserver.backuprestore.listener.RestoreJobExecutionListener">
 		<constructor-arg ref="backupFacade"/>
+		<constructor-arg ref="configurationLock"/>
 	</bean>
 
 	<bean id="restoreExecutionPromotionListener" 

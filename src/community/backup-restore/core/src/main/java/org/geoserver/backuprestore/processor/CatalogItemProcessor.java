@@ -48,6 +48,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
 
     private Catalog catalog;
 
+    private boolean isNew;
+
     /**
      * Default Constructor.
      * 
@@ -80,8 +82,10 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
             this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId())
                     .getRestoreCatalog();
+            this.isNew = true;
         } else {
             this.catalog = backupFacade.getCatalog();
+            this.isNew = false;
         }
     }
 
@@ -89,7 +93,7 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     public T process(T resource) throws Exception {
 
         if (resource != null) {
-            if (this.catalog instanceof CatalogImpl) {
+            if (isNew) {
                 // Disabling additional validators
                 ((CatalogImpl) this.catalog).setExtendedValidation(false);
             }
@@ -97,30 +101,36 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             LOGGER.info("Processing resource: " + resource);
 
             if (resource instanceof WorkspaceInfo) {
-                if (!validateWorkspace((WorkspaceInfo) resource)) {
+                if (!validateWorkspace((WorkspaceInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     return null;
                 }
             } else if (resource instanceof DataStoreInfo) {
-                if (!validateDataStore((DataStoreInfo) resource)) {
+                if (!validateDataStore((DataStoreInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     return null;
                 }
+                
+                WorkspaceInfo ws = ((DataStoreInfo) resource).getWorkspace();
+                if (this.catalog.getDefaultDataStore(ws) == null) {
+                    this.catalog.setDefaultDataStore(ws, (DataStoreInfo) resource);
+                }
+                
             } else if (resource instanceof CoverageStoreInfo) {
-                if (!validateCoverageStore((CoverageStoreInfo) resource)) {
+                if (!validateCoverageStore((CoverageStoreInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     return null;
                 }
             }
             else if (resource instanceof ResourceInfo) {
-                if (!validateResource((ResourceInfo) resource)) {
+                if (!validateResource((ResourceInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     return null;
                 }
             }
             else if (resource instanceof LayerInfo) {
                 try {
-                    ValidationResult result = this.catalog.validate((LayerInfo) resource, true);
+                    ValidationResult result = this.catalog.validate((LayerInfo) resource, isNew);
                     if (!result.isValid()) {
                      // TODO: collect warnings
                         return null;
@@ -133,7 +143,7 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             }
             else if (resource instanceof StyleInfo) {
                 try {
-                    ValidationResult result = this.catalog.validate((StyleInfo) resource, true);
+                    ValidationResult result = this.catalog.validate((StyleInfo) resource, isNew);
                     if (!result.isValid()) {
                      // TODO: collect warnings
                         return null;
@@ -146,7 +156,7 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             }
             else if (resource instanceof LayerGroupInfo) {
                 try {
-                    ValidationResult result = this.catalog.validate((LayerGroupInfo) resource, true);
+                    ValidationResult result = this.catalog.validate((LayerGroupInfo) resource, isNew);
                     if (!result.isValid()) {
                      // TODO: collect warnings
                         return null;
@@ -167,19 +177,20 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     /**
      * Being sure the associated {@link NamespaceInfo} exists and is available on the
      * GeoServer Catalog.
+     * @param isNew 
      * 
      * @param {@link WorkspaceInfo} resource
      * 
      * @return boolean indicating whether the resource is valid or not.
      */
-    private boolean validateWorkspace(WorkspaceInfo resource) {
+    private boolean validateWorkspace(WorkspaceInfo resource, boolean isNew) {
         final NamespaceInfo ns = this.catalog.getNamespaceByPrefix(resource.getName());
         if (ns == null) {
             return false;
         }
         
         try {
-            ValidationResult result = this.catalog.validate(resource, true);
+            ValidationResult result = this.catalog.validate(resource, isNew);
             if (!result.isValid()) {
              // TODO: collect warnings
                 return false;
@@ -200,19 +211,20 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
      * 
      * Also if a default {@link DataStoreInfo} has not been defined for the current 
      * {@link WorkspaceInfo}, set this one as default.
+     * @param isNew 
      * 
      * @param {@link DataStoreInfo} resource
      * 
      * @return boolean indicating whether the resource is valid or not.
      */
-    private boolean validateDataStore(DataStoreInfo resource) {
+    private boolean validateDataStore(DataStoreInfo resource, boolean isNew) {
         final WorkspaceInfo ws = this.catalog.getWorkspaceByName(resource.getWorkspace().getName());
         if (ws == null) {
             return false;
         }
         
         try {
-            ValidationResult result = this.catalog.validate(resource, true);
+            ValidationResult result = this.catalog.validate(resource, isNew);
             if (!result.isValid()) {
              // TODO: collect warnings
                 return false;
@@ -224,30 +236,28 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         }
         
         resource.setWorkspace(ws);
-        if (this.catalog.getDefaultDataStore(ws) == null) {
-            this.catalog.setDefaultDataStore(ws, resource);
-        }
 
-     // TODO: collect warnings
+        // TODO: collect warnings
         return true;
     }
 
     /**
      * Being sure the associated {@link WorkspaceInfo} exists and is available on the
      * GeoServer Catalog.
+     * @param isNew 
      * 
      * @param {@link CoverageStoreInfo} resource
      * 
      * @return boolean indicating whether the resource is valid or not.
      */
-    private boolean validateCoverageStore(CoverageStoreInfo resource) {
+    private boolean validateCoverageStore(CoverageStoreInfo resource, boolean isNew) {
         final WorkspaceInfo ws = this.catalog.getWorkspaceByName(resource.getWorkspace().getName());
         if (ws == null) {
             return false;
         }
         
         try {
-            ValidationResult result = this.catalog.validate(resource, true);
+            ValidationResult result = this.catalog.validate(resource, isNew);
             if (!result.isValid()) {
              // TODO: collect warnings
                 return false;
@@ -265,13 +275,14 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     /**
      * Being sure the associated {@link StoreInfo} exists and is available on the
      * GeoServer Catalog.
+     * @param isNew2 
      * 
      * @param {@link ResourceInfo} resource
      * @return 
      * 
      * @return boolean indicating whether the resource is valid or not.
      */
-    private boolean validateResource(ResourceInfo resource) {
+    private boolean validateResource(ResourceInfo resource, boolean isNew) {
         try {
             final StoreInfo store = resource.getStore();
             final NamespaceInfo namespace = resource.getNamespace();

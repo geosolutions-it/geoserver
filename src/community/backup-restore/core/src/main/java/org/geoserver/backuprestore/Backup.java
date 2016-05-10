@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.FileUtils;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.GeoServer;
@@ -60,7 +61,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     public static final String BACKUP_JOB_NAME = "backupJob";
 
     public static final String RESTORE_JOB_NAME = "restoreJob";
-    
+
     public static final String RESTORE_CATALOG_KEY = "restore.catalog";
 
     /** catalog */
@@ -73,19 +74,19 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     GeoServerDataDirectory dd;
 
     XStreamPersisterFactory xpf;
-    
+
     JobOperator jobOperator;
-    
+
     JobLauncher jobLauncher;
 
     Job backupJob;
-    
+
     Job restoreJob;
-    
+
     ConcurrentHashMap<Long, BackupExecutionAdapter> backupExecutions = new ConcurrentHashMap<Long, BackupExecutionAdapter>();
-    
+
     ConcurrentHashMap<Long, RestoreExecutionAdapter> restoreExecutions = new ConcurrentHashMap<Long, RestoreExecutionAdapter>();
-    
+
     /**
      * A static application context
      */
@@ -148,7 +149,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         if (event instanceof ContextLoadedEvent) {
             this.jobOperator = (JobOperator) context.getBean("jobOperator");
             this.jobLauncher = (JobLauncher) context.getBean("jobLauncherAsync");
-            
+
             this.backupJob = (Job) context.getBean(BACKUP_JOB_NAME);
             this.restoreJob = (Job) context.getBean(RESTORE_JOB_NAME);
         }
@@ -160,7 +161,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     public Set<Long> getBackupRunningExecutions() {
         Set<Long> runningExecutions;
         try {
-            runningExecutions = jobOperator.getRunningExecutions(BACKUP_JOB_NAME);                    
+            runningExecutions = jobOperator.getRunningExecutions(BACKUP_JOB_NAME);
         } catch (NoSuchJobException e) {
             runningExecutions = new HashSet<>();
         }
@@ -173,13 +174,13 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     public Set<Long> getRestoreRunningExecutions() {
         Set<Long> runningExecutions;
         try {
-            runningExecutions = jobOperator.getRunningExecutions(RESTORE_JOB_NAME);                    
+            runningExecutions = jobOperator.getRunningExecutions(RESTORE_JOB_NAME);
         } catch (NoSuchJobException e) {
             runningExecutions = new HashSet<>();
         }
         return runningExecutions;
     }
-    
+
     public Catalog getCatalog() {
         return catalog;
     }
@@ -207,7 +208,28 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @throws IOException 
      * 
      */
-    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile) throws IOException {
+    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile, final boolean overwrite) throws IOException {
+        
+        // Check if archiveFile exists
+        if(archiveFile.file().exists()) {
+            if (!overwrite) {
+                // Unless the user explicitly wants to overwrite the archiveFile, throw an exception whenever it already exists
+                throw new IOException("The target archive file already exists. Use 'overwrite=TRUE' if you want to overwrite it.");
+            } else {
+                FileUtils.forceDelete(archiveFile.file());
+            }
+        } else {
+            // Make sure the parent path exists
+            if (!archiveFile.file().getParentFile().exists()) {
+                if (!archiveFile.file().getParentFile().mkdirs()) {
+                    throw new IOException("The path to target archive file is unreachable.");
+                }
+            }
+        }
+        
+        // Initialize ZIP
+        FileUtils.touch(archiveFile.file());
+        
         // Write flat files into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
 
@@ -223,9 +245,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                         getBackupRunningExecutions().isEmpty()) {
                     backupExecution = new BackupExecutionAdapter(jobLauncher.run(backupJob, params));
                     backupExecution.setArchiveFile(archiveFile);
+                    backupExecution.setOverwrite(overwrite);
                     backupExecutions.put(backupExecution.getId(), backupExecution);
 
-                    LOGGER.fine("Status : " + backupExecution.getStatus());
+                    // LOGGER.fine("Status : " + backupExecution.getStatus());
                     
                     return backupExecution;
                 }
@@ -240,38 +263,39 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         
         return null;
     }
-    
+
     /**
-     * @return 
-     * @return 
-     * @throws IOException 
+     * @return
+     * @return
+     * @throws IOException
      * 
      */
     public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile) throws IOException {
         // Extract archive into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
         BackupUtils.extractTo(archiveFile, tmpDir);
-        
+
         JobParameters params = new JobParametersBuilder()
-                .addString(PARAM_INPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
-                .addLong(PARAM_TIME, System.currentTimeMillis())
-                .toJobParameters();
+                .addString(PARAM_INPUT_FILE_PATH,
+                        BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
+                .addLong(PARAM_TIME, System.currentTimeMillis()).toJobParameters();
 
         RestoreExecutionAdapter restoreExecution;
         try {
-            synchronized(jobOperator) {
-                if(getRestoreRunningExecutions().isEmpty() && 
-                        getBackupRunningExecutions().isEmpty()) {
-                    restoreExecution = new RestoreExecutionAdapter(jobLauncher.run(restoreJob, params));
+            synchronized (jobOperator) {
+                if (getRestoreRunningExecutions().isEmpty()
+                        && getBackupRunningExecutions().isEmpty()) {
+                    restoreExecution = new RestoreExecutionAdapter(
+                            jobLauncher.run(restoreJob, params));
                     restoreExecution.setArchiveFile(archiveFile);
-                    
+
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
 
-                    LOGGER.fine("Status : " + restoreExecution.getStatus());
-                    
+                    // LOGGER.fine("Status : " + restoreExecution.getStatus());
+
                     return restoreExecution;
                 }
-                
+
                 // TODO: Else throw an Exception
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
@@ -279,10 +303,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
             // TODO
             e.printStackTrace();
         }
-        
+
         return null;
     }
-    
+
     public XStreamPersister createXStreamPersisterXML() {
         return initXStreamPersister(new XStreamPersisterFactory().createXMLPersister());
     }
@@ -293,13 +317,13 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
     public XStreamPersister initXStreamPersister(XStreamPersister xp) {
         xp.setCatalog(catalog);
-        //xp.setReferenceByName(true);
-        
+        // xp.setReferenceByName(true);
+
         XStream xs = xp.getXStream();
 
-        //ImportContext
+        // ImportContext
         xs.alias("backup", BackupExecutionAdapter.class);
-        
+
         // security
         xs.allowTypes(new Class[] { BackupExecutionAdapter.class });
         xs.allowTypeHierarchy(Resource.class);

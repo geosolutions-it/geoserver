@@ -33,9 +33,11 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
                 "}";
         int i = postNewBackup(json);
         
+        // TODO: Read Backup State; just waste some time for now
+        Thread.sleep(3000);
+        
         assertTrue(i == 0);
         
-        // TODO: Read Backup State
     }
     
     

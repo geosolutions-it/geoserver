@@ -5,6 +5,7 @@
  */
 package org.geoserver.backuprestore.rest;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +16,7 @@ import java.util.List;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.BackupExecutionAdapter;
 import org.geoserver.backuprestore.rest.format.BackupJSONWriter;
+import org.geoserver.platform.resource.Files;
 import org.geoserver.rest.PageInfo;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
@@ -107,8 +109,8 @@ public class BackupResource  extends BaseResource {
             if (MediaType.APPLICATION_JSON.equals(getRequest().getEntity().getMediaType())) {
                 BackupExecutionAdapter newExecution = (BackupExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
     
-                // TODO: Parse parameters
-                execution = backupFacade.runBackupAsync(null);
+                // TODO: Parse parameters -> output file / overwrite
+                execution = backupFacade.runBackupAsync(Files.asResource(File.createTempFile("bkpRestTmp", ".zip")), true);
     
                 getResponse().redirectSeeOther(getPageInfo().rootURI("/br/backup/"+execution.getId()));
                 getResponse().setEntity(getFormatGet().toRepresentation(execution));

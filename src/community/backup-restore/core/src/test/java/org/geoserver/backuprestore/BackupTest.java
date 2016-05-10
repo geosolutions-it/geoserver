@@ -8,6 +8,7 @@ package org.geoserver.backuprestore;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -17,6 +18,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.platform.resource.Files;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,18 +59,11 @@ public class BackupTest extends BackupRestoreTestSupport {
 
     @Test
     public void testRunSpringBatchBackupJob() throws Exception {
-        backupFacade.runBackupAsync(null);
+        BackupExecutionAdapter backupExecution = 
+                backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
 
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
-
-        BackupExecutionAdapter backupExecution = null;
-        final Iterator<BackupExecutionAdapter> iterator = backupFacade.getBackupExecutions()
-                .values().iterator();
-        while (iterator.hasNext()) {
-            backupExecution = iterator.next();
-        }
-
         assertNotNull(backupExecution);
 
         while (backupExecution.isRunning()) {
@@ -80,9 +75,9 @@ public class BackupTest extends BackupRestoreTestSupport {
 
     @Test
     public void testTryToRunMultipleSpringBatchBackupJobs() throws Exception {
-        backupFacade.runBackupAsync(null);
-        backupFacade.runBackupAsync(null);
-        backupFacade.runBackupAsync(null);
+        backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
+        backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
+        backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
 
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
@@ -106,17 +101,10 @@ public class BackupTest extends BackupRestoreTestSupport {
 
     @Test
     public void testRunSpringBatchRestoreJob() throws Exception {
-        backupFacade.runRestoreAsync(file("bk_test_simple.zip"));
+        RestoreExecutionAdapter restoreExecution = backupFacade.runRestoreAsync(file("bk_test_simple.zip"));
 
         assertNotNull(backupFacade.getRestoreExecutions());
         assertTrue(!backupFacade.getRestoreExecutions().isEmpty());
-
-        RestoreExecutionAdapter restoreExecution = null;
-        final Iterator<RestoreExecutionAdapter> iterator = backupFacade.getRestoreExecutions()
-                .values().iterator();
-        while (iterator.hasNext()) {
-            restoreExecution = iterator.next();
-        }
 
         assertNotNull(restoreExecution);
 

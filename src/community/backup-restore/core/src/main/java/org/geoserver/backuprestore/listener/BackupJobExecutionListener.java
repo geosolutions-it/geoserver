@@ -5,14 +5,22 @@
  */
 package org.geoserver.backuprestore.listener;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import org.geoserver.GeoServerConfigurationLock;
+import org.geoserver.GeoServerConfigurationLock.LockType;
 import org.geoserver.backuprestore.Backup;
+import org.geoserver.backuprestore.BackupExecutionAdapter;
+import org.geoserver.backuprestore.utils.BackupUtils;
+import org.geoserver.platform.resource.Resource;
+import org.geoserver.platform.resource.Resources;
 import org.geotools.util.logging.Logging;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.launch.NoSuchJobException;
 import org.springframework.batch.core.launch.NoSuchJobExecutionException;
@@ -34,15 +42,21 @@ public class BackupJobExecutionListener implements JobExecutionListener {
      */
     private static final Logger LOGGER = Logging.getLogger(BackupJobExecutionListener.class);
 
+    public static final LockType lockType = LockType.READ;
+    
     private Backup backupFacade;
+    
+    GeoServerConfigurationLock locker;
 
-    public BackupJobExecutionListener(Backup backupFacade) {
+    public BackupJobExecutionListener(Backup backupFacade, GeoServerConfigurationLock locker) {
         this.backupFacade = backupFacade;
+        this.locker = locker;
     }
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
-        // TODO Auto-generated method stub
+     // Acquire GeoServer Configuration Lock in READ mode
+        locker.lock(lockType);
     }
 
     @Override
@@ -60,9 +74,18 @@ public class BackupJobExecutionListener implements JobExecutionListener {
                 LOGGER.fine("Executions Parameters : " + backupFacade.getJobOperator().getParameters(executionId));
                 LOGGER.fine("Executions Summary : " + backupFacade.getJobOperator().getSummary(executionId));
 
-                LOGGER.fine("Exit Status : " + backupFacade.getBackupExecutions().get(executionId).getStatus());
-                LOGGER.fine("Exit Failures : " + backupFacade.getBackupExecutions().get(executionId).getAllFailureExceptions());
+                final BackupExecutionAdapter backupExecution = backupFacade.getBackupExecutions().get(executionId);
+                
+                LOGGER.fine("Exit Status : " + backupExecution.getStatus());
+                LOGGER.fine("Exit Failures : " + backupExecution.getAllFailureExceptions());
+                
+                if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
+                    JobParameters jobParameters = backupExecution.getJobParameters();
+                    Resource sourceFolder = Resources.fromURL(jobParameters.getString(Backup.PARAM_OUTPUT_FILE_PATH));
+                    BackupUtils.compressTo(sourceFolder, backupExecution.getArchiveFile());
+                }
             }
+         // TODO: Collect errors
         } catch (NoSuchJobException e) {
             e.printStackTrace();
         } catch (NoSuchJobExecutionException e) {
@@ -73,8 +96,11 @@ public class BackupJobExecutionListener implements JobExecutionListener {
             e.printStackTrace();
         } catch (JobParametersInvalidException e) {
             e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
-            // TODO UNLOCK Configuration
+            // Release locks on GeoServer Configuration
+            locker.unlock(lockType);
         }
     }
 }

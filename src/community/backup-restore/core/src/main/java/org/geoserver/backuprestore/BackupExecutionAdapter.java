@@ -18,6 +18,8 @@ public class BackupExecutionAdapter extends AbstractExecutionAdapter {
 
     private Resource archiveFile;
     
+    private boolean overwrite;
+    
     public BackupExecutionAdapter(JobExecution jobExecution) {
         super(jobExecution);
     }
@@ -34,6 +36,20 @@ public class BackupExecutionAdapter extends AbstractExecutionAdapter {
      */
     public void setArchiveFile(Resource archiveFile) {
         this.archiveFile = archiveFile;
+    }
+
+    /**
+     * @return the overwrite
+     */
+    public boolean isOverwrite() {
+        return overwrite;
+    }
+
+    /**
+     * @param overwrite the overwrite to set
+     */
+    public void setOverwrite(boolean overwrite) {
+        this.overwrite = overwrite;
     }
 
 }
