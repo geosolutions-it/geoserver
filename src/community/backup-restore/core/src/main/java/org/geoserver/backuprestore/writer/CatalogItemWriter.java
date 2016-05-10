@@ -51,6 +51,8 @@ public class CatalogItemWriter<T> extends CatalogWriter<T> {
         for(T item : items) {
             // TODO: add items to the catalog
             //this.restoreCatalog.put(((Info)item).getId(), item);
+            
+            // TODO: add additionalResources
             if(item instanceof WorkspaceInfo) {
                 this.catalog.add((WorkspaceInfo)item);
             }
@@ -81,13 +83,11 @@ public class CatalogItemWriter<T> extends CatalogWriter<T> {
     @Override
     public void afterPropertiesSet() throws Exception {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
     public void setResource(Resource resource) {
         // TODO Auto-generated method stub
-        
     }
 
 }

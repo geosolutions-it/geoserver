@@ -69,9 +69,9 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
     GeoServer geoServer;
 
-    GeoServerResourceLoader rl;
+    GeoServerResourceLoader resourceLoader;
 
-    GeoServerDataDirectory dd;
+    GeoServerDataDirectory geoServerDataDirectory;
 
     XStreamPersisterFactory xpf;
 
@@ -96,8 +96,9 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         this.catalog = catalog;
         this.geoServer = GeoServerExtensions.bean(GeoServer.class);
 
-        this.rl = rl;
-        this.dd = new GeoServerDataDirectory(rl);
+        this.resourceLoader = rl;
+        this.geoServerDataDirectory = new GeoServerDataDirectory(rl);
+        
         this.xpf = GeoServerExtensions.bean(XStreamPersisterFactory.class);
     }
 
@@ -187,6 +188,34 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
     public GeoServer getGeoServer() {
         return geoServer;
+    }
+
+    /**
+     * @return the resourceLoader
+     */
+    public GeoServerResourceLoader getResourceLoader() {
+        return resourceLoader;
+    }
+
+    /**
+     * @param resourceLoader the resourceLoader to set
+     */
+    public void setResourceLoader(GeoServerResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+    }
+
+    /**
+     * @return the geoServerDataDirectory
+     */
+    public GeoServerDataDirectory getGeoServerDataDirectory() {
+        return geoServerDataDirectory;
+    }
+
+    /**
+     * @param geoServerDataDirectory the geoServerDataDirectory to set
+     */
+    public void setGeoServerDataDirectory(GeoServerDataDirectory geoServerDataDirectory) {
+        this.geoServerDataDirectory = geoServerDataDirectory;
     }
 
     @Override

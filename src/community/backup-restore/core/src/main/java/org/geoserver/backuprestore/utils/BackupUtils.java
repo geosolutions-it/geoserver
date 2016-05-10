@@ -87,7 +87,7 @@ public class BackupUtils {
     public static void compressTo(Resource sourceFolder, Resource archiveFile) throws IOException {
         // See https://commons.apache.org/proper/commons-vfs/filesystems.html
         // for the supported filesystems
-        
+
         FileSystemManager manager = VFS.getManager();
 
         FileObject sourceDir = manager
@@ -144,10 +144,12 @@ public class BackupUtils {
         if (sourceFile.getType() == FileType.FOLDER) {
             // add entry/-ies.
             for (FileObject file : sourceFile.getChildren()) {
-                writeEntry(zos, file, sourceFile.getName().getBaseName());
+                writeEntry(zos, file, Paths.path(baseDir, sourceFile.getName().getBaseName()));
             }
         } else {
-            String fileName = (baseDir != null ? Paths.path(baseDir, sourceFile.getName().getBaseName()) : sourceFile.getName().getBaseName() );
+            String fileName = (baseDir != null
+                    ? Paths.path(baseDir, sourceFile.getName().getBaseName())
+                    : sourceFile.getName().getBaseName());
             ZipEntry zipEntry = new ZipEntry(fileName);
             InputStream is = sourceFile.getContent().getInputStream();
 
@@ -158,7 +160,7 @@ public class BackupUtils {
                 zos.write(buf, 0, readNum);
             }
             zos.closeEntry();
-            is.close();            
+            is.close();
         }
     }
 
@@ -207,4 +209,15 @@ public class BackupUtils {
         return null;
     }
 
+    /**
+     * 
+     * @param baseDir
+     * @param subDir
+     * @return
+     */
+    public static Resource dir(Resource baseDir, String subDir) {
+        final Resource targetPath = Resources.fromPath(subDir, baseDir);
+        return Resources.fromPath(
+                Resources.directory(targetPath, !Resources.exists(targetPath)).getAbsolutePath());
+    }
 }

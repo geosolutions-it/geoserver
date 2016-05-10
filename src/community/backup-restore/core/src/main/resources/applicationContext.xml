@@ -37,6 +37,10 @@
 		<constructor-arg ref="xstreamPersisterFactory" />
 	</bean>
 
+	<bean id="styleInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter" />
+	
+	<bean id="resourceInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.ResourceInfoAdditionalResourceWriter" />
+	
 	<batch:job id="backupJob" restartable="true">
 	
 	    <batch:listeners>

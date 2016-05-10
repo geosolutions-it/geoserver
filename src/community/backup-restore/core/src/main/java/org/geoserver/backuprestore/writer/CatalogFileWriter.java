@@ -21,6 +21,8 @@ import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.resource.Files;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
@@ -101,6 +103,8 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
         for (T item : items) {
             lines.append(doWrite(item));
             lineCount++;
+            
+            firePostWrite(item);
         }
         try {
             state.write(lines.toString());
@@ -108,6 +112,18 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
             throw new WriteFailedException("Could not write data.  The file may be corrupt.", e);
         }
         state.linesWritten += lineCount;
+    }
+
+    protected void firePostWrite(T item) throws IOException {
+        List<CatalogAdditionalResourcesWriter> additionalResourceWriters = 
+                GeoServerExtensions.extensions(CatalogAdditionalResourcesWriter.class);
+        
+        for (CatalogAdditionalResourcesWriter wr : additionalResourceWriters) {
+            if (wr.canHandle(item)) {
+                wr.writeAdditionalResources(backupFacade,
+                        Files.asResource(resource.getFile()), item);
+            }
+        }
     }
 
     //
