@@ -66,7 +66,6 @@ public class BackupTest extends BackupRestoreTestSupport {
         Thread.sleep(100);
         
         assertNotNull(backupFacade.getBackupExecutions());
-        assertTrue(!backupFacade.getBackupExecutions().isEmpty());
         assertNotNull(backupExecution);
 
         while (backupExecution.isRunning()) {
@@ -83,7 +82,7 @@ public class BackupTest extends BackupRestoreTestSupport {
         backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
 
         // Wait a bit
-        Thread.sleep(100);
+        Thread.sleep(500);
         
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
@@ -113,8 +112,6 @@ public class BackupTest extends BackupRestoreTestSupport {
         Thread.sleep(100);
 
         assertNotNull(backupFacade.getRestoreExecutions());
-        assertTrue(!backupFacade.getRestoreExecutions().isEmpty());
-
         assertNotNull(restoreExecution);
 
         Thread.sleep(100);
