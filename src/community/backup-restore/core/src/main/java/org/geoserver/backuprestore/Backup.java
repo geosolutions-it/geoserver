@@ -160,26 +160,30 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @return
      */
     public Set<Long> getBackupRunningExecutions() {
-        Set<Long> runningExecutions;
-        try {
-            runningExecutions = jobOperator.getRunningExecutions(BACKUP_JOB_NAME);
-        } catch (NoSuchJobException e) {
-            runningExecutions = new HashSet<>();
+        synchronized(jobOperator) {
+            Set<Long> runningExecutions;
+            try {
+                runningExecutions = jobOperator.getRunningExecutions(BACKUP_JOB_NAME);
+            } catch (NoSuchJobException e) {
+                runningExecutions = new HashSet<>();
+            }
+            return runningExecutions;
         }
-        return runningExecutions;
     }
 
     /**
      * @return
      */
     public Set<Long> getRestoreRunningExecutions() {
-        Set<Long> runningExecutions;
-        try {
-            runningExecutions = jobOperator.getRunningExecutions(RESTORE_JOB_NAME);
-        } catch (NoSuchJobException e) {
-            runningExecutions = new HashSet<>();
+        synchronized(jobOperator) {
+            Set<Long> runningExecutions;
+            try {
+                runningExecutions = jobOperator.getRunningExecutions(RESTORE_JOB_NAME);
+            } catch (NoSuchJobException e) {
+                runningExecutions = new HashSet<>();
+            }
+            return runningExecutions;
         }
-        return runningExecutions;
     }
 
     public Catalog getCatalog() {
@@ -238,7 +242,6 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * 
      */
     public BackupExecutionAdapter runBackupAsync(final Resource archiveFile, final boolean overwrite) throws IOException {
-        
         // Check if archiveFile exists
         if(archiveFile.file().exists()) {
             if (!overwrite) {
@@ -269,9 +272,9 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
         BackupExecutionAdapter backupExecution;
         try {
-            synchronized(jobOperator) {
-                if(getRestoreRunningExecutions().isEmpty() && 
-                        getBackupRunningExecutions().isEmpty()) {
+            if(getRestoreRunningExecutions().isEmpty() && 
+                    getBackupRunningExecutions().isEmpty()) {
+                synchronized(jobOperator) {
                     backupExecution = new BackupExecutionAdapter(jobLauncher.run(backupJob, params));
                     backupExecution.setArchiveFile(archiveFile);
                     backupExecution.setOverwrite(overwrite);
@@ -281,16 +284,16 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     
                     return backupExecution;
                 }
-                
+            }
+            else {
                 // TODO: Else throw an Exception
+                throw new IOException("Could not start a new Backup Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
                 | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
             // TODO
-            e.printStackTrace();
+            throw new IOException(e);
         }
-        
-        return null;
     }
 
     /**
@@ -311,11 +314,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
         RestoreExecutionAdapter restoreExecution;
         try {
-            synchronized (jobOperator) {
-                if (getRestoreRunningExecutions().isEmpty()
-                        && getBackupRunningExecutions().isEmpty()) {
-                    restoreExecution = new RestoreExecutionAdapter(
-                            jobLauncher.run(restoreJob, params));
+            if (getRestoreRunningExecutions().isEmpty()
+                    && getBackupRunningExecutions().isEmpty()) {
+                synchronized (jobOperator) {
+                    restoreExecution = new RestoreExecutionAdapter(jobLauncher.run(restoreJob, params));
                     restoreExecution.setArchiveFile(archiveFile);
 
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
@@ -324,16 +326,16 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
                     return restoreExecution;
                 }
-
+            }
+            else {
                 // TODO: Else throw an Exception
+                throw new IOException("Could not start a new Restore Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
                 | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
             // TODO
-            e.printStackTrace();
+            throw new IOException(e);
         }
-
-        return null;
     }
 
     public XStreamPersister createXStreamPersisterXML() {

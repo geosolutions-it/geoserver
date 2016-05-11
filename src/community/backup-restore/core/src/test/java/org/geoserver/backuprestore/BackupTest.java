@@ -7,11 +7,14 @@ package org.geoserver.backuprestore;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
 
 import org.geoserver.catalog.CascadeDeleteVisitor;
 import org.geoserver.catalog.Catalog;
@@ -66,10 +69,21 @@ public class BackupTest extends BackupRestoreTestSupport {
         Thread.sleep(100);
         
         assertNotNull(backupFacade.getBackupExecutions());
+        assertTrue(!backupFacade.getBackupExecutions().isEmpty());
         assertNotNull(backupExecution);
 
-        while (backupExecution.isRunning()) {
+        while (backupExecution.getStatus() != BatchStatus.COMPLETED) {
             Thread.sleep(100);
+            
+            if (backupExecution.getStatus() == BatchStatus.ABANDONED || 
+                    backupExecution.getStatus() == BatchStatus.FAILED) {
+
+                for (Throwable exception : backupExecution.getAllFailureExceptions()) {
+                    LOGGER.log(Level.INFO, "ERROR: " + exception.getLocalizedMessage(), exception);
+                    exception.printStackTrace();
+                }
+                break;
+            }
         }
 
         assertTrue(backupExecution.getStatus() == BatchStatus.COMPLETED);
@@ -78,11 +92,14 @@ public class BackupTest extends BackupRestoreTestSupport {
     @Test
     public void testTryToRunMultipleSpringBatchBackupJobs() throws Exception {
         backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
-        backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
-        backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
+        try {
+            backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
+        } catch (IOException e) {
+            assertEquals(e.getMessage(), "Could not start a new Backup Job Execution since there are currently Running jobs.");
+        }
 
         // Wait a bit
-        Thread.sleep(500);
+        Thread.sleep(100);
         
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
@@ -97,8 +114,19 @@ public class BackupTest extends BackupRestoreTestSupport {
 
         assertNotNull(backupExecution);
 
-        while (backupExecution.isRunning()) {
+        while (backupExecution.getStatus() != BatchStatus.COMPLETED) {
             Thread.sleep(100);
+            
+            if (backupExecution.getStatus() == BatchStatus.ABANDONED || 
+                    backupExecution.getStatus() == BatchStatus.FAILED) {
+                LOGGER.severe("backupExecution.getStatus() == " + (backupExecution.getStatus()));
+                
+                for (Throwable exception : backupExecution.getAllFailureExceptions()) {
+                    LOGGER.log(Level.INFO, "ERROR: " + exception.getLocalizedMessage(), exception);
+                    exception.printStackTrace();
+                }
+                break;
+            }
         }
 
         assertTrue(backupExecution.getStatus() == BatchStatus.COMPLETED);
@@ -112,6 +140,8 @@ public class BackupTest extends BackupRestoreTestSupport {
         Thread.sleep(100);
 
         assertNotNull(backupFacade.getRestoreExecutions());
+        assertTrue(!backupFacade.getRestoreExecutions().isEmpty());
+
         assertNotNull(restoreExecution);
 
         Thread.sleep(100);
@@ -119,8 +149,18 @@ public class BackupTest extends BackupRestoreTestSupport {
         final Catalog restoreCatalog = restoreExecution.getRestoreCatalog();
         assertNotNull(restoreCatalog);
 
-        while (restoreExecution.isRunning()) {
+        while (restoreExecution.getStatus() != BatchStatus.COMPLETED) {
             Thread.sleep(100);
+            
+            if (restoreExecution.getStatus() == BatchStatus.ABANDONED || 
+                    restoreExecution.getStatus() == BatchStatus.FAILED) {
+
+                for (Throwable exception : restoreExecution.getAllFailureExceptions()) {
+                    LOGGER.log(Level.INFO, "ERROR: " + exception.getLocalizedMessage(), exception);
+                    exception.printStackTrace();
+                }
+                break;
+            }
         }
 
         assertTrue(restoreExecution.getStatus() == BatchStatus.COMPLETED);
