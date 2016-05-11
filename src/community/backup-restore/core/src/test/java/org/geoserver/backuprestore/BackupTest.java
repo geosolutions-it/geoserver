@@ -62,6 +62,9 @@ public class BackupTest extends BackupRestoreTestSupport {
         BackupExecutionAdapter backupExecution = 
                 backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
 
+        // Wait a bit
+        Thread.sleep(100);
+        
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
         assertNotNull(backupExecution);
@@ -79,6 +82,9 @@ public class BackupTest extends BackupRestoreTestSupport {
         backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
         backupFacade.runBackupAsync(Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
 
+        // Wait a bit
+        Thread.sleep(100);
+        
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
         assertTrue(backupFacade.getBackupExecutions().size() == 1);
@@ -102,6 +108,9 @@ public class BackupTest extends BackupRestoreTestSupport {
     @Test
     public void testRunSpringBatchRestoreJob() throws Exception {
         RestoreExecutionAdapter restoreExecution = backupFacade.runRestoreAsync(file("bk_test_simple.zip"));
+
+        // Wait a bit
+        Thread.sleep(100);
 
         assertNotNull(backupFacade.getRestoreExecutions());
         assertTrue(!backupFacade.getRestoreExecutions().isEmpty());
