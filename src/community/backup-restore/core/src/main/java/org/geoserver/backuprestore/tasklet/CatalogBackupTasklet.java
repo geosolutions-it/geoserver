@@ -7,20 +7,32 @@ package org.geoserver.backuprestore.tasklet;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
+import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.config.util.XStreamServiceLoader;
+import org.geoserver.gwc.config.GWCConfig;
+import org.geoserver.gwc.config.GWCConfigPersister;
+import org.geoserver.gwc.config.GeoserverXMLResourceProvider;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Resource;
+import org.geoserver.platform.resource.Resource.Type;
+import org.geoserver.platform.resource.Resources.AnyFilter;
+import org.geoserver.platform.resource.ResourceStore;
 import org.geoserver.platform.resource.Resources;
+import org.geoserver.util.Filter;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.UnexpectedJobExecutionException;
@@ -40,9 +52,50 @@ import com.thoughtworks.xstream.XStream;
  */
 public class CatalogBackupTasklet implements Tasklet, InitializingBean {
 
+    /*
+     * 
+     */
+    static Map<String, Filter<Resource>> resources = new HashMap<String, Filter<Resource>>();
+
+    /*
+     * 
+     */
+    static {
+        resources.put("demo", AnyFilter.INSTANCE);
+        resources.put("logs", new Filter<Resource>() {
+
+            @Override
+            public boolean accept(Resource res) {
+                if (res.name().endsWith(".properties")) {
+                    return true;
+                }
+                return false;
+            }
+            
+        });
+        resources.put("palettes", AnyFilter.INSTANCE);
+        resources.put("plugIns", AnyFilter.INSTANCE);
+        resources.put("styles", new Filter<Resource>() {
+
+            @Override
+            public boolean accept(Resource res) {
+                if (res.name().endsWith(".sld") || res.name().endsWith(".xml")) {
+                    return false;
+                }
+                return true;
+            }
+            
+        });
+        resources.put("user_projections", AnyFilter.INSTANCE);
+        resources.put("validation", AnyFilter.INSTANCE);
+        resources.put("www", AnyFilter.INSTANCE);
+    }
+    
     private Backup backupFacade;
 
     private Catalog catalog;
+
+    private XStreamPersisterFactory xStreamPersisterFactory;
 
     private XStreamPersister xstream;
 
@@ -52,6 +105,7 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
             XStreamPersisterFactory xStreamPersisterFactory) {
         this.backupFacade = backupFacade;
         
+        this.xStreamPersisterFactory = xStreamPersisterFactory;
         this.xstream = xStreamPersisterFactory.createXMLPersister();
         this.xstream.setCatalog(catalog);
         this.xstream.setReferenceByName(true);
@@ -82,6 +136,7 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
         Assert.notNull(catalog, "catalog must be set");
 
         final GeoServer geoserver = backupFacade.getGeoServer();
+        final GeoServerDataDirectory dd = backupFacade.getGeoServerDataDirectory();
         
         try {
             final String outputFolderURL = jobExecution.getJobParameters().getString(Backup.PARAM_OUTPUT_FILE_PATH);
@@ -108,7 +163,7 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
             doWrite(catalog.getDefaultNamespace(), targetWorkspacesFolder, "defaultnamespace.xml");
             doWrite(catalog.getDefaultWorkspace(), targetWorkspacesFolder, "default.xml");
             
-            // Store Workspace Specific Settings
+            // Store Workspace Specific Settings and Services
             for (WorkspaceInfo ws : catalog.getWorkspaces()) {
                 if (geoserver.getSettings(ws) != null) {
                     doWrite(geoserver.getSettings(ws), BackupUtils.dir(targetWorkspacesFolder, ws.getName()), "settings.xml");
@@ -120,11 +175,79 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
                     }
                 }
             }
+            
+            // Backup other configuration bits, like images, palettes, user projections and so on...
+            ResourceStore resourceStore = dd.getResourceStore();
+            backupAdditionalResources(resourceStore, targetBackupFolder);
+            
+            // Backup GWC Configuration bits
+            if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
+                GWCConfigPersister gwcGeoServervConfigPersister = 
+                        (GWCConfigPersister) GeoServerExtensions.bean("gwcGeoServervConfigPersister");
+                
+                GWCConfigPersister testGWCCP = 
+                        new GWCConfigPersister(xStreamPersisterFactory, new GeoServerResourceLoader(targetBackupFolder.dir()));
+                
+                testGWCCP.save(gwcGeoServervConfigPersister.getConfig());
+                
+                // Test that everything went well
+                try {
+                    GWCConfig gwcConfig = testGWCCP.getConfig();
+                    
+                    Assert.notNull(gwcConfig);
+                    
+                    // TODO: perform more tests and integrity checks on reloaded configuration
+                    
+                    
+                    // Store GWC Providers Configurations
+                    Resource targetGWCProviderBackupDir = 
+                            BackupUtils.dir(targetBackupFolder, GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
+
+                    for(GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions.extensions(GeoserverXMLResourceProvider.class)) {
+                        Resource providerConfigFile = Resources.fromPath(gwcProvider.getLocation());
+                        Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir, providerConfigFile.name());
+                    }
+                    
+                    /**
+                     * TODO: When Restoring
+                     * 
+                     * 1. the securityManager should issue the listeners
+                     * 2. the GWCInitializer  should be re-initialized
+                     */
+                } catch (Exception e) {
+                    // TODO: collect warnings and errors
+                }
+            }
+            
         } catch (Exception e) {
             throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer globals and services settings!", e);            
         }
 
         return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * @param resourceStore
+     * @param baseDir 
+     * @throws IOException 
+     */
+    public void backupAdditionalResources(ResourceStore resourceStore, Resource baseDir) throws IOException {
+        for (Entry<String, Filter<Resource>> entry : resources.entrySet()){
+            Resource resource = resourceStore.get(entry.getKey());
+            if (resource != null && Resources.exists(resource)) {
+                
+                List<Resource> resources = Resources.list(resource, entry.getValue(), false);
+                
+                Resource targetDir = BackupUtils.dir(baseDir, resource.name());
+                for (Resource res : resources) {
+                    if (res.getType() != Type.DIRECTORY) {
+                        Resources.copy(res.file(), targetDir);
+                    } else {
+                        Resources.copy(res, BackupUtils.dir(targetDir, res.name()));
+                    }
+                }
+            }
+        }
     }
 
     @Override

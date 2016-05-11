@@ -50,6 +50,13 @@
 			<version>${spring.batch.version}</version>
 		</dependency>
 
+		<!-- GeoServer Dependencies -->
+		<dependency>
+			<groupId>org.geoserver</groupId>
+			<artifactId>gs-gwc</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		
 		<!-- REST Resources -->
 		<dependency>
 			<groupId>org.geoserver</groupId>

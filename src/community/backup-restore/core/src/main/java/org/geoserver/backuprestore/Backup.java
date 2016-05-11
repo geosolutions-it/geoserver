@@ -67,7 +67,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     public static final String RESTORE_CATALOG_KEY = "restore.catalog";
 
     /** The semaphore */
-    private static final long SIGNAL_TIMEOUT = 300;
+    private static final long SIGNAL_TIMEOUT = 300; // TODO: This should be configurable from the GUI
     CountDownLatch doneSignal = new CountDownLatch(1);
 
     /** catalog */

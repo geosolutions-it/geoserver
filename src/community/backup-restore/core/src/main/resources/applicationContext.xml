@@ -36,6 +36,11 @@
 		<constructor-arg ref="backupFacade" />
 		<constructor-arg ref="xstreamPersisterFactory" />
 	</bean>
+	
+	<bean id="catalogSecurityManagerTasklet" class="org.geoserver.backuprestore.tasklet.CatalogSecurityManagerTasklet">
+		<constructor-arg ref="backupFacade" />
+		<constructor-arg ref="xstreamPersisterFactory" />
+	</bean>
 
 	<bean id="styleInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter" />
 	
@@ -51,6 +56,13 @@
     	<!-- Backup GeoServer Globals/Logging/Services -->
     	<batch:step id="backupGeoServerInfos">
     		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
+    		
+    		<batch:fail on="FAILED"/>
+			<batch:next on="*" to="backupGeoServerSecurityManager"/>
+    	</batch:step>
+    	
+    	<batch:step id="backupGeoServerSecurityManager">
+    		<batch:tasklet allow-start-if-complete="true" ref="catalogSecurityManagerTasklet"/>
     		
     		<batch:fail on="FAILED"/>
 			<batch:next on="*" to="backupWorkspaceInfos"/>
