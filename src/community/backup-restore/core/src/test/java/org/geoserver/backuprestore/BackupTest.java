@@ -103,7 +103,7 @@ public class BackupTest extends BackupRestoreTestSupport {
         
         assertNotNull(backupFacade.getBackupExecutions());
         assertTrue(!backupFacade.getBackupExecutions().isEmpty());
-        assertTrue(backupFacade.getBackupExecutions().size() == 1);
+        assertTrue(backupFacade.getBackupRunningExecutions().size() == 1);
 
         BackupExecutionAdapter backupExecution = null;
         final Iterator<BackupExecutionAdapter> iterator = backupFacade.getBackupExecutions()

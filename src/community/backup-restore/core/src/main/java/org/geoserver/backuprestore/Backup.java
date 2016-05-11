@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
@@ -63,6 +65,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     public static final String RESTORE_JOB_NAME = "restoreJob";
 
     public static final String RESTORE_CATALOG_KEY = "restore.catalog";
+
+    /** The semaphore */
+    private static final long SIGNAL_TIMEOUT = 300;
+    CountDownLatch doneSignal = new CountDownLatch(1);
 
     /** catalog */
     Catalog catalog;
@@ -272,6 +278,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
         BackupExecutionAdapter backupExecution;
         try {
+            while (!(getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty())) {
+                doneSignal.await(SIGNAL_TIMEOUT, TimeUnit.SECONDS);
+            }
+
             if(getRestoreRunningExecutions().isEmpty() && 
                     getBackupRunningExecutions().isEmpty()) {
                 synchronized(jobOperator) {
@@ -290,9 +300,11 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                 throw new IOException("Could not start a new Backup Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
-                | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
+                | JobInstanceAlreadyCompleteException | JobParametersInvalidException | InterruptedException e) {
             // TODO
             throw new IOException(e);
+        } finally {
+            doneSignal.countDown();
         }
     }
 
@@ -314,6 +326,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
         RestoreExecutionAdapter restoreExecution;
         try {
+            while (!(getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty())) {
+                doneSignal.await(SIGNAL_TIMEOUT, TimeUnit.SECONDS);
+            }
+            
             if (getRestoreRunningExecutions().isEmpty()
                     && getBackupRunningExecutions().isEmpty()) {
                 synchronized (jobOperator) {
@@ -332,9 +348,11 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                 throw new IOException("Could not start a new Restore Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
-                | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
+                | JobInstanceAlreadyCompleteException | JobParametersInvalidException | InterruptedException e) {
             // TODO
             throw new IOException(e);
+        } finally {
+            doneSignal.countDown();
         }
     }
 
