@@ -66,6 +66,7 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
      */
     static {
         resources.put("demo", AnyFilter.INSTANCE);
+        resources.put("images", AnyFilter.INSTANCE);
         resources.put("logs", new Filter<Resource>() {
 
             @Override
