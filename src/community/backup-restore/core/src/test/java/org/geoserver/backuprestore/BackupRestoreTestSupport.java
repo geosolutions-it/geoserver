@@ -49,7 +49,7 @@ import com.vividsolutions.jts.io.WKTReader;
  */
 public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
 
-    static final Set<String> DEFAULT_STYLEs = new HashSet<String>() {
+    static public final Set<String> DEFAULT_STYLEs = new HashSet<String>() {
         {
             add(StyleInfo.DEFAULT_POINT);
             add(StyleInfo.DEFAULT_LINE);

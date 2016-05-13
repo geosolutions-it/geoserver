@@ -5,11 +5,17 @@
  */
 package org.geoserver.backuprestore.rest;
 
+import static org.geoserver.backuprestore.BackupRestoreTestSupport.DEFAULT_STYLEs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+
 import org.geoserver.backuprestore.BackupRestoreTestSupport;
+import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.StyleInfo;
+import org.junit.After;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -22,40 +28,61 @@ import net.sf.json.JSONObject;
  */
 public class RESTBackupTest extends BackupRestoreTestSupport {
 
+    @After
+    public void cleanCatalog() throws IOException {
+        for (StoreInfo s : getCatalog().getStores(StoreInfo.class)) {
+            removeStore(s.getWorkspace().getName(), s.getName());
+        }
+        for (StyleInfo s : getCatalog().getStyles()) {
+            String styleName = s.getName();
+            if (!DEFAULT_STYLEs.contains(styleName)) {
+                removeStyle(null, styleName);
+            }
+        }
+    }
+    
     @Test
     public void testNewBackup() throws Exception {
-        String json = 
-                "{" + 
-                    "\"backup\": { " + 
-                        "\"parameters\": " +
-                            "\"{output.file.path=file://F:/tmp/xml/outputs/, time=1462286275654}\"" +
-                    "}" + 
-                "}";
-        int i = postNewBackup(json);
-        
-        // TODO: Read Backup State; just waste some time for now
-        Thread.sleep(3000);
-        
-        assertTrue(i == 0);
-        
+        String json = "{\"backup\": {" + "   \"archiveFile\": \"/tmp/geoserver-backup.zip\", "
+                + "   \"overwrite\": true" + "  }" + "}";
+        JSONObject execution = postNewBackup(json);
+
+        assertTrue(execution.getLong("id") == 0);
+        assertTrue("STARTED".equals(execution.getString("status")));
+
+        while ("STARTED".equals(execution.getString("status"))) {
+            execution = readExecutionStatus(execution.getLong("id"));
+
+            Thread.sleep(100);
+        }
+
+        assertTrue("COMPLETED".equals(execution.getString("status")));
     }
-    
-    
-    int postNewBackup() throws Exception {
-        return postNewBackup(null);
-    }
-    
-    int postNewBackup(String body) throws Exception {
+
+    JSONObject postNewBackup(String body) throws Exception {
         MockHttpServletResponse resp = body == null ? postAsServletResponse("/rest/br/backup", "")
-            : postAsServletResponse("/rest/br/backup", body, "application/json");
-        
+                : postAsServletResponse("/rest/br/backup", body, "application/json");
+
         assertEquals(201, resp.getStatus());
-        assertNotNull( resp.getHeader( "Location") );
+        assertNotNull(resp.getHeader("Location"));
         assertTrue(resp.getHeader("Location").matches(".*/backup/\\d"));
         assertEquals("application/json", resp.getContentType());
 
         JSONObject json = (JSONObject) json(resp);
-        JSONObject executionId = json.getJSONObject("backup");
-        return executionId.getInt("id");
+        JSONObject execution = json.getJSONObject("backup");
+
+        assertNotNull(execution);
+
+        return execution;
+    }
+
+    JSONObject readExecutionStatus(long executionId) throws Exception {
+        JSONObject json = (JSONObject) getAsJSON("/rest/br/backup/" + executionId);
+
+        JSONObject execution = json.getJSONObject("backup");
+
+        assertNotNull(execution);
+
+        return execution;
     }
 }

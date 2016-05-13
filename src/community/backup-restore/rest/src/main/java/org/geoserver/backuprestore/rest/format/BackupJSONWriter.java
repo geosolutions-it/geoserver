@@ -90,6 +90,12 @@ public class BackupJSONWriter {
             json.key("parameters").value(execution.getJobParameters());
         }
         
+        if (execution.getArchiveFile() != null) {
+            json.key("archiveFile").value(execution.getArchiveFile().file().getAbsolutePath());
+        }
+        
+        json.key("overwrite").value(execution.isOverwrite());
+        
 //        if (expand > 0) {
 //            json.key("archive").value(execution.isArchive());
 //            if (execution.getTargetWorkspace() != null) {

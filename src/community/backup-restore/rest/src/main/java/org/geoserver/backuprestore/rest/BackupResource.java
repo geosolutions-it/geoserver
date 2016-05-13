@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
 
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.BackupExecutionAdapter;
@@ -109,8 +110,11 @@ public class BackupResource  extends BaseResource {
             if (MediaType.APPLICATION_JSON.equals(getRequest().getEntity().getMediaType())) {
                 BackupExecutionAdapter newExecution = (BackupExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
     
-                // TODO: Parse parameters -> output file / overwrite
-                execution = backupFacade.runBackupAsync(Files.asResource(File.createTempFile("bkpRestTmp", ".zip")), true);
+                // TODO: archiveFile and overwrite option integrity checks
+                
+                execution = backupFacade.runBackupAsync(newExecution.getArchiveFile(), newExecution.isOverwrite());
+                
+                LOGGER.log(Level.INFO, "Backup file generated: " + newExecution.getArchiveFile());
     
                 getResponse().redirectSeeOther(getPageInfo().rootURI("/br/backup/"+execution.getId()));
                 getResponse().setEntity(getFormatGet().toRepresentation(execution));

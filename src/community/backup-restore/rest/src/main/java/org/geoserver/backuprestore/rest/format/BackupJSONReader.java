@@ -7,6 +7,7 @@ package org.geoserver.backuprestore.rest.format;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import org.apache.commons.io.IOUtils;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.BackupExecutionAdapter;
 import org.geoserver.config.util.XStreamPersister;
+import org.geoserver.platform.resource.Files;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -34,13 +36,14 @@ import net.sf.json.JSONObject;
  * </pre>
  * 
  * Based on Importer {@link ImporterJSONReader}
- *  
+ * 
  * @author Justin Deoliveira, OpenGeo
  * @author Alessio Fabiani, GeoSolutions
  */
 public class BackupJSONReader {
 
     Backup backupFacade;
+
     JSONObject json;
 
     public BackupJSONReader(Backup backupFacade, String in) throws IOException {
@@ -65,11 +68,15 @@ public class BackupJSONReader {
         BackupExecutionAdapter execution = null;
         if (json.has("backup")) {
             execution = new BackupExecutionAdapter(null);
-            
+
             json = json.getJSONObject("backup");
-//            if (json.has("id")) {
-//                execution.setId(json.getLong("id"));
-//            }
+            if (json.has("archiveFile")) {
+                execution.setArchiveFile(Files.asResource(new File(json.getString("archiveFile"))));
+            }
+            
+            if (json.has("overwrite")) {
+                execution.setOverwrite(json.getBoolean("overwrite"));
+            }
         }
         return execution;
     }
