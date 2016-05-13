@@ -204,7 +204,7 @@ public class GeoServerExtensions implements ApplicationContextAware, Application
         }else{
             names = null;
         }
-        if(names == null || names.length == 0) {
+        if(names == null) {
             checkContext(context,extensionPoint.getSimpleName());
             if ( context != null ) {
                 try {
