@@ -13,6 +13,7 @@ import java.util.List;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.platform.resource.Files;
+import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.template.GeoServerTemplateLoader;
@@ -58,7 +59,7 @@ public class ResourceInfoAdditionalResourceWriter
     public void writeAdditionalResources(Backup backupFacade, Resource base, ResourceInfo item)
             throws IOException {
 
-        final Resource rootDataDir = backupFacade.getGeoServerDataDirectory().getRoot("/");
+        final Resource rootDataDir = backupFacade.getGeoServerDataDirectory().getRoot(Paths.BASE);
 
         GeoServerTemplateLoader templateLoader = new GeoServerTemplateLoader(item.getClass(),
                 backupFacade.getResourceLoader());

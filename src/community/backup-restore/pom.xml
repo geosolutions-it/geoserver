@@ -16,36 +16,54 @@
   <name>GeoServer Config Backup And Restore</name>
 
   <dependencies>
-    <dependency>
+
+	<dependency>
       <groupId>org.geoserver</groupId>
       <artifactId>gs-main</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.geoserver</groupId>
-      <artifactId>gs-main</artifactId>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>xmlunit</groupId>
-      <artifactId>xmlunit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymockclassextension</artifactId>
-      <scope>test</scope>
-     </dependency>
+
+	<!-- Test Dependencies -->
+	<dependency>
+		<groupId>org.geoserver</groupId>
+		<artifactId>gs-main</artifactId>
+		<classifier>tests</classifier>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-test</artifactId>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.geotools.jdbc</groupId>
+		<artifactId>gt-jdbc-h2</artifactId>
+		<version>${gt.version}</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.easymock</groupId>
+		<artifactId>easymock</artifactId>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.easymock</groupId>
+		<artifactId>easymockclassextension</artifactId>
+		<version>2.3</version>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.hamcrest</groupId>
+		<artifactId>hamcrest-library</artifactId>
+		<scope>test</scope>
+	</dependency>
+	<dependency>
+		<groupId>org.geoserver</groupId>
+		<artifactId>gs-platform</artifactId>
+		<version>${project.version}</version>
+		<classifier>tests</classifier>
+		<scope>test</scope>
+	</dependency>
+
   </dependencies>
 
   <build>

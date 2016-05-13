@@ -11,7 +11,6 @@
     <!-- The control flow callback -->
     <bean id="controlFlowCallback" class="org.geoserver.flow.ControlFlowCallback"/>
 
-
     <!-- IP blacklist filter -->
     <bean id="ipBlacklistFilter" class="org.geoserver.flow.controller.IpBlacklistFilter" />
 	

@@ -18,6 +18,8 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerDataDirectory;
+import org.geoserver.config.GeoServerPluginConfigurator;
+import org.geoserver.config.GeoServerPropertyConfigurer;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
@@ -27,11 +29,13 @@ import org.geoserver.gwc.config.GWCConfigPersister;
 import org.geoserver.gwc.config.GeoserverXMLResourceProvider;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Files;
+import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
-import org.geoserver.platform.resource.Resources.AnyFilter;
 import org.geoserver.platform.resource.ResourceStore;
 import org.geoserver.platform.resource.Resources;
+import org.geoserver.platform.resource.Resources.AnyFilter;
 import org.geoserver.util.Filter;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepContribution;
@@ -137,6 +141,7 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
 
         final GeoServer geoserver = backupFacade.getGeoServer();
         final GeoServerDataDirectory dd = backupFacade.getGeoServerDataDirectory();
+        final ResourceStore resourceStore = dd.getResourceStore();
         
         try {
             final String outputFolderURL = jobExecution.getJobParameters().getString(Backup.PARAM_OUTPUT_FILE_PATH);
@@ -153,7 +158,10 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
             
             // Store GeoServer Global Services
             for(ServiceInfo service : geoserver.getServices()) {
-                doWrite(service, targetBackupFolder, "services");
+                // Local Services will be saved later on ...
+                if (service.getWorkspace() == null) {
+                    doWrite(service, targetBackupFolder, "services");
+                }
             }
             
             // Save Workspace specific settings
@@ -176,47 +184,31 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
                 }
             }
             
+            // Backup GeoServer Plugins
+            final GeoServerResourceLoader targetGeoServerResourceLoader = new GeoServerResourceLoader(targetBackupFolder.dir());
+            for (GeoServerPluginConfigurator pluginConfig : GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
+                pluginConfig.saveConfiguration(targetGeoServerResourceLoader);
+            }
+            
+            for (GeoServerPropertyConfigurer props : GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
+                // On restore invoke 'props.reload();' after having replaced the configuration file.
+                Resource configFile = props.getConfigFile();
+                
+                if (configFile != null && Resources.exists(configFile)) {
+                    Resource targetDir = 
+                        Files.asResource(targetGeoServerResourceLoader.findOrCreateDirectory(
+                                Paths.convert(dd.getResourceLoader().getBaseDirectory(), configFile.parent().dir())));
+                
+                    Resources.copy(configFile.file(), targetDir);
+                }
+            }
+            
             // Backup other configuration bits, like images, palettes, user projections and so on...
-            ResourceStore resourceStore = dd.getResourceStore();
             backupAdditionalResources(resourceStore, targetBackupFolder);
             
             // Backup GWC Configuration bits
             if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
-                GWCConfigPersister gwcGeoServervConfigPersister = 
-                        (GWCConfigPersister) GeoServerExtensions.bean("gwcGeoServervConfigPersister");
-                
-                GWCConfigPersister testGWCCP = 
-                        new GWCConfigPersister(xStreamPersisterFactory, new GeoServerResourceLoader(targetBackupFolder.dir()));
-                
-                testGWCCP.save(gwcGeoServervConfigPersister.getConfig());
-                
-                // Test that everything went well
-                try {
-                    GWCConfig gwcConfig = testGWCCP.getConfig();
-                    
-                    Assert.notNull(gwcConfig);
-                    
-                    // TODO: perform more tests and integrity checks on reloaded configuration
-                    
-                    
-                    // Store GWC Providers Configurations
-                    Resource targetGWCProviderBackupDir = 
-                            BackupUtils.dir(targetBackupFolder, GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
-
-                    for(GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions.extensions(GeoserverXMLResourceProvider.class)) {
-                        Resource providerConfigFile = Resources.fromPath(gwcProvider.getLocation());
-                        Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir, providerConfigFile.name());
-                    }
-                    
-                    /**
-                     * TODO: When Restoring
-                     * 
-                     * 1. the securityManager should issue the listeners
-                     * 2. the GWCInitializer  should be re-initialized
-                     */
-                } catch (Exception e) {
-                    // TODO: collect warnings and errors
-                }
+                backupGWCSettings(targetBackupFolder);
             }
             
         } catch (Exception e) {
@@ -224,6 +216,48 @@ public class CatalogBackupTasklet implements Tasklet, InitializingBean {
         }
 
         return RepeatStatus.FINISHED;
+    }
+
+    /**
+     * @param targetBackupFolder
+     * @throws IOException
+     */
+    public void backupGWCSettings(Resource targetBackupFolder) throws IOException {
+        GWCConfigPersister gwcGeoServervConfigPersister = 
+                (GWCConfigPersister) GeoServerExtensions.bean("gwcGeoServervConfigPersister");
+        
+        GWCConfigPersister testGWCCP = 
+                new GWCConfigPersister(xStreamPersisterFactory, new GeoServerResourceLoader(targetBackupFolder.dir()));
+        
+        testGWCCP.save(gwcGeoServervConfigPersister.getConfig());
+        
+        // Test that everything went well
+        try {
+            GWCConfig gwcConfig = testGWCCP.getConfig();
+            
+            Assert.notNull(gwcConfig);
+            
+            // TODO: perform more tests and integrity checks on reloaded configuration
+            
+            
+            // Store GWC Providers Configurations
+            Resource targetGWCProviderBackupDir = 
+                    BackupUtils.dir(targetBackupFolder, GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
+
+            for(GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions.extensions(GeoserverXMLResourceProvider.class)) {
+                Resource providerConfigFile = Resources.fromPath(gwcProvider.getLocation());
+                Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir, providerConfigFile.name());
+            }
+            
+            /**
+             * TODO: When Restoring
+             * 
+             * 1. the securityManager should issue the listeners
+             * 2. the GWCInitializer  should be re-initialized
+             */
+        } catch (Exception e) {
+            // TODO: collect warnings and errors
+        }
     }
 
     /**

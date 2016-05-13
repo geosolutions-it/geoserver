@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.geoserver.flow.config.DefaultControlFlowConfigurator;
 import org.geoserver.ows.AbstractDispatcherCallback;
 import org.geoserver.ows.HttpErrorCodeException;
 import org.geoserver.ows.Request;
@@ -17,6 +18,12 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.Operation;
 import org.geotools.util.logging.Logging;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.ConstructorArgumentValues;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
@@ -28,7 +35,7 @@ import org.springframework.context.ApplicationContextAware;
  * @author Andrea Aime - OpenGeo
  */
 public class ControlFlowCallback extends AbstractDispatcherCallback implements
-        ApplicationContextAware {
+    BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     /**
      * Header added to all responses to make it visible how much deplay was applied going thorough
@@ -59,6 +66,8 @@ public class ControlFlowCallback extends AbstractDispatcherCallback implements
     AtomicLong blockedRequests = new AtomicLong();
 
     AtomicLong runningRequests = new AtomicLong();
+
+    private ApplicationContext applicationContext;
 
     /**
      * Returns the current number of blocked/queued requests.
@@ -160,6 +169,15 @@ public class ControlFlowCallback extends AbstractDispatcherCallback implements
     }
 
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        if (GeoServerExtensions.bean(FlowControllerProvider.class) == null) {
+            beanFactory.initializeBean(provider, "defaultFlowControllerProvider");
+        }
+        
         // look for a ControlFlowConfigurator in the application context, if none is found, use the
         // default one
         provider = GeoServerExtensions.bean(FlowControllerProvider.class, applicationContext);
@@ -168,4 +186,35 @@ public class ControlFlowCallback extends AbstractDispatcherCallback implements
         }
     }
 
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)
+            throws BeansException {
+        // Inject DefaultFlowControllerProvider definition it not defined
+        if (GeoServerExtensions.bean(FlowControllerProvider.class, applicationContext) == null) {
+            
+            ConstructorArgumentValues args = new ConstructorArgumentValues();
+            args.addGenericArgumentValue(applicationContext);
+            
+            RootBeanDefinition beanDefinition = 
+                    new RootBeanDefinition(DefaultFlowControllerProvider.class, args, null); //The service implementation
+            
+            beanDefinition.setTargetType(FlowControllerProvider.class); //The service interface
+            beanDefinition.setRole(BeanDefinition.ROLE_APPLICATION);
+            beanDefinition.setScope(BeanDefinition.SCOPE_SINGLETON);
+            
+            registry.registerBeanDefinition("defaultFlowControllerProvider", beanDefinition);
+        }
+        
+        // Inject DefaultControlFlowConfigurator definition it not defined
+        if (GeoServerExtensions.bean(ControlFlowConfigurator.class, applicationContext) == null) {
+            RootBeanDefinition beanDefinition = 
+                    new RootBeanDefinition(DefaultControlFlowConfigurator.class); //The service implementation
+            
+            beanDefinition.setTargetType(ControlFlowConfigurator.class); //The service interface
+            beanDefinition.setRole(BeanDefinition.ROLE_APPLICATION);
+            beanDefinition.setScope(BeanDefinition.SCOPE_SINGLETON);
+            
+            registry.registerBeanDefinition("defaultControlFlowConfigurator", beanDefinition);
+        }
+    }
 }
