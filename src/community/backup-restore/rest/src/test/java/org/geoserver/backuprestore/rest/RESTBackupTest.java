@@ -5,7 +5,6 @@
  */
 package org.geoserver.backuprestore.rest;
 
-import static org.geoserver.backuprestore.BackupRestoreTestSupport.DEFAULT_STYLEs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -43,8 +42,12 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
     
     @Test
     public void testNewBackup() throws Exception {
-        String json = "{\"backup\": {" + "   \"archiveFile\": \"/tmp/geoserver-backup.zip\", "
-                + "   \"overwrite\": true" + "  }" + "}";
+        String json = 
+                "{\"backup\": {" + 
+                "   \"archiveFile\": \"/tmp/geoserver-backup.zip\", " + 
+                "   \"overwrite\": true" + 
+                "  }" + 
+                "}";
         JSONObject execution = postNewBackup(json);
 
         assertTrue(execution.getLong("id") == 0);

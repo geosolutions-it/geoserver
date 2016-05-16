@@ -428,6 +428,10 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
     }
 
     public void reload() throws Exception {
+        this.reload(null);
+    }
+    
+    public void reload(Catalog catalog) throws Exception {
         // notify start of reload
         List<GeoServerLifecycleHandler> handlers = GeoServerExtensions
                 .extensions(GeoServerLifecycleHandler.class);
@@ -449,6 +453,10 @@ public class GeoServerImpl implements GeoServer, ApplicationContextAware {
             GeoServerLoaderProxy loader = GeoServerExtensions.bean(GeoServerLoaderProxy.class);
             synchronized (org.geoserver.config.GeoServer.CONFIGURATION_LOCK) {
                 getCatalog().getResourcePool().dispose();
+                
+                if(catalog != null) {
+                    setCatalog(catalog);
+                }
                 loader.reload();
             }
         } finally {

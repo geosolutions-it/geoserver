@@ -24,14 +24,8 @@
 		<constructor-arg ref="catalog" />
 		<constructor-arg ref="resourceLoader" />
 	</bean>
-	
-	<!-- Main Backup BATCH Flow -->
 
-	<bean id="backupJobExecutionListener" class="org.geoserver.backuprestore.listener.BackupJobExecutionListener">
-		<constructor-arg ref="backupFacade"/>
-		<constructor-arg ref="configurationLock"/>
-	</bean>
-
+	<!-- Definition of the Backup/Restore Tasklets: those are specific tasklets which can be invoked as additional steps of the main Job -->
 	<bean id="catalogBackupTasklet" class="org.geoserver.backuprestore.tasklet.CatalogBackupTasklet">
 		<constructor-arg ref="backupFacade" />
 		<constructor-arg ref="xstreamPersisterFactory" />
@@ -41,11 +35,23 @@
 		<constructor-arg ref="backupFacade" />
 		<constructor-arg ref="xstreamPersisterFactory" />
 	</bean>
+	
+	<!-- ********************** -->
+	<!-- Main Backup BATCH Flow -->
+	<!-- ********************** -->
+	
+	<!-- The main Job Listener: This is responsible of both pre/post-processing before/afer the Job execution and managing configuration locks -->
+		<bean id="backupJobExecutionListener" class="org.geoserver.backuprestore.listener.BackupJobExecutionListener">
+			<constructor-arg ref="backupFacade"/>
+			<constructor-arg ref="configurationLock"/>
+		</bean>
 
-	<bean id="styleInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter" />
+	<!-- CatalogAdditionalResourcesWriter extensions: those can be triggered by the CatalogWriter -->
+		<bean id="styleInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter" />
 	
-	<bean id="resourceInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.ResourceInfoAdditionalResourceWriter" />
+		<bean id="resourceInfoAdditionalResourceWriter" class="org.geoserver.backuprestore.writer.ResourceInfoAdditionalResourceWriter" />
 	
+	<!-- The BACKUP Job definition START here -->
 	<batch:job id="backupJob" restartable="true">
 	
 	    <batch:listeners>
@@ -54,19 +60,30 @@
 	    </batch:listeners>
     	
     	<!-- Backup GeoServer Globals/Logging/Services -->
-    	<batch:step id="backupGeoServerInfos">
-    		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
-    		
-    		<batch:fail on="FAILED"/>
-			<batch:next on="*" to="backupGeoServerSecurityManager"/>
-    	</batch:step>
-    	
-    	<batch:step id="backupGeoServerSecurityManager">
-    		<batch:tasklet allow-start-if-complete="true" ref="catalogSecurityManagerTasklet"/>
-    		
+    	<batch:split id="backupGeoServerGlobalsFlow">
+	    	<!-- batch:split id="backupGeoServerGlobalsFlow" task-executor="taskExecutor" next="backupWorkspaceInfos" -->
+	    	<!-- The default is SyncTaskExecutor -->
+    		<batch:flow>
+		    	<batch:step id="backupGeoServerInfos">
+		    		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
+		    		
+		    		<!-- batch:fail on="FAILED"/>
+					<batch:next on="*" to="backupGeoServerSecurityManager"/ -->
+		    	</batch:step>
+		    </batch:flow>
+		    
+		    <batch:flow>
+		    	<batch:step id="backupGeoServerSecurityManager">
+		    		<batch:tasklet allow-start-if-complete="true" ref="catalogSecurityManagerTasklet"/>
+		    		
+		    		<!-- batch:fail on="FAILED"/>
+					<batch:next on="*" to="backupWorkspaceInfos"/ -->
+		    	</batch:step>
+		    </batch:flow>
+
     		<batch:fail on="FAILED"/>
 			<batch:next on="*" to="backupWorkspaceInfos"/>
-    	</batch:step>
+    	</batch:split>
     	
 		<!-- Backup WorkspaceInfos -->
 		<batch:step id="backupWorkspaceInfos">
@@ -367,19 +384,28 @@
 		</batch:step>
 
 	</batch:job>
-
-	<!-- Main Restore BATCH Flow -->
-
-	<bean id="restoreJobExecutionListener" class="org.geoserver.backuprestore.listener.RestoreJobExecutionListener">
-		<constructor-arg ref="backupFacade"/>
-		<constructor-arg ref="configurationLock"/>
-	</bean>
-
-	<bean id="restoreExecutionPromotionListener" 
-			class="org.springframework.batch.core.listener.ExecutionContextPromotionListener">
-    	<property name="keys" value="restore.catalog"/>
-	</bean>
+	<!-- The BACKUP Job definition ENDS here -->
 	
+
+	<!-- *********************** -->
+	<!-- Main Restore BATCH Flow -->
+	<!-- *********************** -->
+	
+	<!-- The main Job Listener: This is responsible of both pre/post-processing before/afer the Job execution and managing configuration locks -->
+		<bean id="restoreJobExecutionListener" class="org.geoserver.backuprestore.listener.RestoreJobExecutionListener">
+			<constructor-arg ref="backupFacade"/>
+			<constructor-arg ref="configurationLock"/>
+		</bean>
+
+		<!-- This specific Listener allows to promote properties setted on Steps to Job Context Scope -->
+		<bean id="restoreExecutionPromotionListener" 
+				class="org.springframework.batch.core.listener.ExecutionContextPromotionListener">
+	    	<property name="keys" value="restore.catalog"/>
+		</bean>
+
+	<!-- CatalogAdditionalResourcesReader extensions: those can be triggered by the CatalogReader -->
+		
+	<!-- The RESTORE Job definition START here -->
 	<batch:job id="restoreJob" restartable="true">
 	
 	    <batch:listeners>
@@ -726,5 +752,6 @@
 		</batch:step>
 		
 	</batch:job>
+	<!-- The RESTORE Job definition ENDS here -->
 	
 </beans>
