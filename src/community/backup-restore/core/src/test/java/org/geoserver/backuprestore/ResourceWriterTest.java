@@ -5,8 +5,6 @@
  */
 package org.geoserver.backuprestore;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.classextension.EasyMock.createNiceMock;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -20,7 +18,6 @@ import org.geoserver.backuprestore.writer.ResourceInfoAdditionalResourceWriter;
 import org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
-import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
@@ -34,8 +31,6 @@ import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
-import org.junit.After;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.thoughtworks.xstream.XStream;
@@ -46,22 +41,6 @@ import com.thoughtworks.xstream.XStream;
  *
  */
 public class ResourceWriterTest extends BackupRestoreTestSupport {
-
-    static File root;
-
-    @BeforeClass
-    public static void createTmpDir() throws Exception {
-        root = File.createTempFile("template", "tmp", new File("target"));
-        root.delete();
-        root.mkdir();
-    }
-
-    GeoServerDataDirectory createDataDirectoryMock() {
-        GeoServerDataDirectory dd = createNiceMock(GeoServerDataDirectory.class);
-        expect(dd.root()).andReturn(root).anyTimes();
-        return dd;
-    }
-
     @Test
     public void testResourceInfoAdditionalResourceWriter() throws IOException {
         Catalog cat = getCatalog();

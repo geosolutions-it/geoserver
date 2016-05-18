@@ -43,6 +43,13 @@ public class BackupUtils {
     public static Resource tmpDir() throws IOException {
         Resource root = Resources.fromPath(System.getProperty("java.io.tmpdir", "."));
         Resource directory = Resources.createRandom("tmp", "", root);
+        
+        do {
+            FileUtils.forceDelete(directory.dir());
+        } while(Resources.exists(directory));
+
+        FileUtils.forceMkdir(directory.dir());
+
         return Files.asResource(directory.dir());
     }
 

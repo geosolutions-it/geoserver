@@ -5,6 +5,9 @@
  */
 package org.geoserver.backuprestore;
 
+import static org.easymock.EasyMock.expect;
+import static org.easymock.classextension.EasyMock.createNiceMock;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -16,6 +19,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.custommonkey.xmlunit.SimpleNamespaceContext;
@@ -27,6 +31,7 @@ import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.resource.Resource;
@@ -38,8 +43,8 @@ import org.geotools.data.FeatureStore;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.opengis.feature.simple.SimpleFeatureType;
 
 import com.vividsolutions.jts.io.WKTReader;
@@ -50,6 +55,14 @@ import com.vividsolutions.jts.io.WKTReader;
  *
  */
 public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
+
+    static File root;
+
+    GeoServerDataDirectory createDataDirectoryMock() {
+        GeoServerDataDirectory dd = createNiceMock(GeoServerDataDirectory.class);
+        expect(dd.root()).andReturn(root).anyTimes();
+        return dd;
+    }
 
     static public final Set<String> DEFAULT_STYLEs = new HashSet<String>() {
         {
@@ -77,7 +90,7 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
     protected void onTearDown(SystemTestData testData) throws Exception {
         super.onTearDown(testData);
         
-        cleanCatalog();
+        cleanCatalog();        
     }
 
     @Override
@@ -105,6 +118,10 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
     
     protected void setUpInternal(SystemTestData data) throws Exception {
         
+        root = File.createTempFile("template", "tmp", new File("target"));
+        root.delete();
+        root.mkdir();
+
         //setup an H2 datastore for the purpose of doing joins
         //run all the tests against a store that can do native paging (h2) and one that 
         // can't (property)
@@ -235,7 +252,13 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
     }
     
     public static Resource file(String path) throws Exception {
-        return file(path, BackupUtils.tmpDir());
+        Resource dir = BackupUtils.tmpDir();
+        
+        if (dir.dir().exists()) {
+            FileUtils.forceDelete(dir.dir());
+        }
+
+        return file(path, dir);
     }
 
     public static Resource file(String path, Resource dir) throws IOException {
@@ -243,12 +266,19 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
         InputStream in = BackupRestoreTestSupport.class.getResourceAsStream("test-data/" + path);
 
         File file = new File(dir.dir(), filename);
+        
+        if (file.exists()) {
+            FileUtils.forceDelete(file);
+        }
 
         FileOutputStream out = new FileOutputStream(file);
-        IOUtils.copy(in, out);
-        in.close();
-        out.flush();
-        out.close();
+        try {
+            IOUtils.copy(in, out);
+        } finally {
+            in.close();
+            out.flush();
+            out.close();
+        }
 
         return org.geoserver.platform.resource.Files.asResource(file);
     }
@@ -263,6 +293,15 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
                 removeStyle(null, styleName);
             }
         }
+        
+        do {
+            try {
+                root.delete();
+                FileUtils.forceDelete(root);
+            } catch(Exception e) {
+                
+            }
+        } while(root.exists());
     }
     
 }

@@ -5,8 +5,6 @@
  */
 package org.geoserver.backuprestore;
 
-import static org.easymock.EasyMock.expect;
-import static org.easymock.classextension.EasyMock.createNiceMock;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -16,15 +14,10 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.logging.Level;
 
-import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
-import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.resource.Files;
-import org.geoserver.platform.resource.Resource;
-import org.geoserver.platform.resource.Resources;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.batch.core.BatchStatus;
 
@@ -34,22 +27,6 @@ import org.springframework.batch.core.BatchStatus;
  *
  */
 public class BackupTest extends BackupRestoreTestSupport {
-
-    static File root;
-
-    @BeforeClass
-    public static void createTmpDir() throws Exception {
-        root = File.createTempFile("template", "tmp", new File("target"));
-        root.delete();
-        root.mkdir();
-    }
-
-    GeoServerDataDirectory createDataDirectoryMock() {
-        GeoServerDataDirectory dd = createNiceMock(GeoServerDataDirectory.class);
-        expect(dd.root()).andReturn(root).anyTimes();
-        return dd;
-    }
-    
     @Test
     public void testRunSpringBatchBackupJob() throws Exception {
         BackupExecutionAdapter backupExecution = backupFacade.runBackupAsync(
@@ -163,23 +140,14 @@ public class BackupTest extends BackupRestoreTestSupport {
 
         assertTrue(restoreExecution.getStatus() == BatchStatus.COMPLETED);
 
-        assertTrue(backupFacade.getGeoServer().getCatalog().getWorkspaces().size() == backupFacade.getGeoServer().getCatalog().getNamespaces().size());
+        assertTrue(restoreCatalog.getWorkspaces().size() == restoreCatalog.getNamespaces().size());
 
-        assertTrue(backupFacade.getGeoServer().getCatalog().getDataStores().size() == 4);
-        assertTrue(backupFacade.getGeoServer().getCatalog().getResources(FeatureTypeInfo.class).size() == 14);
-        assertTrue(backupFacade.getGeoServer().getCatalog().getResources(CoverageInfo.class).size() == 4);
-        assertTrue(backupFacade.getGeoServer().getCatalog().getStyles().size() == 21);
-        assertTrue(backupFacade.getGeoServer().getCatalog().getLayers().size() == 4);
-        assertTrue(backupFacade.getGeoServer().getCatalog().getLayerGroups().size() == 1);
-        
-        
-        assertTrue(backupFacade.getGeoServer().getCatalog().getWorkspaces().size() == restoreCatalog.getWorkspaces().size());
-        assertTrue(backupFacade.getGeoServer().getCatalog().getDataStores().size() == restoreCatalog.getDataStores().size());
-        assertTrue(backupFacade.getGeoServer().getCatalog().getResources(FeatureTypeInfo.class).size() == restoreCatalog.getResources(FeatureTypeInfo.class).size());
-        assertTrue(backupFacade.getGeoServer().getCatalog().getResources(CoverageInfo.class).size() == restoreCatalog.getResources(CoverageInfo.class).size());
-        assertTrue(backupFacade.getGeoServer().getCatalog().getStyles().size() == restoreCatalog.getStyles().size());
-        assertTrue(backupFacade.getGeoServer().getCatalog().getLayers().size() == restoreCatalog.getLayers().size());
-        assertTrue(backupFacade.getGeoServer().getCatalog().getLayerGroups().size() == restoreCatalog.getLayerGroups().size());        
+        assertTrue(restoreCatalog.getDataStores().size() == 4);
+        assertTrue(restoreCatalog.getResources(FeatureTypeInfo.class).size() == 14);
+        assertTrue(restoreCatalog.getResources(CoverageInfo.class).size() == 4);
+        assertTrue(restoreCatalog.getStyles().size() == 21);
+        assertTrue(restoreCatalog.getLayers().size() == 4);
+        assertTrue(restoreCatalog.getLayerGroups().size() == 1);
     }
 
 }
