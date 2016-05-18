@@ -9,6 +9,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.logging.Level;
+
 import org.geoserver.backuprestore.BackupRestoreTestSupport;
 import org.geoserver.platform.resource.Resource;
 import org.junit.Test;
@@ -26,24 +28,28 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
     public void testNewRestore() throws Exception {
         Resource archiveFile = file("geoserver-alfa2-backup.zip");
         
-        String json = 
-                "{\"restore\": {" + 
-                "   \"archiveFile\": \""+archiveFile.path()+"\" " +  
-                "  }" + 
-                "}";
-        
-        JSONObject execution = postNewRestore(json);
+        if (archiveFile == null) {
+            LOGGER.log(Level.WARNING, "Could not find source archive file ["+archiveFile.path()+"]");
+        } else {
+            String json = 
+                    "{\"restore\": {" + 
+                    "   \"archiveFile\": \""+archiveFile.path()+"\" " +  
+                    "  }" + 
+                    "}";
+            
+            JSONObject execution = postNewRestore(json);
 
-        assertTrue(execution.getLong("id") == 0);
-        assertTrue("STARTED".equals(execution.getString("status")));
+            assertTrue(execution.getLong("id") == 0);
+            assertTrue("STARTED".equals(execution.getString("status")));
 
-        while ("STARTED".equals(execution.getString("status"))) {
-            execution = readExecutionStatus(execution.getLong("id"));
+            while ("STARTED".equals(execution.getString("status"))) {
+                execution = readExecutionStatus(execution.getLong("id"));
 
-            Thread.sleep(100);
+                Thread.sleep(100);
+            }
+
+            assertTrue("COMPLETED".equals(execution.getString("status")));   
         }
-
-        assertTrue("COMPLETED".equals(execution.getString("status")));
     }
 
     JSONObject postNewRestore(String body) throws Exception {

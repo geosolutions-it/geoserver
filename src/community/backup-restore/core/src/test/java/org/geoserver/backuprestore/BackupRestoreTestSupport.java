@@ -274,10 +274,17 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
         FileOutputStream out = new FileOutputStream(file);
         try {
             IOUtils.copy(in, out);
+        } catch (Exception e) {
+            return null;
         } finally {
-            in.close();
-            out.flush();
-            out.close();
+            if (in != null) {
+                in.close();
+            }
+            
+            if (out != null) {
+                out.flush();
+                out.close();
+            }
         }
 
         return org.geoserver.platform.resource.Files.asResource(file);
