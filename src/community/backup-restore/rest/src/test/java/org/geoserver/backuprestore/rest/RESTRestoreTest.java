@@ -12,11 +12,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 
 import org.geoserver.backuprestore.BackupRestoreTestSupport;
-import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.platform.resource.Resource;
-import org.geoserver.platform.resource.Resources;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -45,10 +43,7 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
     
     @Test
     public void testNewRestore() throws Exception {
-        Resource tmpDir = BackupUtils.tmpDir();
-        Resources.copy(file("geoserver-alfa2-backup.zip").file(), tmpDir);
-
-        Resource archiveFile = tmpDir.get("geoserver-alfa2-backup.zip");
+        Resource archiveFile = file("geoserver-alfa2-backup.zip");
         
         String json = 
                 "{\"restore\": {" + 

@@ -130,11 +130,8 @@ public class BackupTest extends BackupRestoreTestSupport {
 
     @Test
     public void testRunSpringBatchRestoreJob() throws Exception {
-        Resource tmpDir = BackupUtils.tmpDir();
-        Resources.copy(file("geoserver-full-backup.zip").file(), tmpDir);
-        
         RestoreExecutionAdapter restoreExecution = backupFacade
-                .runRestoreAsync(tmpDir.get("geoserver-full-backup.zip"));
+                .runRestoreAsync(file("geoserver-full-backup.zip"));
 
         // Wait a bit
         Thread.sleep(100);
