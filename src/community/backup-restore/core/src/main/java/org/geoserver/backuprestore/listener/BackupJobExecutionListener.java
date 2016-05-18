@@ -46,6 +46,8 @@ public class BackupJobExecutionListener implements JobExecutionListener {
     
     private Backup backupFacade;
     
+    private BackupExecutionAdapter backupExecution;
+
     GeoServerConfigurationLock locker;
 
     public BackupJobExecutionListener(Backup backupFacade, GeoServerConfigurationLock locker) {
@@ -55,8 +57,10 @@ public class BackupJobExecutionListener implements JobExecutionListener {
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
-     // Acquire GeoServer Configuration Lock in READ mode
+        // Acquire GeoServer Configuration Lock in READ mode
         locker.lock(lockType);
+        
+        this.backupExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
     }
 
     @Override
@@ -69,13 +73,10 @@ public class BackupJobExecutionListener implements JobExecutionListener {
             if (jobExecution.getStatus() == BatchStatus.STOPPED) {
                 backupFacade.getJobOperator().restart(executionId);
             } else {
-                // TODO 
                 LOGGER.fine("Executions Step Summaries : " + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
                 LOGGER.fine("Executions Parameters : " + backupFacade.getJobOperator().getParameters(executionId));
                 LOGGER.fine("Executions Summary : " + backupFacade.getJobOperator().getSummary(executionId));
 
-                final BackupExecutionAdapter backupExecution = backupFacade.getBackupExecutions().get(executionId);
-                
                 LOGGER.fine("Exit Status : " + backupExecution.getStatus());
                 LOGGER.fine("Exit Failures : " + backupExecution.getAllFailureExceptions());
                 

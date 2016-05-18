@@ -15,8 +15,8 @@ import org.geoserver.backuprestore.BackupRestoreTestSupport;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
-import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
+import org.geoserver.platform.resource.Resources;
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -28,7 +28,7 @@ import net.sf.json.JSONObject;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public class RESTBackupTest extends BackupRestoreTestSupport {
+public class RESTRestoreTest extends BackupRestoreTestSupport {
 
     @After
     public void cleanCatalog() throws IOException {
@@ -44,18 +44,19 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
     }
     
     @Test
-    public void testNewBackup() throws Exception {
+    public void testNewRestore() throws Exception {
         Resource tmpDir = BackupUtils.tmpDir();
-        String archiveFilePath = Paths.path(tmpDir.path(), "geoserver-backup.zip");
+        Resources.copy(file("geoserver-alfa2-backup.zip").file(), tmpDir);
+
+        Resource archiveFile = tmpDir.get("geoserver-alfa2-backup.zip");
         
         String json = 
-                "{\"backup\": {" + 
-                "   \"archiveFile\": \""+archiveFilePath+"\", " + 
-                "   \"overwrite\": true" + 
+                "{\"restore\": {" + 
+                "   \"archiveFile\": \""+archiveFile.path()+"\" " +  
                 "  }" + 
                 "}";
         
-        JSONObject execution = postNewBackup(json);
+        JSONObject execution = postNewRestore(json);
 
         assertTrue(execution.getLong("id") == 0);
         assertTrue("STARTED".equals(execution.getString("status")));
@@ -69,17 +70,17 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
         assertTrue("COMPLETED".equals(execution.getString("status")));
     }
 
-    JSONObject postNewBackup(String body) throws Exception {
-        MockHttpServletResponse resp = body == null ? postAsServletResponse("/rest/br/backup", "")
-                : postAsServletResponse("/rest/br/backup", body, "application/json");
+    JSONObject postNewRestore(String body) throws Exception {
+        MockHttpServletResponse resp = body == null ? postAsServletResponse("/rest/br/restore", "")
+                : postAsServletResponse("/rest/br/restore", body, "application/json");
 
         assertEquals(201, resp.getStatus());
         assertNotNull(resp.getHeader("Location"));
-        assertTrue(resp.getHeader("Location").matches(".*/backup/\\d"));
+        assertTrue(resp.getHeader("Location").matches(".*/restore/\\d"));
         assertEquals("application/json", resp.getContentType());
 
         JSONObject json = (JSONObject) json(resp);
-        JSONObject execution = json.getJSONObject("backup");
+        JSONObject execution = json.getJSONObject("restore");
 
         assertNotNull(execution);
 
@@ -87,9 +88,9 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
     }
 
     JSONObject readExecutionStatus(long executionId) throws Exception {
-        JSONObject json = (JSONObject) getAsJSON("/rest/br/backup/" + executionId);
+        JSONObject json = (JSONObject) getAsJSON("/rest/br/restore/" + executionId);
 
-        JSONObject execution = json.getJSONObject("backup");
+        JSONObject execution = json.getJSONObject("restore");
 
         assertNotNull(execution);
 

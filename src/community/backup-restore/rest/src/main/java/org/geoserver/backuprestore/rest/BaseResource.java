@@ -5,14 +5,9 @@
  */
 package org.geoserver.backuprestore.rest;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.logging.Logger;
 
 import org.geoserver.backuprestore.Backup;
-import org.geoserver.backuprestore.rest.format.BackupJSONReader;
-import org.geoserver.backuprestore.rest.format.BackupJSONWriter;
 import org.geoserver.rest.AbstractResource;
 import org.geotools.util.logging.Logging;
 
@@ -53,13 +48,4 @@ public abstract class BaseResource extends AbstractResource {
         }
     }
 
-    // TODO
-    protected BackupJSONReader newReader(InputStream input) throws IOException {
-        return new BackupJSONReader(backupFacade, input);
-    }
-
-    // TODO
-    protected BackupJSONWriter newWriter(OutputStream output) throws IOException {
-        return new BackupJSONWriter(backupFacade, getPageInfo(), output);
-    }
 }

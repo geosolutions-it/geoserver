@@ -20,6 +20,7 @@ import org.geoserver.backuprestore.writer.ResourceInfoAdditionalResourceWriter;
 import org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
@@ -33,6 +34,7 @@ import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
+import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

@@ -12,6 +12,9 @@ import org.geoserver.GeoServerConfigurationLock;
 import org.geoserver.GeoServerConfigurationLock.LockType;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.RestoreExecutionAdapter;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.Wrapper;
+import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geotools.util.logging.Logging;
 import org.springframework.batch.core.BatchStatus;
@@ -58,7 +61,24 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         // swapped at the end of the Restore if everything goes well.
         
         this.restoreExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
-        this.restoreExecution.setRestoreCatalog(new CatalogImpl());
+        this.restoreExecution.setRestoreCatalog(createRestoreCatalog());
+    }
+
+    private Catalog createRestoreCatalog() {
+        CatalogImpl restoreCatalog = new CatalogImpl();
+        Catalog gsCatalog = backupFacade.getGeoServer().getCatalog();
+        if (gsCatalog instanceof Wrapper) {
+            gsCatalog = ((Wrapper)gsCatalog).unwrap(Catalog.class);
+        }
+        
+        restoreCatalog.setResourceLoader(gsCatalog.getResourceLoader());
+        restoreCatalog.setResourcePool(gsCatalog.getResourcePool());
+        
+        for (CatalogListener listener : gsCatalog.getListeners()) {
+            restoreCatalog.addListener(listener);
+        }
+
+        return restoreCatalog;
     }
 
     @Override
@@ -71,13 +91,20 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
             if (jobExecution.getStatus() == BatchStatus.STOPPED) {
                 backupFacade.getJobOperator().restart(executionId);
             } else {
-                // TODO 
                 LOGGER.fine("Executions Step Summaries : " + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
                 LOGGER.fine("Executions Parameters : " + backupFacade.getJobOperator().getParameters(executionId));
                 LOGGER.fine("Executions Summary : " + backupFacade.getJobOperator().getSummary(executionId));
 
-                LOGGER.fine("Exit Status : " + backupFacade.getRestoreExecutions().get(executionId).getStatus());
-                LOGGER.fine("Exit Failures : " + backupFacade.getRestoreExecutions().get(executionId).getAllFailureExceptions());
+                LOGGER.fine("Exit Status : " + restoreExecution.getStatus());
+                LOGGER.fine("Exit Failures : " + restoreExecution.getAllFailureExceptions());
+
+                if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
+                    // Reload GeoServer Catalog
+                    // TODO: If not DRY-RUN
+                    backupFacade.getGeoServer().reload();
+
+                    // TODO - fire events to listeners
+                }
             }
         } catch (NoSuchJobException e) {
             e.printStackTrace();
@@ -88,6 +115,9 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         } catch (JobRestartException e) {
             e.printStackTrace();
         } catch (JobParametersInvalidException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
             e.printStackTrace();
         } finally {
             // Release locks on GeoServer Configuration

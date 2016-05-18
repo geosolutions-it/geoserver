@@ -12,9 +12,12 @@ import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.security.GeoServerSecurityManager;
+import org.geoserver.security.SecurityManagerListener;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.UnexpectedJobExecutionException;
@@ -56,10 +59,6 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
         this.backupFacade = backupFacade;
         
         this.xstream = xStreamPersisterFactory.createXMLPersister();
-        this.xstream.setCatalog(catalog);
-        this.xstream.setReferenceByName(true);
-        this.xstream.setExcludeIds();
-        this.xp = this.xstream.getXStream();
     }
 
     @Override
@@ -82,9 +81,14 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
         } else {
             this.catalog = backupFacade.getCatalog();
             this.restoringCatalog = false;
+            this.xstream.setExcludeIds();
         }
 
         Assert.notNull(catalog, "catalog must be set");
+
+        this.xstream.setCatalog(this.catalog);
+        this.xstream.setReferenceByName(true);
+        this.xp = this.xstream.getXStream();
 
         final GeoServer geoserver = backupFacade.getGeoServer();
         final GeoServerDataDirectory dd = backupFacade.getGeoServerDataDirectory();
@@ -110,13 +114,12 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
                 
                 // TODO: Save warnings and validation issues on the JobContext
             } catch (Exception e) {
+                // TODO: Collect warnings and issues
                 throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer security settings!", e);  
             } finally {
                 testGssm.destroy();
             }
         } else {
-            // TODO: Restore GeoServerSecurityManager
-            
             /**
              * Create a new GeoServerSecurityManager instance using the INPUT DATA DIR.
              * 
@@ -125,6 +128,37 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
              * 2. Destroy and reload the appContext GeoServerSecurityManager
              * 3. Issue SecurityManagerListener extensions handlePostChanged(...)
              */
+            final String inputFolderURL = jobExecution.getJobParameters().getString(Backup.PARAM_INPUT_FILE_PATH);
+            Resource sourceRestoreFolder = Resources.fromURL(inputFolderURL);
+            
+            // Test that the security folder has been correctly saved
+            GeoServerSecurityManager testGssm = 
+                    new GeoServerSecurityManager(new GeoServerDataDirectory(sourceRestoreFolder.dir()));
+            try {
+                testGssm.setApplicationContext(applicationContext);
+                testGssm.reload();
+                
+                // TODO: Perform validation tests here using "testGssm"
+                
+                // TODO: Save warnings and validation issues on the JobContext
+            } catch (Exception e) {
+                throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer security settings!", e);  
+            } finally {
+                testGssm.destroy();
+            }
+
+            // Copy the Security files into the destination folder
+            // TODO: Purge datadir option
+            Files.delete(security.dir());
+            Resources.copy(BackupUtils.dir(sourceRestoreFolder, SECURITY_FOLDER_NAME), security);
+
+            // Reload Security Context
+            GeoServerSecurityManager securityContext = GeoServerExtensions.bean(GeoServerSecurityManager.class);
+            securityContext.reload();
+            
+            for (SecurityManagerListener listener : GeoServerExtensions.extensions(SecurityManagerListener.class)) {
+                listener.handlePostChanged(securityContext);
+            }
         }
         
         return RepeatStatus.FINISHED;

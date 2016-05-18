@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.logging.Level;
 
 import org.geoserver.backuprestore.Backup;
-import org.geoserver.backuprestore.BackupExecutionAdapter;
-import org.geoserver.backuprestore.rest.format.BackupJSONReader;
-import org.geoserver.backuprestore.rest.format.BackupJSONWriter;
+import org.geoserver.backuprestore.RestoreExecutionAdapter;
+import org.geoserver.backuprestore.rest.format.RestoreJSONReader;
+import org.geoserver.backuprestore.rest.format.RestoreJSONWriter;
 import org.geoserver.rest.PageInfo;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
@@ -30,21 +30,21 @@ import org.restlet.data.Status;
 /**
  * REST resource for 
  * 
- * <pre>/br/backup[/&lt;backupId&gt;]</pre>
+ * <pre>/br/restore[/&lt;restoreId&gt;]</pre>
  * 
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public class BackupResource  extends BaseResource {
+public class RestoreResource  extends BaseResource {
 
-    public BackupResource(Backup backupFacade) {
+    public RestoreResource(Backup backupFacade) {
         super(backupFacade);
     }
 
     @Override
     protected List<DataFormat> createSupportedFormats(Request arg0, Response arg1) {
-        return (List) Arrays.asList(new BackupJSONFormat(MediaType.APPLICATION_JSON),
-                new BackupJSONFormat(MediaType.TEXT_HTML));
+        return (List) Arrays.asList(new RestoreJSONFormat(MediaType.APPLICATION_JSON),
+                new RestoreJSONFormat(MediaType.TEXT_HTML));
     }
 
     @Override
@@ -61,7 +61,7 @@ public class BackupResource  extends BaseResource {
     public void handleGet() {
         DataFormat formatGet = getFormatGet();
         if (formatGet == null) {
-            formatGet = new BackupJSONFormat(MediaType.APPLICATION_JSON);
+            formatGet = new RestoreJSONFormat(MediaType.APPLICATION_JSON);
         }
         Object lookupContext = lookupContext(true, false);
         if (lookupContext == null) {
@@ -75,11 +75,11 @@ public class BackupResource  extends BaseResource {
     @Override
     public void handlePost() {
         Object obj = lookupContext(true, true);
-        BackupExecutionAdapter execution = null;
-        if (obj instanceof BackupExecutionAdapter) {
+        RestoreExecutionAdapter execution = null;
+        if (obj instanceof RestoreExecutionAdapter) {
             // TODO: restart an existing execution
             /*try {
-                restartImport((BackupExecutionAdapter) obj);
+                restartImport((RestoreExecutionAdapter) obj);
             } catch (Throwable t) {
                 if (t instanceof ValidationException) {
                     throw new RestletException(t.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, t);
@@ -89,7 +89,7 @@ public class BackupResource  extends BaseResource {
             }*/
         }
         else {
-            execution = runBackup();
+            execution = runRestore();
         }
         if (execution != null) {
             // TODO 
@@ -100,22 +100,22 @@ public class BackupResource  extends BaseResource {
      * 
      * @return
      */
-    private BackupExecutionAdapter runBackup() {
-        BackupExecutionAdapter execution = null;
+    private RestoreExecutionAdapter runRestore() {
+        RestoreExecutionAdapter execution = null;
         
         try {
             Form query = getRequest().getResourceRef().getQueryAsForm();
     
             if (MediaType.APPLICATION_JSON.equals(getRequest().getEntity().getMediaType())) {
-                BackupExecutionAdapter newExecution = (BackupExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
+                RestoreExecutionAdapter newExecution = (RestoreExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
     
                 // TODO: archiveFile and overwrite option integrity checks
                 
-                execution = backupFacade.runBackupAsync(newExecution.getArchiveFile(), newExecution.isOverwrite());
+                execution = backupFacade.runRestoreAsync(newExecution.getArchiveFile());
                 
-                LOGGER.log(Level.INFO, "Backup file generated: " + newExecution.getArchiveFile());
+                LOGGER.log(Level.INFO, "Restore file started: " + newExecution.getArchiveFile());
     
-                getResponse().redirectSeeOther(getPageInfo().rootURI("/br/backup/"+execution.getId()));
+                getResponse().redirectSeeOther(getPageInfo().rootURI("/br/restore/"+execution.getId()));
                 getResponse().setEntity(getFormatGet().toRepresentation(execution));
                 getResponse().setStatus(Status.SUCCESS_CREATED);
             } else {
@@ -135,9 +135,9 @@ public class BackupResource  extends BaseResource {
      * @author afabiani
      *
      */
-    class BackupJSONFormat extends StreamDataFormat {
+    class RestoreJSONFormat extends StreamDataFormat {
 
-        public BackupJSONFormat(MediaType type) {
+        public RestoreJSONFormat(MediaType type) {
             super(type);
         }
 
@@ -156,12 +156,12 @@ public class BackupResource  extends BaseResource {
                 pageInfo.setPagePath(pageInfo.getPagePath().substring(0, queryIdx));
             }
 
-            BackupJSONWriter json = newWriter(out);
-            if (object instanceof BackupExecutionAdapter) {
-                json.execution((BackupExecutionAdapter) object, true, expand(1));
+            RestoreJSONWriter json = newWriter(out);
+            if (object instanceof RestoreExecutionAdapter) {
+                json.execution((RestoreExecutionAdapter) object, true, expand(1));
             }
             else {
-                json.executions((Iterator<BackupExecutionAdapter>) object, expand(0));
+                json.executions((Iterator<RestoreExecutionAdapter>) object, expand(0));
             }
         }
     }
@@ -173,23 +173,23 @@ public class BackupResource  extends BaseResource {
      * @return
      */
     Object lookupContext(boolean allowAll, boolean mustExist) {
-        String i = getAttribute("backupId");
+        String i = getAttribute("restoreId");
         if (i != null) {
-            BackupExecutionAdapter backupExecution = null;
+            RestoreExecutionAdapter restoreExecution = null;
             try {
-                backupExecution = backupFacade.getBackupExecutions().get(Long.parseLong(i));
+                restoreExecution = backupFacade.getRestoreExecutions().get(Long.parseLong(i));
             } catch (NumberFormatException e) {
             }
-            if (backupExecution == null && mustExist) {
-                throw new RestletException("No such backup execution: " + i, Status.CLIENT_ERROR_NOT_FOUND);
+            if (restoreExecution == null && mustExist) {
+                throw new RestletException("No such restore execution: " + i, Status.CLIENT_ERROR_NOT_FOUND);
             }
-            return backupExecution;
+            return restoreExecution;
         }
         else {
             if (allowAll) {
-                return backupFacade.getBackupExecutions().entrySet().iterator();
+                return backupFacade.getRestoreExecutions().entrySet().iterator();
             }
-            throw new RestletException("No backup execution specified", Status.CLIENT_ERROR_BAD_REQUEST);
+            throw new RestletException("No restore execution specified", Status.CLIENT_ERROR_BAD_REQUEST);
         }
     }
     
@@ -199,8 +199,8 @@ public class BackupResource  extends BaseResource {
      * @return
      * @throws IOException
      */
-    public BackupJSONReader newReader(InputStream input) throws IOException {
-        return new BackupJSONReader(backupFacade, input);
+    public RestoreJSONReader newReader(InputStream input) throws IOException {
+        return new RestoreJSONReader(backupFacade, input);
     }
 
     /**
@@ -209,7 +209,7 @@ public class BackupResource  extends BaseResource {
      * @return
      * @throws IOException
      */
-    public BackupJSONWriter newWriter(OutputStream output) throws IOException {
-        return new BackupJSONWriter(backupFacade, getPageInfo(), output);
+    public RestoreJSONWriter newWriter(OutputStream output) throws IOException {
+        return new RestoreJSONWriter(backupFacade, getPageInfo(), output);
     }
 }

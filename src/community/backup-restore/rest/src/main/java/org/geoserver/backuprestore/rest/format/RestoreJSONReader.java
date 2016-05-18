@@ -15,7 +15,7 @@ import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.geoserver.backuprestore.Backup;
-import org.geoserver.backuprestore.BackupExecutionAdapter;
+import org.geoserver.backuprestore.RestoreExecutionAdapter;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.platform.resource.Files;
 
@@ -23,15 +23,14 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 /**
- * Utility class for reading backupexecutions/filters/etc... from JSON.
+ * Utility class for reading restoreexecutions/filters/etc... from JSON.
  * 
- * Reads backup execution parameters from JSON
+ * Reads restore execution parameters from JSON
  *
  * <pre>
  * {
- *         "backup": {
- *              "archiveFile": "<path_to_archive_file>.zip", 
- *              "overwrite": true/false
+ *         "restore": {
+ *              "archiveFile": "<path_to_archive_file>.zip"
  *         }
  * }
  * </pre>
@@ -41,22 +40,22 @@ import net.sf.json.JSONObject;
  * @author Justin Deoliveira, OpenGeo
  * @author Alessio Fabiani, GeoSolutions
  */
-public class BackupJSONReader {
+public class RestoreJSONReader {
 
     Backup backupFacade;
 
     JSONObject json;
 
-    public BackupJSONReader(Backup backupFacade, String in) throws IOException {
+    public RestoreJSONReader(Backup backupFacade, String in) throws IOException {
         this(backupFacade, new ByteArrayInputStream(in.getBytes()));
     }
 
-    public BackupJSONReader(Backup backupFacade, InputStream in) throws IOException {
+    public RestoreJSONReader(Backup backupFacade, InputStream in) throws IOException {
         this.backupFacade = backupFacade;
         json = parse(in);
     }
 
-    public BackupJSONReader(Backup backupFacade, JSONObject obj) {
+    public RestoreJSONReader(Backup backupFacade, JSONObject obj) {
         this.backupFacade = backupFacade;
         json = obj;
     }
@@ -65,18 +64,14 @@ public class BackupJSONReader {
         return json;
     }
 
-    public BackupExecutionAdapter execution() throws IOException {
-        BackupExecutionAdapter execution = null;
-        if (json.has("backup")) {
-            execution = new BackupExecutionAdapter(null);
+    public RestoreExecutionAdapter execution() throws IOException {
+        RestoreExecutionAdapter execution = null;
+        if (json.has("restore")) {
+            execution = new RestoreExecutionAdapter(null);
 
-            json = json.getJSONObject("backup");
+            json = json.getJSONObject("restore");
             if (json.has("archiveFile")) {
                 execution.setArchiveFile(Files.asResource(new File(json.getString("archiveFile"))));
-            }
-            
-            if (json.has("overwrite")) {
-                execution.setOverwrite(json.getBoolean("overwrite"));
             }
         }
         return execution;

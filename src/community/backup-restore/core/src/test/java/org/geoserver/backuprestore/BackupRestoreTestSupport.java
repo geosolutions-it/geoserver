@@ -25,6 +25,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.SystemTestData;
@@ -37,6 +38,7 @@ import org.geotools.data.FeatureStore;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
+import org.junit.After;
 import org.junit.Before;
 import org.opengis.feature.simple.SimpleFeatureType;
 
@@ -71,19 +73,13 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
         return SystemUtils.IS_OS_WINDOWS;
     }
 
-    /*@After
-    public void cleanCatalog() throws IOException {
-        for (StoreInfo s : getCatalog().getStores(StoreInfo.class)) {
-            removeStore(s.getWorkspace().getName(), s.getName());
-        }
-        for (StyleInfo s : getCatalog().getStyles()) {
-            String styleName = s.getName();
-            if (!DEFAULT_STYLEs.contains(styleName)) {
-                removeStyle(null, styleName);
-            }
-        }
-    }*/
-    
+    @Override
+    protected void onTearDown(SystemTestData testData) throws Exception {
+        super.onTearDown(testData);
+        
+        cleanCatalog();
+    }
+
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
@@ -257,4 +253,16 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
         return org.geoserver.platform.resource.Files.asResource(file);
     }
 
+    public void cleanCatalog() throws IOException {
+        for (StoreInfo s : getCatalog().getStores(StoreInfo.class)) {
+            removeStore(s.getWorkspace().getName(), s.getName());
+        }
+        for (StyleInfo s : getCatalog().getStyles()) {
+            String styleName = s.getName();
+            if (!DEFAULT_STYLEs.contains(styleName)) {
+                removeStyle(null, styleName);
+            }
+        }
+    }
+    
 }

@@ -26,15 +26,15 @@
 	</bean>
 
 	<!-- Definition of the Backup/Restore Tasklets: those are specific tasklets which can be invoked as additional steps of the main Job -->
-	<bean id="catalogBackupTasklet" class="org.geoserver.backuprestore.tasklet.CatalogBackupTasklet">
-		<constructor-arg ref="backupFacade" />
-		<constructor-arg ref="xstreamPersisterFactory" />
-	</bean>
-	
-	<bean id="catalogSecurityManagerTasklet" class="org.geoserver.backuprestore.tasklet.CatalogSecurityManagerTasklet">
-		<constructor-arg ref="backupFacade" />
-		<constructor-arg ref="xstreamPersisterFactory" />
-	</bean>
+		<bean id="catalogBackupTasklet" class="org.geoserver.backuprestore.tasklet.CatalogBackupTasklet">
+			<constructor-arg ref="backupFacade" />
+			<constructor-arg ref="xstreamPersisterFactory" />
+		</bean>
+		
+		<bean id="catalogSecurityManagerTasklet" class="org.geoserver.backuprestore.tasklet.CatalogSecurityManagerTasklet">
+			<constructor-arg ref="backupFacade" />
+			<constructor-arg ref="xstreamPersisterFactory" />
+		</bean>
 	
 	<!-- ********************** -->
 	<!-- Main Backup BATCH Flow -->
@@ -749,7 +749,31 @@
 					</batch:writer>
 				</batch:chunk>
 			</batch:tasklet>
+
+			<batch:fail on="FAILED"/>
+			<batch:next on="*" to="restoreGeoServerInfos"/>
+
+			<batch:listeners>
+            	<batch:listener ref="restoreExecutionPromotionListener"/>
+        	</batch:listeners>
+			
 		</batch:step>
+		
+    	<batch:step id="restoreGeoServerInfos">
+    		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
+    		
+    		<batch:fail on="FAILED"/>
+			<batch:next on="*" to="restoreGeoServerSecurityManager"/>
+
+			<batch:listeners>
+            	<batch:listener ref="restoreExecutionPromotionListener"/>
+        	</batch:listeners>
+
+    	</batch:step>
+
+    	<batch:step id="restoreGeoServerSecurityManager">
+    		<batch:tasklet allow-start-if-complete="true" ref="catalogSecurityManagerTasklet"/>
+    	</batch:step>
 		
 	</batch:job>
 	<!-- The RESTORE Job definition ENDS here -->

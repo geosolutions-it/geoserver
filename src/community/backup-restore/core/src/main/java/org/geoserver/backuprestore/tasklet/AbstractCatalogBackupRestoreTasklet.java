@@ -5,13 +5,16 @@
  */
 package org.geoserver.backuprestore.tasklet;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.io.FileUtils;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
@@ -24,6 +27,8 @@ import org.geoserver.gwc.config.GWCConfigPersister;
 import org.geoserver.gwc.config.GeoserverXMLResourceProvider;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Files;
+import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.platform.resource.ResourceStore;
@@ -98,7 +103,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
 
     protected XStream xp;
 
-    protected boolean restoringCatalog;
+    private boolean restoringCatalog;
 
     public AbstractCatalogBackupRestoreTasklet(Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
@@ -106,12 +111,22 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
         
         this.xStreamPersisterFactory = xStreamPersisterFactory;
         this.xstream = xStreamPersisterFactory.createXMLPersister();
-        this.xstream.setCatalog(catalog);
-        this.xstream.setReferenceByName(true);
-        this.xstream.setExcludeIds();
-        this.xp = this.xstream.getXStream();
     }
     
+    /**
+     * @return the restoringCatalog
+     */
+    public boolean isRestoringCatalog() {
+        return restoringCatalog;
+    }
+
+    /**
+     * @param restoringCatalog the restoringCatalog to set
+     */
+    public void setRestoringCatalog(boolean restoringCatalog) {
+        this.restoringCatalog = restoringCatalog;
+    }
+
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) 
             throws Exception {
@@ -131,10 +146,15 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
         } else {
             this.catalog = backupFacade.getCatalog();
             this.restoringCatalog = false;
+            this.xstream.setExcludeIds();
         }
 
         Assert.notNull(catalog, "catalog must be set");
-        
+
+        this.xstream.setCatalog(this.catalog);
+        this.xstream.setReferenceByName(true);
+        this.xp = this.xstream.getXStream();
+
         return doExecute(contribution, chunkContext, jobExecution);
     }
     
@@ -154,13 +174,13 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
      * @throws IOException
      */
     public void backupGWCSettings(Resource targetBackupFolder) throws IOException {
-        GWCConfigPersister gwcGeoServervConfigPersister = 
+        GWCConfigPersister gwcGeoServerConfigPersister = 
                 (GWCConfigPersister) GeoServerExtensions.bean("gwcGeoServervConfigPersister");
         
         GWCConfigPersister testGWCCP = 
                 new GWCConfigPersister(xStreamPersisterFactory, new GeoServerResourceLoader(targetBackupFolder.dir()));
         
-        testGWCCP.save(gwcGeoServervConfigPersister.getConfig());
+        testGWCCP.save(gwcGeoServerConfigPersister.getConfig());
         
         // Test that everything went well
         try {
@@ -177,20 +197,47 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
 
             for(GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions.extensions(GeoserverXMLResourceProvider.class)) {
                 Resource providerConfigFile = Resources.fromPath(gwcProvider.getLocation());
-                Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir, providerConfigFile.name());
+                if (Resources.exists(providerConfigFile) && FileUtils.sizeOf(providerConfigFile.file()) > 0) {
+                    Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir, providerConfigFile.name());
+                }
             }
-            
-            /**
-             * TODO: When Restoring
-             * 
-             * 1. the securityManager should issue the listeners
-             * 2. the GWCInitializer  should be re-initialized
-             */
         } catch (Exception e) {
             // TODO: collect warnings and errors
         }
     }
 
+    /**
+     * TODO: When Restoring
+     * 
+     * 1. the securityManager should issue the listeners
+     * 2. the GWCInitializer  should be re-initialized
+     * 
+     * @param sourceRestoreFolder
+     * @param baseDir
+     * @throws IOException
+     */
+    public void restoreGWCSettings(Resource sourceRestoreFolder, Resource baseDir) throws IOException {
+        // Restore configuration files form source and Test that everything went well
+        try {
+            // - Prepare folder
+            Files.delete(baseDir.get(GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME).dir());
+            
+            // Store GWC Providers Configurations
+            Resource targetGWCProviderRestoreDir = 
+                    BackupUtils.dir(baseDir, GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
+            
+            for(GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions.extensions(GeoserverXMLResourceProvider.class)) {
+                final File gwcProviderConfigFile = new File(gwcProvider.getLocation());
+                Resource providerConfigFile = sourceRestoreFolder.get(Paths.path(gwcProviderConfigFile.getParent(), gwcProviderConfigFile.getName()));
+                if (Resources.exists(providerConfigFile) && FileUtils.sizeOf(gwcProviderConfigFile) > 0) {
+                    Resources.copy(providerConfigFile.in(), targetGWCProviderRestoreDir, providerConfigFile.name());
+                }
+            }
+        } catch (Exception e) {
+            // TODO: collect warnings and errors
+        }
+    }
+    
     /**
      * @param resourceStore
      * @param baseDir 
@@ -238,13 +285,58 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
             OutputStream out = Resources.fromPath(fileName, directory).out();
             try {
                 item = xstream.unwrapProxies(item);
+                if (xp == null) {
+                    xp = xstream.getXStream(); 
+                }
                 xp.toXML(item, out);
             } finally {
                 out.close();
             }
         }
     }
-    
+
+    //
+    public Object doRead(Resource directory, String fileName) throws IOException {
+        Object item = null;
+        InputStream in = Resources.fromPath(fileName, directory).in();
+        
+        // Try first using the Services Loaders
+        final List<XStreamServiceLoader> loaders = 
+                GeoServerExtensions.extensions( XStreamServiceLoader.class );
+        for ( XStreamServiceLoader<ServiceInfo> l : loaders  ) {
+            try {
+                if (l.getFilename().equals(fileName)) {
+                    item = l.load(backupFacade.getGeoServer(), Resources.fromPath(fileName, directory));
+                    
+                    if (item != null && item instanceof ServiceInfo) {
+                        return item;
+                    }
+                }
+            } catch (Exception e) {
+                // Just skip and try with another loader
+                item = null;
+            }
+        }
+        
+        try {
+            if (item == null) {
+                try {
+                    if (xp == null) {
+                        xp = xstream.getXStream(); 
+                    }
+                    item = xp.fromXML(in);
+                } finally {
+                    in.close();
+                }
+            }
+        } catch (Exception e) {
+            // TODO: Collect warnings
+            item = null;
+        }
+        
+        return item;
+    }
+
     protected XStreamServiceLoader findServiceLoader(ServiceInfo service) {
         XStreamServiceLoader loader = null;
         

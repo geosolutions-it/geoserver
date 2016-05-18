@@ -17,6 +17,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
 import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 import com.thoughtworks.xstream.XStream;
@@ -67,11 +68,13 @@ public abstract class CatalogReader<T> extends AbstractItemCountingItemStreamIte
                     .getRestoreCatalog();
         } else {
             this.catalog = backupFacade.getCatalog();
+            this.xstream.setExcludeIds();
         }
 
-        this.xstream.setCatalog(catalog);
+        Assert.notNull(catalog, "catalog must be set");
+
+        this.xstream.setCatalog(this.catalog);
         this.xstream.setReferenceByName(true);
-        this.xstream.setExcludeIds();
         this.xp = this.xstream.getXStream();
 
         beforeStep(stepExecution);

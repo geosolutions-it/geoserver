@@ -15,6 +15,13 @@
   <bean id="backupContextFinder" class="org.geoserver.rest.BeanResourceFinder">
       <constructor-arg value="backupResource"/>
   </bean>
+
+  <bean id="restoreResource" class="org.geoserver.backuprestore.rest.RestoreResource" scope="prototype">
+    <constructor-arg ref="backupFacade"/>
+  </bean>
+  <bean id="restoreContextFinder" class="org.geoserver.rest.BeanResourceFinder">
+      <constructor-arg value="restoreResource"/>
+  </bean>
   
   <bean id="backupRestoreRestMapping" class="org.geoserver.rest.RESTMapping">
     <property name="routes">
@@ -30,6 +37,18 @@
             <value>/br/backup/{backupId}</value>
           </key>
           <value>backupContextFinder</value>
+        </entry>
+        <entry>
+          <key>
+            <value>/br/restore</value>
+          </key>
+          <value>restoreContextFinder</value>
+        </entry>
+        <entry>
+          <key>
+            <value>/br/restore/{restoreId}</value>
+          </key>
+          <value>restoreContextFinder</value>
         </entry>
       </map>
     </property>
