@@ -40,7 +40,6 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
             
             JSONObject execution = postNewRestore(json);
 
-            assertTrue(execution.getLong("id") == 0);
             assertTrue("STARTED".equals(execution.getString("status")));
 
             while ("STARTED".equals(execution.getString("status"))) {

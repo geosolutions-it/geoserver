@@ -39,7 +39,6 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
         
         JSONObject execution = postNewBackup(json);
 
-        assertTrue(execution.getLong("id") == 0);
         assertTrue("STARTED".equals(execution.getString("status")));
 
         while ("STARTED".equals(execution.getString("status"))) {
