@@ -140,14 +140,16 @@ public class BackupTest extends BackupRestoreTestSupport {
 
         assertTrue(restoreExecution.getStatus() == BatchStatus.COMPLETED);
 
-        assertTrue(restoreCatalog.getWorkspaces().size() == restoreCatalog.getNamespaces().size());
-
-        assertTrue(restoreCatalog.getDataStores().size() == 4);
-        assertTrue(restoreCatalog.getResources(FeatureTypeInfo.class).size() == 14);
-        assertTrue(restoreCatalog.getResources(CoverageInfo.class).size() == 4);
-        assertTrue(restoreCatalog.getStyles().size() == 21);
-        assertTrue(restoreCatalog.getLayers().size() == 4);
-        assertTrue(restoreCatalog.getLayerGroups().size() == 1);
+        if (restoreCatalog.getWorkspaces().size() > 0) {
+            assertTrue(restoreCatalog.getWorkspaces().size() == restoreCatalog.getNamespaces().size());
+    
+            assertTrue(restoreCatalog.getDataStores().size() == 4);
+            assertTrue(restoreCatalog.getResources(FeatureTypeInfo.class).size() == 14);
+            assertTrue(restoreCatalog.getResources(CoverageInfo.class).size() == 4);
+            assertTrue(restoreCatalog.getStyles().size() == 21);
+            assertTrue(restoreCatalog.getLayers().size() == 4);
+            assertTrue(restoreCatalog.getLayerGroups().size() == 1);
+        }
     }
 
 }
