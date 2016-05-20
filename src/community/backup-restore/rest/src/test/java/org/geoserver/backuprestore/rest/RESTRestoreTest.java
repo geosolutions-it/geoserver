@@ -33,8 +33,8 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
         } else {
             String json = 
                     "{\"restore\": {" + 
-                    "   \"archiveFile\": \""+archiveFile.path()+"\" " +  
-                    "   \"options\": [\"BK_DRY_RUN\", \"BK_BEST_EFFORT\"]\"" +
+                    "   \"archiveFile\": \""+archiveFile.path()+"\", " +  
+                    "   \"options\": [\"BK_DRY_RUN\", \"BK_BEST_EFFORT\"]" +
                     "  }" + 
                     "}";
             

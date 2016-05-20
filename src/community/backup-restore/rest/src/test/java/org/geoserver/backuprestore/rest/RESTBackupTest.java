@@ -32,8 +32,8 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
         String json = 
                 "{\"backup\": {" + 
                 "   \"archiveFile\": \""+archiveFilePath+"\", " + 
-                "   \"overwrite\": true" + 
-                "   \"options\": [\"BK_BEST_EFFORT\"]\"" +
+                "   \"overwrite\": true," + 
+                "   \"options\": [\"BK_BEST_EFFORT\"]" +
                 "  }" + 
                 "}";
         
