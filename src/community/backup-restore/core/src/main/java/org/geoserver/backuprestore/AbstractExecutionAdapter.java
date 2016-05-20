@@ -5,6 +5,8 @@
  */
 package org.geoserver.backuprestore;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -28,15 +30,20 @@ import org.springframework.batch.core.JobParameters;
  */
 public abstract class AbstractExecutionAdapter {
 
+    private Integer totalNumberOfSteps;
+
     protected JobExecution delegate;
+    
+    private List<String> options = Collections.synchronizedList(new ArrayList<String>());;
     
     /**
      * Default Constructor
      * 
      * @param jobExecution
      */
-    public AbstractExecutionAdapter(JobExecution jobExecution) {
+    public AbstractExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
         this.delegate = jobExecution;
+        this.totalNumberOfSteps = totalNumberOfSteps;
     }
     
     /**
@@ -119,5 +126,30 @@ public abstract class AbstractExecutionAdapter {
      */
     public List<Throwable> getAllFailureExceptions() {
         return delegate.getAllFailureExceptions();
+    }
+
+    /**
+     * Returns the total number of Job steps
+     * 
+     * @return the totalNumberOfSteps
+     */
+    public Integer getTotalNumberOfSteps() {
+        return totalNumberOfSteps;
+    }
+
+    /**
+     * Returns the current number of executed steps.
+     * 
+     * @return
+     */
+    public Integer getExecutedSteps() {
+        return delegate.getStepExecutions().size();
+    }
+
+    /**
+     * @return the options
+     */
+    public List<String> getOptions() {
+        return options;
     }
 }

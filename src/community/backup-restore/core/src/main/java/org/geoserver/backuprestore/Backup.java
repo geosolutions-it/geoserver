@@ -7,6 +7,7 @@ package org.geoserver.backuprestore;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -24,8 +25,10 @@ import org.geoserver.platform.ContextLoadedEvent;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Resource;
+import org.geotools.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.JobParametersInvalidException;
@@ -54,12 +57,18 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
     static Logger LOGGER = Logging.getLogger(Backup.class);
 
+    /* Job Parameters Keys **/
     public static final String PARAM_TIME = "time";
 
     public static final String PARAM_OUTPUT_FILE_PATH = "output.file.path";
 
     public static final String PARAM_INPUT_FILE_PATH = "input.file.path";
 
+    public static final String PARAM_DRY_RUN_MODE = "BK_DRY_RUN";
+
+    public static final String PARAM_BEST_EFFORT_MODE = "BK_BEST_EFFORT";
+    
+    /* Jobs Context Keys **/
     public static final String BACKUP_JOB_NAME = "backupJob";
 
     public static final String RESTORE_JOB_NAME = "restoreJob";
@@ -92,6 +101,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     ConcurrentHashMap<Long, BackupExecutionAdapter> backupExecutions = new ConcurrentHashMap<Long, BackupExecutionAdapter>();
 
     ConcurrentHashMap<Long, RestoreExecutionAdapter> restoreExecutions = new ConcurrentHashMap<Long, RestoreExecutionAdapter>();
+
+    private Integer totalNumberOfBackupSteps;
+
+    private Integer totalNumberOfRestoreSteps;
 
     /**
      * A static application context
@@ -228,6 +241,34 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         this.geoServerDataDirectory = geoServerDataDirectory;
     }
 
+    /**
+     * @return the totalNumberOfBackupSteps
+     */
+    public Integer getTotalNumberOfBackupSteps() {
+        return totalNumberOfBackupSteps;
+    }
+
+    /**
+     * @param totalNumberOfBackupSteps the totalNumberOfBackupSteps to set
+     */
+    public void setTotalNumberOfBackupSteps(Integer totalNumberOfBackupSteps) {
+        this.totalNumberOfBackupSteps = totalNumberOfBackupSteps;
+    }
+
+    /**
+     * @return the totalNumberOfRestoreSteps
+     */
+    public Integer getTotalNumberOfRestoreSteps() {
+        return totalNumberOfRestoreSteps;
+    }
+
+    /**
+     * @param totalNumberOfRestoreSteps the totalNumberOfRestoreSteps to set
+     */
+    public void setTotalNumberOfRestoreSteps(Integer totalNumberOfRestoreSteps) {
+        this.totalNumberOfRestoreSteps = totalNumberOfRestoreSteps;
+    }
+
     @Override
     public void destroy() throws Exception {
         // TODO Auto-generated method stub
@@ -247,10 +288,10 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @throws IOException 
      * 
      */
-    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile, final boolean overwrite) throws IOException {
+    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile, final boolean overwrite, final Hints params) throws IOException {
         // Check if archiveFile exists
         if(archiveFile.file().exists()) {
-            if (!overwrite) {
+            if (!overwrite && FileUtils.sizeOf(archiveFile.file()) > 0) {
                 // Unless the user explicitly wants to overwrite the archiveFile, throw an exception whenever it already exists
                 throw new IOException("The target archive file already exists. Use 'overwrite=TRUE' if you want to overwrite it.");
             } else {
@@ -259,8 +300,12 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         } else {
             // Make sure the parent path exists
             if (!archiveFile.file().getParentFile().exists()) {
-                if (!archiveFile.file().getParentFile().mkdirs()) {
-                    throw new IOException("The path to target archive file is unreachable.");
+                try {
+                    archiveFile.file().getParentFile().mkdirs();
+                } finally {
+                    if (!archiveFile.file().getParentFile().exists()) {
+                        throw new IOException("The path to target archive file is unreachable.");
+                    }
                 }
             }
         }
@@ -271,11 +316,17 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         // Write flat files into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
 
-        JobParameters params = new JobParametersBuilder()
-                .addString(PARAM_OUTPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
-                .addLong(PARAM_TIME, System.currentTimeMillis())
-                .toJobParameters();
+        // Fill Job Parameters
+        JobParametersBuilder paramsBuilder = new JobParametersBuilder();
+        paramsBuilder
+            .addString(PARAM_OUTPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
+            .addLong(PARAM_TIME, System.currentTimeMillis());
 
+        parseParams(params, paramsBuilder);
+
+        JobParameters jobParameters = paramsBuilder.toJobParameters();
+                
+        // Send Execution Signal
         BackupExecutionAdapter backupExecution;
         try {
             while (!(getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty())) {
@@ -285,7 +336,8 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
             if(getRestoreRunningExecutions().isEmpty() && 
                     getBackupRunningExecutions().isEmpty()) {
                 synchronized(jobOperator) {
-                    backupExecution = new BackupExecutionAdapter(jobLauncher.run(backupJob, params));
+                    JobExecution jobExecution = jobLauncher.run(backupJob, jobParameters);
+                    backupExecution = new BackupExecutionAdapter(jobExecution, totalNumberOfBackupSteps);
                     backupExecution.setArchiveFile(archiveFile);
                     backupExecution.setOverwrite(overwrite);
                     backupExecutions.put(backupExecution.getId(), backupExecution);
@@ -314,16 +366,21 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @throws IOException
      * 
      */
-    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile) throws IOException {
+    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile, final Hints params) throws IOException {
         // Extract archive into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
         BackupUtils.extractTo(archiveFile, tmpDir);
 
-        JobParameters params = new JobParametersBuilder()
-                .addString(PARAM_INPUT_FILE_PATH,
-                        BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
-                .addLong(PARAM_TIME, System.currentTimeMillis()).toJobParameters();
+        // Fill Job Parameters
+        JobParametersBuilder paramsBuilder = new JobParametersBuilder();
+        paramsBuilder
+            .addString(PARAM_INPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
+            .addLong(PARAM_TIME, System.currentTimeMillis());
 
+        parseParams(params, paramsBuilder);
+
+        JobParameters jobParameters = paramsBuilder.toJobParameters();
+        
         RestoreExecutionAdapter restoreExecution;
         try {
             while (!(getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty())) {
@@ -333,7 +390,8 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
             if (getRestoreRunningExecutions().isEmpty()
                     && getBackupRunningExecutions().isEmpty()) {
                 synchronized (jobOperator) {
-                    restoreExecution = new RestoreExecutionAdapter(jobLauncher.run(restoreJob, params));
+                    JobExecution jobExecution = jobLauncher.run(restoreJob, jobParameters);
+                    restoreExecution = new RestoreExecutionAdapter(jobExecution, totalNumberOfRestoreSteps);
                     restoreExecution.setArchiveFile(archiveFile);
 
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
@@ -356,6 +414,37 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         }
     }
 
+    /**
+     * @param params
+     * @param paramsBuilder
+     */
+    private void parseParams(final Hints params, JobParametersBuilder paramsBuilder) {
+        if (params != null) {
+            if (params.containsKey(new Hints.OptionKey(PARAM_DRY_RUN_MODE))) {
+                paramsBuilder.addString(PARAM_DRY_RUN_MODE, "true");
+            }
+            
+            if (params.containsKey(new Hints.OptionKey(PARAM_BEST_EFFORT_MODE))) {
+                paramsBuilder.addString(PARAM_BEST_EFFORT_MODE, "true");
+            }
+
+            for(Entry<Object, Object> param : params.entrySet()) {
+                if (param.getKey() instanceof Hints.OptionKey) {
+                    final Set<String> key = ((Hints.OptionKey) param.getKey()).getOptions();
+                    for (String k : key) {
+                        switch (k) {
+                            case PARAM_DRY_RUN_MODE:
+                            case PARAM_BEST_EFFORT_MODE:
+                                if (paramsBuilder.toJobParameters().getString(k) == null) {
+                                    paramsBuilder.addString(k, "true");
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     public XStreamPersister createXStreamPersisterXML() {
         return initXStreamPersister(new XStreamPersisterFactory().createXMLPersister());
     }

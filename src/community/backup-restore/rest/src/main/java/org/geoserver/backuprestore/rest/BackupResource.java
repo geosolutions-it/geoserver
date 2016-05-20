@@ -79,12 +79,12 @@ public class BackupResource  extends BaseResource {
         if (obj instanceof BackupExecutionAdapter) {
             // TODO: restart an existing execution
             /*try {
-                restartImport((BackupExecutionAdapter) obj);
+                restartBackup((BackupExecutionAdapter) obj);
             } catch (Throwable t) {
                 if (t instanceof ValidationException) {
                     throw new RestletException(t.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, t);
                 } else {
-                    throw new RestletException("Error occured executing import", Status.SERVER_ERROR_INTERNAL, t);
+                    throw new RestletException("Error occurred executing backup: ", Status.SERVER_ERROR_INTERNAL, t);
                 }
             }*/
         }
@@ -111,7 +111,8 @@ public class BackupResource  extends BaseResource {
     
                 // TODO: archiveFile and overwrite option integrity checks
                 
-                execution = backupFacade.runBackupAsync(newExecution.getArchiveFile(), newExecution.isOverwrite());
+                execution = backupFacade.runBackupAsync(
+                        newExecution.getArchiveFile(), newExecution.isOverwrite(), asParams(newExecution.getOptions()));
                 
                 LOGGER.log(Level.INFO, "Backup file generated: " + newExecution.getArchiveFile());
     
@@ -122,9 +123,9 @@ public class BackupResource  extends BaseResource {
                 throw new IllegalArgumentException("Unknown Content-Type: " + getRequest().getEntity().getMediaType());
             }
         } catch (IllegalArgumentException iae) {
-            throw new RestletException("Unable to create import", Status.CLIENT_ERROR_BAD_REQUEST, iae);
+            throw new RestletException("Unable to perform backup: ", Status.CLIENT_ERROR_BAD_REQUEST, iae);
         } catch (Exception e) {
-            throw new RestletException("Unable to create import", Status.SERVER_ERROR_INTERNAL, e);
+            throw new RestletException("Unable to perform backup: ", Status.SERVER_ERROR_INTERNAL, e);
         }
         
         return execution;

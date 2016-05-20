@@ -23,6 +23,9 @@
 	<bean id="backupFacade" class="org.geoserver.backuprestore.Backup">
 		<constructor-arg ref="catalog" />
 		<constructor-arg ref="resourceLoader" />
+		
+		<property name="totalNumberOfBackupSteps" value="9" />
+		<property name="totalNumberOfRestoreSteps" value="9" />
 	</bean>
 
 	<!-- Definition of the Backup/Restore Tasklets: those are specific tasklets which can be invoked as additional steps of the main Job -->

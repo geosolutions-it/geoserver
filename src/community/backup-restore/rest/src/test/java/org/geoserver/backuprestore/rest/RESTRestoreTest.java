@@ -29,11 +29,12 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
         Resource archiveFile = file("geoserver-alfa2-backup.zip");
         
         if (archiveFile == null) {
-            LOGGER.log(Level.WARNING, "Could not find source archive file ["+archiveFile.path()+"]");
+            LOGGER.log(Level.WARNING, "Could not find source archive file.");
         } else {
             String json = 
                     "{\"restore\": {" + 
                     "   \"archiveFile\": \""+archiveFile.path()+"\" " +  
+                    "   \"options\": [\"BK_DRY_RUN\", \"BK_BEST_EFFORT\"]\"" +
                     "  }" + 
                     "}";
             

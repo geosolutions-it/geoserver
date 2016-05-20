@@ -67,11 +67,16 @@ public class RestoreJSONReader {
     public RestoreExecutionAdapter execution() throws IOException {
         RestoreExecutionAdapter execution = null;
         if (json.has("restore")) {
-            execution = new RestoreExecutionAdapter(null);
+            execution = new RestoreExecutionAdapter(null, 0);
 
             json = json.getJSONObject("restore");
+            
             if (json.has("archiveFile")) {
                 execution.setArchiveFile(Files.asResource(new File(json.getString("archiveFile"))));
+            }
+            
+            if (json.has("options")) {
+                execution.getOptions().addAll(getOptions(json));
             }
         }
         return execution;

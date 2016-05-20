@@ -5,10 +5,13 @@
  */
 package org.geoserver.backuprestore.rest;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.rest.AbstractResource;
+import org.geotools.factory.Hints;
 import org.geotools.util.logging.Logging;
 
 /**
@@ -48,4 +51,22 @@ public abstract class BaseResource extends AbstractResource {
         }
     }
 
+    // TODO
+    protected  Hints asParams(List<String> options) {
+        Hints hints = new Hints(new HashMap(2));
+        
+        if (options != null) {
+            for (String option : options) {
+                if (Backup.PARAM_DRY_RUN_MODE.equals(option)) {
+                    hints.add(new Hints(new Hints.OptionKey(Backup.PARAM_DRY_RUN_MODE), option));
+                }
+                
+                if (Backup.PARAM_BEST_EFFORT_MODE.equals(option)) {
+                    hints.add(new Hints(new Hints.OptionKey(Backup.PARAM_BEST_EFFORT_MODE), option));
+                }                
+            }
+        }
+        
+        return hints;
+    }
 }

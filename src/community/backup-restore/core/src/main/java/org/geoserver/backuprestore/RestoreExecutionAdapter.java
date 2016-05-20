@@ -21,8 +21,8 @@ public class RestoreExecutionAdapter extends AbstractExecutionAdapter {
     
     private Resource archiveFile;
 
-    public RestoreExecutionAdapter(JobExecution jobExecution) {
-        super(jobExecution);
+    public RestoreExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
+        super(jobExecution, totalNumberOfSteps);
     }
 
     /**

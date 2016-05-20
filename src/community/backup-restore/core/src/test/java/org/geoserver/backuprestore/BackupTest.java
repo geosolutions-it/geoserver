@@ -30,7 +30,7 @@ public class BackupTest extends BackupRestoreTestSupport {
     @Test
     public void testRunSpringBatchBackupJob() throws Exception {
         BackupExecutionAdapter backupExecution = backupFacade.runBackupAsync(
-                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
+                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, null);
 
         // Wait a bit
         Thread.sleep(100);
@@ -60,11 +60,11 @@ public class BackupTest extends BackupRestoreTestSupport {
     @Test
     public void testTryToRunMultipleSpringBatchBackupJobs() throws Exception {
         backupFacade.runBackupAsync(
-                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true);
+                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, null);
         try {
             backupFacade.runBackupAsync(
                     Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")),
-                    true);
+                    true, null);
         } catch (IOException e) {
             assertEquals(e.getMessage(),
                     "Could not start a new Backup Job Execution since there are currently Running jobs.");
@@ -108,7 +108,7 @@ public class BackupTest extends BackupRestoreTestSupport {
     @Test
     public void testRunSpringBatchRestoreJob() throws Exception {
         RestoreExecutionAdapter restoreExecution = backupFacade
-                .runRestoreAsync(file("geoserver-full-backup.zip"));
+                .runRestoreAsync(file("geoserver-full-backup.zip"), null);
 
         // Wait a bit
         Thread.sleep(100);

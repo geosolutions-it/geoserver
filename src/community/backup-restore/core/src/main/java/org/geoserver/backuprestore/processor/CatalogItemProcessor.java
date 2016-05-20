@@ -7,7 +7,9 @@ package org.geoserver.backuprestore.processor;
 
 import java.util.logging.Logger;
 
+import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
+import org.geoserver.backuprestore.RestoreExecutionAdapter;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.DataStoreInfo;
@@ -50,6 +52,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
 
     private boolean isNew;
 
+    private AbstractExecutionAdapter currentJobExecution;
+    
     /**
      * Default Constructor.
      * 
@@ -80,10 +84,11 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
-            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId())
-                    .getRestoreCatalog();
+            this.currentJobExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
+            this.catalog = ((RestoreExecutionAdapter)currentJobExecution).getRestoreCatalog();
             this.isNew = true;
         } else {
+            this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
             this.catalog = backupFacade.getCatalog();
             this.isNew = false;
         }
@@ -98,7 +103,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
                 ((CatalogImpl) this.catalog).setExtendedValidation(false);
             }
             
-            LOGGER.info("Processing resource: " + resource);
+            LOGGER.info("Processing resource: " + resource + 
+                    " - Progress: [" + currentJobExecution.getExecutedSteps() + "/" + currentJobExecution.getTotalNumberOfSteps() + "]");
 
             if (resource instanceof WorkspaceInfo) {
                 if (!validateWorkspace((WorkspaceInfo) resource, isNew)) {

@@ -20,8 +20,8 @@ public class BackupExecutionAdapter extends AbstractExecutionAdapter {
     
     private boolean overwrite;
     
-    public BackupExecutionAdapter(JobExecution jobExecution) {
-        super(jobExecution);
+    public BackupExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
+        super(jobExecution, totalNumberOfSteps);
     }
 
     /**

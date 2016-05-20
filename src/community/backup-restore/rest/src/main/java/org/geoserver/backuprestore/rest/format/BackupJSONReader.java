@@ -68,7 +68,7 @@ public class BackupJSONReader {
     public BackupExecutionAdapter execution() throws IOException {
         BackupExecutionAdapter execution = null;
         if (json.has("backup")) {
-            execution = new BackupExecutionAdapter(null);
+            execution = new BackupExecutionAdapter(null, 0);
 
             json = json.getJSONObject("backup");
             if (json.has("archiveFile")) {
@@ -77,6 +77,10 @@ public class BackupJSONReader {
             
             if (json.has("overwrite")) {
                 execution.setOverwrite(json.getBoolean("overwrite"));
+            }
+            
+            if (json.has("options")) {
+                execution.getOptions().addAll(getOptions(json));
             }
         }
         return execution;

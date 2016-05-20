@@ -94,26 +94,7 @@ public class RestoreJSONWriter {
             json.key("archiveFile").value(execution.getArchiveFile().file().getAbsolutePath());
         }
         
-//        if (expand > 0) {
-//            json.key("archive").value(execution.isArchive());
-//            if (execution.getTargetWorkspace() != null) {
-//                json.key("targetWorkspace").value(toJSON(execution.getTargetWorkspace()));
-//            }
-//            if (execution.getTargetStore() != null) {
-//                json.key("targetStore");
-//                store(execution.getTargetStore(), null, false, expand-1);
-//                //value(toJSON(context.getTargetStore()));
-//            }
-//    
-//            if (execution.getData() != null) {
-//                json.key("data");
-//                data(execution.getData(), execution, expand-1);
-//            }
-//            if (!execution.getDefaultTransforms().isEmpty()) {
-//                transforms(execution, expand - 1, execution.getDefaultTransforms());
-//            }
-//            tasks(execution.getTasks(), false, expand-1);
-//        }
+        json.key("progress").value(execution.getExecutedSteps() + "/" + execution.getTotalNumberOfSteps());
 
         json.endObject();
 

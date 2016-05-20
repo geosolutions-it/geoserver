@@ -21,6 +21,7 @@ import org.geoserver.rest.PageInfo;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
 import org.geoserver.rest.format.StreamDataFormat;
+import org.geotools.factory.Hints;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Request;
@@ -79,12 +80,12 @@ public class RestoreResource  extends BaseResource {
         if (obj instanceof RestoreExecutionAdapter) {
             // TODO: restart an existing execution
             /*try {
-                restartImport((RestoreExecutionAdapter) obj);
+                restartRestore((RestoreExecutionAdapter) obj);
             } catch (Throwable t) {
                 if (t instanceof ValidationException) {
                     throw new RestletException(t.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, t);
                 } else {
-                    throw new RestletException("Error occured executing import", Status.SERVER_ERROR_INTERNAL, t);
+                    throw new RestletException("Error occured executing restore: ", Status.SERVER_ERROR_INTERNAL, t);
                 }
             }*/
         }
@@ -111,7 +112,7 @@ public class RestoreResource  extends BaseResource {
     
                 // TODO: archiveFile and overwrite option integrity checks
                 
-                execution = backupFacade.runRestoreAsync(newExecution.getArchiveFile());
+                execution = backupFacade.runRestoreAsync(newExecution.getArchiveFile(), asParams(newExecution.getOptions()));
                 
                 LOGGER.log(Level.INFO, "Restore file started: " + newExecution.getArchiveFile());
     
@@ -122,9 +123,9 @@ public class RestoreResource  extends BaseResource {
                 throw new IllegalArgumentException("Unknown Content-Type: " + getRequest().getEntity().getMediaType());
             }
         } catch (IllegalArgumentException iae) {
-            throw new RestletException("Unable to create import", Status.CLIENT_ERROR_BAD_REQUEST, iae);
+            throw new RestletException("Unable to perform restore: ", Status.CLIENT_ERROR_BAD_REQUEST, iae);
         } catch (Exception e) {
-            throw new RestletException("Unable to create import", Status.SERVER_ERROR_INTERNAL, e);
+            throw new RestletException("Unable to perform restore: ", Status.SERVER_ERROR_INTERNAL, e);
         }
         
         return execution;

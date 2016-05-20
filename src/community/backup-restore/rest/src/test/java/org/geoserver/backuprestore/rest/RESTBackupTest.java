@@ -33,6 +33,7 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
                 "{\"backup\": {" + 
                 "   \"archiveFile\": \""+archiveFilePath+"\", " + 
                 "   \"overwrite\": true" + 
+                "   \"options\": [\"BK_BEST_EFFORT\"]\"" +
                 "  }" + 
                 "}";
         
