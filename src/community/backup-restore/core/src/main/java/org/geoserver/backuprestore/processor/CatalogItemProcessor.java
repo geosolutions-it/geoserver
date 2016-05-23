@@ -68,6 +68,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     private boolean dryRun;
 
     private boolean bestEffort;
+
+    private XStreamPersisterFactory xStreamPersisterFactory;
     
     /**
      * Default Constructor.
@@ -79,7 +81,7 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             XStreamPersisterFactory xStreamPersisterFactory) {
         this.clazz = clazz;
         this.backupFacade = backupFacade;
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
+        this.xStreamPersisterFactory = xStreamPersisterFactory;
     }
 
     /**
@@ -97,6 +99,7 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         // 
         // For restore operations the order matters.
         JobExecution jobExecution = stepExecution.getJobExecution();
+        this.xstream = xStreamPersisterFactory.createXMLPersister();
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {

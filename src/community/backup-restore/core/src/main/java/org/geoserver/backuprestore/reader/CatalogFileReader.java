@@ -129,7 +129,6 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
      */
     @Override
     public void afterPropertiesSet() throws Exception {
-        Assert.notNull(xstream, "The Unmarshaller must not be null.");
         Assert.notEmpty(fragmentRootElementNames, "The FragmentRootElementNames must not be empty");
         for (QName fragmentRootElementName : fragmentRootElementNames) {
             Assert.hasText(fragmentRootElementName.getLocalPart(),

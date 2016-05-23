@@ -63,14 +63,16 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
     private boolean bestEffort;
 
     private ApplicationContext applicationContext;
+
+    private XStreamPersisterFactory xStreamPersisterFactory;
     
     public CatalogSecurityManagerTasklet(Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
         this.backupFacade = backupFacade;
-        
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
+        this.xStreamPersisterFactory = xStreamPersisterFactory;
     }
 
+    @SuppressWarnings("unused")
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext)
             throws Exception {
@@ -82,6 +84,7 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
         // For restore operations the order matters.
         JobExecution jobExecution = chunkContext.getStepContext().getStepExecution()
                 .getJobExecution();
+        this.xstream = xStreamPersisterFactory.createXMLPersister();
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
@@ -174,17 +177,20 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
                 testGssm.destroy();
             }
 
-            // Copy the Security files into the destination folder
-            // TODO: Purge datadir option
-            Files.delete(security.dir());
-            Resources.copy(BackupUtils.dir(sourceRestoreFolder, SECURITY_FOLDER_NAME), security);
-
-            // Reload Security Context
-            GeoServerSecurityManager securityContext = GeoServerExtensions.bean(GeoServerSecurityManager.class);
-            securityContext.reload();
-            
-            for (SecurityManagerListener listener : GeoServerExtensions.extensions(SecurityManagerListener.class)) {
-                listener.handlePostChanged(securityContext);
+            // Do this *ONLY* when DRY-RUN-MODE == OFF
+            if (!dryRun) {
+                // Copy the Security files into the destination folder
+                // TODO: Purge datadir option
+                Files.delete(security.dir());
+                Resources.copy(BackupUtils.dir(sourceRestoreFolder, SECURITY_FOLDER_NAME), security);
+    
+                // Reload Security Context
+                GeoServerSecurityManager securityContext = GeoServerExtensions.bean(GeoServerSecurityManager.class);
+                securityContext.reload();
+                
+                for (SecurityManagerListener listener : GeoServerExtensions.extensions(SecurityManagerListener.class)) {
+                    listener.handlePostChanged(securityContext);
+                }
             }
         }
         
@@ -199,6 +205,6 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(backupFacade, "backupFacade must be set");
-        Assert.notNull(xstream, "xstream must be set");
+        Assert.notNull(xStreamPersisterFactory, "xstream must be set");
     }
 }

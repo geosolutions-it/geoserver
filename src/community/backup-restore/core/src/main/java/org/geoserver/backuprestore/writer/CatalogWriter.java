@@ -14,7 +14,6 @@ import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.file.ResourceAwareItemWriterItemStream;
 import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
@@ -52,12 +51,14 @@ public abstract class CatalogWriter<T> extends AbstractItemStreamItemWriter<T>
     private boolean dryRun;
 
     private boolean bestEffort;
+
+    private XStreamPersisterFactory xStreamPersisterFactory;
     
     public CatalogWriter(Class<T> clazz, Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
         this.clazz = clazz;
         this.backupFacade = backupFacade;
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
+        this.xStreamPersisterFactory = xStreamPersisterFactory;
 
         this.setExecutionContextName(ClassUtils.getShortName(clazz));
     }
@@ -70,7 +71,7 @@ public abstract class CatalogWriter<T> extends AbstractItemStreamItemWriter<T>
         //
         // For restore operations the order matters.
         JobExecution jobExecution = stepExecution.getJobExecution();
-        ExecutionContext jobContext = jobExecution.getExecutionContext();
+        this.xstream = xStreamPersisterFactory.createXMLPersister();
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {

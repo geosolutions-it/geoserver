@@ -130,7 +130,7 @@ public class ResourceWriterTest extends BackupRestoreTestSupport {
         BackupUtils.extractTo(file("data.zip"), dd.get(Paths.BASE));
         
         // Backup other configuration bits, like images, palettes, user projections and so on...
-        catalogTsklet.backupAdditionalResources(dd.getResourceStore(), td.get(Paths.BASE));
+        catalogTsklet.backupRestoreAdditionalResources(dd.getResourceStore(), td.get(Paths.BASE));
         
         assertTrue(Resources
                 .exists(Files.asResource(new File(td.get(Paths.BASE).dir(), "demo"))));

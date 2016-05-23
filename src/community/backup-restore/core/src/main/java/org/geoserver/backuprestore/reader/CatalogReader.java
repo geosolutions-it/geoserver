@@ -14,7 +14,6 @@ import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
 import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
@@ -53,12 +52,14 @@ public abstract class CatalogReader<T> extends AbstractItemCountingItemStreamIte
 
     private boolean bestEffort;
 
+    private XStreamPersisterFactory xStreamPersisterFactory;
+
     public CatalogReader(Class<T> clazz, Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
         this.clazz = clazz;
         this.backupFacade = backupFacade;
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
-
+        this.xStreamPersisterFactory = xStreamPersisterFactory;
+        
         this.setExecutionContextName(ClassUtils.getShortName(clazz));
     }
 
@@ -70,7 +71,7 @@ public abstract class CatalogReader<T> extends AbstractItemCountingItemStreamIte
         //
         // For restore operations the order matters.
         JobExecution jobExecution = stepExecution.getJobExecution();
-        ExecutionContext jobContext = jobExecution.getExecutionContext();
+        this.xstream = xStreamPersisterFactory.createXMLPersister();
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {

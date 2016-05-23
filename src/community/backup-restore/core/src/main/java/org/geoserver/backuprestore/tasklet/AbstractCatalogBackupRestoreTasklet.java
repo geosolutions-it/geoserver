@@ -117,9 +117,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
     public AbstractCatalogBackupRestoreTasklet(Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
         this.backupFacade = backupFacade;
-        
         this.xStreamPersisterFactory = xStreamPersisterFactory;
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
     }
     
     @Override
@@ -132,6 +130,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
         // For restore operations the order matters.
         JobExecution jobExecution = chunkContext.getStepContext().getStepExecution()
                 .getJobExecution();
+        this.xstream = xStreamPersisterFactory.createXMLPersister();
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
@@ -205,10 +204,14 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
             }
         } catch (Exception e) {
             if(!bestEffort) {
-                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                }
                 throw new RuntimeException(e);
             } else {
-                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             }
         }
     }
@@ -236,16 +239,20 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
             for(GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions.extensions(GeoserverXMLResourceProvider.class)) {
                 final File gwcProviderConfigFile = new File(gwcProvider.getLocation());
                 Resource providerConfigFile = sourceRestoreFolder.get(Paths.path(gwcProviderConfigFile.getParent(), gwcProviderConfigFile.getName()));
-                if (Resources.exists(providerConfigFile) && FileUtils.sizeOf(gwcProviderConfigFile) > 0) {
+                if (Resources.exists(providerConfigFile) && FileUtils.sizeOf(providerConfigFile.file()) > 0) {
                     Resources.copy(providerConfigFile.in(), targetGWCProviderRestoreDir, providerConfigFile.name());
                 }
             }
         } catch (Exception e) {
             if(!bestEffort) {
-                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                }
                 throw new RuntimeException(e);
             } else {
-                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             }
         }
     }
@@ -255,7 +262,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
      * @param baseDir 
      * @throws IOException 
      */
-    public void backupAdditionalResources(ResourceStore resourceStore, Resource baseDir) {
+    public void backupRestoreAdditionalResources(ResourceStore resourceStore, Resource baseDir) {
         try {
             for (Entry<String, Filter<Resource>> entry : resources.entrySet()){
                 Resource resource = resourceStore.get(entry.getKey());
@@ -275,10 +282,14 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
             }
         } catch(Exception e) {
             if(!bestEffort) {
-                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                }
                 throw new RuntimeException(e);
             } else {
-                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             }
         }
     }
@@ -286,7 +297,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
     @Override
     public void afterPropertiesSet() throws Exception {
         Assert.notNull(backupFacade, "backupFacade must be set");
-        Assert.notNull(xstream, "xstream must be set");
+        Assert.notNull(xStreamPersisterFactory, "xstream must be set");
     }
 
     //
@@ -307,10 +318,11 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
                 // unwrap dynamic proxies
                 OutputStream out = Resources.fromPath(fileName, directory).out();
                 try {
-                    item = xstream.unwrapProxies(item);
                     if (xp == null) {
+                        xstream = xStreamPersisterFactory.createXMLPersister();
                         xp = xstream.getXStream(); 
                     }
+                    item = xstream.unwrapProxies(item);
                     xp.toXML(item, out);
                 } finally {
                     out.close();
@@ -318,10 +330,14 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
             }
         } catch (Exception e) {
             if(!bestEffort) {
-                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                }
                 throw new RuntimeException(e);
             } else {
-                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             }
         }
     }
@@ -355,6 +371,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
                 if (item == null) {
                     try {
                         if (xp == null) {
+                            xstream = xStreamPersisterFactory.createXMLPersister();
                             xp = xstream.getXStream(); 
                         }
                         item = xp.fromXML(in);
@@ -365,14 +382,20 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
             } catch (Exception e) {
                 // Collect warnings
                 item = null;
-                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             }
         } catch (Exception e) {
             if(!bestEffort) {
-                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                }
                 throw new RuntimeException(e);
             } else {
-                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                if (this.currentJobExecution != null) {
+                    this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             }
         }
         

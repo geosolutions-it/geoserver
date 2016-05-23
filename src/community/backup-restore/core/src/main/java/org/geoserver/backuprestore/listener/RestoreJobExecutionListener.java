@@ -76,7 +76,6 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         return restoreCatalog;
     }
 
-    @SuppressWarnings("unused")
     @Override
     public void afterJob(JobExecution jobExecution) {
         boolean dryRun = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
@@ -103,7 +102,7 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
                     }
                 }
             }
-         // Collect errors
+        // Collect errors
         } catch (Exception e) {
             if(!bestEffort) {
                 this.restoreExecution.addFailureExceptions(Arrays.asList(e));
