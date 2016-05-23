@@ -5,6 +5,8 @@
  */
 package org.geoserver.backuprestore.reader;
 
+import java.util.Arrays;
+
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.util.CloseableIterator;
@@ -12,9 +14,6 @@ import org.geoserver.config.util.XStreamPersisterFactory;
 import org.opengis.filter.Filter;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.NonTransientResourceException;
-import org.springframework.batch.item.ParseException;
-import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.core.io.Resource;
 
 /**
@@ -34,15 +33,25 @@ public class CatalogItemReader<T> extends CatalogReader<T> {
         super(clazz, backupFacade, xStreamPersisterFactory);
     }
     
+    @SuppressWarnings("unchecked")
     protected void beforeStep(StepExecution stepExecution) {
         this.catalogIterator = (CloseableIterator<T>) catalog.list(this.clazz, Filter.INCLUDE);
     }
     
     @Override
-    public T read() throws Exception, UnexpectedInputException, ParseException,
-            NonTransientResourceException {
-        if (catalogIterator.hasNext()) {
-            return (T) catalogIterator.next();
+    public T read() {
+        try {
+            if (catalogIterator.hasNext()) {
+                return (T) catalogIterator.next();
+            }
+        } catch (Exception e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
         }
         
         return null;
@@ -51,13 +60,11 @@ public class CatalogItemReader<T> extends CatalogReader<T> {
     @Override
     public void setResource(Resource resource) {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
@@ -69,13 +76,11 @@ public class CatalogItemReader<T> extends CatalogReader<T> {
     @Override
     protected void doOpen() throws Exception {
         // TODO Auto-generated method stub
-        
     }
 
     @Override
     protected void doClose() throws Exception {
         // TODO Auto-generated method stub
-        
     }
 
 }

@@ -12,7 +12,9 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 import java.util.TimeZone;
 
 import org.geoserver.backuprestore.Backup;
@@ -95,6 +97,10 @@ public class RestoreJSONWriter {
         }
         
         json.key("progress").value(execution.getExecutedSteps() + "/" + execution.getTotalNumberOfSteps());
+        
+        concatErrorMessages(execution.getAllFailureExceptions(), "exceptions", Level.SEVERE);
+        
+        concatErrorMessages(execution.getAllWarningExceptions(), "warnings", Level.WARNING);
 
         json.endObject();
 
@@ -104,18 +110,27 @@ public class RestoreJSONWriter {
         json.flush();
     }
 
-    String concatErrorMessages(Throwable ex) {
-        StringBuilder buf = new StringBuilder();
-        while (ex != null) {
-            if (buf.length() > 0) {
-                buf.append('\n');
+    void concatErrorMessages(List<Throwable> exceptions, String key, Level level) {
+        json.key(key);
+        json.array();
+        for (Throwable ex : exceptions) {
+            json.object();
+            
+            StringBuilder buf = new StringBuilder();
+            while (ex != null) {
+                if (buf.length() > 0) {
+                    buf.append('\n');
+                }
+                if (ex.getMessage() != null) {
+                    buf.append(ex.getMessage());
+                }
+                ex = ex.getCause();
             }
-            if (ex.getMessage() != null) {
-                buf.append(ex.getMessage());
-            }
-            ex = ex.getCause();
+            json.key(level.getName()).value(buf.toString());
+            
+            json.endObject();
         }
-        return buf.toString();
+        json.endArray();
     }
 
     FlushableJSONBuilder builder(OutputStream out) {

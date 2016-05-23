@@ -7,6 +7,7 @@ package org.geoserver.backuprestore.writer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.geoserver.backuprestore.Backup;
@@ -69,23 +70,33 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
 
     @Override
     public void write(List<? extends T> items) throws Exception {
-        if (!opened) {
-            File file = setResourceToDelegate();
-            // create only if write is called
-            file.createNewFile();
-            Assert.state(file.canWrite(),
-                    "Output resource " + file.getAbsolutePath() + " must be writable");
-            delegate.open(new ExecutionContext());
-            opened = true;
-        }
-        delegate.write(items);
-        currentResourceItemCount += items.size();
-        if (currentResourceItemCount >= itemCountLimitPerResource) {
-            delegate.close();
-            resourceIndex++;
-            currentResourceItemCount = 0;
-            setResourceToDelegate();
-            opened = false;
+        try {
+            if (!opened) {
+                File file = setResourceToDelegate();
+                // create only if write is called
+                file.createNewFile();
+                Assert.state(file.canWrite(),
+                        "Output resource " + file.getAbsolutePath() + " must be writable");
+                delegate.open(new ExecutionContext());
+                opened = true;
+            }
+            delegate.write(items);
+            currentResourceItemCount += items.size();
+            if (currentResourceItemCount >= itemCountLimitPerResource) {
+                delegate.close();
+                resourceIndex++;
+                currentResourceItemCount = 0;
+                setResourceToDelegate();
+                opened = false;
+            }
+        } catch (Exception e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
         }
     }
 
@@ -123,46 +134,76 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
     }
 
     @Override
-    public void close() throws ItemStreamException {
-        super.close();
-        resourceIndex = 1;
-        currentResourceItemCount = 0;
-        if (opened) {
-            delegate.close();
-        }
-    }
-
-    @Override
-    public void open(ExecutionContext executionContext) throws ItemStreamException {
-        super.open(executionContext);
-        resourceIndex = executionContext.getInt(getExecutionContextKey(RESOURCE_INDEX_KEY), 1);
-        currentResourceItemCount = executionContext
-                .getInt(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT), 0);
-
+    public void close() {
         try {
-            setResourceToDelegate();
-        } catch (IOException e) {
-            throw new ItemStreamException("Couldn't assign resource", e);
-        }
-
-        if (executionContext.containsKey(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT))) {
-            // It's a restart
-            delegate.open(executionContext);
-        } else {
-            opened = false;
+            super.close();
+            resourceIndex = 1;
+            currentResourceItemCount = 0;
+            if (opened) {
+                delegate.close();
+            }
+        } catch (ItemStreamException e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
         }
     }
 
     @Override
-    public void update(ExecutionContext executionContext) throws ItemStreamException {
-        super.update(executionContext);
-        if (saveState) {
-            if (opened) {
-                delegate.update(executionContext);
+    public void open(ExecutionContext executionContext) {
+        try {
+            super.open(executionContext);
+            resourceIndex = executionContext.getInt(getExecutionContextKey(RESOURCE_INDEX_KEY), 1);
+            currentResourceItemCount = executionContext
+                    .getInt(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT), 0);
+    
+            try {
+                setResourceToDelegate();
+            } catch (IOException e) {
+                throw new ItemStreamException("Couldn't assign resource", e);
             }
-            executionContext.putInt(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT),
-                    currentResourceItemCount);
-            executionContext.putInt(getExecutionContextKey(RESOURCE_INDEX_KEY), resourceIndex);
+    
+            if (executionContext.containsKey(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT))) {
+                // It's a restart
+                delegate.open(executionContext);
+            } else {
+                opened = false;
+            }
+        } catch(ItemStreamException e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
+        }
+    }
+
+    @Override
+    public void update(ExecutionContext executionContext) {
+        try {
+            super.update(executionContext);
+            if (saveState) {
+                if (opened) {
+                    delegate.update(executionContext);
+                }
+                executionContext.putInt(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT),
+                        currentResourceItemCount);
+                executionContext.putInt(getExecutionContextKey(RESOURCE_INDEX_KEY), resourceIndex);
+            }
+        } catch(ItemStreamException e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
         }
     }
 

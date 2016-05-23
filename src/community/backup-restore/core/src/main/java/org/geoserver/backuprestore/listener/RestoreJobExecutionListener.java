@@ -5,7 +5,7 @@
  */
 package org.geoserver.backuprestore.listener;
 
-import java.util.Set;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.geoserver.GeoServerConfigurationLock;
@@ -20,11 +20,6 @@ import org.geotools.util.logging.Logging;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
-import org.springframework.batch.core.JobParametersInvalidException;
-import org.springframework.batch.core.launch.NoSuchJobException;
-import org.springframework.batch.core.launch.NoSuchJobExecutionException;
-import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
-import org.springframework.batch.core.repository.JobRestartException;
 
 /**
  * Implements a Spring Batch {@link JobExecutionListener}.
@@ -81,13 +76,16 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         return restoreCatalog;
     }
 
+    @SuppressWarnings("unused")
     @Override
     public void afterJob(JobExecution jobExecution) {
+        boolean dryRun = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        boolean bestEffort = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
         try {
-            Set<Long> runningExecutions = backupFacade.getJobOperator().getRunningExecutions(Backup.RESTORE_JOB_NAME);
-            LOGGER.fine("Running Executions IDs : " + runningExecutions);
-
-            Long executionId = runningExecutions.iterator().next();
+            final Long executionId = jobExecution.getId();
+            
+            LOGGER.fine("Running Executions IDs : " + executionId);
+            
             if (jobExecution.getStatus() == BatchStatus.STOPPED) {
                 backupFacade.getJobOperator().restart(executionId);
             } else {
@@ -100,25 +98,19 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
 
                 if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
                     // Reload GeoServer Catalog
-                    // TODO: If not DRY-RUN
-                    backupFacade.getGeoServer().reload();
-
-                    // TODO - fire events to listeners
+                    if (!dryRun) {
+                        backupFacade.getGeoServer().reload();
+                    }
                 }
             }
-        } catch (NoSuchJobException e) {
-            e.printStackTrace();
-        } catch (NoSuchJobExecutionException e) {
-            e.printStackTrace();
-        } catch (JobInstanceAlreadyCompleteException e) {
-            e.printStackTrace();
-        } catch (JobRestartException e) {
-            e.printStackTrace();
-        } catch (JobParametersInvalidException e) {
-            e.printStackTrace();
+         // Collect errors
         } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            if(!bestEffort) {
+                this.restoreExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.restoreExecution.addWarningExceptions(Arrays.asList(e));
+            }
         } finally {
             // Release locks on GeoServer Configuration
             locker.unlock(lockType);

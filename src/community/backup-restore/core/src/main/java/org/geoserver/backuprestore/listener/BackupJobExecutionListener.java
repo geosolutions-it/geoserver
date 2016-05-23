@@ -6,7 +6,7 @@
 package org.geoserver.backuprestore.listener;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.geoserver.GeoServerConfigurationLock;
@@ -63,13 +63,17 @@ public class BackupJobExecutionListener implements JobExecutionListener {
         this.backupExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
     }
 
+    @SuppressWarnings("unused")
     @Override
     public void afterJob(JobExecution jobExecution) {
-        try {
-            Set<Long> runningExecutions = backupFacade.getJobOperator().getRunningExecutions(Backup.BACKUP_JOB_NAME);
-            LOGGER.fine("Running Executions IDs : " + runningExecutions);
+        boolean dryRun = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        boolean bestEffort = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
 
-            Long executionId = runningExecutions.iterator().next();
+        try {
+            final Long executionId = jobExecution.getId();
+            
+            LOGGER.fine("Running Executions IDs : " + executionId);
+            
             if (jobExecution.getStatus() == BatchStatus.STOPPED) {
                 backupFacade.getJobOperator().restart(executionId);
             } else {
@@ -86,19 +90,19 @@ public class BackupJobExecutionListener implements JobExecutionListener {
                     BackupUtils.compressTo(sourceFolder, backupExecution.getArchiveFile());
                 }
             }
-         // TODO: Collect errors
-        } catch (NoSuchJobException e) {
-            e.printStackTrace();
-        } catch (NoSuchJobExecutionException e) {
-            e.printStackTrace();
-        } catch (JobInstanceAlreadyCompleteException e) {
-            e.printStackTrace();
-        } catch (JobRestartException e) {
-            e.printStackTrace();
-        } catch (JobParametersInvalidException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        // Collect errors
+        } catch (NoSuchJobException | 
+                NoSuchJobExecutionException | 
+                JobInstanceAlreadyCompleteException | 
+                JobRestartException | 
+                JobParametersInvalidException | 
+                IOException e) {
+            if(!bestEffort) {
+                this.backupExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.backupExecution.addWarningExceptions(Arrays.asList(e));
+            }
         } finally {
             // Release locks on GeoServer Configuration
             locker.unlock(lockType);

@@ -104,6 +104,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -147,6 +148,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -190,6 +192,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -233,6 +236,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -276,6 +280,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -319,6 +324,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -362,6 +368,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StyleInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -442,6 +449,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -490,6 +498,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -543,6 +552,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -596,6 +606,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -644,6 +655,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StyleInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -692,6 +704,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					
@@ -740,6 +753,7 @@
 						<bean class="org.geoserver.backuprestore.processor.CatalogItemProcessor" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
 							<constructor-arg ref="backupFacade"/>
+							<constructor-arg ref="xstreamPersisterFactory" />
 						</bean>
 					</batch:processor>
 					

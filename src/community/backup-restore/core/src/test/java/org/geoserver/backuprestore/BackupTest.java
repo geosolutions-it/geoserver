@@ -11,6 +11,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.logging.Level;
 
@@ -18,6 +19,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.platform.resource.Files;
+import org.geotools.factory.Hints;
 import org.junit.Test;
 import org.springframework.batch.core.BatchStatus;
 
@@ -27,10 +29,14 @@ import org.springframework.batch.core.BatchStatus;
  *
  */
 public class BackupTest extends BackupRestoreTestSupport {
+    
     @Test
     public void testRunSpringBatchBackupJob() throws Exception {
+        Hints hints = new Hints(new HashMap(2));
+        hints.add(new Hints(new Hints.OptionKey(Backup.PARAM_BEST_EFFORT_MODE), Backup.PARAM_BEST_EFFORT_MODE));
+        
         BackupExecutionAdapter backupExecution = backupFacade.runBackupAsync(
-                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, null);
+                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, hints);
 
         // Wait a bit
         Thread.sleep(100);
@@ -59,12 +65,15 @@ public class BackupTest extends BackupRestoreTestSupport {
 
     @Test
     public void testTryToRunMultipleSpringBatchBackupJobs() throws Exception {
+        Hints hints = new Hints(new HashMap(2));
+        hints.add(new Hints(new Hints.OptionKey(Backup.PARAM_BEST_EFFORT_MODE), Backup.PARAM_BEST_EFFORT_MODE));
+
         backupFacade.runBackupAsync(
-                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, null);
+                Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, hints);
         try {
             backupFacade.runBackupAsync(
                     Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")),
-                    true, null);
+                    true, hints);
         } catch (IOException e) {
             assertEquals(e.getMessage(),
                     "Could not start a new Backup Job Execution since there are currently Running jobs.");
@@ -107,8 +116,11 @@ public class BackupTest extends BackupRestoreTestSupport {
 
     @Test
     public void testRunSpringBatchRestoreJob() throws Exception {
+        Hints hints = new Hints(new HashMap(2));
+        hints.add(new Hints(new Hints.OptionKey(Backup.PARAM_BEST_EFFORT_MODE), Backup.PARAM_BEST_EFFORT_MODE));
+
         RestoreExecutionAdapter restoreExecution = backupFacade
-                .runRestoreAsync(file("geoserver-full-backup.zip"), null);
+                .runRestoreAsync(file("geoserver-full-backup.zip"), hints);
 
         // Wait a bit
         Thread.sleep(100);

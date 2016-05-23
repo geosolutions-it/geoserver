@@ -5,6 +5,9 @@
  */
 package org.geoserver.backuprestore.tasklet;
 
+import java.util.Arrays;
+
+import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
@@ -19,6 +22,7 @@ import org.geoserver.platform.resource.Resources;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.security.SecurityManagerListener;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.UnexpectedJobExecutionException;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -49,8 +53,14 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
     private XStreamPersister xstream;
 
     private XStream xp;
+    
+    private boolean isNew;
 
-    private boolean restoringCatalog;
+    private AbstractExecutionAdapter currentJobExecution;
+
+    private boolean dryRun;
+
+    private boolean bestEffort;
 
     private ApplicationContext applicationContext;
     
@@ -75,13 +85,14 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
-            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId())
-                    .getRestoreCatalog();
-            this.restoringCatalog = true;
+            this.currentJobExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
+            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId()).getRestoreCatalog();
+            this.isNew = true;
         } else {
+            this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
             this.catalog = backupFacade.getCatalog();
-            this.restoringCatalog = false;
             this.xstream.setExcludeIds();
+            this.isNew = false;
         }
 
         Assert.notNull(catalog, "catalog must be set");
@@ -90,13 +101,20 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
         this.xstream.setReferenceByName(true);
         this.xp = this.xstream.getXStream();
 
+        Assert.notNull(this.xp, "xStream persister should not be NULL");
+        
+        JobParameters jobParameters = this.currentJobExecution.getJobParameters();
+        
+        this.dryRun = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        this.bestEffort = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
+
         final GeoServer geoserver = backupFacade.getGeoServer();
         final GeoServerDataDirectory dd = backupFacade.getGeoServerDataDirectory();
         
         // GeoServer Security Folder
         final Resource security = dd.getSecurity("/");
         
-        if (!isRestoringCatalog()) {
+        if (!isNew) {
             final String outputFolderURL = jobExecution.getJobParameters().getString(Backup.PARAM_OUTPUT_FILE_PATH);
             Resource targetBackupFolder = Resources.fromURL(outputFolderURL);
             
@@ -114,8 +132,12 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
                 
                 // TODO: Save warnings and validation issues on the JobContext
             } catch (Exception e) {
-                // TODO: Collect warnings and issues
-                throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer security settings!", e);  
+                if(!bestEffort) {
+                    currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                    throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer security settings!", e);
+                } else {
+                    currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             } finally {
                 testGssm.destroy();
             }
@@ -142,7 +164,12 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
                 
                 // TODO: Save warnings and validation issues on the JobContext
             } catch (Exception e) {
-                throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer security settings!", e);  
+                if(!bestEffort) {
+                    currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                    throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer security settings!", e);
+                } else {
+                    currentJobExecution.addWarningExceptions(Arrays.asList(e));
+                }
             } finally {
                 testGssm.destroy();
             }
@@ -174,19 +201,4 @@ public class CatalogSecurityManagerTasklet implements Tasklet, ApplicationContex
         Assert.notNull(backupFacade, "backupFacade must be set");
         Assert.notNull(xstream, "xstream must be set");
     }
-
-    /**
-     * @return the restoringCatalog
-     */
-    public boolean isRestoringCatalog() {
-        return restoringCatalog;
-    }
-
-    /**
-     * @param restoringCatalog the restoringCatalog to set
-     */
-    public void setRestoringCatalog(boolean restoringCatalog) {
-        this.restoringCatalog = restoringCatalog;
-    }
-
 }

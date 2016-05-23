@@ -6,6 +6,7 @@
 package org.geoserver.backuprestore.tasklet;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.geoserver.backuprestore.Backup;
@@ -57,22 +58,24 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
     }
 
     @Override
-    RepeatStatus doExecute(StepContribution contribution, ChunkContext chunkContext, JobExecution jobExecution)
-            throws Exception {
-
+    RepeatStatus doExecute(StepContribution contribution, ChunkContext chunkContext, JobExecution jobExecution) {
         final GeoServer geoserver = backupFacade.getGeoServer();
         final GeoServerDataDirectory dd = backupFacade.getGeoServerDataDirectory();
         final ResourceStore resourceStore = dd.getResourceStore();
         
         try {
-            if (!isRestoringCatalog()) {
+            if (!isNew()) {
                 doBackup(jobExecution, geoserver, dd, resourceStore);
             } else {
                 doRestore(jobExecution, geoserver, dd);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer globals and services settings!", e);            
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer globals and services settings!", e);
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+            }
         }
 
         return RepeatStatus.FINISHED;
@@ -352,9 +355,12 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
                 - Move to Security!
             */
         } catch (Exception e) {
-            // TODO: handle revert...
-            e.printStackTrace();
-            throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer globals and services settings!", e); 
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer globals and services settings!", e);
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+            }
         } finally {
             // TODO: temp
         }
@@ -370,85 +376,94 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
      * @throws IOException
      */
     private void doBackup(JobExecution jobExecution, final GeoServer geoserver,
-            final GeoServerDataDirectory dd, final ResourceStore resourceStore) throws IOException {
-        final String outputFolderURL = jobExecution.getJobParameters().getString(Backup.PARAM_OUTPUT_FILE_PATH);
-        Resource targetBackupFolder = Resources.fromURL(outputFolderURL);
-        
-        // Store GeoServer Global Info
-        doWrite(geoserver.getGlobal(), targetBackupFolder, "global.xml");
-        
-        // Store GeoServer Global Settings
-        doWrite(geoserver.getSettings(), targetBackupFolder, "settings.xml");
-      
-        // Store GeoServer Global Logging Settings
-        doWrite(geoserver.getLogging(), targetBackupFolder, "logging.xml");
-        
-        // Store GeoServer Global Services
-        for(ServiceInfo service : geoserver.getServices()) {
-            // Local Services will be saved later on ...
-            if (service.getWorkspace() == null) {
-                doWrite(service, targetBackupFolder, "services");
-            }
-        }
-        
-        // Save Workspace specific settings
-        Resource targetWorkspacesFolder = BackupUtils.dir(targetBackupFolder, "workspaces");
-        
-        // Store Default Workspace
-        doWrite(catalog.getDefaultNamespace(), targetWorkspacesFolder, "defaultnamespace.xml");
-        doWrite(catalog.getDefaultWorkspace(), targetWorkspacesFolder, "default.xml");
-        
-        // Store Workspace Specific Settings and Services
-        for (WorkspaceInfo ws : catalog.getWorkspaces()) {
-            if (geoserver.getSettings(ws) != null) {
-                doWrite(geoserver.getSettings(ws), BackupUtils.dir(targetWorkspacesFolder, ws.getName()), "settings.xml");
+            final GeoServerDataDirectory dd, final ResourceStore resourceStore) {
+        try {
+            final String outputFolderURL = jobExecution.getJobParameters().getString(Backup.PARAM_OUTPUT_FILE_PATH);
+            Resource targetBackupFolder = Resources.fromURL(outputFolderURL);
+            
+            // Store GeoServer Global Info
+            doWrite(geoserver.getGlobal(), targetBackupFolder, "global.xml");
+            
+            // Store GeoServer Global Settings
+            doWrite(geoserver.getSettings(), targetBackupFolder, "settings.xml");
+          
+            // Store GeoServer Global Logging Settings
+            doWrite(geoserver.getLogging(), targetBackupFolder, "logging.xml");
+            
+            // Store GeoServer Global Services
+            for(ServiceInfo service : geoserver.getServices()) {
+                // Local Services will be saved later on ...
+                if (service.getWorkspace() == null) {
+                    doWrite(service, targetBackupFolder, "services");
+                }
             }
             
-            if (geoserver.getServices(ws) != null) {
-                for (ServiceInfo service : geoserver.getServices(ws)) {
-                    doWrite(service, targetWorkspacesFolder, ws.getName());
+            // Save Workspace specific settings
+            Resource targetWorkspacesFolder = BackupUtils.dir(targetBackupFolder, "workspaces");
+            
+            // Store Default Workspace
+            doWrite(catalog.getDefaultNamespace(), targetWorkspacesFolder, "defaultnamespace.xml");
+            doWrite(catalog.getDefaultWorkspace(), targetWorkspacesFolder, "default.xml");
+            
+            // Store Workspace Specific Settings and Services
+            for (WorkspaceInfo ws : catalog.getWorkspaces()) {
+                if (geoserver.getSettings(ws) != null) {
+                    doWrite(geoserver.getSettings(ws), BackupUtils.dir(targetWorkspacesFolder, ws.getName()), "settings.xml");
+                }
+                
+                if (geoserver.getServices(ws) != null) {
+                    for (ServiceInfo service : geoserver.getServices(ws)) {
+                        doWrite(service, targetWorkspacesFolder, ws.getName());
+                    }
+                }
+                
+                // Backup other configuration bits, like images, palettes, user projections and so on...
+                GeoServerDataDirectory wsDd = new GeoServerDataDirectory(dd.get(Paths.path("workspaces", ws.getName())).dir());
+                backupAdditionalResources(wsDd.getResourceStore(), targetWorkspacesFolder.get(ws.getName()));
+                
+                // Backup Style SLDs
+                for (StyleInfo sty : catalog.getStylesByWorkspace(ws)) {
+                    Resource styResource = wsDd.get(Paths.path("styles", sty.getFilename()));
+                    if (Resources.exists(styResource)) {
+                        Resources.copy(styResource.file(), BackupUtils.dir(targetWorkspacesFolder.get(ws.getName()), "styles"));
+                    }
+                }
+            }
+            
+            // Backup GeoServer Plugins
+            final GeoServerResourceLoader targetGeoServerResourceLoader = new GeoServerResourceLoader(targetBackupFolder.dir());
+            for (GeoServerPluginConfigurator pluginConfig : GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
+                // On restore invoke 'pluginConfig.loadConfiguration(resourceLoader);' after having replaced the config files.  
+                pluginConfig.saveConfiguration(targetGeoServerResourceLoader);
+            }
+            
+            for (GeoServerPropertyConfigurer props : GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
+                // On restore invoke 'props.reload();' after having replaced the properties files.
+                Resource configFile = props.getConfigFile();
+                
+                if (configFile != null && Resources.exists(configFile)) {
+                    Resource targetDir = 
+                        Files.asResource(targetGeoServerResourceLoader.findOrCreateDirectory(
+                                Paths.convert(dd.getResourceLoader().getBaseDirectory(), configFile.parent().dir())));
+                
+                    Resources.copy(configFile.file(), targetDir);
                 }
             }
             
             // Backup other configuration bits, like images, palettes, user projections and so on...
-            GeoServerDataDirectory wsDd = new GeoServerDataDirectory(dd.get(Paths.path("workspaces", ws.getName())).dir());
-            backupAdditionalResources(wsDd.getResourceStore(), targetWorkspacesFolder.get(ws.getName()));
+            backupAdditionalResources(resourceStore, targetBackupFolder);
             
-            // Backup Style SLDs
-            for (StyleInfo sty : catalog.getStylesByWorkspace(ws)) {
-                Resource styResource = wsDd.get(Paths.path("styles", sty.getFilename()));
-                if (Resources.exists(styResource)) {
-                    Resources.copy(styResource.file(), BackupUtils.dir(targetWorkspacesFolder.get(ws.getName()), "styles"));
-                }
+            // Backup GWC Configuration bits
+            if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
+                backupGWCSettings(targetBackupFolder);
             }
-        }
-        
-        // Backup GeoServer Plugins
-        final GeoServerResourceLoader targetGeoServerResourceLoader = new GeoServerResourceLoader(targetBackupFolder.dir());
-        for (GeoServerPluginConfigurator pluginConfig : GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
-            // On restore invoke 'pluginConfig.loadConfiguration(resourceLoader);' after having replaced the config files.  
-            pluginConfig.saveConfiguration(targetGeoServerResourceLoader);
-        }
-        
-        for (GeoServerPropertyConfigurer props : GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
-            // On restore invoke 'props.reload();' after having replaced the properties files.
-            Resource configFile = props.getConfigFile();
-            
-            if (configFile != null && Resources.exists(configFile)) {
-                Resource targetDir = 
-                    Files.asResource(targetGeoServerResourceLoader.findOrCreateDirectory(
-                            Paths.convert(dd.getResourceLoader().getBaseDirectory(), configFile.parent().dir())));
-            
-                Resources.copy(configFile.file(), targetDir);
+        } catch (Exception e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw new UnexpectedJobExecutionException("Exception occurred while storing GeoServer globals and services settings!", e);
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
             }
-        }
-        
-        // Backup other configuration bits, like images, palettes, user projections and so on...
-        backupAdditionalResources(resourceStore, targetBackupFolder);
-        
-        // Backup GWC Configuration bits
-        if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
-            backupGWCSettings(targetBackupFolder);
         }
     }
 

@@ -34,7 +34,9 @@ public abstract class AbstractExecutionAdapter {
 
     protected JobExecution delegate;
     
-    private List<String> options = Collections.synchronizedList(new ArrayList<String>());;
+    private List<String> options = Collections.synchronizedList(new ArrayList<String>());
+    
+    private List<Throwable> warningsList = Collections.synchronizedList(new ArrayList<Throwable>());
     
     /**
      * Default Constructor
@@ -126,6 +128,39 @@ public abstract class AbstractExecutionAdapter {
      */
     public List<Throwable> getAllFailureExceptions() {
         return delegate.getAllFailureExceptions();
+    }
+    
+    /**
+     * Return all failure marked as warnings by this JobExecution, including step executions.
+     *
+     * @return List&lt;Throwable&gt; containing all warning exceptions.
+     */
+    public List<Throwable> getAllWarningExceptions() {
+        return warningsList;
+    }
+    
+    /**
+     * Adds exceptions to the current executions marking it as FAILED.
+     * 
+     * @param exceptions
+     */
+    public void addFailureExceptions(List<Throwable> exceptions) {
+        for (Throwable t : exceptions) {
+            this.delegate.addFailureException(t);
+        }
+        
+        this.delegate.setExitStatus(ExitStatus.FAILED);
+    }
+
+    /**
+     * Adds exceptions to the current executions as Warnings.
+     * 
+     * @param exceptions
+     */
+    public void addWarningExceptions(List<Throwable> exceptions) {
+        for (Throwable t : exceptions) {
+            this.warningsList.add(t);
+        }
     }
 
     /**

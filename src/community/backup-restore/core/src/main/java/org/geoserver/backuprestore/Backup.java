@@ -342,19 +342,15 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     backupExecution.setOverwrite(overwrite);
                     backupExecutions.put(backupExecution.getId(), backupExecution);
 
-                    // LOGGER.fine("Status : " + backupExecution.getStatus());
-                    
                     return backupExecution;
                 }
             }
             else {
-                // TODO: Else throw an Exception
                 throw new IOException("Could not start a new Backup Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
                 | JobInstanceAlreadyCompleteException | JobParametersInvalidException | InterruptedException e) {
-            // TODO
-            throw new IOException(e);
+            throw new IOException("Could not start a new Backup Job Execution: ", e);
         } finally {
             doneSignal.countDown();
         }
@@ -393,22 +389,17 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     JobExecution jobExecution = jobLauncher.run(restoreJob, jobParameters);
                     restoreExecution = new RestoreExecutionAdapter(jobExecution, totalNumberOfRestoreSteps);
                     restoreExecution.setArchiveFile(archiveFile);
-
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
-
-                    // LOGGER.fine("Status : " + restoreExecution.getStatus());
 
                     return restoreExecution;
                 }
             }
             else {
-                // TODO: Else throw an Exception
                 throw new IOException("Could not start a new Restore Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
                 | JobInstanceAlreadyCompleteException | JobParametersInvalidException | InterruptedException e) {
-            // TODO
-            throw new IOException(e);
+            throw new IOException("Could not start a new Restore Job Execution: ", e);
         } finally {
             doneSignal.countDown();
         }

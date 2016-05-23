@@ -7,8 +7,10 @@ package org.geoserver.backuprestore.reader;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -146,8 +148,7 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
      * @throws NonTransientResourceException if the cursor could not be moved. This will be treated as fatal and subsequent calls to read will return
      *         null.
      */
-    protected boolean moveCursorToNextFragment(XMLEventReader reader)
-            throws NonTransientResourceException {
+    protected boolean moveCursorToNextFragment(XMLEventReader reader) {
         try {
             while (true) {
                 while (reader.peek() != null && !reader.peek().isStartElement()) {
@@ -161,10 +162,16 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
                     return true;
                 }
                 reader.nextEvent();
-
             }
         } catch (XMLStreamException e) {
-            throw new NonTransientResourceException("Error while reading from event reader", e);
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(new NonTransientResourceException("Error while reading from event reader", e)));
+                throw new NonTransientResourceException("Error while reading from event reader", e);
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(new NonTransientResourceException("Error while reading from event reader", e)));
+                return false;
+            }
         }
     }
 
@@ -177,6 +184,14 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
             if (inputStream != null) {
                 inputStream.close();
             }
+        } catch (IOException | XMLStreamException e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
         } finally {
             fragmentReader = null;
             inputStream = null;
@@ -187,28 +202,38 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
     protected void doOpen() throws Exception {
         Assert.notNull(resource, "The Resource must not be null.");
 
-        noInput = true;
-        if (!resource.exists()) {
-            if (strict) {
-                throw new IllegalStateException(
-                        "Input resource must exist (reader is in 'strict' mode)");
+        try {
+            noInput = true;
+            if (!resource.exists()) {
+                if (strict) {
+                    throw new IllegalStateException(
+                            "Input resource must exist (reader is in 'strict' mode)");
+                }
+                logger.warn("Input resource does not exist " + resource.getDescription());
+                return;
             }
-            logger.warn("Input resource does not exist " + resource.getDescription());
-            return;
-        }
-        if (!resource.isReadable()) {
-            if (strict) {
-                throw new IllegalStateException(
-                        "Input resource must be readable (reader is in 'strict' mode)");
+            if (!resource.isReadable()) {
+                if (strict) {
+                    throw new IllegalStateException(
+                            "Input resource must be readable (reader is in 'strict' mode)");
+                }
+                logger.warn("Input resource is not readable " + resource.getDescription());
+                return;
             }
-            logger.warn("Input resource is not readable " + resource.getDescription());
-            return;
+    
+            inputStream = resource.getInputStream();
+            eventReader = XMLInputFactory.newInstance().createXMLEventReader(inputStream);
+            fragmentReader = new DefaultFragmentEventReader(eventReader);
+            noInput = false;
+        } catch (Exception e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
         }
-
-        inputStream = resource.getInputStream();
-        eventReader = XMLInputFactory.newInstance().createXMLEventReader(inputStream);
-        fragmentReader = new DefaultFragmentEventReader(eventReader);
-        noInput = false;
     }
 
     /**
@@ -216,30 +241,38 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
      */
     @Override
     protected T doRead() throws Exception {
-
-        if (noInput) {
-            return null;
-        }
-
         T item = null;
-
-        boolean success = false;
         try {
-            success = moveCursorToNextFragment(fragmentReader);
-        } catch (NonTransientResourceException e) {
-            // Prevent caller from retrying indefinitely since this is fatal
-            noInput = true;
-            throw e;
-        }
-        if (success) {
-            fragmentReader.markStartFragment();
-
+            if (noInput) {
+                return null;
+            }
+    
+            boolean success = false;
             try {
-                @SuppressWarnings("unchecked")
-                T mappedFragment = (T) unmarshal(StaxUtils.getSource(fragmentReader));
-                item = mappedFragment;
-            } finally {
-                fragmentReader.markFragmentProcessed();
+                success = moveCursorToNextFragment(fragmentReader);
+            } catch (NonTransientResourceException e) {
+                // Prevent caller from retrying indefinitely since this is fatal
+                noInput = true;
+                throw e;
+            }
+            if (success) {
+                fragmentReader.markStartFragment();
+    
+                try {
+                    @SuppressWarnings("unchecked")
+                    T mappedFragment = (T) unmarshal(StaxUtils.getSource(fragmentReader));
+                    item = mappedFragment;
+                } finally {
+                    fragmentReader.markFragmentProcessed();
+                }
+            }
+        } catch(Exception e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
             }
         }
 
@@ -255,13 +288,25 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
      * @throws TransformerException
      */
     private Object unmarshal(Source source) throws TransformerException {
-        TransformerFactory tf = new com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl();
-        Transformer t = tf.newTransformer();
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        Result result = new StreamResult(os);
-        t.transform(source, result);
-
-        return this.getXp().fromXML(new ByteArrayInputStream(os.toByteArray()));
+        try {
+            TransformerFactory tf = new com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl();
+            Transformer t = tf.newTransformer();
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            Result result = new StreamResult(os);
+            t.transform(source, result);
+    
+            return this.getXp().fromXML(new ByteArrayInputStream(os.toByteArray()));
+        } catch (TransformerException e) {
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(Arrays.asList(e));
+            }
+        }
+        
+        return null;
     }
 
     /*
@@ -280,7 +325,13 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
                     return;
                 } else {
                     // if NoSuchElementException occurs on an item other than the last one, this indicates a problem
-                    throw e;
+                    if(!isBestEffort()) {
+                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                        throw e;
+                    } else {
+                        getCurrentJobExecution().
+                            addWarningExceptions(Arrays.asList(e));
+                    }
                 }
             }
         }

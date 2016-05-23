@@ -60,6 +60,7 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
         assertEquals("application/json", resp.getContentType());
 
         JSONObject json = (JSONObject) json(resp);
+        
         JSONObject execution = json.getJSONObject("backup");
 
         assertNotNull(execution);

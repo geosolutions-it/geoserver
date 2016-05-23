@@ -5,12 +5,14 @@
  */
 package org.geoserver.backuprestore.processor;
 
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.RestoreExecutionAdapter;
 import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogException;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -22,12 +24,17 @@ import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.ValidationResult;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogImpl;
+import org.geoserver.config.util.XStreamPersister;
+import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geotools.util.logging.Logging;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.annotation.BeforeStep;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.util.Assert;
+
+import com.thoughtworks.xstream.XStream;
 
 /**
  * Concrete Spring Batch {@link ItemProcessor}.
@@ -49,10 +56,18 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     Backup backupFacade;
 
     private Catalog catalog;
+    
+    protected XStreamPersister xstream;
+
+    private XStream xp;
 
     private boolean isNew;
 
     private AbstractExecutionAdapter currentJobExecution;
+
+    private boolean dryRun;
+
+    private boolean bestEffort;
     
     /**
      * Default Constructor.
@@ -60,9 +75,11 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
      * @param clazz
      * @param backupFacade
      */
-    public CatalogItemProcessor(Class<T> clazz, Backup backupFacade) {
+    public CatalogItemProcessor(Class<T> clazz, Backup backupFacade,
+            XStreamPersisterFactory xStreamPersisterFactory) {
         this.clazz = clazz;
         this.backupFacade = backupFacade;
+        this.xstream = xStreamPersisterFactory.createXMLPersister();
     }
 
     /**
@@ -80,7 +97,6 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         // 
         // For restore operations the order matters.
         JobExecution jobExecution = stepExecution.getJobExecution();
-        ExecutionContext jobContext = jobExecution.getExecutionContext();
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
@@ -90,10 +106,66 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         } else {
             this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
             this.catalog = backupFacade.getCatalog();
+            this.xstream.setExcludeIds();
             this.isNew = false;
         }
+        
+        Assert.notNull(this.catalog, "catalog must be set");
+
+        this.xstream.setCatalog(this.catalog);
+        this.xstream.setReferenceByName(true);
+        this.xp = this.xstream.getXStream();
+
+        Assert.notNull(this.xp, "xStream persister should not be NULL");
+        
+        JobParameters jobParameters = this.currentJobExecution.getJobParameters();
+        
+        this.dryRun = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        this.bestEffort = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
     }
 
+    /**
+     * @return the xp
+     */
+    public XStream getXp() {
+        return xp;
+    }
+
+    /**
+     * @param xp the xp to set
+     */
+    public void setXp(XStream xp) {
+        this.xp = xp;
+    }
+
+    /**
+     * @return the isNew
+     */
+    public boolean isNew() {
+        return isNew;
+    }
+
+    /**
+     * @return the currentJobExecution
+     */
+    public AbstractExecutionAdapter getCurrentJobExecution() {
+        return currentJobExecution;
+    }
+
+    /**
+     * @return the dryRun
+     */
+    public boolean isDryRun() {
+        return dryRun;
+    }
+
+    /**
+     * @return the bestEffort
+     */
+    public boolean isBestEffort() {
+        return bestEffort;
+    }
+    
     @Override
     public T process(T resource) throws Exception {
 
@@ -109,11 +181,17 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             if (resource instanceof WorkspaceInfo) {
                 if (!validateWorkspace((WorkspaceInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
+                    
+                    logValidationExceptions(resource);
+                    
                     return null;
                 }
             } else if (resource instanceof DataStoreInfo) {
                 if (!validateDataStore((DataStoreInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
+                    
+                    logValidationExceptions(resource);
+                    
                     return null;
                 }
                 
@@ -125,51 +203,92 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             } else if (resource instanceof CoverageStoreInfo) {
                 if (!validateCoverageStore((CoverageStoreInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
+                    
+                    logValidationExceptions(resource);
+                    
                     return null;
                 }
             }
             else if (resource instanceof ResourceInfo) {
                 if (!validateResource((ResourceInfo) resource, isNew)) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
+                    
+                    logValidationExceptions(resource);
+                    
                     return null;
                 }
             }
             else if (resource instanceof LayerInfo) {
+                ValidationResult result = null;
                 try {
-                    ValidationResult result = this.catalog.validate((LayerInfo) resource, isNew);
+                    result = this.catalog.validate((LayerInfo) resource, isNew);
                     if (!result.isValid()) {
-                     // TODO: collect warnings
+                        
+                        logValidationExceptions(resource);
+                        
                         return null;
                     }
                 } catch (Exception e) {
-                    // TODO: collect warnings
                     LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+                    
+                    if(!bestEffort) {
+                        if (result != null) {
+                            result.throwIfInvalid();
+                        }
+                    }
+
+                    if(!bestEffort) {
+                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    }
+                    
                     return null;
                 }
             }
             else if (resource instanceof StyleInfo) {
+                ValidationResult result = null;
                 try {
-                    ValidationResult result = this.catalog.validate((StyleInfo) resource, isNew);
+                    result = this.catalog.validate((StyleInfo) resource, isNew);
                     if (!result.isValid()) {
-                     // TODO: collect warnings
+                        
+                        logValidationExceptions(resource);
+                        
                         return null;
                     }
                 } catch (Exception e) {
-                    // TODO: collect warnings
-                    LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+                    if(!bestEffort) {
+                        if (result != null) {
+                            result.throwIfInvalid();
+                        }
+                    }
+
+                    if(!bestEffort) {
+                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    }
+                    
                     return null;
                 }
             }
             else if (resource instanceof LayerGroupInfo) {
+                ValidationResult result = null;
                 try {
-                    ValidationResult result = this.catalog.validate((LayerGroupInfo) resource, isNew);
+                    result = this.catalog.validate((LayerGroupInfo) resource, isNew);
                     if (!result.isValid()) {
-                     // TODO: collect warnings
+                        
+                        logValidationExceptions(resource);
+                        
                         return null;
                     }
                 } catch (Exception e) {
-                    // TODO: collect warnings
-                    LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+                    if(!bestEffort) {
+                        if (result != null) {
+                            result.throwIfInvalid();
+                        }
+                    }
+
+                    if(!bestEffort) {
+                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    }
+                    
                     return null;
                 }
             }
@@ -178,6 +297,19 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         }
 
         return null;
+    }
+
+    /**
+     * @param resource
+     */
+    private void logValidationExceptions(T resource) {
+        CatalogException validationException = new CatalogException("Invalid resource: " + resource);
+        if (!bestEffort) {
+            getCurrentJobExecution().addFailureExceptions(Arrays.asList(validationException));
+            throw validationException;
+        } else {
+            getCurrentJobExecution().addWarningExceptions(Arrays.asList(validationException));
+        }
     }
 
     /**
@@ -198,16 +330,22 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         try {
             ValidationResult result = this.catalog.validate(resource, isNew);
             if (!result.isValid()) {
-             // TODO: collect warnings
+                result.throwIfInvalid();
                 return false;
             }
         } catch (Exception e) {
-            // TODO: collect warnings
             LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+            
+            if(!bestEffort) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+            }
+            
             return false;
         }
         
-     // TODO: collect warnings
         return true;
     }
 
@@ -232,18 +370,23 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         try {
             ValidationResult result = this.catalog.validate(resource, isNew);
             if (!result.isValid()) {
-             // TODO: collect warnings
-                return false;
+                result.throwIfInvalid();
             }
         } catch (Exception e) {
-            // TODO: collect warnings
             LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+            
+            if(!bestEffort) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+            }
+            
             return false;
         }
         
         resource.setWorkspace(ws);
 
-        // TODO: collect warnings
         return true;
     }
 
@@ -265,16 +408,23 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
         try {
             ValidationResult result = this.catalog.validate(resource, isNew);
             if (!result.isValid()) {
-             // TODO: collect warnings
-                return false;
+                result.throwIfInvalid();
             }
         } catch (Exception e) {
-            // TODO: collect warnings
             LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+            
+            if(!bestEffort) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+            }
+            
             return false;
         }
         
         resource.setWorkspace(ws);
+        
         return true;
     }
 
@@ -294,6 +444,13 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             final NamespaceInfo namespace = resource.getNamespace();
         
             if (store == null) {
+                CatalogException e = new CatalogException("Store is NULL for resource: " + resource);
+                if(!bestEffort) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw e;
+                } else {
+                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+                }
                 return false;
             }
 
@@ -303,28 +460,54 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
             if (ds != null) {
                 resource.setStore(ds);
             } else {
+                CatalogException e = new CatalogException("Store is NULL for resource: " + resource);
+                if(!bestEffort) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw e;
+                } else {
+                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+                }
                 return false;
             }
             
             ResourceInfo existing = catalog.getResourceByStore( store, resource.getName(), ResourceInfo.class);
             if ( existing != null && !existing.getId().equals( resource.getId() ) ) {
-                //String msg = "Resource named '"+resource.getName()+"' already exists in store: '"+ store.getName()+"'";
+                final String msg = "Resource named '"+resource.getName()+"' already exists in store: '"+ store.getName()+"'";
+                CatalogException e = new CatalogException(msg);
+                if(!bestEffort) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw e;
+                } else {
+                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+                }
                 return false;
             }
             
             
             existing = catalog.getResourceByName( namespace, resource.getName(), ResourceInfo.class);
             if ( existing != null && !existing.getId().equals( resource.getId() ) ) {
-                //String msg = "Resource named '"+resource.getName()+"' already exists in namespace: '"+ namespace.getPrefix()+"'";
+                final String msg = "Resource named '"+resource.getName()+"' already exists in namespace: '"+ namespace.getPrefix()+"'";
+                CatalogException e = new CatalogException(msg);
+                if(!bestEffort) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw e;
+                } else {
+                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+                }
                 return false;
             }
             
-         // TODO: collect warnings
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
-         // TODO: collect warnings
             LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
+            
+            if(!bestEffort) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw e;
+            } else {
+                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+            }
+            
             return false;
         }
     }

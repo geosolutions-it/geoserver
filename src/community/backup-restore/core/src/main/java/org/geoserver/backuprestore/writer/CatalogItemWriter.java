@@ -5,6 +5,7 @@
  */
 package org.geoserver.backuprestore.writer;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.geoserver.backuprestore.Backup;
@@ -45,37 +46,41 @@ public class CatalogItemWriter<T> extends CatalogWriter<T> {
     }
     
     @Override
-    public void write(List<? extends T> items) throws Exception {
-        // TODO:
-        
+    public void write(List<? extends T> items) {
         for(T item : items) {
-            // TODO: add items to the catalog
-            //this.restoreCatalog.put(((Info)item).getId(), item);
-            
-            // TODO: add additionalResources
-            if(item instanceof WorkspaceInfo) {
-                this.catalog.add((WorkspaceInfo)item);
-            }
-            else if(item instanceof NamespaceInfo) {
-                this.catalog.add((NamespaceInfo)item);
-            }
-            else if(item instanceof DataStoreInfo) {
-                this.catalog.add((DataStoreInfo)item);
-            }
-            else if(item instanceof CoverageStoreInfo) {
-                this.catalog.add((CoverageStoreInfo)item);
-            }
-            else if(item instanceof ResourceInfo) {
-                this.catalog.add((ResourceInfo)item);
-            }
-            else if(item instanceof LayerInfo) {
-                this.catalog.add((LayerInfo)item);
-            }
-            else if(item instanceof StyleInfo) {
-                this.catalog.add((StyleInfo)item);
-            }
-            else if(item instanceof LayerGroupInfo) {
-                this.catalog.add((LayerGroupInfo)item);
+            try {
+                if(item instanceof WorkspaceInfo) {
+                    this.catalog.add((WorkspaceInfo)item);
+                }
+                else if(item instanceof NamespaceInfo) {
+                    this.catalog.add((NamespaceInfo)item);
+                }
+                else if(item instanceof DataStoreInfo) {
+                    this.catalog.add((DataStoreInfo)item);
+                }
+                else if(item instanceof CoverageStoreInfo) {
+                    this.catalog.add((CoverageStoreInfo)item);
+                }
+                else if(item instanceof ResourceInfo) {
+                    this.catalog.add((ResourceInfo)item);
+                }
+                else if(item instanceof LayerInfo) {
+                    this.catalog.add((LayerInfo)item);
+                }
+                else if(item instanceof StyleInfo) {
+                    this.catalog.add((StyleInfo)item);
+                }
+                else if(item instanceof LayerGroupInfo) {
+                    this.catalog.add((LayerGroupInfo)item);
+                }
+            } catch (Exception e) {
+                if(!isBestEffort()) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw e;
+                } else {
+                    getCurrentJobExecution().
+                        addWarningExceptions(Arrays.asList(e));
+                }
             }
         }
     }

@@ -9,12 +9,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.io.FileUtils;
+import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.Catalog;
@@ -36,6 +38,7 @@ import org.geoserver.platform.resource.Resources;
 import org.geoserver.platform.resource.Resources.AnyFilter;
 import org.geoserver.util.Filter;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -102,8 +105,14 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
     protected XStreamPersister xstream;
 
     protected XStream xp;
+    
+    private boolean isNew;
 
-    private boolean restoringCatalog;
+    private AbstractExecutionAdapter currentJobExecution;
+
+    private boolean dryRun;
+
+    private boolean bestEffort;
 
     public AbstractCatalogBackupRestoreTasklet(Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
@@ -113,20 +122,6 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
         this.xstream = xStreamPersisterFactory.createXMLPersister();
     }
     
-    /**
-     * @return the restoringCatalog
-     */
-    public boolean isRestoringCatalog() {
-        return restoringCatalog;
-    }
-
-    /**
-     * @param restoringCatalog the restoringCatalog to set
-     */
-    public void setRestoringCatalog(boolean restoringCatalog) {
-        this.restoringCatalog = restoringCatalog;
-    }
-
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) 
             throws Exception {
@@ -140,13 +135,14 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
         if (backupFacade.getRestoreExecutions() != null
                 && !backupFacade.getRestoreExecutions().isEmpty()
                 && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
-            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId())
-                    .getRestoreCatalog();
-            this.restoringCatalog = true;
+            this.currentJobExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
+            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId()).getRestoreCatalog();
+            this.isNew = true;
         } else {
+            this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
             this.catalog = backupFacade.getCatalog();
-            this.restoringCatalog = false;
             this.xstream.setExcludeIds();
+            this.isNew = false;
         }
 
         Assert.notNull(catalog, "catalog must be set");
@@ -154,6 +150,13 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
         this.xstream.setCatalog(this.catalog);
         this.xstream.setReferenceByName(true);
         this.xp = this.xstream.getXStream();
+
+        Assert.notNull(this.xp, "xStream persister should not be NULL");
+        
+        JobParameters jobParameters = this.currentJobExecution.getJobParameters();
+        
+        this.dryRun = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        this.bestEffort = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
 
         return doExecute(contribution, chunkContext, jobExecution);
     }
@@ -173,23 +176,22 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
      * @param targetBackupFolder
      * @throws IOException
      */
-    public void backupGWCSettings(Resource targetBackupFolder) throws IOException {
+    public void backupGWCSettings(Resource targetBackupFolder) {
         GWCConfigPersister gwcGeoServerConfigPersister = 
                 (GWCConfigPersister) GeoServerExtensions.bean("gwcGeoServervConfigPersister");
         
         GWCConfigPersister testGWCCP = 
                 new GWCConfigPersister(xStreamPersisterFactory, new GeoServerResourceLoader(targetBackupFolder.dir()));
         
-        testGWCCP.save(gwcGeoServerConfigPersister.getConfig());
-        
         // Test that everything went well
         try {
+            testGWCCP.save(gwcGeoServerConfigPersister.getConfig());
+
             GWCConfig gwcConfig = testGWCCP.getConfig();
             
             Assert.notNull(gwcConfig);
             
             // TODO: perform more tests and integrity checks on reloaded configuration
-            
             
             // Store GWC Providers Configurations
             Resource targetGWCProviderBackupDir = 
@@ -202,7 +204,12 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
                 }
             }
         } catch (Exception e) {
-            // TODO: collect warnings and errors
+            if(!bestEffort) {
+                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+            }
         }
     }
 
@@ -216,7 +223,7 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
      * @param baseDir
      * @throws IOException
      */
-    public void restoreGWCSettings(Resource sourceRestoreFolder, Resource baseDir) throws IOException {
+    public void restoreGWCSettings(Resource sourceRestoreFolder, Resource baseDir) {
         // Restore configuration files form source and Test that everything went well
         try {
             // - Prepare folder
@@ -234,7 +241,12 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
                 }
             }
         } catch (Exception e) {
-            // TODO: collect warnings and errors
+            if(!bestEffort) {
+                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+            }
         }
     }
     
@@ -243,21 +255,30 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
      * @param baseDir 
      * @throws IOException 
      */
-    public void backupAdditionalResources(ResourceStore resourceStore, Resource baseDir) throws IOException {
-        for (Entry<String, Filter<Resource>> entry : resources.entrySet()){
-            Resource resource = resourceStore.get(entry.getKey());
-            if (resource != null && Resources.exists(resource)) {
-                
-                List<Resource> resources = Resources.list(resource, entry.getValue(), false);
-                
-                Resource targetDir = BackupUtils.dir(baseDir, resource.name());
-                for (Resource res : resources) {
-                    if (res.getType() != Type.DIRECTORY) {
-                        Resources.copy(res.file(), targetDir);
-                    } else {
-                        Resources.copy(res, BackupUtils.dir(targetDir, res.name()));
+    public void backupAdditionalResources(ResourceStore resourceStore, Resource baseDir) {
+        try {
+            for (Entry<String, Filter<Resource>> entry : resources.entrySet()){
+                Resource resource = resourceStore.get(entry.getKey());
+                if (resource != null && Resources.exists(resource)) {
+                    
+                    List<Resource> resources = Resources.list(resource, entry.getValue(), false);
+                    
+                    Resource targetDir = BackupUtils.dir(baseDir, resource.name());
+                    for (Resource res : resources) {
+                        if (res.getType() != Type.DIRECTORY) {
+                            Resources.copy(res.file(), targetDir);
+                        } else {
+                            Resources.copy(res, BackupUtils.dir(targetDir, res.name()));
+                        }
                     }
                 }
+            }
+        } catch(Exception e) {
+            if(!bestEffort) {
+                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
             }
         }
     }
@@ -269,74 +290,138 @@ public abstract class AbstractCatalogBackupRestoreTasklet implements Tasklet, In
     }
 
     //
-    public void doWrite(Object item, Resource directory, String fileName) throws IOException {
-        if (item instanceof ServiceInfo) {
-            ServiceInfo service = (ServiceInfo) item;
-            XStreamServiceLoader loader = findServiceLoader(service);
-
-            try {
-                loader.save(service, backupFacade.getGeoServer(), BackupUtils.dir(directory, fileName));
-            } catch (Throwable t) {
-                throw new RuntimeException( t );
-                //LOGGER.log(Level.SEVERE, "Error occurred while saving configuration", t);
-            }
-        } else {
-            // unwrap dynamic proxies
-            OutputStream out = Resources.fromPath(fileName, directory).out();
-            try {
-                item = xstream.unwrapProxies(item);
-                if (xp == null) {
-                    xp = xstream.getXStream(); 
+    @SuppressWarnings({ "rawtypes", "unchecked", "static-access" })
+    public void doWrite(Object item, Resource directory, String fileName) {
+        try {
+            if (item instanceof ServiceInfo) {
+                ServiceInfo service = (ServiceInfo) item;
+                XStreamServiceLoader loader = findServiceLoader(service);
+    
+                try {
+                    loader.save(service, backupFacade.getGeoServer(), BackupUtils.dir(directory, fileName));
+                } catch (Throwable t) {
+                    throw new RuntimeException( t );
+                    //LOGGER.log(Level.SEVERE, "Error occurred while saving configuration", t);
                 }
-                xp.toXML(item, out);
-            } finally {
-                out.close();
+            } else {
+                // unwrap dynamic proxies
+                OutputStream out = Resources.fromPath(fileName, directory).out();
+                try {
+                    item = xstream.unwrapProxies(item);
+                    if (xp == null) {
+                        xp = xstream.getXStream(); 
+                    }
+                    xp.toXML(item, out);
+                } finally {
+                    out.close();
+                }
+            }
+        } catch (Exception e) {
+            if(!bestEffort) {
+                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
             }
         }
     }
 
     //
-    public Object doRead(Resource directory, String fileName) throws IOException {
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public Object doRead(Resource directory, String fileName) {
         Object item = null;
-        InputStream in = Resources.fromPath(fileName, directory).in();
-        
-        // Try first using the Services Loaders
-        final List<XStreamServiceLoader> loaders = 
-                GeoServerExtensions.extensions( XStreamServiceLoader.class );
-        for ( XStreamServiceLoader<ServiceInfo> l : loaders  ) {
+        try {
+            InputStream in = Resources.fromPath(fileName, directory).in();
+            
+            // Try first using the Services Loaders
+            final List<XStreamServiceLoader> loaders = 
+                    GeoServerExtensions.extensions( XStreamServiceLoader.class );
+            for ( XStreamServiceLoader<ServiceInfo> l : loaders  ) {
+                try {
+                    if (l.getFilename().equals(fileName)) {
+                        item = l.load(backupFacade.getGeoServer(), Resources.fromPath(fileName, directory));
+                        
+                        if (item != null && item instanceof ServiceInfo) {
+                            return item;
+                        }
+                    }
+                } catch (Exception e) {
+                    // Just skip and try with another loader
+                    item = null;
+                }
+            }
+            
             try {
-                if (l.getFilename().equals(fileName)) {
-                    item = l.load(backupFacade.getGeoServer(), Resources.fromPath(fileName, directory));
-                    
-                    if (item != null && item instanceof ServiceInfo) {
-                        return item;
+                if (item == null) {
+                    try {
+                        if (xp == null) {
+                            xp = xstream.getXStream(); 
+                        }
+                        item = xp.fromXML(in);
+                    } finally {
+                        in.close();
                     }
                 }
             } catch (Exception e) {
-                // Just skip and try with another loader
+                // Collect warnings
                 item = null;
-            }
-        }
-        
-        try {
-            if (item == null) {
-                try {
-                    if (xp == null) {
-                        xp = xstream.getXStream(); 
-                    }
-                    item = xp.fromXML(in);
-                } finally {
-                    in.close();
-                }
+                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
             }
         } catch (Exception e) {
-            // TODO: Collect warnings
-            item = null;
+            if(!bestEffort) {
+                this.currentJobExecution.addFailureExceptions(Arrays.asList(e));
+                throw new RuntimeException(e);
+            } else {
+                this.currentJobExecution.addWarningExceptions(Arrays.asList(e));
+            }
         }
         
         return item;
     }
 
+    /**
+     * @return the xp
+     */
+    public XStream getXp() {
+        return xp;
+    }
+
+    /**
+     * @param xp the xp to set
+     */
+    public void setXp(XStream xp) {
+        this.xp = xp;
+    }
+
+    /**
+     * @return the isNew
+     */
+    public boolean isNew() {
+        return isNew;
+    }
+
+    /**
+     * @return the currentJobExecution
+     */
+    public AbstractExecutionAdapter getCurrentJobExecution() {
+        return currentJobExecution;
+    }
+
+    /**
+     * @return the dryRun
+     */
+    public boolean isDryRun() {
+        return dryRun;
+    }
+
+    /**
+     * @return the bestEffort
+     */
+    public boolean isBestEffort() {
+        return bestEffort;
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     protected XStreamServiceLoader findServiceLoader(ServiceInfo service) {
         XStreamServiceLoader loader = null;
         

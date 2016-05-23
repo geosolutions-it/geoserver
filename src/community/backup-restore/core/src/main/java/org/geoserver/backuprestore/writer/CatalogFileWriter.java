@@ -13,6 +13,7 @@ import java.io.Writer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -86,7 +87,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
     }
 
     @Override
-    public void write(List<? extends T> items) throws Exception {
+    public void write(List<? extends T> items) {
 
         if (!getOutputState().isInitialized()) {
             throw new WriterNotOpenException("Writer must be open before it can be written to");
@@ -104,12 +105,30 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
             lines.append(doWrite(item));
             lineCount++;
             
-            firePostWrite(item);
+            try {
+                firePostWrite(item);
+            } catch (IOException e) {
+                if(!isBestEffort()) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw new WriteFailedException("Could not write data.  The file may be corrupt.", e);
+                } else {
+                    getCurrentJobExecution().
+                        addWarningExceptions(
+                                Arrays.asList(new WriteFailedException("Could not write data.  The file may be corrupt.", e)));
+                }
+            }
         }
         try {
             state.write(lines.toString());
         } catch (IOException e) {
-            throw new WriteFailedException("Could not write data.  The file may be corrupt.", e);
+            if(!isBestEffort()) {
+                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                throw new WriteFailedException("Could not write data.  The file may be corrupt.", e);
+            } else {
+                getCurrentJobExecution().
+                    addWarningExceptions(
+                            Arrays.asList(new WriteFailedException("Could not write data.  The file may be corrupt.", e)));
+            }
         }
         state.linesWritten += lineCount;
     }
@@ -196,13 +215,23 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
      * @see ItemStream#open(ExecutionContext)
      */
     @Override
-    public void open(ExecutionContext executionContext) throws ItemStreamException {
+    public void open(ExecutionContext executionContext) {
         super.open(executionContext);
 
         Assert.notNull(resource, "The resource must be set");
 
         if (!getOutputState().isInitialized()) {
-            doOpen(executionContext);
+            try {
+                doOpen(executionContext);
+            } catch (ItemStreamException e) {
+                if(!isBestEffort()) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw e;
+                } else {
+                    getCurrentJobExecution().
+                        addWarningExceptions(Arrays.asList(e));
+                }
+            }
         }
     }
 
@@ -237,8 +266,15 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
                 executionContext.putLong(getExecutionContextKey(RESTART_DATA_NAME),
                         state.position());
             } catch (IOException e) {
-                throw new ItemStreamException(
-                        "ItemStream does not return current position properly", e);
+                if(!isBestEffort()) {
+                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
+                    throw new ItemStreamException(
+                            "ItemStream does not return current position properly", e);
+                } else {
+                    getCurrentJobExecution().
+                        addWarningExceptions(Arrays.asList(new ItemStreamException(
+                                "ItemStream does not return current position properly", e)));
+                }
             }
 
             executionContext.putLong(getExecutionContextKey(WRITTEN_STATISTICS_NAME),
@@ -370,7 +406,6 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
          * Close the open resource and reset counters.
          */
         public void close() {
-
             initialized = false;
             restarted = false;
             try {
@@ -433,7 +468,6 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
          * @throws IOException
          */
         private void initializeBufferedWriter() throws IOException {
-
             File file = resource.getFile();
             FileUtils.setUpOutputFile(file, restarted, append, shouldDeleteIfExists);
 
@@ -498,9 +532,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
 
                     return writer;
                 }
-            } catch (
-
-            UnsupportedCharsetException ucse) {
+            } catch (UnsupportedCharsetException ucse) {
                 throw new ItemStreamException(
                         "Bad encoding configuration for output file " + fileChannel, ucse);
             }
