@@ -32,6 +32,7 @@ public class BackupStreamResource  extends BaseResource {
         super(backupFacade);
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     protected List<DataFormat> createSupportedFormats(Request request, Response response) {
         return (List) Arrays.asList();

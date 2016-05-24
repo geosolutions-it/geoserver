@@ -66,6 +66,7 @@ public abstract class BaseResource extends AbstractResource {
     }
 
     // TODO
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     protected  Hints asParams(List<String> options) {
         Hints hints = new Hints(new HashMap(2));
         

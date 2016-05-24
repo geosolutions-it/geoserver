@@ -9,13 +9,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.logging.Level;
 import java.util.TimeZone;
+import java.util.logging.Level;
 
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.RestoreExecutionAdapter;
@@ -68,6 +70,7 @@ public class RestoreJSONWriter {
         this.json = new FlushableJSONBuilder(w);
     }
 
+    @SuppressWarnings("rawtypes")
     public void executions(Iterator<RestoreExecutionAdapter> executions, int expand) throws IOException {
         json.object().key("restores").array();
         while (executions.hasNext()) {
@@ -98,9 +101,9 @@ public class RestoreJSONWriter {
         
         json.key("progress").value(execution.getExecutedSteps() + "/" + execution.getTotalNumberOfSteps());
         
-        concatErrorMessages(execution.getAllFailureExceptions(), "exceptions", Level.SEVERE);
+        concatErrorMessages(execution.getAllFailureExceptions(), "exceptions", Level.SEVERE, expand);
         
-        concatErrorMessages(execution.getAllWarningExceptions(), "warnings", Level.WARNING);
+        concatErrorMessages(execution.getAllWarningExceptions(), "warnings", Level.WARNING, expand);
 
         json.endObject();
 
@@ -110,19 +113,27 @@ public class RestoreJSONWriter {
         json.flush();
     }
 
-    void concatErrorMessages(List<Throwable> exceptions, String key, Level level) {
+    void concatErrorMessages(List<Throwable> exceptions, String key, Level level, int expand) {
         json.key(key);
         json.array();
         for (Throwable ex : exceptions) {
             json.object();
             
             StringBuilder buf = new StringBuilder();
+            int cnt = 0;
             while (ex != null) {
                 if (buf.length() > 0) {
                     buf.append('\n');
                 }
                 if (ex.getMessage() != null) {
                     buf.append(ex.getMessage());
+                    cnt++;
+                    
+                    if (expand > 0 && expand <= cnt) {
+                        StringWriter errors = new StringWriter();
+                        ex.printStackTrace(new PrintWriter(errors));
+                        buf.append('\n').append(errors.toString());
+                    }
                 }
                 ex = ex.getCause();
             }

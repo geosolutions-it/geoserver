@@ -59,7 +59,7 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         this.restoreExecution.setRestoreCatalog(createRestoreCatalog());
     }
 
-    private Catalog createRestoreCatalog() {
+    private synchronized Catalog createRestoreCatalog() {
         CatalogImpl restoreCatalog = new CatalogImpl();
         Catalog gsCatalog = backupFacade.getGeoServer().getCatalog();
         if (gsCatalog instanceof Wrapper) {

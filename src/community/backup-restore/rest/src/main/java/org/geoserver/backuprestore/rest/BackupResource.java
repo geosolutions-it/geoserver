@@ -30,7 +30,7 @@ import org.restlet.data.Status;
 /**
  * REST resource for 
  * 
- * <pre>/br/backup[/&lt;backupId&gt;]</pre>
+ * <pre>/br/backup[/&lt;backupId&gt;]?expand=1</pre>
  * 
  * @author Alessio Fabiani, GeoSolutions
  *
@@ -41,6 +41,7 @@ public class BackupResource  extends BaseResource {
         super(backupFacade);
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     protected List<DataFormat> createSupportedFormats(Request request, Response response) {
         return (List) Arrays.asList(new BackupJSONFormat(MediaType.APPLICATION_JSON),
@@ -100,6 +101,7 @@ public class BackupResource  extends BaseResource {
      * 
      * @return
      */
+    @SuppressWarnings("unused")
     protected BackupExecutionAdapter runBackup() {
         BackupExecutionAdapter execution = null;
         
@@ -147,6 +149,7 @@ public class BackupResource  extends BaseResource {
             return newReader(in).execution();
         }
 
+        @SuppressWarnings("unchecked")
         @Override
         protected void write(Object object, OutputStream out) throws IOException {
             

@@ -44,6 +44,8 @@ import org.springframework.batch.core.UnexpectedJobExecutionException;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.repeat.RepeatStatus;
 
+import com.thoughtworks.xstream.io.StreamException;
+
 /**
  * TODO
  * 
@@ -467,7 +469,11 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
             GeoServerDataDirectory dd) throws IOException {
         for (WorkspaceInfo ws : geoserver.getCatalog().getWorkspaces()) {
             Resource wsFolder = BackupUtils.dir(sourceWorkspacesFolder, ws.getName());
-            SettingsInfo wsSettings = (SettingsInfo) doRead(wsFolder, "settings.xml");
+            SettingsInfo wsSettings = null;
+            if (Resources.exists(wsFolder.get("settings.xml"))) {
+                wsSettings = (SettingsInfo) doRead(wsFolder, "settings.xml");
+            }
+        
             if (wsSettings != null) {
                 wsSettings.setWorkspace(ws);
                 if(!isDryRun()) {

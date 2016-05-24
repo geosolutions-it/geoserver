@@ -61,6 +61,7 @@ public class RestoreStreamResource  extends RestoreResource {
         doFileUpload();
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void doFileUpload() {
         try {
             Form query = getRequest().getResourceRef().getQueryAsForm();
