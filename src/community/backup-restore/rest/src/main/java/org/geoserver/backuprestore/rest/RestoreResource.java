@@ -21,7 +21,6 @@ import org.geoserver.rest.PageInfo;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
 import org.geoserver.rest.format.StreamDataFormat;
-import org.geotools.factory.Hints;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Request;
@@ -101,7 +100,7 @@ public class RestoreResource  extends BaseResource {
      * 
      * @return
      */
-    private RestoreExecutionAdapter runRestore() {
+    protected RestoreExecutionAdapter runRestore() {
         RestoreExecutionAdapter execution = null;
         
         try {
@@ -112,7 +111,7 @@ public class RestoreResource  extends BaseResource {
     
                 // TODO: archiveFile and overwrite option integrity checks
                 
-                execution = backupFacade.runRestoreAsync(newExecution.getArchiveFile(), asParams(newExecution.getOptions()));
+                execution = getBackupFacade().runRestoreAsync(newExecution.getArchiveFile(), asParams(newExecution.getOptions()));
                 
                 LOGGER.log(Level.INFO, "Restore file started: " + newExecution.getArchiveFile());
     
@@ -178,7 +177,7 @@ public class RestoreResource  extends BaseResource {
         if (i != null) {
             RestoreExecutionAdapter restoreExecution = null;
             try {
-                restoreExecution = backupFacade.getRestoreExecutions().get(Long.parseLong(i));
+                restoreExecution = getBackupFacade().getRestoreExecutions().get(Long.parseLong(i));
             } catch (NumberFormatException e) {
             }
             if (restoreExecution == null && mustExist) {
@@ -188,7 +187,7 @@ public class RestoreResource  extends BaseResource {
         }
         else {
             if (allowAll) {
-                return backupFacade.getRestoreExecutions().entrySet().iterator();
+                return getBackupFacade().getRestoreExecutions().entrySet().iterator();
             }
             throw new RestletException("No restore execution specified", Status.CLIENT_ERROR_BAD_REQUEST);
         }
@@ -201,7 +200,7 @@ public class RestoreResource  extends BaseResource {
      * @throws IOException
      */
     public RestoreJSONReader newReader(InputStream input) throws IOException {
-        return new RestoreJSONReader(backupFacade, input);
+        return new RestoreJSONReader(getBackupFacade(), input);
     }
 
     /**
@@ -211,6 +210,6 @@ public class RestoreResource  extends BaseResource {
      * @throws IOException
      */
     public RestoreJSONWriter newWriter(OutputStream output) throws IOException {
-        return new RestoreJSONWriter(backupFacade, getPageInfo(), output);
+        return new RestoreJSONWriter(getBackupFacade(), getPageInfo(), output);
     }
 }

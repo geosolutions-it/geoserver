@@ -42,7 +42,7 @@ public class BackupResource  extends BaseResource {
     }
 
     @Override
-    protected List<DataFormat> createSupportedFormats(Request arg0, Response arg1) {
+    protected List<DataFormat> createSupportedFormats(Request request, Response response) {
         return (List) Arrays.asList(new BackupJSONFormat(MediaType.APPLICATION_JSON),
                 new BackupJSONFormat(MediaType.TEXT_HTML));
     }
@@ -100,7 +100,7 @@ public class BackupResource  extends BaseResource {
      * 
      * @return
      */
-    private BackupExecutionAdapter runBackup() {
+    protected BackupExecutionAdapter runBackup() {
         BackupExecutionAdapter execution = null;
         
         try {
@@ -111,7 +111,7 @@ public class BackupResource  extends BaseResource {
     
                 // TODO: archiveFile and overwrite option integrity checks
                 
-                execution = backupFacade.runBackupAsync(
+                execution = getBackupFacade().runBackupAsync(
                         newExecution.getArchiveFile(), newExecution.isOverwrite(), asParams(newExecution.getOptions()));
                 
                 LOGGER.log(Level.INFO, "Backup file generated: " + newExecution.getArchiveFile());
@@ -178,7 +178,7 @@ public class BackupResource  extends BaseResource {
         if (i != null) {
             BackupExecutionAdapter backupExecution = null;
             try {
-                backupExecution = backupFacade.getBackupExecutions().get(Long.parseLong(i));
+                backupExecution = getBackupFacade().getBackupExecutions().get(Long.parseLong(i));
             } catch (NumberFormatException e) {
             }
             if (backupExecution == null && mustExist) {
@@ -188,7 +188,7 @@ public class BackupResource  extends BaseResource {
         }
         else {
             if (allowAll) {
-                return backupFacade.getBackupExecutions().entrySet().iterator();
+                return getBackupFacade().getBackupExecutions().entrySet().iterator();
             }
             throw new RestletException("No backup execution specified", Status.CLIENT_ERROR_BAD_REQUEST);
         }
@@ -201,7 +201,7 @@ public class BackupResource  extends BaseResource {
      * @throws IOException
      */
     public BackupJSONReader newReader(InputStream input) throws IOException {
-        return new BackupJSONReader(backupFacade, input);
+        return new BackupJSONReader(getBackupFacade(), input);
     }
 
     /**
@@ -211,6 +211,6 @@ public class BackupResource  extends BaseResource {
      * @throws IOException
      */
     public BackupJSONWriter newWriter(OutputStream output) throws IOException {
-        return new BackupJSONWriter(backupFacade, getPageInfo(), output);
+        return new BackupJSONWriter(getBackupFacade(), getPageInfo(), output);
     }
 }

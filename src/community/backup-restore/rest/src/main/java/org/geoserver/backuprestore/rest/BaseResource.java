@@ -29,9 +29,23 @@ public abstract class BaseResource extends AbstractResource {
 
     static Logger LOGGER = Logging.getLogger(BaseResource.class);
 
-    protected Backup backupFacade;
+    private Backup backupFacade;
 
     public BaseResource(Backup backupFacade) {
+        this.backupFacade = backupFacade;
+    }
+
+    /**
+     * @return the backupFacade
+     */
+    public Backup getBackupFacade() {
+        return backupFacade;
+    }
+
+    /**
+     * @param backupFacade the backupFacade to set
+     */
+    public void setBackupFacade(Backup backupFacade) {
         this.backupFacade = backupFacade;
     }
 
