@@ -63,7 +63,7 @@ public class BackupExecutionsTable extends GeoServerTablePanel<BackupExecutionAd
             return new Label(id, pretty);
         }
         else if (BackupExecutionsProvider.ARCHIVEFILE == property) {
-            String pretty = ((Resource) property.getModel(itemModel).getObject()).path();
+            String pretty = ((Resource) property.getModel(itemModel).getObject()).name();
             return new Label(id, pretty);
         }
 
