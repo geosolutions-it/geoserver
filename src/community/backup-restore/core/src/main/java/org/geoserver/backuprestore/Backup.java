@@ -340,6 +340,16 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     backupExecution = new BackupExecutionAdapter(jobExecution, totalNumberOfBackupSteps);
                     backupExecution.setArchiveFile(archiveFile);
                     backupExecution.setOverwrite(overwrite);
+                    
+                    backupExecution.getOptions().add("OVERWRITE=" + overwrite);
+                    for (Entry jobParam : jobParameters.toProperties().entrySet()) {
+                        if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey()) && 
+                                !PARAM_INPUT_FILE_PATH.equals(jobParam.getKey()) && 
+                                !PARAM_TIME.equals(jobParam.getKey())) {
+                            backupExecution.getOptions().add(jobParam.getKey() + "=" + jobParam.getValue());
+                        }
+                    }
+                    
                     backupExecutions.put(backupExecution.getId(), backupExecution);
 
                     return backupExecution;
@@ -389,6 +399,15 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     JobExecution jobExecution = jobLauncher.run(restoreJob, jobParameters);
                     restoreExecution = new RestoreExecutionAdapter(jobExecution, totalNumberOfRestoreSteps);
                     restoreExecution.setArchiveFile(archiveFile);
+                    
+                    for (Entry jobParam : jobParameters.toProperties().entrySet()) {
+                        if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey()) && 
+                                !PARAM_INPUT_FILE_PATH.equals(jobParam.getKey()) && 
+                                !PARAM_TIME.equals(jobParam.getKey())) {
+                            restoreExecution.getOptions().add(jobParam.getKey() + "=" + jobParam.getValue());
+                        }
+                    }
+                    
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
 
                     return restoreExecution;

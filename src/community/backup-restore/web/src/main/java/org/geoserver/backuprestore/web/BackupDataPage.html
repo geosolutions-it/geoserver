@@ -1,0 +1,43 @@
+<html xmlns:wicket="http://wicket.apache.org/">
+<head>
+<wicket:head>
+  <wicket:link>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+  </wicket:link>
+  
+ <style type="text/css">
+   fieldset {
+     margin-top: 3em;
+   }
+   
+   #sources li {
+     margin: 0;
+     padding: 0;
+   }
+   
+   #sources li:first-child {
+     margin: 0.3em 0 0;
+   }
+ </style>
+ </wicket:head>
+</head>
+<body>
+<wicket:extend>
+  <form wicket:id="form">   
+    <fieldset>
+      <legend>
+        <span class="no-border"><wicket:message key="recentBackups">recentBackups</wicket:message></span>
+      </legend>
+
+      <ul>
+        <li>
+          <div wicket:id="backups"></div>
+        </li>
+      </ul>
+    </fieldset>
+  </form>
+  
+  <div wicket:id="dialog"></div>
+</wicket:extend>
+</body>
+</html>

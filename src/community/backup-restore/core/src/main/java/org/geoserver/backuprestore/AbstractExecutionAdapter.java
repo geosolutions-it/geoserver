@@ -7,6 +7,7 @@ package org.geoserver.backuprestore;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -76,7 +77,25 @@ public abstract class AbstractExecutionAdapter {
     }
 
     /**
+     * The Spring Batch Job TimeStamp
+     * 
+     * @return
+     */
+    public Date getTime() {
+        return new Date(delegate.getJobParameters().getLong(Backup.PARAM_TIME));
+    }
+    
+    /**
      * The Spring Batch {@link BatchStatus}
+     * 
+     *  ABANDONED
+     *  COMPLETED
+     *  FAILED
+     *  STARTED
+     *  STARTING
+     *  STOPPED
+     *  STOPPING
+     *  UNKNOWN
      *  
      * @return BatchStatus of the enclosing job
      */
@@ -186,5 +205,11 @@ public abstract class AbstractExecutionAdapter {
      */
     public List<String> getOptions() {
         return options;
+    }
+    
+    public String getProgress() {
+        final StringBuffer progress = new StringBuffer();
+        progress.append(getExecutedSteps()).append("/").append(getTotalNumberOfSteps());
+        return progress.toString();
     }
 }
