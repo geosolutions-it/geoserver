@@ -1,18 +1,6 @@
-/*
- *    GeoTools - The Open Source Java GIS Toolkit
- *    http://geotools.org
- *
- *    (C) 2016, Open Source Geospatial Foundation (OSGeo)
- *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU Lesser General Public
- *    License as published by the Free Software Foundation;
- *    version 2.1 of the License.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    Lesser General Public License for more details.
+/* (c) 2016 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
  */
 package org.geoserver.backuprestore.web;
 
@@ -51,7 +39,9 @@ import org.apache.wicket.request.resource.PackageResourceReference;
 import org.apache.wicket.util.resource.FileResourceStream;
 import org.apache.wicket.util.resource.IResourceStream;
 import org.apache.wicket.validation.validator.RangeValidator;
+import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.BackupExecutionAdapter;
+import org.geoserver.backuprestore.RestoreExecutionAdapter;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.resource.Paths;
 import org.geoserver.web.GeoServerSecuredPage;
@@ -60,13 +50,13 @@ import org.geoserver.web.wicket.Icon;
 import org.springframework.batch.core.BatchStatus;
 
 /**
- * @author afabiani
+ * @author Alessio Fabiani, GeoSolutions S.A.S.
  *
  */
-public class BackupPage extends GeoServerSecuredPage {
+public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoServerSecuredPage {
 
     public static final PackageResourceReference COMPRESS_ICON = new PackageResourceReference(
-            BackupPage.class, "compress.png");
+            BackupRestorePage.class, "compress.png");
     
     static final String DETAILS_LEVEL = "expand";
 
@@ -78,43 +68,64 @@ public class BackupPage extends GeoServerSecuredPage {
 
     private PageParameters params;
 
-    public BackupPage(PageParameters pp) {
-        this(new BackupExecutionModel(pp.get("id").toLong()), pp);
+    private Class<T> clazz;
+
+    public BackupRestorePage(PageParameters pp) {
+        this(new BackupRestoreExecutionModel(pp.get("id").toLong(), getType(pp.get("clazz").toString())), pp, getType(pp.get("clazz").toString()));
     }
 
-    public BackupPage(BackupExecutionAdapter bkp, PageParameters pp) {
-        this(new BackupExecutionModel(bkp), pp);
+    public BackupRestorePage(T bkp, PageParameters pp) {
+        this(new BackupRestoreExecutionModel(bkp, getType(pp.get("clazz").toString())), pp, getType(pp.get("clazz").toString()));
     }
 
-    public BackupPage(IModel<BackupExecutionAdapter> model, PageParameters pp) {
+    /**
+     * @param string
+     * @return
+     */
+    private static Class getType(String simpleName) {
+        if (BackupExecutionAdapter.class.getSimpleName().equals(simpleName)) {
+            return BackupExecutionAdapter.class;
+        } else if (RestoreExecutionAdapter.class.getSimpleName().equals(simpleName)) {
+            return RestoreExecutionAdapter.class;
+        }
+        return null;
+    }
+
+    public BackupRestorePage(IModel<T> model, PageParameters pp, Class<T> clazz) {
         this.params = pp;
+        this.clazz = clazz;
         
         initComponents(model);
     }
 
-    void initComponents(final IModel<BackupExecutionAdapter> model) {
+    public Class<T> getType() {
+        return this.clazz;
+    }
+    
+    void initComponents(final IModel<T> model) {
         add(new Label("id", new PropertyModel(model, "id")));
+        add(new Label("clazz", new Model(this.clazz.getSimpleName().substring(0, this.clazz.getSimpleName().indexOf("Execution")))));
         
-        BackupExecutionsProvider provider = new BackupExecutionsProvider() {
+        BackupRestoreExecutionsProvider provider = new BackupRestoreExecutionsProvider(getType()) {
             @Override
-            protected List<Property<BackupExecutionAdapter>> getProperties() {
+            protected List<Property<AbstractExecutionAdapter>> getProperties() {
                 return Arrays.asList(ID, STATE, STARTED, PROGRESS, ARCHIVEFILE, OPTIONS);
             }
     
             @Override
-            protected List<BackupExecutionAdapter> getItems() {
+            protected List<T> getItems() {
                 return Collections.singletonList(model.getObject());
             }
         };
         
-        final BackupExecutionsTable headerTable = new BackupExecutionsTable("header", provider);
+        final BackupRestoreExecutionsTable headerTable = new BackupRestoreExecutionsTable("header", provider, getType());
 
         headerTable.setOutputMarkupId(true);
         headerTable.setFilterable(false);
         headerTable.setPageable(false);
         add(headerTable);
         
-        final BackupExecutionAdapter bkp = model.getObject();
+        final T bkp = model.getObject();
         boolean selectable = bkp.getStatus() != BatchStatus.COMPLETED;
         
         add(new Icon("icon", COMPRESS_ICON));
@@ -138,7 +149,11 @@ public class BackupPage extends GeoServerSecuredPage {
         form.add(new SubmitLink("refresh") {
             @Override
             public void onSubmit() {
-                setResponsePage(BackupPage.class, new PageParameters().add("id", params.get("id").toLong()).add(DETAILS_LEVEL, expand));
+                setResponsePage(BackupRestorePage.class, 
+                        new PageParameters()
+                            .add("id", params.get("id").toLong())
+                            .add("clazz", getType().getSimpleName())
+                            .add(DETAILS_LEVEL, expand));
             }
         });
         
@@ -193,9 +208,9 @@ public class BackupPage extends GeoServerSecuredPage {
     
             @Override
             public void onClick(AjaxRequestTarget target) {
-                BackupExecutionAdapter bkp = model.getObject();
+                T bkp = model.getObject();
                 //if (!bkp.isRunning()) {
-                    setResponsePage(BackupDataPage.class);
+                    setResponsePage(BackupRestoreDataPage.class);
                     return;
                 //}
 
@@ -215,23 +230,29 @@ public class BackupPage extends GeoServerSecuredPage {
         return null;
     }
 
-    static class DataTitleModel extends LoadableDetachableModel<String> {
+    class DataTitleModel<T extends AbstractExecutionAdapter> extends LoadableDetachableModel<String> {
 
         long contextId;
         boolean abbrev;
         
-        DataTitleModel(BackupExecutionAdapter bkp) {
+        DataTitleModel(T bkp) {
             this(bkp, true);
         }
 
-        DataTitleModel(BackupExecutionAdapter bkp, boolean abbrev) {
+        DataTitleModel(T bkp, boolean abbrev) {
             this.contextId = bkp.getId();
             this.abbrev = abbrev;
         }
 
         @Override
         protected String load() {
-            BackupExecutionAdapter ctx = backupFacade().getBackupExecutions().get(contextId);
+            AbstractExecutionAdapter ctx = null;
+            
+            if (getType() == BackupExecutionAdapter.class) { 
+                ctx = backupFacade().getBackupExecutions().get(contextId);
+            } else if (getType() == RestoreExecutionAdapter.class) {
+                ctx = backupFacade().getRestoreExecutions().get(contextId);
+            }
             String title =  ctx.getArchiveFile() != null ? ctx.getArchiveFile().path() : ctx.toString();
 
             if (abbrev && title.length() > 70) {
@@ -247,17 +268,23 @@ public class BackupPage extends GeoServerSecuredPage {
     
     }
     
-    class BKErrorDetailsModel extends LoadableDetachableModel<String> {
+    class BKErrorDetailsModel<T extends AbstractExecutionAdapter> extends LoadableDetachableModel<String> {
 
         long contextId;
         
-        public BKErrorDetailsModel(BackupExecutionAdapter bkp) {
+        public BKErrorDetailsModel(AbstractExecutionAdapter bkp) {
             this.contextId = bkp.getId();
         }
         
         @Override
         protected String load() {
-            BackupExecutionAdapter ctx = backupFacade().getBackupExecutions().get(contextId);
+            AbstractExecutionAdapter ctx = null;
+            
+            if (getType() == BackupExecutionAdapter.class) { 
+                ctx = backupFacade().getBackupExecutions().get(contextId);
+            } else if (getType() == RestoreExecutionAdapter.class) {
+                ctx = backupFacade().getRestoreExecutions().get(contextId);
+            }
             
             StringBuilder buf = new StringBuilder();
             if (!ctx.getAllFailureExceptions().isEmpty()) {
@@ -296,7 +323,7 @@ public class BackupPage extends GeoServerSecuredPage {
                     buf.append(ex.getMessage());
                     cnt++;
                     
-                    if (BackupPage.this.expand > 0 && BackupPage.this.expand <= cnt) {
+                    if (BackupRestorePage.this.expand > 0 && BackupRestorePage.this.expand >= cnt) {
                         StringWriter errors = new StringWriter();
                         ex.printStackTrace(new PrintWriter(errors));
                         buf.append('\n').append(errors.toString());

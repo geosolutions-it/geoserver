@@ -1,5 +1,4 @@
-/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2013 OpenPlans
+/* (c) 2016 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -25,6 +24,8 @@ import org.geoserver.web.wicket.browser.GeoServerFileChooser;
 
 @SuppressWarnings("serial")
 public class ResourceFilePanel extends Panel {
+
+    private static final String[] FILE_EXTENSIONS = new String[] {".zip", ".gz", ".tar", ".tgz", ".bz"};
 
     String file;
     
@@ -123,6 +124,7 @@ public class ResourceFilePanel extends Panel {
     }
 
     protected void initFileChooser(GeoServerFileChooser fileChooser) {
-        fileChooser.setFilter(new Model(new ExtensionFileFilter(".zip")));
+        fileChooser.setFilter(new Model(new ExtensionFileFilter(FILE_EXTENSIONS)));
+        // fileChooser.setFilter(new Model((Serializable)FileFileFilter.FILE));
     }
 }

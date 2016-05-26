@@ -1,11 +1,9 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2016 OpenPlans
+/* (c) 2016 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.backuprestore;
 
-import org.geoserver.platform.resource.Resource;
 import org.springframework.batch.core.JobExecution;
 
 /**
@@ -16,26 +14,10 @@ import org.springframework.batch.core.JobExecution;
  */
 public class BackupExecutionAdapter extends AbstractExecutionAdapter {
 
-    private Resource archiveFile;
-    
     private boolean overwrite;
     
     public BackupExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
         super(jobExecution, totalNumberOfSteps);
-    }
-
-    /**
-     * @return the archiveFile
-     */
-    public Resource getArchiveFile() {
-        return archiveFile;
-    }
-
-    /**
-     * @param archiveFile the archiveFile to set
-     */
-    public void setArchiveFile(Resource archiveFile) {
-        this.archiveFile = archiveFile;
     }
 
     /**

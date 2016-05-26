@@ -1,5 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2016 OpenPlans
+/* (c) 2016 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -237,6 +236,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
                     if(!bestEffort) {
                         if (result != null) {
                             result.throwIfInvalid();
+                        } else {
+                            throw e;
                         }
                     }
 
@@ -261,6 +262,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
                     if(!bestEffort) {
                         if (result != null) {
                             result.throwIfInvalid();
+                        } else {
+                            throw e;
                         }
                     }
 
@@ -285,6 +288,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
                     if(!bestEffort) {
                         if (result != null) {
                             result.throwIfInvalid();
+                        } else {
+                            throw e;
                         }
                     }
 

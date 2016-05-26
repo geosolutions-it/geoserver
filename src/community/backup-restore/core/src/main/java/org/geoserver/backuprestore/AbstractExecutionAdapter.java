@@ -1,5 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2016 OpenPlans
+/* (c) 2016 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -11,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.geoserver.platform.resource.Resource;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
@@ -38,6 +38,8 @@ public abstract class AbstractExecutionAdapter {
     private List<String> options = Collections.synchronizedList(new ArrayList<String>());
     
     private List<Throwable> warningsList = Collections.synchronizedList(new ArrayList<Throwable>());
+    
+    private Resource archiveFile;
     
     /**
      * Default Constructor
@@ -206,10 +208,28 @@ public abstract class AbstractExecutionAdapter {
     public List<String> getOptions() {
         return options;
     }
-    
+
+    /**
+     * 
+     * @return
+     */
     public String getProgress() {
         final StringBuffer progress = new StringBuffer();
         progress.append(getExecutedSteps()).append("/").append(getTotalNumberOfSteps());
         return progress.toString();
+    }
+
+    /**
+     * @return the archiveFile
+     */
+    public Resource getArchiveFile() {
+        return archiveFile;
+    }
+
+    /**
+     * @param archiveFile the archiveFile to set
+     */
+    public void setArchiveFile(Resource archiveFile) {
+        this.archiveFile = archiveFile;
     }
 }

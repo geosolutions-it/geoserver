@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--  <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">-->
 <!-- 
- Copyright (C) 2015 - 2016 - Open Source Geospatial Foundation. All rights reserved.
+ (c) 2016 Open Source Geospatial Foundation - all rights reserved
  This code is licensed under the GPL 2.0 license, available at the root
- application directory.
+ application directory. 
  -->
  
  <beans xmlns="http://www.springframework.org/schema/beans"

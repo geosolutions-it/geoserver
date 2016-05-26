@@ -1,5 +1,4 @@
-/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
- * (c) 2001 - 2016 OpenPlans
+/* (c) 2016 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -131,7 +130,7 @@ public class BackupJSONWriter {
                     buf.append(ex.getMessage());
                     cnt++;
                     
-                    if (expand > 0 && expand <= cnt) {
+                    if (expand > 0 && expand >= cnt) {
                         StringWriter errors = new StringWriter();
                         ex.printStackTrace(new PrintWriter(errors));
                         buf.append('\n').append(errors.toString());
