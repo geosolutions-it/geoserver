@@ -18,13 +18,11 @@ import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
 
 /**
- * Base Class for {@link JobExecution} wrappers.
- * Those will be used to share objects, I/O parameters and GeoServer B/R specific 
- * variables and the batch contexts.
+ * Base Class for {@link JobExecution} wrappers. Those will be used to share objects, I/O parameters and GeoServer B/R specific variables and the
+ * batch contexts.
  * 
- * {@link ConcurrentHashMap}s are populated from the {@link Backup} facade in order
- * to allow external classes to follow jobs executions and retrieve configuration,
- * parameters and statuses.
+ * {@link ConcurrentHashMap}s are populated from the {@link Backup} facade in order to allow external classes to follow jobs executions and retrieve
+ * configuration, parameters and statuses.
  * 
  * @author Alessio Fabiani, GeoSolutions
  *
@@ -34,13 +32,13 @@ public abstract class AbstractExecutionAdapter {
     private Integer totalNumberOfSteps;
 
     protected JobExecution delegate;
-    
+
     private List<String> options = Collections.synchronizedList(new ArrayList<String>());
-    
+
     private List<Throwable> warningsList = Collections.synchronizedList(new ArrayList<Throwable>());
-    
+
     private Resource archiveFile;
-    
+
     /**
      * Default Constructor
      * 
@@ -50,7 +48,7 @@ public abstract class AbstractExecutionAdapter {
         this.delegate = jobExecution;
         this.totalNumberOfSteps = totalNumberOfSteps;
     }
-    
+
     /**
      * The Unique Job Execution ID
      * 
@@ -71,7 +69,7 @@ public abstract class AbstractExecutionAdapter {
 
     /**
      * The Spring Batch {@link JobParameters}
-     *  
+     * 
      * @return JobParameters of the enclosing job
      */
     public JobParameters getJobParameters() {
@@ -86,19 +84,12 @@ public abstract class AbstractExecutionAdapter {
     public Date getTime() {
         return new Date(delegate.getJobParameters().getLong(Backup.PARAM_TIME));
     }
-    
+
     /**
      * The Spring Batch {@link BatchStatus}
      * 
-     *  ABANDONED
-     *  COMPLETED
-     *  FAILED
-     *  STARTED
-     *  STARTING
-     *  STOPPED
-     *  STOPPING
-     *  UNKNOWN
-     *  
+     * ABANDONED COMPLETED FAILED STARTED STARTING STOPPED STOPPING UNKNOWN
+     * 
      * @return BatchStatus of the enclosing job
      */
     public BatchStatus getStatus() {
@@ -150,7 +141,7 @@ public abstract class AbstractExecutionAdapter {
     public List<Throwable> getAllFailureExceptions() {
         return delegate.getAllFailureExceptions();
     }
-    
+
     /**
      * Return all failure marked as warnings by this JobExecution, including step executions.
      *
@@ -159,7 +150,7 @@ public abstract class AbstractExecutionAdapter {
     public List<Throwable> getAllWarningExceptions() {
         return warningsList;
     }
-    
+
     /**
      * Adds exceptions to the current executions marking it as FAILED.
      * 
@@ -169,7 +160,7 @@ public abstract class AbstractExecutionAdapter {
         for (Throwable t : exceptions) {
             this.delegate.addFailureException(t);
         }
-        
+
         this.delegate.setExitStatus(ExitStatus.FAILED);
     }
 

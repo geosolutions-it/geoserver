@@ -16,7 +16,7 @@ import org.springframework.batch.core.JobExecution;
 public class RestoreExecutionAdapter extends AbstractExecutionAdapter {
 
     private Catalog restoreCatalog;
-    
+
     public RestoreExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
         super(jobExecution, totalNumberOfSteps);
     }

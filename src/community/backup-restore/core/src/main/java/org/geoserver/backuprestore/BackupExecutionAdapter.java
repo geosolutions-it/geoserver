@@ -15,7 +15,7 @@ import org.springframework.batch.core.JobExecution;
 public class BackupExecutionAdapter extends AbstractExecutionAdapter {
 
     private boolean overwrite;
-    
+
     public BackupExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
         super(jobExecution, totalNumberOfSteps);
     }

@@ -6,7 +6,6 @@ package org.geoserver.backuprestore.writer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import org.geoserver.backuprestore.Backup;
@@ -63,7 +62,7 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
         super(clazz, backupFacade, xStreamPersisterFactory);
     }
 
-    protected void beforeStep(StepExecution stepExecution) {
+    protected void initialize(StepExecution stepExecution) {
         delegate.setXp(getXp());
     }
 
@@ -89,13 +88,7 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
                 opened = false;
             }
         } catch (Exception e) {
-            if(!isBestEffort()) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().
-                    addWarningExceptions(Arrays.asList(e));
-            }
+            logValidationExceptions((T) null, e);
         }
     }
 
@@ -142,13 +135,7 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
                 delegate.close();
             }
         } catch (ItemStreamException e) {
-            if(!isBestEffort()) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().
-                    addWarningExceptions(Arrays.asList(e));
-            }
+            logValidationExceptions((T) null, e);
         }
     }
 
@@ -159,27 +146,21 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
             resourceIndex = executionContext.getInt(getExecutionContextKey(RESOURCE_INDEX_KEY), 1);
             currentResourceItemCount = executionContext
                     .getInt(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT), 0);
-    
+
             try {
                 setResourceToDelegate();
             } catch (IOException e) {
                 throw new ItemStreamException("Couldn't assign resource", e);
             }
-    
+
             if (executionContext.containsKey(getExecutionContextKey(CURRENT_RESOURCE_ITEM_COUNT))) {
                 // It's a restart
                 delegate.open(executionContext);
             } else {
                 opened = false;
             }
-        } catch(ItemStreamException e) {
-            if(!isBestEffort()) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().
-                    addWarningExceptions(Arrays.asList(e));
-            }
+        } catch (ItemStreamException e) {
+            logValidationExceptions((T) null, e);
         }
     }
 
@@ -195,14 +176,8 @@ public class CatalogMultiResourceItemWriter<T> extends CatalogWriter<T> {
                         currentResourceItemCount);
                 executionContext.putInt(getExecutionContextKey(RESOURCE_INDEX_KEY), resourceIndex);
             }
-        } catch(ItemStreamException e) {
-            if(!isBestEffort()) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().
-                    addWarningExceptions(Arrays.asList(e));
-            }
+        } catch (ItemStreamException e) {
+            logValidationExceptions((T) null, e);
         }
     }
 

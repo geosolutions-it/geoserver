@@ -4,23 +4,18 @@
  */
 package org.geoserver.backuprestore.writer;
 
-import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
+import org.geoserver.backuprestore.BackupRestoreItem;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.annotation.BeforeStep;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemStreamWriter;
 import org.springframework.batch.item.file.ResourceAwareItemWriterItemStream;
-import org.springframework.batch.item.support.AbstractItemStreamItemWriter;
+import org.springframework.batch.item.util.ExecutionContextUserSupport;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-
-import com.thoughtworks.xstream.XStream;
 
 /**
  * Abstract Spring Batch {@link ItemReader}.
@@ -30,122 +25,68 @@ import com.thoughtworks.xstream.XStream;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public abstract class CatalogWriter<T> extends AbstractItemStreamItemWriter<T>
-        implements ResourceAwareItemWriterItemStream<T>, InitializingBean {
-    
+public abstract class CatalogWriter<T> extends BackupRestoreItem
+        implements ItemStreamWriter<T>, ResourceAwareItemWriterItemStream<T>, InitializingBean {
+
     protected Class clazz;
 
-    protected Backup backupFacade;
-
-    protected Catalog catalog;
-
-    protected XStreamPersister xstream;
-
-    private XStream xp;
-    
-    private boolean isNew;
-
-    private AbstractExecutionAdapter currentJobExecution;
-
-    private boolean dryRun;
-
-    private boolean bestEffort;
-
-    private XStreamPersisterFactory xStreamPersisterFactory;
-    
     public CatalogWriter(Class<T> clazz, Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
+        super(backupFacade, xStreamPersisterFactory);
         this.clazz = clazz;
-        this.backupFacade = backupFacade;
-        this.xStreamPersisterFactory = xStreamPersisterFactory;
 
         this.setExecutionContextName(ClassUtils.getShortName(clazz));
     }
 
-    @BeforeStep
-    protected void retrieveInterstepData(StepExecution stepExecution) {
-        // Accordingly to the running execution type (Backup or Restore) we
-        // need to validate resources against the official GeoServer Catalog (Backup)
-        // or the temporary one (Restore).
-        //
-        // For restore operations the order matters.
-        JobExecution jobExecution = stepExecution.getJobExecution();
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
-        if (backupFacade.getRestoreExecutions() != null
-                && !backupFacade.getRestoreExecutions().isEmpty()
-                && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
-            this.currentJobExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
-            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId()).getRestoreCatalog();
-            this.isNew = true;
-        } else {
-            this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
-            this.catalog = backupFacade.getCatalog();
-            this.xstream.setExcludeIds();
-            this.isNew = false;
-        }
+    private final ExecutionContextUserSupport executionContextUserSupport = new ExecutionContextUserSupport();
 
-        Assert.notNull(catalog, "catalog must be set");
-
-        this.xstream.setCatalog(this.catalog);
-        this.xstream.setReferenceByName(true);
-        this.xp = this.xstream.getXStream();
-
-        Assert.notNull(this.xp, "xStream persister should not be NULL");
-        
-        JobParameters jobParameters = this.currentJobExecution.getJobParameters();
-        
-        this.dryRun = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_DRY_RUN_MODE, "false"));
-        this.bestEffort = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
-
-        beforeStep(stepExecution);
+    /**
+     * No-op.
+     * 
+     * @see org.springframework.batch.item.ItemStream#close()
+     */
+    @Override
+    public void close() {
     }
 
-    protected abstract void beforeStep(StepExecution stepExecution);
+    /**
+     * No-op.
+     * 
+     * @see org.springframework.batch.item.ItemStream#open(ExecutionContext)
+     */
+    @Override
+    public void open(ExecutionContext executionContext) {
+    }
+
+    /**
+     * Return empty {@link ExecutionContext}.
+     * 
+     * @see org.springframework.batch.item.ItemStream#update(ExecutionContext)
+     */
+    @Override
+    public void update(ExecutionContext executionContext) {
+    }
+
+    /**
+     * The name of the component which will be used as a stem for keys in the {@link ExecutionContext}. Subclasses should provide a default value,
+     * e.g. the short form of the class name.
+     * 
+     * @param name the name for the component
+     */
+    public void setName(String name) {
+        this.setExecutionContextName(name);
+    }
+
+    protected void setExecutionContextName(String name) {
+        executionContextUserSupport.setName(name);
+    }
+
+    public String getExecutionContextKey(String key) {
+        return executionContextUserSupport.getKey(key);
+    }
 
     protected String getItemName(XStreamPersister xp) {
         return xp.getClassAliasingMapper().serializedClass(clazz);
-    }
-    
-    /**
-     * @return the xp
-     */
-    public XStream getXp() {
-        return xp;
-    }
-
-    /**
-     * @param xp the xp to set
-     */
-    public void setXp(XStream xp) {
-        this.xp = xp;
-    }
-
-    /**
-     * @return the isNew
-     */
-    public boolean isNew() {
-        return isNew;
-    }
-
-    /**
-     * @return the currentJobExecution
-     */
-    public AbstractExecutionAdapter getCurrentJobExecution() {
-        return currentJobExecution;
-    }
-
-    /**
-     * @return the dryRun
-     */
-    public boolean isDryRun() {
-        return dryRun;
-    }
-
-    /**
-     * @return the bestEffort
-     */
-    public boolean isBestEffort() {
-        return bestEffort;
     }
 
 }

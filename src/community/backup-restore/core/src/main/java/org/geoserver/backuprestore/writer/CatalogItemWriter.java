@@ -38,48 +38,35 @@ public class CatalogItemWriter<T> extends CatalogWriter<T> {
     }
 
     @Override
-    protected void beforeStep(StepExecution stepExecution) {
-        if(this.getXp() == null) {
+    protected void initialize(StepExecution stepExecution) {
+        if (this.getXp() == null) {
             setXp(this.xstream.getXStream());
         }
     }
-    
+
     @Override
     public void write(List<? extends T> items) {
-        for(T item : items) {
+        for (T item : items) {
             try {
-                if(item instanceof WorkspaceInfo) {
-                    this.catalog.add((WorkspaceInfo)item);
-                }
-                else if(item instanceof NamespaceInfo) {
-                    this.catalog.add((NamespaceInfo)item);
-                }
-                else if(item instanceof DataStoreInfo) {
-                    this.catalog.add((DataStoreInfo)item);
-                }
-                else if(item instanceof CoverageStoreInfo) {
-                    this.catalog.add((CoverageStoreInfo)item);
-                }
-                else if(item instanceof ResourceInfo) {
-                    this.catalog.add((ResourceInfo)item);
-                }
-                else if(item instanceof LayerInfo) {
-                    this.catalog.add((LayerInfo)item);
-                }
-                else if(item instanceof StyleInfo) {
-                    this.catalog.add((StyleInfo)item);
-                }
-                else if(item instanceof LayerGroupInfo) {
-                    this.catalog.add((LayerGroupInfo)item);
+                if (item instanceof WorkspaceInfo) {
+                    getCatalog().add((WorkspaceInfo) item);
+                } else if (item instanceof NamespaceInfo) {
+                    getCatalog().add((NamespaceInfo) item);
+                } else if (item instanceof DataStoreInfo) {
+                    getCatalog().add((DataStoreInfo) item);
+                } else if (item instanceof CoverageStoreInfo) {
+                    getCatalog().add((CoverageStoreInfo) item);
+                } else if (item instanceof ResourceInfo) {
+                    getCatalog().add((ResourceInfo) item);
+                } else if (item instanceof LayerInfo) {
+                    getCatalog().add((LayerInfo) item);
+                } else if (item instanceof StyleInfo) {
+                    getCatalog().add((StyleInfo) item);
+                } else if (item instanceof LayerGroupInfo) {
+                    getCatalog().add((LayerGroupInfo) item);
                 }
             } catch (Exception e) {
-                if(!isBestEffort()) {
-                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    throw e;
-                } else {
-                    getCurrentJobExecution().
-                        addWarningExceptions(Arrays.asList(e));
-                }
+                logValidationExceptions((T) null, e);
             }
         }
     }

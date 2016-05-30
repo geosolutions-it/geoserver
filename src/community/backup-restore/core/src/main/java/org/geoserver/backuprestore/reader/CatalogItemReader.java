@@ -4,8 +4,6 @@
  */
 package org.geoserver.backuprestore.reader;
 
-import java.util.Arrays;
-
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.util.CloseableIterator;
@@ -26,17 +24,17 @@ import org.springframework.core.io.Resource;
 public class CatalogItemReader<T> extends CatalogReader<T> {
 
     CloseableIterator<T> catalogIterator;
-    
+
     public CatalogItemReader(Class<T> clazz, Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
         super(clazz, backupFacade, xStreamPersisterFactory);
     }
-    
+
     @SuppressWarnings("unchecked")
-    protected void beforeStep(StepExecution stepExecution) {
-        this.catalogIterator = (CloseableIterator<T>) catalog.list(this.clazz, Filter.INCLUDE);
+    protected void initialize(StepExecution stepExecution) {
+        this.catalogIterator = (CloseableIterator<T>) getCatalog().list(this.clazz, Filter.INCLUDE);
     }
-    
+
     @Override
     public T read() {
         try {
@@ -44,15 +42,9 @@ public class CatalogItemReader<T> extends CatalogReader<T> {
                 return (T) catalogIterator.next();
             }
         } catch (Exception e) {
-            if(!isBestEffort()) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().
-                    addWarningExceptions(Arrays.asList(e));
-            }
+            logValidationExceptions((T) null, e);
         }
-        
+
         return null;
     }
 

@@ -24,11 +24,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 
 /**
- * Reads items from multiple resources sequentially - resource list is given by {@link #setResources(Resource[])}, the
- * actual reading is delegated to {@link #setDelegate(ResourceAwareItemReaderItemStream)}.
+ * Reads items from multiple resources sequentially - resource list is given by {@link #setResources(Resource[])}, the actual reading is delegated to
+ * {@link #setDelegate(ResourceAwareItemReaderItemStream)}.
  * 
- * Input resources are ordered using {@link #setComparator(Comparator)} to make sure resource ordering is preserved
- * between job runs in restart scenario.
+ * Input resources are ordered using {@link #setComparator(Comparator)} to make sure resource ordering is preserved between job runs in restart
+ * scenario.
  * 
  * Code based on original {@link MultiResourceItemReader} by Robert Kasanicky and Lucas Ward.
  * 
@@ -61,10 +61,10 @@ public class CatalogMultiResourceItemReader<T> extends CatalogReader<T> {
         super(clazz, backupFacade, xStreamPersisterFactory);
     }
 
-    protected void beforeStep(StepExecution stepExecution) {
+    protected void initialize(StepExecution stepExecution) {
         delegate.setXp(getXp());
     }
-    
+
     /**
      * In strict mode the reader will throw an exception on {@link #open(org.springframework.batch.item.ExecutionContext)} if there are no resources
      * to read.
@@ -254,7 +254,7 @@ public class CatalogMultiResourceItemReader<T> extends CatalogReader<T> {
     @Override
     public void afterPropertiesSet() throws Exception {
         // TODO Auto-generated method stub
-        
+
     }
 
     @Override
@@ -266,13 +266,13 @@ public class CatalogMultiResourceItemReader<T> extends CatalogReader<T> {
     @Override
     protected void doOpen() throws Exception {
         // TODO Auto-generated method stub
-        
+
     }
 
     @Override
     protected void doClose() throws Exception {
         // TODO Auto-generated method stub
-        
+
     }
 
 }

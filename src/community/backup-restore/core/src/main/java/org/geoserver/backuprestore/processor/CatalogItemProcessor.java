@@ -4,14 +4,11 @@
  */
 package org.geoserver.backuprestore.processor;
 
-import java.util.Arrays;
 import java.util.logging.Logger;
 
-import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
-import org.geoserver.backuprestore.RestoreExecutionAdapter;
+import org.geoserver.backuprestore.BackupRestoreItem;
 import org.geoserver.catalog.Catalog;
-import org.geoserver.catalog.CatalogException;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -23,17 +20,10 @@ import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.ValidationResult;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogImpl;
-import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geotools.util.logging.Logging;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.util.Assert;
-
-import com.thoughtworks.xstream.XStream;
 
 /**
  * Concrete Spring Batch {@link ItemProcessor}.
@@ -43,7 +33,7 @@ import com.thoughtworks.xstream.XStream;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
+public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements ItemProcessor<T, T> {
 
     /**
      * logger
@@ -52,24 +42,11 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
 
     Class<T> clazz;
 
-    Backup backupFacade;
+    @Override
+    protected void initialize(StepExecution stepExecution) {
 
-    private Catalog catalog;
-    
-    protected XStreamPersister xstream;
+    }
 
-    private XStream xp;
-
-    private boolean isNew;
-
-    private AbstractExecutionAdapter currentJobExecution;
-
-    private boolean dryRun;
-
-    private boolean bestEffort;
-
-    private XStreamPersisterFactory xStreamPersisterFactory;
-    
     /**
      * Default Constructor.
      * 
@@ -78,9 +55,8 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
      */
     public CatalogItemProcessor(Class<T> clazz, Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
+        super(backupFacade, xStreamPersisterFactory);
         this.clazz = clazz;
-        this.backupFacade = backupFacade;
-        this.xStreamPersisterFactory = xStreamPersisterFactory;
     }
 
     /**
@@ -89,214 +65,86 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     public Class<T> getClazz() {
         return clazz;
     }
-    
-    @BeforeStep
-    protected void retrieveInterstepData(StepExecution stepExecution) {
-        // Accordingly to the running execution type (Backup or Restore) we
-        // need to validate resources against the official GeoServer Catalog (Backup)
-        // or the temporary one (Restore).
-        // 
-        // For restore operations the order matters.
-        JobExecution jobExecution = stepExecution.getJobExecution();
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
-        if (backupFacade.getRestoreExecutions() != null
-                && !backupFacade.getRestoreExecutions().isEmpty()
-                && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
-            this.currentJobExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
-            this.catalog = ((RestoreExecutionAdapter)currentJobExecution).getRestoreCatalog();
-            this.isNew = true;
-        } else {
-            this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
-            this.catalog = backupFacade.getCatalog();
-            this.xstream.setExcludeIds();
-            this.isNew = false;
-        }
-        
-        Assert.notNull(this.catalog, "catalog must be set");
 
-        this.xstream.setCatalog(this.catalog);
-        this.xstream.setReferenceByName(true);
-        this.xp = this.xstream.getXStream();
-
-        Assert.notNull(this.xp, "xStream persister should not be NULL");
-        
-        JobParameters jobParameters = this.currentJobExecution.getJobParameters();
-        
-        this.dryRun = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_DRY_RUN_MODE, "false"));
-        this.bestEffort = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
-    }
-
-    /**
-     * @return the xp
-     */
-    public XStream getXp() {
-        return xp;
-    }
-
-    /**
-     * @param xp the xp to set
-     */
-    public void setXp(XStream xp) {
-        this.xp = xp;
-    }
-
-    /**
-     * @return the isNew
-     */
-    public boolean isNew() {
-        return isNew;
-    }
-
-    /**
-     * @return the currentJobExecution
-     */
-    public AbstractExecutionAdapter getCurrentJobExecution() {
-        return currentJobExecution;
-    }
-
-    /**
-     * @return the dryRun
-     */
-    public boolean isDryRun() {
-        return dryRun;
-    }
-
-    /**
-     * @return the bestEffort
-     */
-    public boolean isBestEffort() {
-        return bestEffort;
-    }
-    
     @Override
     public T process(T resource) throws Exception {
 
         if (resource != null) {
-            if (isNew) {
+            if (isNew()) {
                 // Disabling additional validators
-                ((CatalogImpl) this.catalog).setExtendedValidation(false);
+                ((CatalogImpl) getCatalog()).setExtendedValidation(false);
             }
-            
-            LOGGER.info("Processing resource: " + resource + 
-                    " - Progress: [" + currentJobExecution.getExecutedSteps() + "/" + currentJobExecution.getTotalNumberOfSteps() + "]");
+
+            LOGGER.info("Processing resource: " + resource + " - Progress: ["
+                    + getCurrentJobExecution().getExecutedSteps() + "/"
+                    + getCurrentJobExecution().getTotalNumberOfSteps() + "]");
 
             if (resource instanceof WorkspaceInfo) {
-                if (!validateWorkspace((WorkspaceInfo) resource, isNew)) {
+                if (!validateWorkspace((WorkspaceInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
-                    
-                    logValidationExceptions(resource);
-                    
+                    logValidationExceptions(resource, null);
                     return null;
                 }
             } else if (resource instanceof DataStoreInfo) {
-                if (!validateDataStore((DataStoreInfo) resource, isNew)) {
+                if (!validateDataStore((DataStoreInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
-                    
-                    logValidationExceptions(resource);
-                    
+                    logValidationExceptions(resource, null);
                     return null;
                 }
-                
+
                 WorkspaceInfo ws = ((DataStoreInfo) resource).getWorkspace();
-                if (this.catalog.getDefaultDataStore(ws) == null) {
-                    this.catalog.setDefaultDataStore(ws, (DataStoreInfo) resource);
+                if (getCatalog().getDefaultDataStore(ws) == null) {
+                    getCatalog().setDefaultDataStore(ws, (DataStoreInfo) resource);
                 }
-                
+
             } else if (resource instanceof CoverageStoreInfo) {
-                if (!validateCoverageStore((CoverageStoreInfo) resource, isNew)) {
+                if (!validateCoverageStore((CoverageStoreInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
-                    
-                    logValidationExceptions(resource);
-                    
+                    logValidationExceptions(resource, null);
                     return null;
                 }
-            }
-            else if (resource instanceof ResourceInfo) {
-                if (!validateResource((ResourceInfo) resource, isNew)) {
+            } else if (resource instanceof ResourceInfo) {
+                if (!validateResource((ResourceInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
-                    
-                    logValidationExceptions(resource);
-                    
+                    logValidationExceptions(resource, null);
                     return null;
                 }
-            }
-            else if (resource instanceof LayerInfo) {
+            } else if (resource instanceof LayerInfo) {
                 ValidationResult result = null;
                 try {
-                    result = this.catalog.validate((LayerInfo) resource, isNew);
+                    result = this.getCatalog().validate((LayerInfo) resource, isNew());
                     if (!result.isValid()) {
-                        
-                        logValidationExceptions(resource);
-                        
+                        logValidationExceptions(resource, null);
                         return null;
                     }
                 } catch (Exception e) {
-                    LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
-                    
-                    if(!bestEffort) {
-                        if (result != null) {
-                            result.throwIfInvalid();
-                        } else {
-                            throw e;
-                        }
-                    }
-
-                    if(!bestEffort) {
-                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    }
-                    
+                    LOGGER.warning("Could not validate the resource " + resource
+                            + " due to the following issue: " + e.getLocalizedMessage());
+                    logValidationExceptions(result, e);
                     return null;
                 }
-            }
-            else if (resource instanceof StyleInfo) {
+            } else if (resource instanceof StyleInfo) {
                 ValidationResult result = null;
                 try {
-                    result = this.catalog.validate((StyleInfo) resource, isNew);
+                    result = this.getCatalog().validate((StyleInfo) resource, isNew());
                     if (!result.isValid()) {
-                        
-                        logValidationExceptions(resource);
-                        
+                        logValidationExceptions(resource, null);
                         return null;
                     }
                 } catch (Exception e) {
-                    if(!bestEffort) {
-                        if (result != null) {
-                            result.throwIfInvalid();
-                        } else {
-                            throw e;
-                        }
-                    }
-
-                    if(!bestEffort) {
-                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    }
-                    
+                    logValidationExceptions(result, e);
                     return null;
                 }
-            }
-            else if (resource instanceof LayerGroupInfo) {
+            } else if (resource instanceof LayerGroupInfo) {
                 ValidationResult result = null;
                 try {
-                    result = this.catalog.validate((LayerGroupInfo) resource, isNew);
+                    result = this.getCatalog().validate((LayerGroupInfo) resource, isNew());
                     if (!result.isValid()) {
-                        
-                        logValidationExceptions(resource);
-                        
+                        logValidationExceptions(resource, null);
                         return null;
                     }
                 } catch (Exception e) {
-                    if(!bestEffort) {
-                        if (result != null) {
-                            result.throwIfInvalid();
-                        } else {
-                            throw e;
-                        }
-                    }
-
-                    if(!bestEffort) {
-                        getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    }
-                    
+                    logValidationExceptions(result, e);
                     return null;
                 }
             }
@@ -308,216 +156,151 @@ public class CatalogItemProcessor<T> implements ItemProcessor<T, T> {
     }
 
     /**
-     * @param resource
-     */
-    private void logValidationExceptions(T resource) {
-        CatalogException validationException = new CatalogException("Invalid resource: " + resource);
-        if (!bestEffort) {
-            getCurrentJobExecution().addFailureExceptions(Arrays.asList(validationException));
-            throw validationException;
-        } else {
-            getCurrentJobExecution().addWarningExceptions(Arrays.asList(validationException));
-        }
-    }
-
-    /**
-     * Being sure the associated {@link NamespaceInfo} exists and is available on the
-     * GeoServer Catalog.
-     * @param isNew 
+     * Being sure the associated {@link NamespaceInfo} exists and is available on the GeoServer Catalog.
+     * 
+     * @param isNew
      * 
      * @param {@link WorkspaceInfo} resource
      * 
      * @return boolean indicating whether the resource is valid or not.
+     * @throws Exception
      */
-    private boolean validateWorkspace(WorkspaceInfo resource, boolean isNew) {
-        final NamespaceInfo ns = this.catalog.getNamespaceByPrefix(resource.getName());
+    private boolean validateWorkspace(WorkspaceInfo resource, boolean isNew) throws Exception {
+        final NamespaceInfo ns = this.getCatalog().getNamespaceByPrefix(resource.getName());
         if (ns == null) {
             return false;
         }
-        
+
+        ValidationResult result = null;
         try {
-            ValidationResult result = this.catalog.validate(resource, isNew);
-            if (!result.isValid()) {
-                result.throwIfInvalid();
-                return false;
-            }
+            result = this.getCatalog().validate(resource, isNew);
         } catch (Exception e) {
-            LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
-            
-            if(!bestEffort) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-            }
-            
+            LOGGER.warning("Could not validate the resource " + resource
+                    + " due to the following issue: " + e.getLocalizedMessage());
+            logValidationExceptions(result, e);
             return false;
         }
-        
+
         return true;
     }
 
     /**
-     * Being sure the associated {@link WorkspaceInfo} exists and is available on the
-     * GeoServer Catalog.
+     * Being sure the associated {@link WorkspaceInfo} exists and is available on the GeoServer Catalog.
      * 
-     * Also if a default {@link DataStoreInfo} has not been defined for the current 
-     * {@link WorkspaceInfo}, set this one as default.
-     * @param isNew 
+     * Also if a default {@link DataStoreInfo} has not been defined for the current {@link WorkspaceInfo}, set this one as default.
+     * 
+     * @param isNew
      * 
      * @param {@link DataStoreInfo} resource
      * 
      * @return boolean indicating whether the resource is valid or not.
+     * @throws Exception
      */
-    private boolean validateDataStore(DataStoreInfo resource, boolean isNew) {
-        final WorkspaceInfo ws = this.catalog.getWorkspaceByName(resource.getWorkspace().getName());
+    private boolean validateDataStore(DataStoreInfo resource, boolean isNew) throws Exception {
+        final WorkspaceInfo ws = this.getCatalog()
+                .getWorkspaceByName(resource.getWorkspace().getName());
         if (ws == null) {
             return false;
         }
-        
+
+        ValidationResult result = null;
         try {
-            ValidationResult result = this.catalog.validate(resource, isNew);
-            if (!result.isValid()) {
-                result.throwIfInvalid();
-            }
+            result = this.getCatalog().validate(resource, isNew);
         } catch (Exception e) {
-            LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
-            
-            if(!bestEffort) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-            }
-            
+            LOGGER.warning("Could not validate the resource " + resource
+                    + " due to the following issue: " + e.getLocalizedMessage());
+            logValidationExceptions(result, e);
             return false;
         }
-        
+
         resource.setWorkspace(ws);
 
         return true;
     }
 
     /**
-     * Being sure the associated {@link WorkspaceInfo} exists and is available on the
-     * GeoServer Catalog.
-     * @param isNew 
+     * Being sure the associated {@link WorkspaceInfo} exists and is available on the GeoServer Catalog.
+     * 
+     * @param isNew
      * 
      * @param {@link CoverageStoreInfo} resource
      * 
      * @return boolean indicating whether the resource is valid or not.
+     * @throws Exception
      */
-    private boolean validateCoverageStore(CoverageStoreInfo resource, boolean isNew) {
-        final WorkspaceInfo ws = this.catalog.getWorkspaceByName(resource.getWorkspace().getName());
+    private boolean validateCoverageStore(CoverageStoreInfo resource, boolean isNew)
+            throws Exception {
+        final WorkspaceInfo ws = this.getCatalog()
+                .getWorkspaceByName(resource.getWorkspace().getName());
         if (ws == null) {
             return false;
         }
-        
+
+        ValidationResult result = null;
         try {
-            ValidationResult result = this.catalog.validate(resource, isNew);
-            if (!result.isValid()) {
-                result.throwIfInvalid();
-            }
+            result = this.getCatalog().validate(resource, isNew);
         } catch (Exception e) {
-            LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
-            
-            if(!bestEffort) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-            }
-            
-            return false;
+            LOGGER.warning("Could not validate the resource " + resource
+                    + " due to the following issue: " + e.getLocalizedMessage());
+            return logValidationExceptions(result, e);
         }
-        
+
         resource.setWorkspace(ws);
-        
+
         return true;
     }
 
     /**
-     * Being sure the associated {@link StoreInfo} exists and is available on the
-     * GeoServer Catalog.
-     * @param isNew2 
+     * Being sure the associated {@link StoreInfo} exists and is available on the GeoServer Catalog.
+     * 
+     * @param isNew2
      * 
      * @param {@link ResourceInfo} resource
-     * @return 
+     * @return
      * 
      * @return boolean indicating whether the resource is valid or not.
      */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private boolean validateResource(ResourceInfo resource, boolean isNew) {
         try {
             final StoreInfo store = resource.getStore();
             final NamespaceInfo namespace = resource.getNamespace();
-        
+
             if (store == null) {
-                CatalogException e = new CatalogException("Store is NULL for resource: " + resource);
-                if(!bestEffort) {
-                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    throw e;
-                } else {
-                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-                }
-                return false;
+                return logValidationExceptions((T) resource, null);
             }
 
-            final Class storeClazz = (store instanceof DataStoreInfo ? DataStoreInfo.class : CoverageStoreInfo.class);
-            final StoreInfo ds = this.catalog.getStoreByName(store.getName(), storeClazz);
+            final Class storeClazz = (store instanceof DataStoreInfo ? DataStoreInfo.class
+                    : CoverageStoreInfo.class);
+            final StoreInfo ds = this.getCatalog().getStoreByName(store.getName(), storeClazz);
 
             if (ds != null) {
                 resource.setStore(ds);
             } else {
-                CatalogException e = new CatalogException("Store is NULL for resource: " + resource);
-                if(!bestEffort) {
-                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    throw e;
-                } else {
-                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-                }
-                return false;
+                return logValidationExceptions((T) resource, null);
             }
-            
-            ResourceInfo existing = catalog.getResourceByStore( store, resource.getName(), ResourceInfo.class);
-            if ( existing != null && !existing.getId().equals( resource.getId() ) ) {
-                final String msg = "Resource named '"+resource.getName()+"' already exists in store: '"+ store.getName()+"'";
-                CatalogException e = new CatalogException(msg);
-                if(!bestEffort) {
-                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    throw e;
-                } else {
-                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-                }
-                return false;
+
+            ResourceInfo existing = getCatalog().getResourceByStore(store, resource.getName(),
+                    ResourceInfo.class);
+            if (existing != null && !existing.getId().equals(resource.getId())) {
+                final String msg = "Resource named '" + resource.getName()
+                        + "' already exists in store: '" + store.getName() + "'";
+                return logValidationExceptions((T) resource, new RuntimeException(msg));
             }
-            
-            
-            existing = catalog.getResourceByName( namespace, resource.getName(), ResourceInfo.class);
-            if ( existing != null && !existing.getId().equals( resource.getId() ) ) {
-                final String msg = "Resource named '"+resource.getName()+"' already exists in namespace: '"+ namespace.getPrefix()+"'";
-                CatalogException e = new CatalogException(msg);
-                if(!bestEffort) {
-                    getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                    throw e;
-                } else {
-                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-                }
-                return false;
+
+            existing = getCatalog().getResourceByName(namespace, resource.getName(),
+                    ResourceInfo.class);
+            if (existing != null && !existing.getId().equals(resource.getId())) {
+                final String msg = "Resource named '" + resource.getName()
+                        + "' already exists in namespace: '" + namespace.getPrefix() + "'";
+                return logValidationExceptions((T) resource, new RuntimeException(msg));
             }
-            
+
             return true;
         } catch (Exception e) {
-            LOGGER.warning("Could not validate the resource " + resource + " due to the following issue: " + e.getLocalizedMessage());
-            
-            if(!bestEffort) {
-                getCurrentJobExecution().addFailureExceptions(Arrays.asList(e));
-                throw e;
-            } else {
-                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-            }
-            
-            return false;
+            LOGGER.warning("Could not validate the resource " + resource
+                    + " due to the following issue: " + e.getLocalizedMessage());
+            return logValidationExceptions((T) resource, e);
         }
     }
-    
 }

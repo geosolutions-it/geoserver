@@ -54,6 +54,7 @@ import com.thoughtworks.xstream.XStream;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
+@SuppressWarnings("rawtypes")
 public class Backup implements DisposableBean, ApplicationContextAware, ApplicationListener {
 
     static Logger LOGGER = Logging.getLogger(Backup.class);
@@ -68,7 +69,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     public static final String PARAM_DRY_RUN_MODE = "BK_DRY_RUN";
 
     public static final String PARAM_BEST_EFFORT_MODE = "BK_BEST_EFFORT";
-    
+
     /* Jobs Context Keys **/
     public static final String BACKUP_JOB_NAME = "backupJob";
 
@@ -78,6 +79,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
     /** The semaphore */
     private static final long SIGNAL_TIMEOUT = 300; // TODO: This should be configurable from the GUI
+
     CountDownLatch doneSignal = new CountDownLatch(1);
 
     /** catalog */
@@ -110,7 +112,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     /**
      * A static application context
      */
-    static ApplicationContext context;
+    private static ApplicationContext context;
 
     public Backup(Catalog catalog, GeoServerResourceLoader rl) {
         this.catalog = catalog;
@@ -118,8 +120,15 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
         this.resourceLoader = rl;
         this.geoServerDataDirectory = new GeoServerDataDirectory(rl);
-        
+
         this.xpf = GeoServerExtensions.bean(XStreamPersisterFactory.class);
+    }
+
+    /**
+     * @return the context
+     */
+    public static ApplicationContext getContext() {
+        return context;
     }
 
     /**
@@ -180,7 +189,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @return
      */
     public Set<Long> getBackupRunningExecutions() {
-        synchronized(jobOperator) {
+        synchronized (jobOperator) {
             Set<Long> runningExecutions;
             try {
                 runningExecutions = jobOperator.getRunningExecutions(BACKUP_JOB_NAME);
@@ -195,7 +204,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @return
      */
     public Set<Long> getRestoreRunningExecutions() {
-        synchronized(jobOperator) {
+        synchronized (jobOperator) {
             Set<Long> runningExecutions;
             try {
                 runningExecutions = jobOperator.getRunningExecutions(RESTORE_JOB_NAME);
@@ -278,13 +287,13 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     @Override
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         Backup.context = context;
-        
+
         try {
             AbstractJob backupJob = (AbstractJob) context.getBean(BACKUP_JOB_NAME);
             if (backupJob != null) {
                 this.setTotalNumberOfBackupSteps(backupJob.getStepNames().size());
             }
-            
+
             AbstractJob restoreJob = (AbstractJob) context.getBean(BACKUP_JOB_NAME);
             if (restoreJob != null) {
                 this.setTotalNumberOfRestoreSteps(restoreJob.getStepNames().size());
@@ -299,16 +308,18 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     }
 
     /**
-     * @return 
-     * @throws IOException 
+     * @return
+     * @throws IOException
      * 
      */
-    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile, final boolean overwrite, final Hints params) throws IOException {
+    public BackupExecutionAdapter runBackupAsync(final Resource archiveFile,
+            final boolean overwrite, final Hints params) throws IOException {
         // Check if archiveFile exists
-        if(archiveFile.file().exists()) {
+        if (archiveFile.file().exists()) {
             if (!overwrite && FileUtils.sizeOf(archiveFile.file()) > 0) {
                 // Unless the user explicitly wants to overwrite the archiveFile, throw an exception whenever it already exists
-                throw new IOException("The target archive file already exists. Use 'overwrite=TRUE' if you want to overwrite it.");
+                throw new IOException(
+                        "The target archive file already exists. Use 'overwrite=TRUE' if you want to overwrite it.");
             } else {
                 FileUtils.forceDelete(archiveFile.file());
             }
@@ -324,57 +335,61 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                 }
             }
         }
-        
+
         // Initialize ZIP
         FileUtils.touch(archiveFile.file());
-        
+
         // Write flat files into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
 
         // Fill Job Parameters
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
         paramsBuilder
-            .addString(PARAM_OUTPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
-            .addLong(PARAM_TIME, System.currentTimeMillis());
+                .addString(PARAM_OUTPUT_FILE_PATH,
+                        BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
+                .addLong(PARAM_TIME, System.currentTimeMillis());
 
         parseParams(params, paramsBuilder);
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
-                
+
         // Send Execution Signal
         BackupExecutionAdapter backupExecution;
         try {
-            while (!(getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty())) {
+            while (!(getRestoreRunningExecutions().isEmpty()
+                    && getBackupRunningExecutions().isEmpty())) {
                 doneSignal.await(SIGNAL_TIMEOUT, TimeUnit.SECONDS);
             }
 
-            if(getRestoreRunningExecutions().isEmpty() && 
-                    getBackupRunningExecutions().isEmpty()) {
-                synchronized(jobOperator) {
+            if (getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty()) {
+                synchronized (jobOperator) {
                     JobExecution jobExecution = jobLauncher.run(backupJob, jobParameters);
-                    backupExecution = new BackupExecutionAdapter(jobExecution, totalNumberOfBackupSteps);
+                    backupExecution = new BackupExecutionAdapter(jobExecution,
+                            totalNumberOfBackupSteps);
                     backupExecution.setArchiveFile(archiveFile);
                     backupExecution.setOverwrite(overwrite);
-                    
+
                     backupExecution.getOptions().add("OVERWRITE=" + overwrite);
                     for (Entry jobParam : jobParameters.toProperties().entrySet()) {
-                        if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey()) && 
-                                !PARAM_INPUT_FILE_PATH.equals(jobParam.getKey()) && 
-                                !PARAM_TIME.equals(jobParam.getKey())) {
-                            backupExecution.getOptions().add(jobParam.getKey() + "=" + jobParam.getValue());
+                        if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey())
+                                && !PARAM_INPUT_FILE_PATH.equals(jobParam.getKey())
+                                && !PARAM_TIME.equals(jobParam.getKey())) {
+                            backupExecution.getOptions()
+                                    .add(jobParam.getKey() + "=" + jobParam.getValue());
                         }
                     }
-                    
+
                     backupExecutions.put(backupExecution.getId(), backupExecution);
 
                     return backupExecution;
                 }
-            }
-            else {
-                throw new IOException("Could not start a new Backup Job Execution since there are currently Running jobs.");
+            } else {
+                throw new IOException(
+                        "Could not start a new Backup Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
-                | JobInstanceAlreadyCompleteException | JobParametersInvalidException | InterruptedException e) {
+                | JobInstanceAlreadyCompleteException | JobParametersInvalidException
+                | InterruptedException e) {
             throw new IOException("Could not start a new Backup Job Execution: ", e);
         } finally {
             doneSignal.countDown();
@@ -387,7 +402,8 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @throws IOException
      * 
      */
-    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile, final Hints params) throws IOException {
+    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile, final Hints params)
+            throws IOException {
         // Extract archive into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
         BackupUtils.extractTo(archiveFile, tmpDir);
@@ -395,44 +411,48 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         // Fill Job Parameters
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
         paramsBuilder
-            .addString(PARAM_INPUT_FILE_PATH, BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
-            .addLong(PARAM_TIME, System.currentTimeMillis());
+                .addString(PARAM_INPUT_FILE_PATH,
+                        BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
+                .addLong(PARAM_TIME, System.currentTimeMillis());
 
         parseParams(params, paramsBuilder);
 
         JobParameters jobParameters = paramsBuilder.toJobParameters();
-        
+
         RestoreExecutionAdapter restoreExecution;
         try {
-            while (!(getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty())) {
+            while (!(getRestoreRunningExecutions().isEmpty()
+                    && getBackupRunningExecutions().isEmpty())) {
                 doneSignal.await(SIGNAL_TIMEOUT, TimeUnit.SECONDS);
             }
-            
-            if (getRestoreRunningExecutions().isEmpty()
-                    && getBackupRunningExecutions().isEmpty()) {
+
+            if (getRestoreRunningExecutions().isEmpty() && getBackupRunningExecutions().isEmpty()) {
                 synchronized (jobOperator) {
                     JobExecution jobExecution = jobLauncher.run(restoreJob, jobParameters);
-                    restoreExecution = new RestoreExecutionAdapter(jobExecution, totalNumberOfRestoreSteps);
+                    restoreExecution = new RestoreExecutionAdapter(jobExecution,
+                            totalNumberOfRestoreSteps);
                     restoreExecution.setArchiveFile(archiveFile);
-                    
+
                     for (Entry jobParam : jobParameters.toProperties().entrySet()) {
-                        if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey()) && 
-                                !PARAM_INPUT_FILE_PATH.equals(jobParam.getKey()) && 
-                                !PARAM_TIME.equals(jobParam.getKey())) {
-                            restoreExecution.getOptions().add(jobParam.getKey() + "=" + jobParam.getValue());
+                        if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey())
+                                && !PARAM_INPUT_FILE_PATH.equals(jobParam.getKey())
+                                && !PARAM_TIME.equals(jobParam.getKey())) {
+                            restoreExecution.getOptions()
+                                    .add(jobParam.getKey() + "=" + jobParam.getValue());
                         }
                     }
-                    
+
                     restoreExecutions.put(restoreExecution.getId(), restoreExecution);
 
                     return restoreExecution;
                 }
-            }
-            else {
-                throw new IOException("Could not start a new Restore Job Execution since there are currently Running jobs.");
+            } else {
+                throw new IOException(
+                        "Could not start a new Restore Job Execution since there are currently Running jobs.");
             }
         } catch (JobExecutionAlreadyRunningException | JobRestartException
-                | JobInstanceAlreadyCompleteException | JobParametersInvalidException | InterruptedException e) {
+                | JobInstanceAlreadyCompleteException | JobParametersInvalidException
+                | InterruptedException e) {
             throw new IOException("Could not start a new Restore Job Execution: ", e);
         } finally {
             doneSignal.countDown();
@@ -448,28 +468,28 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
             if (params.containsKey(new Hints.OptionKey(PARAM_DRY_RUN_MODE))) {
                 paramsBuilder.addString(PARAM_DRY_RUN_MODE, "true");
             }
-            
+
             if (params.containsKey(new Hints.OptionKey(PARAM_BEST_EFFORT_MODE))) {
                 paramsBuilder.addString(PARAM_BEST_EFFORT_MODE, "true");
             }
 
-            for(Entry<Object, Object> param : params.entrySet()) {
+            for (Entry<Object, Object> param : params.entrySet()) {
                 if (param.getKey() instanceof Hints.OptionKey) {
                     final Set<String> key = ((Hints.OptionKey) param.getKey()).getOptions();
                     for (String k : key) {
                         switch (k) {
-                            case PARAM_DRY_RUN_MODE:
-                            case PARAM_BEST_EFFORT_MODE:
-                                if (paramsBuilder.toJobParameters().getString(k) == null) {
-                                    paramsBuilder.addString(k, "true");
-                                }
+                        case PARAM_DRY_RUN_MODE:
+                        case PARAM_BEST_EFFORT_MODE:
+                            if (paramsBuilder.toJobParameters().getString(k) == null) {
+                                paramsBuilder.addString(k, "true");
+                            }
                         }
                     }
                 }
             }
         }
     }
-    
+
     public XStreamPersister createXStreamPersisterXML() {
         return initXStreamPersister(new XStreamPersisterFactory().createXMLPersister());
     }

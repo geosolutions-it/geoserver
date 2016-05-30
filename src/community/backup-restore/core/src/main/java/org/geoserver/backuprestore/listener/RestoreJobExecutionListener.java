@@ -31,13 +31,13 @@ import org.springframework.batch.core.JobExecutionListener;
 public class RestoreJobExecutionListener implements JobExecutionListener {
 
     static Logger LOGGER = Logging.getLogger(RestoreJobExecutionListener.class);
-    
+
     public static final LockType lockType = LockType.WRITE;
 
     private Backup backupFacade;
 
     private RestoreExecutionAdapter restoreExecution;
-    
+
     GeoServerConfigurationLock locker;
 
     public RestoreJobExecutionListener(Backup backupFacade, GeoServerConfigurationLock locker) {
@@ -49,11 +49,11 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
     public void beforeJob(JobExecution jobExecution) {
         // Acquire GeoServer Configuration Lock in WRITE mode
         locker.lock(lockType);
-        
+
         // Prior starting the JobExecution, lets store a new empty GeoServer Catalog into the context.
         // It will be used to load the resources on a temporary in-memory configuration, which will be
         // swapped at the end of the Restore if everything goes well.
-        
+
         this.restoreExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
         this.restoreExecution.setRestoreCatalog(createRestoreCatalog());
     }
@@ -62,12 +62,12 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         CatalogImpl restoreCatalog = new CatalogImpl();
         Catalog gsCatalog = backupFacade.getGeoServer().getCatalog();
         if (gsCatalog instanceof Wrapper) {
-            gsCatalog = ((Wrapper)gsCatalog).unwrap(Catalog.class);
+            gsCatalog = ((Wrapper) gsCatalog).unwrap(Catalog.class);
         }
-        
+
         restoreCatalog.setResourceLoader(gsCatalog.getResourceLoader());
         restoreCatalog.setResourcePool(gsCatalog.getResourcePool());
-        
+
         for (CatalogListener listener : gsCatalog.getListeners()) {
             restoreCatalog.addListener(listener);
         }
@@ -77,19 +77,24 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
 
     @Override
     public void afterJob(JobExecution jobExecution) {
-        boolean dryRun = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
-        boolean bestEffort = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
+        boolean dryRun = Boolean.parseBoolean(
+                jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        boolean bestEffort = Boolean.parseBoolean(
+                jobExecution.getJobParameters().getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
         try {
             final Long executionId = jobExecution.getId();
-            
+
             LOGGER.fine("Running Executions IDs : " + executionId);
-            
+
             if (jobExecution.getStatus() == BatchStatus.STOPPED) {
                 backupFacade.getJobOperator().restart(executionId);
             } else {
-                LOGGER.fine("Executions Step Summaries : " + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
-                LOGGER.fine("Executions Parameters : " + backupFacade.getJobOperator().getParameters(executionId));
-                LOGGER.fine("Executions Summary : " + backupFacade.getJobOperator().getSummary(executionId));
+                LOGGER.fine("Executions Step Summaries : "
+                        + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
+                LOGGER.fine("Executions Parameters : "
+                        + backupFacade.getJobOperator().getParameters(executionId));
+                LOGGER.fine("Executions Summary : "
+                        + backupFacade.getJobOperator().getSummary(executionId));
 
                 LOGGER.fine("Exit Status : " + restoreExecution.getStatus());
                 LOGGER.fine("Exit Failures : " + restoreExecution.getAllFailureExceptions());
@@ -101,9 +106,9 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
                     }
                 }
             }
-        // Collect errors
+            // Collect errors
         } catch (Exception e) {
-            if(!bestEffort) {
+            if (!bestEffort) {
                 this.restoreExecution.addFailureExceptions(Arrays.asList(e));
                 throw new RuntimeException(e);
             } else {

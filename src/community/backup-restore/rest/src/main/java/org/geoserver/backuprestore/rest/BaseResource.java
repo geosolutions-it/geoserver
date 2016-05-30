@@ -153,6 +153,7 @@ public abstract class BaseResource extends AbstractResource {
         });
         
         ClassAliasingMapper warningsMapper = new ClassAliasingMapper(xStream.getMapper());
+        warningsMapper.addClassAlias(Level.WARNING.getName(), RuntimeException.class);
         warningsMapper.addClassAlias(Level.WARNING.getName(), CatalogException.class);
         xStream.registerLocalConverter(AbstractExecutionAdapter.class, "warningsList", new CollectionConverter(warningsMapper) {
             

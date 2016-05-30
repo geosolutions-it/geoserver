@@ -72,14 +72,15 @@ public class ResourceInfoAdditionalResourceWriter
                     Resource templateResource = Files.asResource((File) ftl);
 
                     if (Resources.exists(templateResource)) {
-                        final String relative = rootDataDir.dir().toURI().relativize(templateResource.file().toURI()).getPath();
-                        
+                        final String relative = rootDataDir.dir().toURI()
+                                .relativize(templateResource.file().toURI()).getPath();
+
                         Resource targetFtl = Resources.fromPath(relative, base.parent());
-                        
+
                         if (!targetFtl.parent().dir().exists()) {
                             targetFtl.parent().dir().mkdirs();
                         }
-                        
+
                         Resources.copy(templateResource.file(), targetFtl.parent());
                     }
                 }

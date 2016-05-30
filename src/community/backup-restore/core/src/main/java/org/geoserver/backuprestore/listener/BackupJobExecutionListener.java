@@ -42,9 +42,9 @@ public class BackupJobExecutionListener implements JobExecutionListener {
     private static final Logger LOGGER = Logging.getLogger(BackupJobExecutionListener.class);
 
     public static final LockType lockType = LockType.READ;
-    
+
     private Backup backupFacade;
-    
+
     private BackupExecutionAdapter backupExecution;
 
     GeoServerConfigurationLock locker;
@@ -58,45 +58,48 @@ public class BackupJobExecutionListener implements JobExecutionListener {
     public void beforeJob(JobExecution jobExecution) {
         // Acquire GeoServer Configuration Lock in READ mode
         locker.lock(lockType);
-        
+
         this.backupExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
     }
 
     @SuppressWarnings("unused")
     @Override
     public void afterJob(JobExecution jobExecution) {
-        boolean dryRun = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
-        boolean bestEffort = Boolean.parseBoolean(jobExecution.getJobParameters().getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
+        boolean dryRun = Boolean.parseBoolean(
+                jobExecution.getJobParameters().getString(Backup.PARAM_DRY_RUN_MODE, "false"));
+        boolean bestEffort = Boolean.parseBoolean(
+                jobExecution.getJobParameters().getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
 
         try {
             final Long executionId = jobExecution.getId();
-            
+
             LOGGER.fine("Running Executions IDs : " + executionId);
-            
+
             if (jobExecution.getStatus() == BatchStatus.STOPPED) {
                 backupFacade.getJobOperator().restart(executionId);
             } else {
-                LOGGER.fine("Executions Step Summaries : " + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
-                LOGGER.fine("Executions Parameters : " + backupFacade.getJobOperator().getParameters(executionId));
-                LOGGER.fine("Executions Summary : " + backupFacade.getJobOperator().getSummary(executionId));
+                LOGGER.fine("Executions Step Summaries : "
+                        + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
+                LOGGER.fine("Executions Parameters : "
+                        + backupFacade.getJobOperator().getParameters(executionId));
+                LOGGER.fine("Executions Summary : "
+                        + backupFacade.getJobOperator().getSummary(executionId));
 
                 LOGGER.fine("Exit Status : " + backupExecution.getStatus());
                 LOGGER.fine("Exit Failures : " + backupExecution.getAllFailureExceptions());
-                
+
                 if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
                     JobParameters jobParameters = backupExecution.getJobParameters();
-                    Resource sourceFolder = Resources.fromURL(jobParameters.getString(Backup.PARAM_OUTPUT_FILE_PATH));
+                    Resource sourceFolder = Resources
+                            .fromURL(jobParameters.getString(Backup.PARAM_OUTPUT_FILE_PATH));
                     BackupUtils.compressTo(sourceFolder, backupExecution.getArchiveFile());
                 }
             }
-        // Collect errors
-        } catch (NoSuchJobException | 
-                NoSuchJobExecutionException | 
-                JobInstanceAlreadyCompleteException | 
-                JobRestartException | 
-                JobParametersInvalidException | 
-                IOException e) {
-            if(!bestEffort) {
+            // Collect errors
+        } catch (NoSuchJobException | NoSuchJobExecutionException
+                | JobInstanceAlreadyCompleteException | JobRestartException
+                | JobParametersInvalidException | IOException e) {
+            if (!bestEffort) {
                 this.backupExecution.addFailureExceptions(Arrays.asList(e));
                 throw new RuntimeException(e);
             } else {

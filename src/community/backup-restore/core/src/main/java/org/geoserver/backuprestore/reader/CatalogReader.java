@@ -4,23 +4,24 @@
  */
 package org.geoserver.backuprestore.reader;
 
-import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
+import org.geoserver.backuprestore.BackupRestoreItem;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.annotation.BeforeStep;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemCountAware;
 import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemStream;
+import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.item.ItemStreamReader;
+import org.springframework.batch.item.ParseException;
+import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
-import org.springframework.batch.item.support.AbstractItemCountingItemStreamItemReader;
+import org.springframework.batch.item.util.ExecutionContextUserSupport;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-
-import com.thoughtworks.xstream.XStream;
 
 /**
  * Abstract Spring Batch {@link ItemReader}.
@@ -30,118 +31,199 @@ import com.thoughtworks.xstream.XStream;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public abstract class CatalogReader<T> extends AbstractItemCountingItemStreamItemReader<T>
-        implements ResourceAwareItemReaderItemStream<T>, InitializingBean {
+public abstract class CatalogReader<T> extends BackupRestoreItem<T> implements ItemStream,
+        ItemStreamReader<T>, ResourceAwareItemReaderItemStream<T>, InitializingBean {
 
     protected Class clazz;
 
-    protected Backup backupFacade;
-
-    protected Catalog catalog;
-
-    protected XStreamPersister xstream;
-
-    private XStream xp;
-    
-    private boolean isNew;
-
-    private AbstractExecutionAdapter currentJobExecution;
-
-    private boolean dryRun;
-
-    private boolean bestEffort;
-
-    private XStreamPersisterFactory xStreamPersisterFactory;
-
     public CatalogReader(Class<T> clazz, Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
+        super(backupFacade, xStreamPersisterFactory);
         this.clazz = clazz;
-        this.backupFacade = backupFacade;
-        this.xStreamPersisterFactory = xStreamPersisterFactory;
-        
+
         this.setExecutionContextName(ClassUtils.getShortName(clazz));
     }
 
-    @BeforeStep
-    protected void retrieveInterstepData(StepExecution stepExecution) {
-        // Accordingly to the running execution type (Backup or Restore) we
-        // need to validate resources against the official GeoServer Catalog (Backup)
-        // or the temporary one (Restore).
-        //
-        // For restore operations the order matters.
-        JobExecution jobExecution = stepExecution.getJobExecution();
-        this.xstream = xStreamPersisterFactory.createXMLPersister();
-        if (backupFacade.getRestoreExecutions() != null
-                && !backupFacade.getRestoreExecutions().isEmpty()
-                && backupFacade.getRestoreExecutions().containsKey(jobExecution.getId())) {
-            this.currentJobExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
-            this.catalog = backupFacade.getRestoreExecutions().get(jobExecution.getId()).getRestoreCatalog();
-            this.isNew = true;
-        } else {
-            this.currentJobExecution = backupFacade.getBackupExecutions().get(jobExecution.getId());
-            this.catalog = backupFacade.getCatalog();
-            this.xstream.setExcludeIds();
-            this.isNew = false;
+    private static final String READ_COUNT = "read.count";
+
+    private static final String READ_COUNT_MAX = "read.count.max";
+
+    private int currentItemCount = 0;
+
+    private int maxItemCount = Integer.MAX_VALUE;
+
+    private boolean saveState = true;
+
+    private final ExecutionContextUserSupport executionContextUserSupport = new ExecutionContextUserSupport();
+
+    /**
+     * The name of the component which will be used as a stem for keys in the {@link ExecutionContext}. Subclasses should provide a default value,
+     * e.g. the short form of the class name.
+     * 
+     * @param name the name for the component
+     */
+    public void setName(String name) {
+        this.setExecutionContextName(name);
+    }
+
+    protected void setExecutionContextName(String name) {
+        executionContextUserSupport.setName(name);
+    }
+
+    public String getExecutionContextKey(String key) {
+        return executionContextUserSupport.getKey(key);
+    }
+
+    /**
+     * Read next item from input.
+     * 
+     * @return item
+     * @throws Exception Allows subclasses to throw checked exceptions for interpretation by the framework
+     */
+    protected abstract T doRead() throws Exception;
+
+    /**
+     * Open resources necessary to start reading input.
+     * 
+     * @throws Exception Allows subclasses to throw checked exceptions for interpretation by the framework
+     */
+    protected abstract void doOpen() throws Exception;
+
+    /**
+     * Close the resources opened in {@link #doOpen()}.
+     * 
+     * @throws Exception Allows subclasses to throw checked exceptions for interpretation by the framework
+     */
+    protected abstract void doClose() throws Exception;
+
+    /**
+     * Move to the given item index. Subclasses should override this method if there is a more efficient way of moving to given index than re-reading
+     * the input using {@link #doRead()}.
+     *
+     * @param itemIndex index of item (0 based) to jump to.
+     * @throws Exception Allows subclasses to throw checked exceptions for interpretation by the framework
+     */
+    protected void jumpToItem(int itemIndex) throws Exception {
+        for (int i = 0; i < itemIndex; i++) {
+            read();
+        }
+    }
+
+    @Override
+    public T read() throws Exception, UnexpectedInputException, ParseException {
+        if (currentItemCount >= maxItemCount) {
+            return null;
+        }
+        currentItemCount++;
+        T item = doRead();
+        if (item instanceof ItemCountAware) {
+            ((ItemCountAware) item).setItemCount(currentItemCount);
+        }
+        return item;
+    }
+
+    protected int getCurrentItemCount() {
+        return currentItemCount;
+    }
+
+    /**
+     * The index of the item to start reading from. If the {@link ExecutionContext} contains a key <code>[name].read.count</code> (where
+     * <code>[name]</code> is the name of this component) the value from the {@link ExecutionContext} will be used in preference.
+     * 
+     * @see #setName(String)
+     * 
+     * @param count the value of the current item count
+     */
+    public void setCurrentItemCount(int count) {
+        this.currentItemCount = count;
+    }
+
+    /**
+     * The maximum index of the items to be read. If the {@link ExecutionContext} contains a key <code>[name].read.count.max</code> (where
+     * <code>[name]</code> is the name of this component) the value from the {@link ExecutionContext} will be used in preference.
+     * 
+     * @see #setName(String)
+     * 
+     * @param count the value of the maximum item count
+     */
+    public void setMaxItemCount(int count) {
+        this.maxItemCount = count;
+    }
+
+    @Override
+    public void close() throws ItemStreamException {
+        currentItemCount = 0;
+        try {
+            doClose();
+        } catch (Exception e) {
+            throw new ItemStreamException("Error while closing item reader", e);
+        }
+    }
+
+    @Override
+    public void open(ExecutionContext executionContext) throws ItemStreamException {
+        try {
+            doOpen();
+        } catch (Exception e) {
+            throw new ItemStreamException("Failed to initialize the reader", e);
+        }
+        if (!isSaveState()) {
+            return;
         }
 
-        Assert.notNull(this.catalog, "catalog must be set");
+        if (executionContext.containsKey(getExecutionContextKey(READ_COUNT_MAX))) {
+            maxItemCount = executionContext.getInt(getExecutionContextKey(READ_COUNT_MAX));
+        }
 
-        this.xstream.setCatalog(this.catalog);
-        this.xstream.setReferenceByName(true);
-        this.xp = this.xstream.getXStream();
+        int itemCount = 0;
+        if (executionContext.containsKey(getExecutionContextKey(READ_COUNT))) {
+            itemCount = executionContext.getInt(getExecutionContextKey(READ_COUNT));
+        } else if (currentItemCount > 0) {
+            itemCount = currentItemCount;
+        }
 
-        Assert.notNull(this.xp, "xStream persister should not be NULL");
-        
-        JobParameters jobParameters = this.currentJobExecution.getJobParameters();
-        
-        this.dryRun = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_DRY_RUN_MODE, "false"));
-        this.bestEffort = Boolean.parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
-        
-        beforeStep(stepExecution);
+        if (itemCount > 0 && itemCount < maxItemCount) {
+            try {
+                jumpToItem(itemCount);
+            } catch (Exception e) {
+                throw new ItemStreamException("Could not move to stored position on restart", e);
+            }
+        }
+
+        currentItemCount = itemCount;
+
     }
 
-    protected abstract void beforeStep(StepExecution stepExecution);
+    @Override
+    public void update(ExecutionContext executionContext) throws ItemStreamException {
+        if (saveState) {
+            Assert.notNull(executionContext, "ExecutionContext must not be null");
+            executionContext.putInt(getExecutionContextKey(READ_COUNT), currentItemCount);
+            if (maxItemCount < Integer.MAX_VALUE) {
+                executionContext.putInt(getExecutionContextKey(READ_COUNT_MAX), maxItemCount);
+            }
+        }
 
-    /**
-     * @return the xp
-     */
-    public XStream getXp() {
-        return xp;
-    }
-
-    /**
-     * @param xp the xp to set
-     */
-    public void setXp(XStream xp) {
-        this.xp = xp;
-    }
-
-    /**
-     * @return the isNew
-     */
-    public boolean isNew() {
-        return isNew;
     }
 
     /**
-     * @return the currentJobExecution
+     * Set the flag that determines whether to save internal data for {@link ExecutionContext}. Only switch this to false if you don't want to save
+     * any state from this stream, and you don't need it to be restartable. Always set it to false if the reader is being used in a concurrent
+     * environment.
+     * 
+     * @param saveState flag value (default true).
      */
-    public AbstractExecutionAdapter getCurrentJobExecution() {
-        return currentJobExecution;
+    public void setSaveState(boolean saveState) {
+        this.saveState = saveState;
     }
 
     /**
-     * @return the dryRun
+     * The flag that determines whether to save internal state for restarts.
+     * 
+     * @return true if the flag was set
      */
-    public boolean isDryRun() {
-        return dryRun;
-    }
-
-    /**
-     * @return the bestEffort
-     */
-    public boolean isBestEffort() {
-        return bestEffort;
+    public boolean isSaveState() {
+        return saveState;
     }
 
 }
