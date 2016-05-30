@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
-import org.apache.wicket.RestartResponseException;
 import org.apache.wicket.ajax.AbstractAjaxTimerBehavior;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink;
@@ -64,12 +63,7 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
         newBackupPanel = new WebMarkupContainer("newBackupPanel");
         newBackupPanel.setOutputMarkupId(true);
         
-        if (newBackupPanel.size() > 0) {
-            newBackupPanel.remove("backupResource");
-        }
-
-        Panel p = new ResourceFilePanel("backupResource");
-        newBackupPanel.add(p);
+        resetResourcePanel();
         
         add(newBackupPanel);
         
@@ -96,6 +90,18 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
         dialog.setInitialWidth(600);
         dialog.setInitialHeight(400);
         dialog.setMinimalHeight(150);
+    }
+
+    /**
+     * 
+     */
+    private void resetResourcePanel() {
+        if (newBackupPanel.size() > 0) {
+            newBackupPanel.remove("backupResource");
+        }
+
+        Panel p = new ResourceFilePanel("backupResource");
+        newBackupPanel.add(p);
     }
 
     /**

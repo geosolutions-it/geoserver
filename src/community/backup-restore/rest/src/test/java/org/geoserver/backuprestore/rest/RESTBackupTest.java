@@ -14,6 +14,7 @@ import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.util.Assert;
 
 import net.sf.json.JSONObject;
 
@@ -32,12 +33,16 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
                 "{\"backup\": {" + 
                 "   \"archiveFile\": \""+archiveFilePath+"\", " + 
                 "   \"overwrite\": true," + 
-                "   \"options\": [\"BK_BEST_EFFORT\"]" +
+                "   \"options\": { \"option\": [\"BK_BEST_EFFORT\"] }" +
                 "  }" + 
                 "}";
         
-        JSONObject execution = postNewBackup(json);
+        JSONObject backup = postNewBackup(json);
+        
+        Assert.notNull(backup);
 
+        JSONObject execution = readExecutionStatus(backup.getJSONObject("execution").getLong("id"));
+        
         assertTrue("STARTED".equals(execution.getString("status")));
 
         while ("STARTED".equals(execution.getString("status"))) {
@@ -50,8 +55,7 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
     }
 
     JSONObject postNewBackup(String body) throws Exception {
-        MockHttpServletResponse resp = body == null ? postAsServletResponse("/rest/br/backup", "")
-                : postAsServletResponse("/rest/br/backup", body, "application/json");
+        MockHttpServletResponse resp = postAsServletResponse("/rest/br/backup", body, "application/json");
 
         assertEquals(201, resp.getStatus());
         assertNotNull(resp.getHeader("Location"));
@@ -68,12 +72,16 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
     }
 
     JSONObject readExecutionStatus(long executionId) throws Exception {
-        JSONObject json = (JSONObject) getAsJSON("/rest/br/backup/" + executionId);
+        JSONObject json = (JSONObject) getAsJSON("/rest/br/backup/" + executionId + ".json");
 
-        JSONObject execution = json.getJSONObject("backup");
+        JSONObject backup = json.getJSONObject("backup");
+
+        assertNotNull(backup);
+
+        JSONObject execution = backup.getJSONObject("execution");
 
         assertNotNull(execution);
-
+        
         return execution;
     }
 }

@@ -39,13 +39,7 @@
         </entry>
         <entry>
           <key>
-            <value>/br/backup/{backupId}</value>
-          </key>
-          <value>backupContextFinder</value>
-        </entry>
-        <entry>
-          <key>
-            <value>/br/backup/{backupId}.zip</value>
+            <value>/br/backup/{backupId}.{format}</value>
           </key>
           <value>backupContextFinder</value>
         </entry>
@@ -57,13 +51,7 @@
         </entry>
         <entry>
           <key>
-            <value>/br/restore/{archiveFile}.zip</value>
-          </key>
-          <value>restoreContextFinder</value>
-        </entry>
-        <entry>
-          <key>
-            <value>/br/restore/{restoreId}</value>
+            <value>/br/restore/{restoreId}.{format}</value>
           </key>
           <value>restoreContextFinder</value>
         </entry>

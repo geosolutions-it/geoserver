@@ -14,6 +14,7 @@ import org.geoserver.backuprestore.BackupRestoreTestSupport;
 import org.geoserver.platform.resource.Resource;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.util.Assert;
 
 import net.sf.json.JSONObject;
 
@@ -33,11 +34,15 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
             String json = 
                     "{\"restore\": {" + 
                     "   \"archiveFile\": \""+archiveFile.path()+"\", " +  
-                    "   \"options\": [\"BK_DRY_RUN\", \"BK_BEST_EFFORT\"]" +
+                    "   \"options\": { \"option\": [\"BK_DRY_RUN\", \"BK_BEST_EFFORT\"] }" +
                     "  }" + 
                     "}";
             
-            JSONObject execution = postNewRestore(json);
+            JSONObject restore = postNewRestore(json);
+            
+            Assert.notNull(restore);
+
+            JSONObject execution = readExecutionStatus(restore.getJSONObject("execution").getLong("id"));
 
             assertTrue("STARTED".equals(execution.getString("status")));
 
@@ -52,8 +57,7 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
     }
 
     JSONObject postNewRestore(String body) throws Exception {
-        MockHttpServletResponse resp = body == null ? postAsServletResponse("/rest/br/restore", "")
-                : postAsServletResponse("/rest/br/restore", body, "application/json");
+        MockHttpServletResponse resp = postAsServletResponse("/rest/br/restore", body, "application/json");
 
         assertEquals(201, resp.getStatus());
         assertNotNull(resp.getHeader("Location"));
@@ -69,9 +73,13 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
     }
 
     JSONObject readExecutionStatus(long executionId) throws Exception {
-        JSONObject json = (JSONObject) getAsJSON("/rest/br/restore/" + executionId);
+        JSONObject json = (JSONObject) getAsJSON("/rest/br/restore/" + executionId + ".json");
 
-        JSONObject execution = json.getJSONObject("restore");
+        JSONObject restore = json.getJSONObject("restore");
+
+        assertNotNull(restore);
+        
+        JSONObject execution = restore.getJSONObject("execution");
 
         assertNotNull(execution);
 

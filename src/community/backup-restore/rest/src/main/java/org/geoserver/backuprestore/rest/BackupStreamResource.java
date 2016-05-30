@@ -16,6 +16,7 @@ import org.restlet.data.Request;
 import org.restlet.data.Response;
 import org.restlet.data.Status;
 import org.restlet.resource.FileRepresentation;
+import org.springframework.batch.core.BatchStatus;
 
 /**
  * REST resource for 
@@ -65,7 +66,11 @@ public class BackupStreamResource  extends BaseResource {
             getResponse().setStatus(Status.CLIENT_ERROR_NOT_FOUND);
         } else {
             BackupExecutionAdapter execution = (BackupExecutionAdapter) lookupContext;
-            getResponse().setEntity(new FileRepresentation(execution.getArchiveFile().file(), MediaType.APPLICATION_ZIP, 0));
+            if (execution.getStatus() == BatchStatus.COMPLETED) {
+                getResponse().setEntity(new FileRepresentation(execution.getArchiveFile().file(), MediaType.APPLICATION_ZIP, 0));
+            } else {
+                throw new RestletException("Backup execution status not ready yet!", Status.CLIENT_ERROR_NOT_FOUND);
+            }
         }
     }
     
@@ -77,10 +82,10 @@ public class BackupStreamResource  extends BaseResource {
      */
     Object lookupContext(boolean allowAll, boolean mustExist) {
         String i = getAttribute("backupId");
-        if (i != null && i.endsWith(".zip")) {
+        if (i != null) {
             BackupExecutionAdapter backupExecution = null;
             try {
-                backupExecution = getBackupFacade().getBackupExecutions().get(Long.parseLong(i.substring(0, i.indexOf(".zip"))));
+                backupExecution = getBackupFacade().getBackupExecutions().get(Long.parseLong(i));
             } catch (NumberFormatException e) {
             }
             if (backupExecution == null && mustExist) {

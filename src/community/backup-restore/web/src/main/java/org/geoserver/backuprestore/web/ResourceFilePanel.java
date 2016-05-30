@@ -8,6 +8,7 @@ import java.io.File;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.form.OnChangeAjaxBehavior;
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.SubmitLink;
@@ -41,8 +42,26 @@ public class ResourceFilePanel extends Panel {
         add(form);
 
         fileField = new TextField("file");
-        fileField.setRequired(false);
+        fileField.setRequired(true);
         fileField.setOutputMarkupId(true);
+        fileField.add(new OnChangeAjaxBehavior(){
+            
+            @Override
+            protected void onUpdate(final AjaxRequestTarget target){
+                // Access the updated model value:
+                final String valueAsString =
+                    ((TextField<String>) getComponent()).getModelObject();
+                
+                // use what the user currently typed
+                File file = null;
+                if (!valueAsString.trim().equals("")) {
+                    file = new File(valueAsString);
+                    if (!file.exists())
+                        file = null;
+                }
+            }
+        });
+        
         form.add(fileField);
         form.add(chooserButton(form));
     }

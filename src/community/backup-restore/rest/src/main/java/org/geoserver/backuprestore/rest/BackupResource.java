@@ -4,22 +4,16 @@
  */
 package org.geoserver.backuprestore.rest;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.BackupExecutionAdapter;
-import org.geoserver.backuprestore.rest.format.BackupJSONReader;
-import org.geoserver.backuprestore.rest.format.BackupJSONWriter;
-import org.geoserver.rest.PageInfo;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
-import org.geoserver.rest.format.StreamDataFormat;
+import org.geoserver.rest.format.ReflectiveJSONFormat;
+import org.geoserver.rest.format.ReflectiveXMLFormat;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Request;
@@ -43,8 +37,20 @@ public class BackupResource  extends BaseResource {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     protected List<DataFormat> createSupportedFormats(Request request, Response response) {
-        return (List) Arrays.asList(new BackupJSONFormat(MediaType.APPLICATION_JSON),
-                new BackupJSONFormat(MediaType.TEXT_HTML));
+        
+        List<DataFormat> formats = new ArrayList<DataFormat>();
+        
+        //JSON
+        ReflectiveJSONFormat jsonFormat = new ReflectiveJSONFormat();
+        intializeXStreamContext(jsonFormat.getXStream());
+        formats.add(jsonFormat);
+        
+        //XML        
+        ReflectiveXMLFormat xmlFormat = new ReflectiveXMLFormat();
+        intializeXStreamContext(xmlFormat.getXStream());
+        formats.add(xmlFormat);
+
+        return formats;
     }
 
     @Override
@@ -59,10 +65,8 @@ public class BackupResource  extends BaseResource {
     
     @Override
     public void handleGet() {
-        DataFormat formatGet = getFormatGet();
-        if (formatGet == null) {
-            formatGet = new BackupJSONFormat(MediaType.APPLICATION_JSON);
-        }
+        DataFormat formatGet = getFormatGet(false);
+        
         Object lookupContext = lookupContext(true, false);
         if (lookupContext == null) {
             // this means a specific lookup failed
@@ -107,11 +111,10 @@ public class BackupResource  extends BaseResource {
         try {
             Form query = getRequest().getResourceRef().getQueryAsForm();
     
-            if (MediaType.APPLICATION_JSON.equals(getRequest().getEntity().getMediaType())) {
+            if (MediaType.APPLICATION_JSON.equals(getRequest().getEntity().getMediaType()) ||
+                    MediaType.APPLICATION_XML.equals(getRequest().getEntity().getMediaType())) {
                 BackupExecutionAdapter newExecution = (BackupExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
     
-                // TODO: archiveFile and overwrite option integrity checks
-                
                 execution = getBackupFacade().runBackupAsync(
                         newExecution.getArchiveFile(), newExecution.isOverwrite(), asParams(newExecution.getOptions()));
                 
@@ -130,43 +133,6 @@ public class BackupResource  extends BaseResource {
         }
         
         return execution;
-    }
-
-    /**
-     * 
-     * @author afabiani
-     *
-     */
-    class BackupJSONFormat extends StreamDataFormat {
-
-        public BackupJSONFormat(MediaType type) {
-            super(type);
-        }
-
-        @Override
-        protected Object read(InputStream in) throws IOException {
-            return newReader(in).execution();
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        protected void write(Object object, OutputStream out) throws IOException {
-            
-            PageInfo pageInfo = getPageInfo();
-            // @hack lop off query if there is one or resulting URIs look silly
-            int queryIdx = pageInfo.getPagePath().indexOf('?');
-            if (queryIdx > 0) {
-                pageInfo.setPagePath(pageInfo.getPagePath().substring(0, queryIdx));
-            }
-
-            BackupJSONWriter json = newWriter(out);
-            if (object instanceof BackupExecutionAdapter) {
-                json.execution((BackupExecutionAdapter) object, true, expand(1));
-            }
-            else {
-                json.executions((Iterator<BackupExecutionAdapter>) object, expand(0));
-            }
-        }
     }
     
     /**
@@ -195,24 +161,5 @@ public class BackupResource  extends BaseResource {
             throw new RestletException("No backup execution specified", Status.CLIENT_ERROR_BAD_REQUEST);
         }
     }
-    
-    /**
-     * 
-     * @param input
-     * @return
-     * @throws IOException
-     */
-    public BackupJSONReader newReader(InputStream input) throws IOException {
-        return new BackupJSONReader(getBackupFacade(), input);
-    }
 
-    /**
-     * 
-     * @param output
-     * @return
-     * @throws IOException
-     */
-    public BackupJSONWriter newWriter(OutputStream output) throws IOException {
-        return new BackupJSONWriter(getBackupFacade(), getPageInfo(), output);
-    }
 }

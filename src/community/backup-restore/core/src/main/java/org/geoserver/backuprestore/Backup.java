@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
@@ -31,6 +32,7 @@ import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.JobParametersInvalidException;
+import org.springframework.batch.core.job.AbstractJob;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.launch.NoSuchJobException;
@@ -276,6 +278,20 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     @Override
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         Backup.context = context;
+        
+        try {
+            AbstractJob backupJob = (AbstractJob) context.getBean(BACKUP_JOB_NAME);
+            if (backupJob != null) {
+                this.setTotalNumberOfBackupSteps(backupJob.getStepNames().size());
+            }
+            
+            AbstractJob restoreJob = (AbstractJob) context.getBean(BACKUP_JOB_NAME);
+            if (restoreJob != null) {
+                this.setTotalNumberOfRestoreSteps(restoreJob.getStepNames().size());
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not fully configure the Backup Facade!", e);
+        }
     }
 
     protected String getItemName(XStreamPersister xp, Class clazz) {
