@@ -29,10 +29,10 @@ public class StyleInfoAdditionalResourceWriter
     @Override
     public void writeAdditionalResources(Backup backupFacade, Resource base, StyleInfo item)
             throws IOException {
-        Resource sldFile = backupFacade.getGeoServerDataDirectory().get(item, item.getFilename());
+        Resource styleFile = backupFacade.getGeoServerDataDirectory().get(item, item.getFilename());
 
-        if (sldFile != null && Resources.exists(sldFile)) {
-            Resources.copy(sldFile.file(), BackupUtils.dir(base.parent(), "styles"));
+        if (styleFile != null && Resources.exists(styleFile)) {
+            Resources.copy(styleFile.file(), BackupUtils.dir(base.parent(), "styles"));
         }
     }
 

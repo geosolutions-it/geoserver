@@ -90,7 +90,7 @@
 		<!-- Backup WorkspaceInfos -->
 		<batch:step id="backupWorkspaceInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
@@ -117,10 +117,10 @@
 									<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/workspace.dat" />
 						</bean>
 					</batch:writer>
@@ -134,7 +134,7 @@
 		<!-- Backup NamespaceInfos -->
 		<batch:step id="backupNamespaceInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
@@ -161,10 +161,10 @@
 									<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/namespace.dat" />
 						</bean>
 					</batch:writer>
@@ -178,7 +178,7 @@
 		<!-- Backup StoreInfos -->
 		<batch:step id="backupStoreInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
@@ -205,10 +205,10 @@
 									<constructor-arg value="org.geoserver.catalog.StoreInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/store.dat" />
 						</bean>
 					</batch:writer>
@@ -222,7 +222,7 @@
 		<!-- Backup ResourceInfos -->
 		<batch:step id="backupResourceInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
@@ -249,10 +249,10 @@
 									<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/resource.dat" />
 						</bean>
 					</batch:writer>
@@ -266,7 +266,7 @@
 		<!-- Backup LayerInfos -->
 		<batch:step id="backupLayerInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerInfo" />
@@ -293,10 +293,10 @@
 									<constructor-arg value="org.geoserver.catalog.LayerInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/layer.dat" />
 						</bean>
 					</batch:writer>
@@ -310,7 +310,7 @@
 		<!-- Backup LayerGroupInfos -->
 		<batch:step id="backupLayerGroupInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
@@ -337,10 +337,10 @@
 									<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/layerGroup.dat" />
 						</bean>
 					</batch:writer>
@@ -354,7 +354,7 @@
 		<!-- Backup StyleInfos -->
 		<batch:step id="backupStyleInfos">
 			<batch:tasklet allow-start-if-complete="true"> <!-- allow-start-if-complete let to start completed job again -->
-				<batch:chunk commit-interval="1">
+				<batch:chunk commit-interval="1000">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StyleInfo" />
@@ -381,10 +381,10 @@
 									<constructor-arg value="org.geoserver.catalog.StyleInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-									<property name="appendAllowed" value="false" />
+									<property name="appendAllowed" value="true" />
 								</bean>
 							</property>
-							<property name="itemCountLimitPerResource" value="1" />
+							<property name="itemCountLimitPerResource" value="10000" />
 							<property name="resource" value="#{jobParameters['output.file.path']}/style.dat" />
 						</bean>
 					</batch:writer>
@@ -436,7 +436,7 @@
 									<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
 									<constructor-arg ref="backupFacade"/>
 									<constructor-arg ref="xstreamPersisterFactory" />
-        							<property name="strict" value="true" />
+        							<property name="strict" value="false" />
         							<property name="fragmentRootElementName" value="namespace"/>
 								</bean>
 							</property>

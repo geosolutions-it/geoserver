@@ -2,6 +2,23 @@
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
+
+/*
+ * Copyright 2006-2007 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.geoserver.backuprestore.reader;
 
 import java.io.ByteArrayInputStream;
@@ -53,11 +70,10 @@ import org.springframework.util.StringUtils;
  * 
  * @author Robert Kasanicky
  * @author Alessio Fabiani, GeoSolutions
- * 
  */
 public class CatalogFileReader<T> extends CatalogReader<T> {
 
-    private static final Log logger = LogFactory.getLog(StaxEventItemReader.class);
+    private static final Log logger = LogFactory.getLog(CatalogFileReader.class);
 
     private FragmentEventReader fragmentReader;
 
@@ -258,21 +274,16 @@ public class CatalogFileReader<T> extends CatalogReader<T> {
      * @param source
      * @return
      * @throws TransformerException
+     * @throws XMLStreamException
      */
-    private Object unmarshal(Source source) throws TransformerException {
-        try {
-            TransformerFactory tf = new com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl();
-            Transformer t = tf.newTransformer();
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            Result result = new StreamResult(os);
-            t.transform(source, result);
+    private Object unmarshal(Source source) throws TransformerException, XMLStreamException {
+        TransformerFactory tf = new com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl();
+        Transformer t = tf.newTransformer();
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        Result result = new StreamResult(os);
+        t.transform(source, result);
 
-            return this.getXp().fromXML(new ByteArrayInputStream(os.toByteArray()));
-        } catch (TransformerException e) {
-            logValidationExceptions((T) null, e);
-        }
-
-        return null;
+        return this.getXp().fromXML(new ByteArrayInputStream(os.toByteArray()));
     }
 
     /*

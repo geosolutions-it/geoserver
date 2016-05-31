@@ -34,6 +34,7 @@ import org.springframework.util.ClassUtils;
 public abstract class CatalogReader<T> extends BackupRestoreItem<T> implements ItemStream,
         ItemStreamReader<T>, ResourceAwareItemReaderItemStream<T>, InitializingBean {
 
+    @SuppressWarnings("rawtypes")
     protected Class clazz;
 
     public CatalogReader(Class<T> clazz, Backup backupFacade,

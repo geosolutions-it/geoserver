@@ -98,8 +98,13 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
 
         OutputState state = getOutputState();
 
-        StringBuilder lines = new StringBuilder();
+        StringBuilder lines = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?>\n");
         int lineCount = 0;
+        
+        if (items.size()>0) {
+            lines.append("<items>\n");
+        }
+        
         for (T item : items) {
             lines.append(doWrite(item));
             lineCount++;
@@ -111,6 +116,11 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
                         "Could not write data.  The file may be corrupt.", e));
             }
         }
+
+        if (items.size()>0) {
+            lines.append("</items>\n");
+        }
+
         try {
             state.write(lines.toString());
         } catch (IOException e) {

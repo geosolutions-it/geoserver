@@ -2,6 +2,23 @@
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
+
+/*
+ * Copyright 2006-2007 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.geoserver.backuprestore.reader;
 
 import java.util.Arrays;
@@ -35,7 +52,6 @@ import org.springframework.util.Assert;
  * @author Robert Kasanicky
  * @author Lucas Ward
  * @author Alessio Fabiani, GeoSolutions
- * 
  */
 public class CatalogMultiResourceItemReader<T> extends CatalogReader<T> {
 
@@ -62,7 +78,7 @@ public class CatalogMultiResourceItemReader<T> extends CatalogReader<T> {
     }
 
     protected void initialize(StepExecution stepExecution) {
-        delegate.setXp(getXp());
+        delegate.retrieveInterstepData(stepExecution);
     }
 
     /**
@@ -248,31 +264,23 @@ public class CatalogMultiResourceItemReader<T> extends CatalogReader<T> {
 
     @Override
     public void setResource(Resource resource) {
-        // TODO Auto-generated method stub
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     protected T doRead() throws Exception {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     protected void doOpen() throws Exception {
-        // TODO Auto-generated method stub
-
     }
 
     @Override
     protected void doClose() throws Exception {
-        // TODO Auto-generated method stub
-
     }
 
 }

@@ -25,6 +25,7 @@ import org.springframework.util.ClassUtils;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
+@SuppressWarnings("rawtypes")
 public abstract class CatalogWriter<T> extends BackupRestoreItem
         implements ItemStreamWriter<T>, ResourceAwareItemWriterItemStream<T>, InitializingBean {
 

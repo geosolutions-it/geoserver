@@ -30,13 +30,19 @@ public class CatalogItemReader<T> extends CatalogReader<T> {
         super(clazz, backupFacade, xStreamPersisterFactory);
     }
 
-    @SuppressWarnings("unchecked")
     protected void initialize(StepExecution stepExecution) {
-        this.catalogIterator = (CloseableIterator<T>) getCatalog().list(this.clazz, Filter.INCLUDE);
     }
 
     @Override
-    public T read() {
+    public void setResource(Resource resource) {
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+    }
+
+    @Override
+    protected T doRead() throws Exception {
         try {
             if (catalogIterator.hasNext()) {
                 return (T) catalogIterator.next();
@@ -49,29 +55,14 @@ public class CatalogItemReader<T> extends CatalogReader<T> {
     }
 
     @Override
-    public void setResource(Resource resource) {
-        // TODO Auto-generated method stub
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        // TODO Auto-generated method stub
-    }
-
-    @Override
-    protected T doRead() throws Exception {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
+    @SuppressWarnings("unchecked")
     protected void doOpen() throws Exception {
-        // TODO Auto-generated method stub
+        this.catalogIterator = (CloseableIterator<T>) getCatalog().list(this.clazz, Filter.INCLUDE);
     }
 
     @Override
     protected void doClose() throws Exception {
-        // TODO Auto-generated method stub
+        catalogIterator.close();
     }
 
 }

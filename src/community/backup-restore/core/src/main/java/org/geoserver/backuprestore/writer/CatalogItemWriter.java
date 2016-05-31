@@ -4,7 +4,6 @@
  */
 package org.geoserver.backuprestore.writer;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.geoserver.backuprestore.Backup;
@@ -44,6 +43,7 @@ public class CatalogItemWriter<T> extends CatalogWriter<T> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void write(List<? extends T> items) {
         for (T item : items) {

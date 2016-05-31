@@ -105,7 +105,7 @@ public abstract class BackupRestoreItem<T> {
     }
 
     @BeforeStep
-    protected void retrieveInterstepData(StepExecution stepExecution) {
+    public void retrieveInterstepData(StepExecution stepExecution) {
         // Accordingly to the running execution type (Backup or Restore) we
         // need to validate resources against the official GeoServer Catalog (Backup)
         // or the temporary one (Restore).

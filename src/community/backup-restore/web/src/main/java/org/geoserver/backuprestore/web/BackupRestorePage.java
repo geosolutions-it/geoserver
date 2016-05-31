@@ -322,13 +322,13 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
                     buf.append(level).append(":");
                     buf.append(ex.getMessage());
                     cnt++;
-                    
-                    if (BackupRestorePage.this.expand > 0 && BackupRestorePage.this.expand >= cnt) {
-                        StringWriter errors = new StringWriter();
-                        ex.printStackTrace(new PrintWriter(errors));
-                        buf.append('\n').append(errors.toString());
-                    }
                 }
+                if (BackupRestorePage.this.expand > 0 && BackupRestorePage.this.expand >= cnt) {
+                    StringWriter errors = new StringWriter();
+                    ex.printStackTrace(new PrintWriter(errors));
+                    buf.append('\n').append(errors.toString());
+                }
+                
                 ex = ex.getCause();
             }
             return ex;
