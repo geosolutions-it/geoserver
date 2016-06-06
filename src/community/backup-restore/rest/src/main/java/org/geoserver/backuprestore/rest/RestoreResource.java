@@ -19,6 +19,12 @@ import org.restlet.data.MediaType;
 import org.restlet.data.Request;
 import org.restlet.data.Response;
 import org.restlet.data.Status;
+import org.springframework.batch.core.JobParametersInvalidException;
+import org.springframework.batch.core.launch.NoSuchJobException;
+import org.springframework.batch.core.launch.NoSuchJobExecutionException;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.repository.JobRestartException;
 
 /**
  * REST resource for 
@@ -34,7 +40,6 @@ public class RestoreResource  extends BaseResource {
         super(backupFacade);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     protected List<DataFormat> createSupportedFormats(Request arg0, Response arg1) {
        
@@ -63,6 +68,12 @@ public class RestoreResource  extends BaseResource {
         return false;
     }
     
+    
+    @Override
+    public boolean allowDelete() {
+        return true;
+    }
+
     @Override
     public void handleGet() {
         DataFormat formatGet = getFormatGet(false);
@@ -81,22 +92,48 @@ public class RestoreResource  extends BaseResource {
         Object obj = lookupContext(true, true);
         RestoreExecutionAdapter execution = null;
         if (obj instanceof RestoreExecutionAdapter) {
-            // TODO: restart an existing execution
-            /*try {
-                restartRestore((RestoreExecutionAdapter) obj);
-            } catch (Throwable t) {
-                if (t instanceof ValidationException) {
-                    throw new RestletException(t.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, t);
+            Long executionId = ((RestoreExecutionAdapter) obj).getId();
+            try {
+                getBackupFacade().restartExecution(executionId);
+            } catch (JobInstanceAlreadyCompleteException | NoSuchJobExecutionException
+                    | NoSuchJobException | JobRestartException | JobParametersInvalidException e) {
+                if (e instanceof JobInstanceAlreadyCompleteException) {
+                    throw new RestletException(e.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, e);
                 } else {
-                    throw new RestletException("Error occured executing restore: ", Status.SERVER_ERROR_INTERNAL, t);
+                    throw new RestletException("Error occurred executing restore: ", Status.SERVER_ERROR_INTERNAL, e);
                 }
-            }*/
+            }
         }
         else {
             execution = runRestore();
         }
-        if (execution != null) {
-            // TODO 
+        if (execution == null) {
+            throw new RestletException("Error occurred executing restore.", Status.CLIENT_ERROR_BAD_REQUEST);
+        }
+    }
+    
+    @Override
+    public void handleDelete() {
+        DataFormat formatGet = getFormatGet(false);
+        
+        Object lookupContext = lookupContext(true, false);
+        if (lookupContext == null) {
+            // this means a specific lookup failed
+            getResponse().setStatus(Status.CLIENT_ERROR_NOT_FOUND);
+        } else if (lookupContext instanceof RestoreExecutionAdapter) {
+            Long executionId = ((RestoreExecutionAdapter) lookupContext).getId();
+            try {
+                getBackupFacade().abandonExecution(executionId);
+            } catch (NoSuchJobExecutionException | JobExecutionAlreadyRunningException e) {
+                if (e instanceof NoSuchJobExecutionException) {
+                    throw new RestletException(e.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, e);
+                } else {
+                    throw new RestletException("Error occurred canceling backup: ", Status.SERVER_ERROR_INTERNAL, e);
+                }
+            }
+            getResponse().redirectSeeOther(getPageInfo().rootURI("/br/restore/"+executionId));
+            getResponse().setEntity(formatGet.toRepresentation(lookupContext));
+            getResponse().setStatus(Status.SUCCESS_ACCEPTED);
         }
     }
     
@@ -115,7 +152,10 @@ public class RestoreResource  extends BaseResource {
                     MediaType.APPLICATION_XML.equals(getRequest().getEntity().getMediaType())) {
                 RestoreExecutionAdapter newExecution = (RestoreExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
     
-                execution = getBackupFacade().runRestoreAsync(newExecution.getArchiveFile(), asParams(newExecution.getOptions()));
+                execution = getBackupFacade().runRestoreAsync(
+                        newExecution.getArchiveFile(),
+                        newExecution.getFilter(),
+                        asParams(newExecution.getOptions()));
                 
                 LOGGER.log(Level.INFO, "Restore file started: " + newExecution.getArchiveFile());
     

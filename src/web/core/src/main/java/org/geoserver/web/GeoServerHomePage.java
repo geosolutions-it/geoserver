@@ -61,6 +61,7 @@ public class GeoServerHomePage extends GeoServerBasePage {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public GeoServerHomePage() {
+        ConfigRequest.start(this.getPageClass());
         GeoServer gs = getGeoServer();
         ContactInfo contact = gs.getGlobal().getSettings().getContact();
 

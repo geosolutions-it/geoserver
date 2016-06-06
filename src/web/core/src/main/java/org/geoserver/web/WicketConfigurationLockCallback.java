@@ -11,11 +11,11 @@ import org.geoserver.GeoServerConfigurationLock;
 import org.geoserver.GeoServerConfigurationLock.LockType;
 
 /**
- * Protects the catalog and configuration from concurrent access from the web GUI side (will stay
- * here until the catalog and configution will become thread safe).
+ * Protects the catalog and configuration from concurrent access from the web GUI side (will stay here until the catalog and configution will become
+ * thread safe).
  * <p>
- * It locks in write mode all {@link GeoServerSecuredPage} subclasses, as those have some
- * possibility to write on the configuration/catalog, all other pages are locked in read mode.
+ * It locks in write mode all {@link GeoServerSecuredPage} subclasses, as those have some possibility to write on the configuration/catalog, all other
+ * pages are locked in read mode.
  * 
  * @author Andrea Aime - GeoSolutions
  * 
@@ -44,8 +44,14 @@ public class WicketConfigurationLockCallback implements WicketCallback {
     public void onEndRequest() {
         LockType type = THREAD_LOCK.get();
         if (type != null) {
-            THREAD_LOCK.remove();
-            locker.unlock(type);
+
+            boolean lockTaken = locker.tryLock(type);
+
+            if (lockTaken) {
+                THREAD_LOCK.remove();
+                locker.unlock(type);
+                ConfigRequest.finish();
+            }
         }
     }
 
@@ -67,8 +73,19 @@ public class WicketConfigurationLockCallback implements WicketCallback {
         }
 
         // and lock
-        THREAD_LOCK.set(type);
-        locker.lock(type);
+        boolean lockTaken = locker.tryLock(type);
+
+        if (lockTaken) {
+            THREAD_LOCK.set(type);
+            locker.unlock(type);
+
+            if (GeoServerSecuredPage.class.isAssignableFrom(requestTarget)) {
+                ConfigRequest.request(requestTarget);
+                if (ConfigRequest.get() == null) {
+                    ConfigRequest.start(requestTarget);
+                }
+            }
+        }
     }
 
     @Override

@@ -27,9 +27,12 @@
    <div>
     <fieldset>
       <legend><span><wicket:message key="newBackupResource">Archive File</wicket:message></span></legend>
-	  <div wicket:id="newBackupPanel">
+	  <div wicket:id="newBackupRestorePanel">
 	    <div wicket:id="backupResource"></div>
 	  </div>
+	  <label for="workspace"><wicket:message key="workspace">Workspace</wicket:message></label>
+      <select id="workspace" wicket:id="workspace"></select>
+      <span wicket:id="workspaceNameContainer"><input type="text" class="text" wicket:id="workspaceName" style="width:10em;"></input></span>
 	</fieldset>
   </div>
   
@@ -51,6 +54,9 @@
 	<div class="button-group selfclear">
       <a href="#" wicket:id="newBackupStart">
         <span>Start Backup</span>
+      </a>
+      <a href="#" wicket:id="cancel">
+        <span><wicket:message key="cancel"></wicket:message></span>
       </a>
       <span wicket:id="status">Working</span>
     </div>
@@ -87,6 +93,9 @@
 	<div class="button-group selfclear">
       <a href="#" wicket:id="newRestoreStart">
         <span>Start Restore</span>
+      </a>
+      <a href="#" wicket:id="cancel">
+        <span><wicket:message key="cancel"></wicket:message></span>
       </a>
       <span wicket:id="status">Working</span>
     </div>

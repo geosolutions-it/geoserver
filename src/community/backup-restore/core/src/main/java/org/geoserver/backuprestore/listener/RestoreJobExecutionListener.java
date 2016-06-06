@@ -5,6 +5,8 @@
 package org.geoserver.backuprestore.listener;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import org.geoserver.GeoServerConfigurationLock;
@@ -15,7 +17,9 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.Wrapper;
 import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.impl.CatalogImpl;
+import org.geoserver.platform.resource.Resource;
 import org.geotools.util.logging.Logging;
+import org.opengis.filter.Filter;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
@@ -53,9 +57,42 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         // Prior starting the JobExecution, lets store a new empty GeoServer Catalog into the context.
         // It will be used to load the resources on a temporary in-memory configuration, which will be
         // swapped at the end of the Restore if everything goes well.
-
-        this.restoreExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
-        this.restoreExecution.setRestoreCatalog(createRestoreCatalog());
+        if (backupFacade.getRestoreExecutions().get(jobExecution.getId()) != null) {
+            this.restoreExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
+            this.restoreExecution.setRestoreCatalog(createRestoreCatalog());
+        } else {
+            Long id = null;
+            RestoreExecutionAdapter rst = null;
+            
+            for (Entry<Long, RestoreExecutionAdapter> entry : backupFacade.getRestoreExecutions().entrySet()) {
+                id = entry.getKey();
+                rst = entry.getValue();
+                
+                if(rst.getJobParameters().getLong(Backup.PARAM_TIME).equals(jobExecution.getJobParameters().getLong(Backup.PARAM_TIME))) {
+                    break;
+                } else {
+                    id = null;
+                    rst = null;
+                }
+            }
+            
+            if (rst != null) {
+                Resource archiveFile = rst.getArchiveFile();
+                Catalog restoreCatalog = rst.getRestoreCatalog();
+                List<String> options = rst.getOptions();
+                Filter filter = rst.getFilter();
+                
+                this.backupFacade.getRestoreExecutions().remove(id);
+                
+                this.restoreExecution = new RestoreExecutionAdapter(jobExecution, backupFacade.getTotalNumberOfRestoreSteps());
+                this.restoreExecution.setArchiveFile(archiveFile);
+                this.restoreExecution.setRestoreCatalog(restoreCatalog);
+                this.restoreExecution.setFilter(filter);
+                this.restoreExecution.getOptions().addAll(options);
+                
+                this.backupFacade.getRestoreExecutions().put(jobExecution.getId(), this.restoreExecution);                    
+            }
+        }
     }
 
     private synchronized Catalog createRestoreCatalog() {
@@ -84,20 +121,17 @@ public class RestoreJobExecutionListener implements JobExecutionListener {
         try {
             final Long executionId = jobExecution.getId();
 
+            this.restoreExecution = backupFacade.getRestoreExecutions().get(jobExecution.getId());
+            
             LOGGER.fine("Running Executions IDs : " + executionId);
 
-            if (jobExecution.getStatus() == BatchStatus.STOPPED) {
-                backupFacade.getJobOperator().restart(executionId);
-            } else {
+            if (jobExecution.getStatus() != BatchStatus.STOPPED) {
                 LOGGER.fine("Executions Step Summaries : "
                         + backupFacade.getJobOperator().getStepExecutionSummaries(executionId));
                 LOGGER.fine("Executions Parameters : "
                         + backupFacade.getJobOperator().getParameters(executionId));
                 LOGGER.fine("Executions Summary : "
                         + backupFacade.getJobOperator().getSummary(executionId));
-
-                LOGGER.fine("Exit Status : " + restoreExecution.getStatus());
-                LOGGER.fine("Exit Failures : " + restoreExecution.getAllFailureExceptions());
 
                 if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
                     // Reload GeoServer Catalog

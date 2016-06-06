@@ -24,28 +24,60 @@ import net.sf.json.JSONObject;
  *
  */
 public class RESTBackupTest extends BackupRestoreTestSupport {
+
     @Test
     public void testNewBackup() throws Exception {
         Resource tmpDir = BackupUtils.tmpDir();
         String archiveFilePath = Paths.path(tmpDir.path(), "geoserver-backup.zip");
-        
-        String json = 
-                "{\"backup\": {" + 
-                "   \"archiveFile\": \""+archiveFilePath+"\", " + 
-                "   \"overwrite\": true," + 
-                "   \"options\": { \"option\": [\"BK_BEST_EFFORT\"] }" +
-                "  }" + 
-                "}";
-        
+
+        String json = "{\"backup\": {" + "   \"archiveFile\": \"" + archiveFilePath + "\", "
+                + "   \"overwrite\": true,"
+                + "   \"options\": { \"option\": [\"BK_BEST_EFFORT=true\"] }" + "  }" + "}";
+
         JSONObject backup = postNewBackup(json);
-        
+
         Assert.notNull(backup);
 
         JSONObject execution = readExecutionStatus(backup.getJSONObject("execution").getLong("id"));
-        
-        assertTrue("STARTED".equals(execution.getString("status")));
 
-        while ("STARTED".equals(execution.getString("status"))) {
+        assertTrue("STARTED".equals(execution.getString("status"))
+                || "STARTING".equals(execution.getString("status")));
+
+        while ("STARTED".equals(execution.getString("status"))
+                || "STARTING".equals(execution.getString("status"))) {
+            execution = readExecutionStatus(execution.getLong("id"));
+
+            Thread.sleep(100);
+        }
+
+        assertTrue("COMPLETED".equals(execution.getString("status")));
+    }
+
+    @Test
+    public void testFilteredBackup() throws Exception {
+        Resource tmpDir = BackupUtils.tmpDir();
+        String archiveFilePath = Paths.path(tmpDir.path(), "geoserver-backup.zip");
+
+        String json = "{\"backup\": {" + "   \"archiveFile\": \"" + archiveFilePath + "\", "
+                + "   \"overwrite\": true,"
+                + "   \"options\": { \"option\": [\"BK_BEST_EFFORT=false\"] },"
+                + "   \"filter\": \"name IN ('topp','geosolutions-it')\"" + "  }" + "}";
+
+        JSONObject backup = postNewBackup(json);
+
+        Assert.notNull(backup);
+
+        JSONObject execution = readExecutionStatus(backup.getJSONObject("execution").getLong("id"));
+
+        assertTrue(execution.getJSONObject("stepExecutions").getJSONArray("step").getJSONObject(0)
+                .getJSONObject("parameters").get("filter")
+                .equals("name IN ('topp','geosolutions-it')"));
+
+        assertTrue("STARTED".equals(execution.getString("status"))
+                || "STARTING".equals(execution.getString("status")));
+
+        while ("STARTED".equals(execution.getString("status"))
+                || "STARTING".equals(execution.getString("status"))) {
             execution = readExecutionStatus(execution.getLong("id"));
 
             Thread.sleep(100);
@@ -55,7 +87,8 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
     }
 
     JSONObject postNewBackup(String body) throws Exception {
-        MockHttpServletResponse resp = postAsServletResponse("/rest/br/backup", body, "application/json");
+        MockHttpServletResponse resp = postAsServletResponse("/rest/br/backup", body,
+                "application/json");
 
         assertEquals(201, resp.getStatus());
         assertNotNull(resp.getHeader("Location"));
@@ -63,7 +96,7 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
         assertEquals("application/json", resp.getContentType());
 
         JSONObject json = (JSONObject) json(resp);
-        
+
         JSONObject execution = json.getJSONObject("backup");
 
         assertNotNull(execution);
@@ -81,7 +114,7 @@ public class RESTBackupTest extends BackupRestoreTestSupport {
         JSONObject execution = backup.getJSONObject("execution");
 
         assertNotNull(execution);
-        
+
         return execution;
     }
 }

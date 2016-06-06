@@ -123,35 +123,39 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
             Resource targetWorkspacesFolder = BackupUtils.dir(targetBackupFolder, "workspaces");
 
             // Store Default Workspace
-            doWrite(getCatalog().getDefaultNamespace(), targetWorkspacesFolder,
-                    "defaultnamespace.xml");
-            doWrite(getCatalog().getDefaultWorkspace(), targetWorkspacesFolder, "default.xml");
-
+            if (filteredWorkspace(getCatalog().getDefaultWorkspace())) {
+                doWrite(getCatalog().getDefaultNamespace(), targetWorkspacesFolder,
+                        "defaultnamespace.xml");
+                doWrite(getCatalog().getDefaultWorkspace(), targetWorkspacesFolder, "default.xml");
+            }
+            
             // Store Workspace Specific Settings and Services
             for (WorkspaceInfo ws : getCatalog().getWorkspaces()) {
-                if (geoserver.getSettings(ws) != null) {
-                    doWrite(geoserver.getSettings(ws),
-                            BackupUtils.dir(targetWorkspacesFolder, ws.getName()), "settings.xml");
-                }
-
-                if (geoserver.getServices(ws) != null) {
-                    for (ServiceInfo service : geoserver.getServices(ws)) {
-                        doWrite(service, targetWorkspacesFolder, ws.getName());
+                if (filteredWorkspace(ws)) {
+                    if (geoserver.getSettings(ws) != null) {
+                        doWrite(geoserver.getSettings(ws),
+                                BackupUtils.dir(targetWorkspacesFolder, ws.getName()), "settings.xml");
                     }
-                }
 
-                // Backup other configuration bits, like images, palettes, user projections and so on...
-                GeoServerDataDirectory wsDd = new GeoServerDataDirectory(
-                        dd.get(Paths.path("workspaces", ws.getName())).dir());
-                backupRestoreAdditionalResources(wsDd.getResourceStore(),
-                        targetWorkspacesFolder.get(ws.getName()));
+                    if (geoserver.getServices(ws) != null) {
+                        for (ServiceInfo service : geoserver.getServices(ws)) {
+                            doWrite(service, targetWorkspacesFolder, ws.getName());
+                        }
+                    }
 
-                // Backup Style SLDs
-                for (StyleInfo sty : getCatalog().getStylesByWorkspace(ws)) {
-                    Resource styResource = wsDd.get(Paths.path("styles", sty.getFilename()));
-                    if (Resources.exists(styResource)) {
-                        Resources.copy(styResource.file(), BackupUtils
-                                .dir(targetWorkspacesFolder.get(ws.getName()), "styles"));
+                    // Backup other configuration bits, like images, palettes, user projections and so on...
+                    GeoServerDataDirectory wsDd = new GeoServerDataDirectory(
+                            dd.get(Paths.path("workspaces", ws.getName())).dir());
+                    backupRestoreAdditionalResources(wsDd.getResourceStore(),
+                            targetWorkspacesFolder.get(ws.getName()));
+
+                    // Backup Style SLDs
+                    for (StyleInfo sty : getCatalog().getStylesByWorkspace(ws)) {
+                        Resource styResource = wsDd.get(Paths.path("styles", sty.getFilename()));
+                        if (Resources.exists(styResource)) {
+                            Resources.copy(styResource.file(), BackupUtils
+                                    .dir(targetWorkspacesFolder.get(ws.getName()), "styles"));
+                        }
                     }
                 }
             }
@@ -196,6 +200,15 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
     }
 
     /**
+     * @param ws
+     * @return
+     */
+    private boolean filteredWorkspace(WorkspaceInfo ws) {
+        return getFilter() == null || 
+                (getFilter() != null && getFilter().evaluate(ws));
+    }
+
+    /**
      * @param jobExecution
      * @param geoserver
      * @param dd
@@ -229,13 +242,16 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
         // Save Workspace specific settings
         try {
             sourceWorkspacesFolder = BackupUtils.dir(sourceRestoreFolder, "workspaces");
+            
             // Set Default Namespace and Workspace
-            NamespaceInfo newDefaultNamespace = (NamespaceInfo) doRead(sourceWorkspacesFolder,
-                    "defaultnamespace.xml");
-            WorkspaceInfo newDefaultWorkspace = (WorkspaceInfo) doRead(sourceWorkspacesFolder,
-                    "default.xml");
-            getCatalog().setDefaultNamespace(newDefaultNamespace);
-            getCatalog().setDefaultWorkspace(newDefaultWorkspace);
+            if (Resources.exists(sourceWorkspacesFolder.get("default.xml"))) {
+                NamespaceInfo newDefaultNamespace = (NamespaceInfo) doRead(sourceWorkspacesFolder,
+                        "defaultnamespace.xml");
+                WorkspaceInfo newDefaultWorkspace = (WorkspaceInfo) doRead(sourceWorkspacesFolder,
+                        "default.xml");
+                getCatalog().setDefaultNamespace(newDefaultNamespace);
+                getCatalog().setDefaultWorkspace(newDefaultWorkspace);
+            }
         } catch (Exception e) {
             logValidationExceptions((ValidationResult) null,
                     new UnexpectedJobExecutionException(
@@ -336,7 +352,7 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
         Files.delete(styles.dir());
         styles = BackupUtils.dir(dd.get(Paths.BASE), "styles");
 
-        restoreLocalServices(sourceRestoreFolder, styles);
+        restoreGlobalStyles(sourceRestoreFolder, styles);
 
         // Restore LayerGroups
         // - Prepare folder
@@ -345,7 +361,7 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
         Files.delete(layerGroups.dir());
         layerGroups = BackupUtils.dir(dd.get(Paths.BASE), "layergroups");
 
-        restoreLayerGroups(layerGroups);
+        restoreGlobalLayerGroups(layerGroups);
 
         // Restore Workspace Specific Settings and Services
         restoreLocalWorkspaceSettingsAndServices(geoserver, sourceRestoreFolder,
@@ -423,7 +439,7 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
         BackupUtils.dir(td.get(Paths.BASE), "styles");
         Resource styles = td.get("styles");
 
-        restoreLocalServices(sourceRestoreFolder, styles);
+        restoreGlobalStyles(sourceRestoreFolder, styles);
 
         // Restore LayerGroups
         // - Prepare folder
@@ -431,7 +447,7 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
         Resource layerGroups = td.get("layergroups");
 
         // Workspace Local LayerGroups
-        restoreLayerGroups(layerGroups);
+        restoreGlobalLayerGroups(layerGroups);
 
         // Restore Workspace Specific Settings and Services
         restoreLocalWorkspaceSettingsAndServices(geoserver, sourceRestoreFolder,
@@ -481,69 +497,71 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
             Resource sourceRestoreFolder, Resource sourceWorkspacesFolder,
             GeoServerDataDirectory dd) throws Exception {
         for (WorkspaceInfo ws : geoserver.getCatalog().getWorkspaces()) {
-            Resource wsFolder = BackupUtils.dir(sourceWorkspacesFolder, ws.getName());
-            SettingsInfo wsSettings = null;
-            if (Resources.exists(wsFolder.get("settings.xml"))) {
-                wsSettings = (SettingsInfo) doRead(wsFolder, "settings.xml");
-            }
-
-            if (wsSettings != null) {
-                wsSettings.setWorkspace(ws);
-                if (!isDryRun()) {
-                    geoserver.add(wsSettings);
-                    doWrite(geoserver.getSettings(ws),
-                            dd.get(Paths.path("workspaces", ws.getName())), "settings.xml");
-                } else {
-                    doWrite(wsSettings, dd.get(Paths.path("workspaces", ws.getName())),
-                            "settings.xml");
+            if (filteredWorkspace(ws)) {
+                Resource wsFolder = BackupUtils.dir(sourceWorkspacesFolder, ws.getName());
+                SettingsInfo wsSettings = null;
+                if (Resources.exists(wsFolder.get("settings.xml"))) {
+                    wsSettings = (SettingsInfo) doRead(wsFolder, "settings.xml");
                 }
-            }
-
-            // Restore Workspace Local Services
-            List<Resource> serviceResources = Resources.list(wsFolder, new Filter<Resource>() {
-
-                @Override
-                public boolean accept(Resource res) {
-                    if (!"settings.xml".equals(res.name()) && res.name().endsWith(".xml")) {
-                        return true;
-                    }
-                    return false;
-                }
-
-            });
-            for (Resource serviceResource : serviceResources) {
-                ServiceInfo localService = (ServiceInfo) doRead(wsFolder, serviceResource.name());
-                if (localService != null) {
-                    localService.setWorkspace(ws);
+    
+                if (wsSettings != null) {
+                    wsSettings.setWorkspace(ws);
                     if (!isDryRun()) {
-                        geoserver.add(localService);
+                        geoserver.add(wsSettings);
+                        doWrite(geoserver.getSettings(ws),
+                                dd.get(Paths.path("workspaces", ws.getName())), "settings.xml");
+                    } else {
+                        doWrite(wsSettings, dd.get(Paths.path("workspaces", ws.getName())),
+                                "settings.xml");
                     }
-                    doWrite(localService, dd.get(Paths.path("workspaces", ws.getName())), "");
                 }
-            }
-
-            // Restore Local Styles
-            for (StyleInfo sty : getCatalog().getStylesByWorkspace(ws.getName())) {
-                // Only Local Services here.
-                sty.setWorkspace(ws);
-                Resource wsLocalStyleFolder = BackupUtils
-                        .dir(dd.get(Paths.path("workspaces", ws.getName())), "styles");
-                doWrite(sty, wsLocalStyleFolder, sty.getName() + ".xml");
-
-                Resource styResource = sourceRestoreFolder
-                        .get(Paths.path("workspaces", ws.getName(), "styles", sty.getFilename()));
-                if (Resources.exists(styResource)) {
-                    Resources.copy(styResource.file(), wsLocalStyleFolder);
+    
+                // Restore Workspace Local Services
+                List<Resource> serviceResources = Resources.list(wsFolder, new Filter<Resource>() {
+    
+                    @Override
+                    public boolean accept(Resource res) {
+                        if (!"settings.xml".equals(res.name()) && res.name().endsWith(".xml")) {
+                            return true;
+                        }
+                        return false;
+                    }
+    
+                });
+                for (Resource serviceResource : serviceResources) {
+                    ServiceInfo localService = (ServiceInfo) doRead(wsFolder, serviceResource.name());
+                    if (localService != null) {
+                        localService.setWorkspace(ws);
+                        if (!isDryRun()) {
+                            geoserver.add(localService);
+                        }
+                        doWrite(localService, dd.get(Paths.path("workspaces", ws.getName())), "");
+                    }
                 }
-            }
-
-            // Restore Local LayerGroups
-            for (LayerGroupInfo lyg : getCatalog().getLayerGroupsByWorkspace(ws.getName())) {
-                // Only Local LayerGroups here.
-                lyg.setWorkspace(ws);
-                Resource wsLocalLayerGroupsFolder = BackupUtils
-                        .dir(dd.get(Paths.path("workspaces", ws.getName())), "layergroups");
-                doWrite(lyg, wsLocalLayerGroupsFolder, lyg.getName() + ".xml");
+    
+                // Restore Local Styles
+                for (StyleInfo sty : getCatalog().getStylesByWorkspace(ws.getName())) {
+                    // Only Local Services here.
+                    sty.setWorkspace(ws);
+                    Resource wsLocalStyleFolder = BackupUtils
+                            .dir(dd.get(Paths.path("workspaces", ws.getName())), "styles");
+                    doWrite(sty, wsLocalStyleFolder, sty.getName() + ".xml");
+    
+                    Resource styResource = sourceRestoreFolder
+                            .get(Paths.path("workspaces", ws.getName(), "styles", sty.getFilename()));
+                    if (Resources.exists(styResource)) {
+                        Resources.copy(styResource.file(), wsLocalStyleFolder);
+                    }
+                }
+    
+                // Restore Local LayerGroups
+                for (LayerGroupInfo lyg : getCatalog().getLayerGroupsByWorkspace(ws.getName())) {
+                    // Only Local LayerGroups here.
+                    lyg.setWorkspace(ws);
+                    Resource wsLocalLayerGroupsFolder = BackupUtils
+                            .dir(dd.get(Paths.path("workspaces", ws.getName())), "layergroups");
+                    doWrite(lyg, wsLocalLayerGroupsFolder, lyg.getName() + ".xml");
+                }
             }
         }
     }
@@ -552,7 +570,7 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
      * @param layerGroups
      * @throws Exception 
      */
-    private void restoreLayerGroups(Resource layerGroups) throws Exception {
+    private void restoreGlobalLayerGroups(Resource layerGroups) throws Exception {
         for (LayerGroupInfo lyg : getCatalog().getLayerGroups()) {
             // Only Global LayerGroups here; local ones will be restored later on
             if (lyg.getWorkspace() == null) {
@@ -566,10 +584,10 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
      * @param styles
      * @throws Exception 
      */
-    private void restoreLocalServices(Resource sourceRestoreFolder, Resource styles)
+    private void restoreGlobalStyles(Resource sourceRestoreFolder, Resource styles)
             throws Exception {
         for (StyleInfo sty : getCatalog().getStyles()) {
-            // Only Global Services here. Local ones will be restored later on
+            // Only Global Styles here. Local ones will be restored later on
             if (sty.getWorkspace() == null) {
                 doWrite(sty, styles, sty.getName() + ".xml");
 
@@ -613,59 +631,61 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
 
         // - Restore Workspaces/Namespaces definitions and settings
         for (WorkspaceInfo ws : getCatalog().getWorkspaces()) {
-            // Restore Workspace and Namespace confifuration
-            // - Prepare Folder
-            Files.delete(workspaces.get(ws.getName()).dir());
-            Resource wsFolder = BackupUtils.dir(workspaces, ws.getName());
-
-            doWrite(getCatalog().getNamespaceByPrefix(ws.getName()), wsFolder, "namespace.xml");
-            doWrite(ws, wsFolder, "workspace.xml");
-
-            // Restore DataStores/CoverageStores
-            for (DataStoreInfo ds : getCatalog().getStoresByWorkspace(ws.getName(),
-                    DataStoreInfo.class)) {
+            if (filteredWorkspace(ws)) {
+                // Restore Workspace and Namespace confifuration
                 // - Prepare Folder
-                Resource dsFolder = BackupUtils.dir(wsFolder, ds.getName());
-
-                ds.setWorkspace(ws);
-
-                doWrite(ds, dsFolder, "datastore.xml");
-
-                // Restore Resources
-                for (FeatureTypeInfo ft : getCatalog().getFeatureTypesByDataStore(ds)) {
+                Files.delete(workspaces.get(ws.getName()).dir());
+                Resource wsFolder = BackupUtils.dir(workspaces, ws.getName());
+    
+                doWrite(getCatalog().getNamespaceByPrefix(ws.getName()), wsFolder, "namespace.xml");
+                doWrite(ws, wsFolder, "workspace.xml");
+    
+                // Restore DataStores/CoverageStores
+                for (DataStoreInfo ds : getCatalog().getStoresByWorkspace(ws.getName(),
+                        DataStoreInfo.class)) {
                     // - Prepare Folder
-                    Files.delete(dsFolder.get(ft.getName()).dir());
-                    Resource ftFolder = BackupUtils.dir(dsFolder, ft.getName());
-
-                    doWrite(ft, ftFolder, "featuretype.xml");
-
-                    // Restore Layers
-                    for (LayerInfo ly : getCatalog().getLayers(ft)) {
-                        doWrite(ly, ftFolder, "layer.xml");
+                    Resource dsFolder = BackupUtils.dir(wsFolder, ds.getName());
+    
+                    ds.setWorkspace(ws);
+    
+                    doWrite(ds, dsFolder, "datastore.xml");
+    
+                    // Restore Resources
+                    for (FeatureTypeInfo ft : getCatalog().getFeatureTypesByDataStore(ds)) {
+                        // - Prepare Folder
+                        Files.delete(dsFolder.get(ft.getName()).dir());
+                        Resource ftFolder = BackupUtils.dir(dsFolder, ft.getName());
+    
+                        doWrite(ft, ftFolder, "featuretype.xml");
+    
+                        // Restore Layers
+                        for (LayerInfo ly : getCatalog().getLayers(ft)) {
+                            doWrite(ly, ftFolder, "layer.xml");
+                        }
                     }
                 }
-            }
-
-            for (CoverageStoreInfo cs : getCatalog().getStoresByWorkspace(ws.getName(),
-                    CoverageStoreInfo.class)) {
-                // - Prepare Folder
-                Resource csFolder = BackupUtils.dir(wsFolder, cs.getName());
-
-                cs.setWorkspace(ws);
-
-                doWrite(cs, csFolder, "coveragestore.xml");
-
-                // Restore Resources
-                for (CoverageInfo ci : getCatalog().getCoveragesByCoverageStore(cs)) {
+    
+                for (CoverageStoreInfo cs : getCatalog().getStoresByWorkspace(ws.getName(),
+                        CoverageStoreInfo.class)) {
                     // - Prepare Folder
-                    Files.delete(csFolder.get(ci.getName()).dir());
-                    Resource ciFolder = BackupUtils.dir(csFolder, ci.getName());
-
-                    doWrite(ci, ciFolder, "coverage.xml");
-
-                    // Restore Layers
-                    for (LayerInfo ly : getCatalog().getLayers(ci)) {
-                        doWrite(ly, ciFolder, "layer.xml");
+                    Resource csFolder = BackupUtils.dir(wsFolder, cs.getName());
+    
+                    cs.setWorkspace(ws);
+    
+                    doWrite(cs, csFolder, "coveragestore.xml");
+    
+                    // Restore Resources
+                    for (CoverageInfo ci : getCatalog().getCoveragesByCoverageStore(cs)) {
+                        // - Prepare Folder
+                        Files.delete(csFolder.get(ci.getName()).dir());
+                        Resource ciFolder = BackupUtils.dir(csFolder, ci.getName());
+    
+                        doWrite(ci, ciFolder, "coverage.xml");
+    
+                        // Restore Layers
+                        for (LayerInfo ly : getCatalog().getLayers(ci)) {
+                            doWrite(ly, ciFolder, "layer.xml");
+                        }
                     }
                 }
             }

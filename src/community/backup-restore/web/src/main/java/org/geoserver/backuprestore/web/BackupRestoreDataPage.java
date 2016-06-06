@@ -16,12 +16,16 @@ import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AbstractAjaxTimerBehavior;
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
+import org.apache.wicket.ajax.markup.html.AjaxLink;
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.form.CheckBox;
+import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.Form;
+import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -30,13 +34,23 @@ import org.geoserver.backuprestore.AbstractExecutionAdapter;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.BackupExecutionAdapter;
 import org.geoserver.backuprestore.RestoreExecutionAdapter;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.platform.resource.Resources;
+import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.GeoServerSecuredPage;
+import org.geoserver.web.data.workspace.WorkspaceChoiceRenderer;
+import org.geoserver.web.data.workspace.WorkspaceDetachableModel;
+import org.geoserver.web.data.workspace.WorkspacesModel;
 import org.geoserver.web.wicket.GeoServerDialog;
 import org.geotools.factory.Hints;
+import org.geotools.filter.text.ecql.ECQL;
 import org.geotools.util.logging.Logging;
+import org.opengis.filter.Filter;
+import org.springframework.batch.core.launch.JobExecutionNotRunningException;
+import org.springframework.batch.core.launch.NoSuchJobExecutionException;
 
 /**
  * First page of the backup wizard.
@@ -49,23 +63,54 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
     
     static Logger LOGGER = Logging.getLogger(BackupRestoreDataPage.class);
 
+    WorkspaceDetachableModel workspace;
+    DropDownChoice workspaceChoice;
+    TextField workspaceNameTextField;
+    
     Component statusLabel;
 
     BackupRestoreExecutionsTable backupRestoreExecutionsTable;
     BackupRestoreExecutionsTable restoreExecutionsTable;
     
-    WebMarkupContainer newBackupPanel;
+    WebMarkupContainer newBackupRestorePanel;
     
     GeoServerDialog dialog;
 
     public BackupRestoreDataPage(PageParameters params) {
         
-        newBackupPanel = new WebMarkupContainer("newBackupPanel");
-        newBackupPanel.setOutputMarkupId(true);
+        newBackupRestorePanel = new WebMarkupContainer("newBackupRestorePanel");
+        newBackupRestorePanel.setOutputMarkupId(true);
         
         resetResourcePanel();
         
-        add(newBackupPanel);
+        add(newBackupRestorePanel);
+        
+        Catalog catalog = GeoServerApplication.get().getCatalog();
+        
+        // workspace chooser
+        workspace = new WorkspaceDetachableModel(null);
+        workspaceChoice = new DropDownChoice("workspace", workspace, new WorkspacesModel(), 
+            new WorkspaceChoiceRenderer());
+        workspaceChoice.setOutputMarkupId(true);
+        workspaceChoice.add(new AjaxFormComponentUpdatingBehavior("change") {
+            @Override
+            protected void onUpdate(AjaxRequestTarget target) {
+                updateTargetWorkspace(target);
+            }
+        });
+        workspaceChoice.setNullValid(true);
+        add(workspaceChoice);
+
+        WebMarkupContainer workspaceNameContainer = new WebMarkupContainer("workspaceNameContainer");
+        workspaceNameContainer.setOutputMarkupId(true);
+        add(workspaceNameContainer);
+
+        workspaceNameTextField = new TextField("workspaceName", new Model());
+        workspaceNameTextField.setOutputMarkupId(true);
+        boolean defaultWorkspace = catalog.getDefaultWorkspace() != null;
+        workspaceNameTextField.setVisible(!defaultWorkspace);
+        workspaceNameTextField.setRequired(!defaultWorkspace);
+        workspaceNameContainer.add(workspaceNameTextField);
         
         /**
          * Backup Panel
@@ -93,20 +138,35 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
     }
 
     /**
+     * @param target
+     */
+    protected void updateTargetWorkspace(AjaxRequestTarget target) {
+        WorkspaceInfo ws = (WorkspaceInfo) workspace.getObject();
+
+        //workspaceNameTextField.setVisible(ws == null);
+        //workspaceNameTextField.setRequired(ws == null);
+
+        /*if (target != null) {
+            target.add(workspaceNameTextField.getParent());
+        }*/
+    }
+
+    /**
      * 
      */
     private void resetResourcePanel() {
-        if (newBackupPanel.size() > 0) {
-            newBackupPanel.remove("backupResource");
+        if (newBackupRestorePanel.size() > 0) {
+            newBackupRestorePanel.remove("backupResource");
         }
 
         Panel p = new ResourceFilePanel("backupResource");
-        newBackupPanel.add(p);
+        newBackupRestorePanel.add(p);
     }
 
     /**
      * @param form
      */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void populateBackupForm(Form form) {
         form.add(new CheckBox("backupOptOverwirte", new Model<Boolean>(false)));
         form.add(new CheckBox("backupOptBestEffort", new Model<Boolean>(false)));
@@ -124,15 +184,20 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
             }
             
             protected void onSubmit(AjaxRequestTarget target, final Form<?> form) {
-                
+
                 //update status to indicate we are working
                 statusLabel.add(AttributeModifier.replace("class", "working-link"));
                 statusLabel.setDefaultModelObject("Working");
                 target.add(statusLabel);
                 
+                //enable cancel and disable this
+                Component cancel = form.get("cancel");
+                cancel.setEnabled(true);
+                target.add(cancel);
+
                 setEnabled(false);
                 target.add(this);
-                
+                                
                 final AjaxSubmitLink self = this;
 
                 final Long jobid;
@@ -149,6 +214,7 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                     target.add(feedbackPanel);
                 }
 
+                cancel.setDefaultModelObject(jobid);
                 this.add(new AbstractAjaxTimerBehavior(Duration.milliseconds(100)) {
                     @Override
                     protected void onTimer(AjaxRequestTarget target) {
@@ -207,7 +273,7 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
             }
 
             private Long launchBackupExecution(Form<?> form) throws Exception {
-                ResourceFilePanel panel = (ResourceFilePanel) newBackupPanel.get("backupResource");
+                ResourceFilePanel panel = (ResourceFilePanel) newBackupRestorePanel.get("backupResource");
                 Resource archiveFile = null;
                 try {
                     archiveFile = panel.getResource();
@@ -219,6 +285,12 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                         archiveFile.getType() == Type.DIRECTORY || 
                         FilenameUtils.getExtension(archiveFile.name()).isEmpty()) {
                     throw new Exception("Backup Archive File is Mandatory and should not be a Directory or URI.");
+                }
+                
+                Filter filter = null;
+                WorkspaceInfo ws = (WorkspaceInfo) workspace.getObject();
+                if (ws != null) {
+                    filter = ECQL.toFilter("name = '" + ws.getName() +"'");
                 }
 
                 Hints hints = new Hints(new HashMap(2));
@@ -232,9 +304,34 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                 
                 Backup backupFacade = BackupRestoreWebUtils.backupFacade();
                 
-                return backupFacade.runBackupAsync(archiveFile, backupOptOverwirte, hints).getId();
+                return backupFacade.runBackupAsync(archiveFile, backupOptOverwirte, filter, hints).getId();
             }
         });
+        
+        form.add(new AjaxLink<Long>("cancel", new Model<Long>()) {
+            protected void disableLink(ComponentTag tag) {
+                super.disableLink(tag);
+                tag.setName("a");
+                tag.addBehavior(AttributeModifier.replace("class", "disabled"));
+            };
+            @Override
+            public void onClick(AjaxRequestTarget target) {
+                Long jobid = getModelObject();
+
+                if (jobid != null) {
+                    try {
+                        BackupRestoreWebUtils.backupFacade().stopExecution(jobid);
+                        setResponsePage(BackupRestoreDataPage.class);
+                    } catch (NoSuchJobExecutionException | JobExecutionNotRunningException e) {
+                        LOGGER.log(Level.WARNING, "", e);
+                    }
+                }
+                
+                setEnabled(false);
+                
+                target.add(this);
+            }
+        }.setOutputMarkupId(true).setEnabled(false));
         
         backupRestoreExecutionsTable = new BackupRestoreExecutionsTable("backups", new BackupRestoreExecutionsProvider(true, BackupExecutionAdapter.class) {
             @Override
@@ -254,6 +351,7 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
     /**
      * @param form
      */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     private void populateRestoreForm(Form form) {
         form.add(new CheckBox("restoreOptDryRun", new Model<Boolean>(false)));
         form.add(new CheckBox("restoreOptBestEffort", new Model<Boolean>(false)));
@@ -277,6 +375,11 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                 statusLabel.setDefaultModelObject("Working");
                 target.add(statusLabel);
                 
+                //enable cancel and disable this
+                Component cancel = form.get("cancel");
+                cancel.setEnabled(true);
+                target.add(cancel);
+
                 setEnabled(false);
                 target.add(this);
                 
@@ -296,6 +399,7 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                     target.add(feedbackPanel);
                 }
 
+                cancel.setDefaultModelObject(jobid);
                 this.add(new AbstractAjaxTimerBehavior(Duration.milliseconds(100)) {
                     @Override
                     protected void onTimer(AjaxRequestTarget target) {
@@ -354,7 +458,7 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
             }
 
             private Long launchRestoreExecution(Form<?> form) throws Exception {
-                ResourceFilePanel panel = (ResourceFilePanel) newBackupPanel.get("backupResource");
+                ResourceFilePanel panel = (ResourceFilePanel) newBackupRestorePanel.get("backupResource");
                 Resource archiveFile = null;
                 try {
                     archiveFile = panel.getResource();
@@ -368,6 +472,12 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                     throw new Exception("Restore Archive File is Mandatory, must exists and should not be a Directory or URI.");
                 }
 
+                Filter filter = null;
+                WorkspaceInfo ws = (WorkspaceInfo) workspace.getObject();
+                if (ws != null) {
+                    filter = ECQL.toFilter("name = '" + ws.getName() +"'");
+                }
+                
                 Hints hints = new Hints(new HashMap(2));
                 
                 Boolean restoreOptDryRun = ((CheckBox) form.get("restoreOptDryRun")).getModelObject();
@@ -384,9 +494,34 @@ public class BackupRestoreDataPage extends GeoServerSecuredPage {
                 
                 Backup backupFacade = BackupRestoreWebUtils.backupFacade();
                 
-                return backupFacade.runRestoreAsync(archiveFile, hints).getId();
+                return backupFacade.runRestoreAsync(archiveFile, filter, hints).getId();
             }
         });
+        
+        form.add(new AjaxLink<Long>("cancel", new Model<Long>()) {
+            protected void disableLink(ComponentTag tag) {
+                super.disableLink(tag);
+                tag.setName("a");
+                tag.addBehavior(AttributeModifier.replace("class", "disabled"));
+            };
+            @Override
+            public void onClick(AjaxRequestTarget target) {
+                Long jobid = getModelObject();
+
+                if (jobid != null) {
+                    try {
+                        BackupRestoreWebUtils.backupFacade().stopExecution(jobid);
+                        setResponsePage(BackupRestoreDataPage.class);
+                    } catch (NoSuchJobExecutionException | JobExecutionNotRunningException e) {
+                        LOGGER.log(Level.WARNING, "", e);
+                    }
+                }
+                
+                setEnabled(false);
+                
+                target.add(this);
+            }
+        }.setOutputMarkupId(true).setEnabled(false));
         
         restoreExecutionsTable = new BackupRestoreExecutionsTable("restores", new BackupRestoreExecutionsProvider(true, RestoreExecutionAdapter.class) {
             @Override

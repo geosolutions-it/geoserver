@@ -26,18 +26,24 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Resource;
 import org.geotools.factory.Hints;
+import org.geotools.filter.text.ecql.ECQL;
 import org.geotools.util.logging.Logging;
+import org.opengis.filter.Filter;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.JobParametersInvalidException;
 import org.springframework.batch.core.job.AbstractJob;
+import org.springframework.batch.core.launch.JobExecutionNotRunningException;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.batch.core.launch.NoSuchJobException;
+import org.springframework.batch.core.launch.NoSuchJobExecutionException;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
@@ -96,6 +102,8 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     JobOperator jobOperator;
 
     JobLauncher jobLauncher;
+    
+    JobRepository jobRepository;
 
     Job backupJob;
 
@@ -179,6 +187,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
         if (event instanceof ContextLoadedEvent) {
             this.jobOperator = (JobOperator) context.getBean("jobOperator");
             this.jobLauncher = (JobLauncher) context.getBean("jobLauncherAsync");
+            this.jobRepository = (JobRepository) context.getBean("jobRepository");
 
             this.backupJob = (Job) context.getBean(BACKUP_JOB_NAME);
             this.restoreJob = (Job) context.getBean(RESTORE_JOB_NAME);
@@ -313,7 +322,7 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * 
      */
     public BackupExecutionAdapter runBackupAsync(final Resource archiveFile,
-            final boolean overwrite, final Hints params) throws IOException {
+            final boolean overwrite, final Filter filter, final Hints params) throws IOException {
         // Check if archiveFile exists
         if (archiveFile.file().exists()) {
             if (!overwrite && FileUtils.sizeOf(archiveFile.file()) > 0) {
@@ -344,6 +353,11 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
 
         // Fill Job Parameters
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
+
+        if (filter != null) {
+            paramsBuilder.addString("filter", ECQL.toCQL(filter));
+        }
+
         paramsBuilder
                 .addString(PARAM_OUTPUT_FILE_PATH,
                         BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
@@ -366,8 +380,11 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     JobExecution jobExecution = jobLauncher.run(backupJob, jobParameters);
                     backupExecution = new BackupExecutionAdapter(jobExecution,
                             totalNumberOfBackupSteps);
+                    backupExecutions.put(backupExecution.getId(), backupExecution);
+                    
                     backupExecution.setArchiveFile(archiveFile);
                     backupExecution.setOverwrite(overwrite);
+                    backupExecution.setFilter(filter);
 
                     backupExecution.getOptions().add("OVERWRITE=" + overwrite);
                     for (Entry jobParam : jobParameters.toProperties().entrySet()) {
@@ -378,8 +395,6 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                                     .add(jobParam.getKey() + "=" + jobParam.getValue());
                         }
                     }
-
-                    backupExecutions.put(backupExecution.getId(), backupExecution);
 
                     return backupExecution;
                 }
@@ -402,14 +417,19 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
      * @throws IOException
      * 
      */
-    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile, final Hints params)
-            throws IOException {
+    public RestoreExecutionAdapter runRestoreAsync(final Resource archiveFile, final Filter filter,
+            final Hints params) throws IOException {
         // Extract archive into a temporary folder
         Resource tmpDir = BackupUtils.tmpDir();
         BackupUtils.extractTo(archiveFile, tmpDir);
 
         // Fill Job Parameters
         JobParametersBuilder paramsBuilder = new JobParametersBuilder();
+
+        if (filter != null) {
+            paramsBuilder.addString("filter", ECQL.toCQL(filter));
+        }
+
         paramsBuilder
                 .addString(PARAM_INPUT_FILE_PATH,
                         BackupUtils.getArchiveURLProtocol(tmpDir) + tmpDir.path())
@@ -431,7 +451,9 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                     JobExecution jobExecution = jobLauncher.run(restoreJob, jobParameters);
                     restoreExecution = new RestoreExecutionAdapter(jobExecution,
                             totalNumberOfRestoreSteps);
+                    restoreExecutions.put(restoreExecution.getId(), restoreExecution);
                     restoreExecution.setArchiveFile(archiveFile);
+                    restoreExecution.setFilter(filter);
 
                     for (Entry jobParam : jobParameters.toProperties().entrySet()) {
                         if (!PARAM_OUTPUT_FILE_PATH.equals(jobParam.getKey())
@@ -441,8 +463,6 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
                                     .add(jobParam.getKey() + "=" + jobParam.getValue());
                         }
                     }
-
-                    restoreExecutions.put(restoreExecution.getId(), restoreExecution);
 
                     return restoreExecution;
                 }
@@ -460,19 +480,62 @@ public class Backup implements DisposableBean, ApplicationContextAware, Applicat
     }
 
     /**
+     * Stop a running Backup/Restore Execution
+     * 
+     * @param executionId
+     * @return 
+     * @throws NoSuchJobExecutionException
+     * @throws JobExecutionNotRunningException
+     */
+    public boolean stopExecution(Long executionId)
+            throws NoSuchJobExecutionException, JobExecutionNotRunningException {
+        LOGGER.info("Stopping execution id [" + executionId + "]");
+        return jobOperator.stop(executionId);
+    }
+
+    /**
+     * Restarts a running Backup/Restore Execution
+     * 
+     * @param executionId
+     * @return 
+     * @throws JobInstanceAlreadyCompleteException
+     * @throws NoSuchJobExecutionException
+     * @throws NoSuchJobException
+     * @throws JobRestartException
+     * @throws JobParametersInvalidException
+     */
+    public Long restartExecution(Long executionId)
+            throws JobInstanceAlreadyCompleteException, NoSuchJobExecutionException,
+            NoSuchJobException, JobRestartException, JobParametersInvalidException {
+        return jobOperator.restart(executionId);
+    }
+
+    /**
+     * Abort a running Backup/Restore Execution
+     * 
+     * @param executionId
+     * @throws NoSuchJobExecutionException
+     * @throws JobExecutionAlreadyRunningException
+     */
+    public void abandonExecution(Long executionId)
+            throws NoSuchJobExecutionException, JobExecutionAlreadyRunningException {
+        JobExecution jobExecution = jobOperator.abandon(executionId);
+        jobExecution.setStatus(BatchStatus.ABANDONED);
+        jobRepository.update(jobExecution);
+        
+        if (this.backupExecutions.get(executionId) != null) {
+            this.backupExecutions.get(executionId).setDelegate(jobExecution);
+        } else if (this.restoreExecutions.get(executionId) != null) {
+            this.restoreExecutions.get(executionId).setDelegate(jobExecution);
+        }
+    }
+
+    /**
      * @param params
      * @param paramsBuilder
      */
     private void parseParams(final Hints params, JobParametersBuilder paramsBuilder) {
         if (params != null) {
-            if (params.containsKey(new Hints.OptionKey(PARAM_DRY_RUN_MODE))) {
-                paramsBuilder.addString(PARAM_DRY_RUN_MODE, "true");
-            }
-
-            if (params.containsKey(new Hints.OptionKey(PARAM_BEST_EFFORT_MODE))) {
-                paramsBuilder.addString(PARAM_BEST_EFFORT_MODE, "true");
-            }
-
             for (Entry<Object, Object> param : params.entrySet()) {
                 if (param.getKey() instanceof Hints.OptionKey) {
                     final Set<String> key = ((Hints.OptionKey) param.getKey()).getOptions();

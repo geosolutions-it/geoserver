@@ -38,6 +38,11 @@
 			<constructor-arg ref="xstreamPersisterFactory" />
 		</bean>
 	
+	<bean id="chunkTimeoutPolicy" class="org.springframework.batch.repeat.policy.TimeoutTerminationPolicy">
+		<!-- milliseconds: 10 minutes timeout for each step -->
+		<constructor-arg value="600000"/>
+	</bean>
+	
 	<!-- ********************** -->
 	<!-- Main Backup BATCH Flow -->
 	<!-- ********************** -->
@@ -68,22 +73,17 @@
     		<batch:flow>
 		    	<batch:step id="backupGeoServerInfos">
 		    		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
-		    		
-		    		<!-- batch:fail on="FAILED"/>
-					<batch:next on="*" to="backupGeoServerSecurityManager"/ -->
 		    	</batch:step>
 		    </batch:flow>
 		    
 		    <batch:flow>
 		    	<batch:step id="backupGeoServerSecurityManager">
 		    		<batch:tasklet allow-start-if-complete="true" ref="catalogSecurityManagerTasklet"/>
-		    		
-		    		<!-- batch:fail on="FAILED"/>
-					<batch:next on="*" to="backupWorkspaceInfos"/ -->
 		    	</batch:step>
 		    </batch:flow>
 
     		<batch:fail on="FAILED"/>
+    		<batch:stop on="STOPPED" restart="backupWorkspaceInfos"/>
 			<batch:next on="*" to="backupWorkspaceInfos"/>
     	</batch:split>
     	
@@ -128,6 +128,7 @@
 			</batch:tasklet>
 			
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="backupNamespaceInfos"/>
 			<batch:next on="*" to="backupNamespaceInfos"/>
 		</batch:step>
 
@@ -172,6 +173,7 @@
 			</batch:tasklet>
 			
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="backupStoreInfos"/>
 			<batch:next on="*" to="backupStoreInfos"/>
 		</batch:step>
 		
@@ -216,6 +218,7 @@
 			</batch:tasklet>
 			
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="backupResourceInfos"/>
 			<batch:next on="*" to="backupResourceInfos"/>
 		</batch:step>
 		
@@ -260,6 +263,7 @@
 			</batch:tasklet>
 			
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="backupLayerInfos"/>
 			<batch:next on="*" to="backupLayerInfos"/>
 		</batch:step>
 
@@ -304,6 +308,7 @@
 			</batch:tasklet>
 			
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="backupLayerGroupInfos"/>
 			<batch:next on="*" to="backupLayerGroupInfos"/>
 		</batch:step>
 
@@ -348,6 +353,7 @@
 			</batch:tasklet>
 			
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="backupStyleInfos"/>
 			<batch:next on="*" to="backupStyleInfos"/>
 		</batch:step>
 
@@ -425,7 +431,7 @@
 		<!-- Restore NamespaceInfos -->
 		<batch:step id="restoreNamespaceInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.NamespaceInfo" />
@@ -463,6 +469,7 @@
 			</batch:tasklet>
         				
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreWorkspaceInfos"/>
 			<batch:next on="*" to="restoreWorkspaceInfos"/>
 
 			<batch:listeners>
@@ -474,7 +481,7 @@
 		<!-- Restore WorkspaceInfos -->
 		<batch:step id="restoreWorkspaceInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.WorkspaceInfo" />
@@ -512,6 +519,7 @@
 			</batch:tasklet>
         				
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreStoreInfos"/>
 			<batch:next on="*" to="restoreStoreInfos"/>
 
 			<batch:listeners>
@@ -523,7 +531,7 @@
 		<!-- Restore StoreInfos -->
 		<batch:step id="restoreStoreInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StoreInfo" />
@@ -566,6 +574,7 @@
 			</batch:tasklet>
         				
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreResourceInfos"/>
 			<batch:next on="*" to="restoreResourceInfos"/>
 
 			<batch:listeners>
@@ -577,7 +586,7 @@
 		<!-- Restore ResourceInfos -->
 		<batch:step id="restoreResourceInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.ResourceInfo" />
@@ -620,6 +629,7 @@
 			</batch:tasklet>
         				
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreStyleInfos"/>
 			<batch:next on="*" to="restoreStyleInfos"/>
 
 			<batch:listeners>
@@ -631,7 +641,7 @@
 		<!-- Restore StyleInfos -->
 		<batch:step id="restoreStyleInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.StyleInfo" />
@@ -669,6 +679,7 @@
 			</batch:tasklet>
         				
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreLayerInfos"/>
 			<batch:next on="*" to="restoreLayerInfos"/>
 
 			<batch:listeners>
@@ -680,7 +691,7 @@
 		<!-- Restore LayerInfos -->
 		<batch:step id="restoreLayerInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerInfo" />
@@ -718,6 +729,7 @@
 			</batch:tasklet>
         				
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreLayerGroupInfos"/>
 			<batch:next on="*" to="restoreLayerGroupInfos"/>
 
 			<batch:listeners>
@@ -729,7 +741,7 @@
 		<!-- Restore LayerGroupInfos -->
 		<batch:step id="restoreLayerGroupInfos">
 			<batch:tasklet allow-start-if-complete="true">
-				<batch:chunk commit-interval="1">
+				<batch:chunk chunk-completion-policy="chunkTimeoutPolicy">
 					<batch:reader>
 						<bean class="org.geoserver.backuprestore.reader.CatalogMultiResourceItemReader" scope="step">
 							<constructor-arg value="org.geoserver.catalog.LayerGroupInfo" />
@@ -767,6 +779,7 @@
 			</batch:tasklet>
 
 			<batch:fail on="FAILED"/>
+			<batch:stop on="STOPPED" restart="restoreGeoServerInfos"/>
 			<batch:next on="*" to="restoreGeoServerInfos"/>
 
 			<batch:listeners>
@@ -779,6 +792,7 @@
     		<batch:tasklet allow-start-if-complete="true" ref="catalogBackupTasklet"/>
     		
     		<batch:fail on="FAILED"/>
+    		<batch:stop on="STOPPED" restart="restoreGeoServerSecurityManager"/>
 			<batch:next on="*" to="restoreGeoServerSecurityManager"/>
 
 			<batch:listeners>

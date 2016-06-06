@@ -44,6 +44,10 @@ import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import com.thoughtworks.xstream.mapper.ClassAliasingMapper;
 import com.thoughtworks.xstream.mapper.Mapper;
 
+import org.geotools.filter.text.cql2.CQLException;
+import org.geotools.filter.text.ecql.ECQL;
+import org.opengis.filter.Filter;
+
 /**
  * Abstract Class representing a Backup REST Resource. 
  * 
@@ -179,6 +183,9 @@ public abstract class BaseResource extends AbstractResource {
         xStream.registerLocalConverter(AbstractExecutionAdapter.class, "delegate", 
                 new JobExecutionConverter(xStream.getMapper(), xStream.getReflectionProvider(), this.backupFacade));
         
+        xStream.registerLocalConverter(AbstractExecutionAdapter.class, "filter", 
+                new FilterConverter(xStream.getMapper(), xStream.getReflectionProvider()));
+        
         ClassAliasingMapper stepExecutionsMapper = new ClassAliasingMapper(xStream.getMapper());
         stepExecutionsMapper.addClassAlias("step", StepExecution.class);
         xStream.registerLocalConverter(JobExecution.class, "stepExecutions", new CollectionConverter(stepExecutionsMapper) {
@@ -291,6 +298,7 @@ public abstract class BaseResource extends AbstractResource {
      */
     static public class ArchiveFileResourceConverter extends AbstractSingleValueConverter {
         
+        @SuppressWarnings("rawtypes")
         @Override
         public boolean canConvert(Class type) {
             return Resource.class.isAssignableFrom(type);
@@ -348,11 +356,58 @@ public abstract class BaseResource extends AbstractResource {
             return super.unmarshal(reader,context);
         }
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("rawtypes")
         @Override
         public boolean canConvert(Class clazz) {
             return clazz.equals(JobExecution.class);
         }
         
+    }
+    
+    /**
+     * 
+     * @author Alessio Fabiani, GeoSolutions S.A.S.
+     *
+     */
+    static public class FilterConverter extends ReflectionConverter {
+
+        /**
+         * @param mapper
+         * @param reflectionProvider
+         */
+        public FilterConverter(Mapper mapper, ReflectionProvider reflectionProvider) {
+            super(mapper, reflectionProvider);
+        }
+        
+        @SuppressWarnings("rawtypes")
+        @Override
+        public boolean canConvert(Class clazz) {
+            return Filter.class.isAssignableFrom(clazz);
+        }
+        
+        @Override
+        public void marshal(Object obj, HierarchicalStreamWriter writer,
+                MarshallingContext context) {
+            Filter filter = (Filter) obj;
+            
+            writer.setValue(ECQL.toCQL(filter));
+        }
+        
+        @Override
+        public Object unmarshal(HierarchicalStreamReader reader,
+                UnmarshallingContext context) {
+            Filter filter = null;
+            
+            String nodeName = reader.getNodeName();
+            if ("filter".equals(nodeName)) {
+                try {
+                    filter = ECQL.toFilter(reader.getValue());
+                } catch (CQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            
+            return filter;
+        }
     }
 }

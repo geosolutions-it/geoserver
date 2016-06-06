@@ -19,6 +19,12 @@ import org.restlet.data.MediaType;
 import org.restlet.data.Request;
 import org.restlet.data.Response;
 import org.restlet.data.Status;
+import org.springframework.batch.core.JobParametersInvalidException;
+import org.springframework.batch.core.launch.NoSuchJobException;
+import org.springframework.batch.core.launch.NoSuchJobExecutionException;
+import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
+import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
+import org.springframework.batch.core.repository.JobRestartException;
 
 /**
  * REST resource for 
@@ -34,7 +40,6 @@ public class BackupResource  extends BaseResource {
         super(backupFacade);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     protected List<DataFormat> createSupportedFormats(Request request, Response response) {
         
@@ -64,6 +69,11 @@ public class BackupResource  extends BaseResource {
     }
     
     @Override
+    public boolean allowDelete() {
+        return true;
+    }
+    
+    @Override
     public void handleGet() {
         DataFormat formatGet = getFormatGet(false);
         
@@ -81,25 +91,52 @@ public class BackupResource  extends BaseResource {
         Object obj = lookupContext(true, true);
         BackupExecutionAdapter execution = null;
         if (obj instanceof BackupExecutionAdapter) {
-            // TODO: restart an existing execution
-            /*try {
-                restartBackup((BackupExecutionAdapter) obj);
-            } catch (Throwable t) {
-                if (t instanceof ValidationException) {
-                    throw new RestletException(t.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, t);
+            Long executionId = ((BackupExecutionAdapter) obj).getId();
+            try {
+                getBackupFacade().restartExecution(executionId);
+            } catch (JobInstanceAlreadyCompleteException | NoSuchJobExecutionException
+                    | NoSuchJobException | JobRestartException | JobParametersInvalidException e) {
+                if (e instanceof NoSuchJobExecutionException || 
+                        e instanceof JobInstanceAlreadyCompleteException) {
+                    throw new RestletException(e.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, e);
                 } else {
-                    throw new RestletException("Error occurred executing backup: ", Status.SERVER_ERROR_INTERNAL, t);
+                    throw new RestletException("Error occurred executing backup: ", Status.SERVER_ERROR_INTERNAL, e);
                 }
-            }*/
+            }
         }
         else {
             execution = runBackup();
         }
-        if (execution != null) {
-            // TODO 
+        if (execution == null) {
+            throw new RestletException("Error occurred executing backup.", Status.CLIENT_ERROR_BAD_REQUEST);
         }
     }
     
+    @Override
+    public void handleDelete() {
+        DataFormat formatGet = getFormatGet(false);
+        
+        Object lookupContext = lookupContext(true, false);
+        if (lookupContext == null) {
+            // this means a specific lookup failed
+            getResponse().setStatus(Status.CLIENT_ERROR_NOT_FOUND);
+        } else if (lookupContext instanceof BackupExecutionAdapter) {
+            Long executionId = ((BackupExecutionAdapter) lookupContext).getId();
+            try {
+                getBackupFacade().abandonExecution(executionId);
+            } catch (NoSuchJobExecutionException | JobExecutionAlreadyRunningException e) {
+                if (e instanceof NoSuchJobExecutionException) {
+                    throw new RestletException(e.getMessage(), Status.CLIENT_ERROR_BAD_REQUEST, e);
+                } else {
+                    throw new RestletException("Error occurred canceling backup: ", Status.SERVER_ERROR_INTERNAL, e);
+                }
+            }
+            getResponse().redirectSeeOther(getPageInfo().rootURI("/br/backup/"+executionId));
+            getResponse().setEntity(formatGet.toRepresentation(lookupContext));
+            getResponse().setStatus(Status.SUCCESS_ACCEPTED);
+        }
+    }
+
     /**
      * 
      * @return
@@ -116,7 +153,10 @@ public class BackupResource  extends BaseResource {
                 BackupExecutionAdapter newExecution = (BackupExecutionAdapter) getFormatPostOrPut().toObject(getRequest().getEntity());
     
                 execution = getBackupFacade().runBackupAsync(
-                        newExecution.getArchiveFile(), newExecution.isOverwrite(), asParams(newExecution.getOptions()));
+                        newExecution.getArchiveFile(), 
+                        newExecution.isOverwrite(),
+                        newExecution.getFilter(),
+                        asParams(newExecution.getOptions()));
                 
                 LOGGER.log(Level.INFO, "Backup file generated: " + newExecution.getArchiveFile());
     

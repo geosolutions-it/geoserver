@@ -79,30 +79,62 @@ public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements Ite
                     + getCurrentJobExecution().getProgress() + "]");
 
             if (resource instanceof WorkspaceInfo) {
+                WorkspaceInfo ws = ((WorkspaceInfo) resource);
+
+                if (filteredResource(resource, ws, true)) {
+                    return null;
+                }
+
                 if (!validateWorkspace((WorkspaceInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     logValidationExceptions(resource, null);
                     return null;
                 }
             } else if (resource instanceof DataStoreInfo) {
+                WorkspaceInfo ws = ((DataStoreInfo) resource).getWorkspace() != null ? getCatalog()
+                        .getWorkspaceByName(((DataStoreInfo) resource).getWorkspace().getName())
+                        : null;
+
+                if (filteredResource(resource, ws, true)) {
+                    return null;
+                }
+
                 if (!validateDataStore((DataStoreInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     logValidationExceptions(resource, null);
                     return null;
                 }
 
-                WorkspaceInfo ws = ((DataStoreInfo) resource).getWorkspace();
                 if (getCatalog().getDefaultDataStore(ws) == null) {
                     getCatalog().setDefaultDataStore(ws, (DataStoreInfo) resource);
                 }
 
             } else if (resource instanceof CoverageStoreInfo) {
+                WorkspaceInfo ws = ((CoverageStoreInfo) resource).getWorkspace() != null
+                        ? getCatalog().getWorkspaceByName(
+                                ((CoverageStoreInfo) resource).getWorkspace().getName())
+                        : null;
+
+                if (filteredResource(resource, ws, true)) {
+                    return null;
+                }
+
                 if (!validateCoverageStore((CoverageStoreInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     logValidationExceptions(resource, null);
                     return null;
                 }
             } else if (resource instanceof ResourceInfo) {
+                WorkspaceInfo ws = ((ResourceInfo) resource).getStore() != null
+                        && ((ResourceInfo) resource).getStore().getWorkspace() != null
+                                ? getCatalog().getWorkspaceByName(((ResourceInfo) resource)
+                                        .getStore().getWorkspace().getName())
+                                : null;
+
+                if (filteredResource(resource, ws, true)) {
+                    return null;
+                }
+
                 if (!validateResource((ResourceInfo) resource, isNew())) {
                     LOGGER.warning("Skipped invalid resource: " + resource);
                     logValidationExceptions(resource, null);
@@ -111,7 +143,20 @@ public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements Ite
             } else if (resource instanceof LayerInfo) {
                 ValidationResult result = null;
                 try {
-                    result = this.getCatalog().validate((LayerInfo) resource, isNew());
+                    WorkspaceInfo ws = ((LayerInfo) resource).getResource() != null
+                            && ((LayerInfo) resource).getResource().getStore() != null
+                            && ((LayerInfo) resource).getResource().getStore()
+                                    .getWorkspace() != null
+                                            ? getCatalog().getWorkspaceByName(
+                                                    ((LayerInfo) resource).getResource().getStore()
+                                                            .getWorkspace().getName())
+                                            : null;
+
+                    if (filteredResource(resource, ws, true)) {
+                        return null;
+                    }
+
+                    result = getCatalog().validate((LayerInfo) resource, isNew());
                     if (!result.isValid()) {
                         logValidationExceptions(resource, null);
                         return null;
@@ -125,6 +170,14 @@ public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements Ite
             } else if (resource instanceof StyleInfo) {
                 ValidationResult result = null;
                 try {
+                    WorkspaceInfo ws = ((StyleInfo) resource).getWorkspace() != null ? getCatalog()
+                            .getWorkspaceByName(((StyleInfo) resource).getWorkspace().getName())
+                            : null;
+
+                    if (filteredResource(resource, ws, false)) {
+                        return null;
+                    }
+
                     result = this.getCatalog().validate((StyleInfo) resource, isNew());
                     if (!result.isValid()) {
                         logValidationExceptions(resource, null);
@@ -137,6 +190,15 @@ public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements Ite
             } else if (resource instanceof LayerGroupInfo) {
                 ValidationResult result = null;
                 try {
+                    WorkspaceInfo ws = ((LayerGroupInfo) resource).getWorkspace() != null
+                            ? getCatalog().getWorkspaceByName(
+                                    ((LayerGroupInfo) resource).getWorkspace().getName())
+                            : null;
+
+                    if (filteredResource(resource, ws, false)) {
+                        return null;
+                    }
+
                     result = this.getCatalog().validate((LayerGroupInfo) resource, isNew());
                     if (!result.isValid()) {
                         logValidationExceptions(resource, null);
@@ -152,6 +214,23 @@ public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements Ite
         }
 
         return null;
+    }
+
+    /**
+     * @param resource
+     * @param ws
+     * @return
+     */
+    private boolean filteredResource(T resource, WorkspaceInfo ws, boolean strict) {
+        // Filtering Resources
+        if (getFilter() != null) {
+            if ((strict && ws == null) || (ws != null && !getFilter().evaluate(ws))) {
+                LOGGER.info("Skipped filtered resource: " + resource);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

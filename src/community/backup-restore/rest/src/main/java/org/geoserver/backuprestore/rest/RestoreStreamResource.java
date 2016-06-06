@@ -17,6 +17,8 @@ import org.geoserver.platform.resource.Resources;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.util.RESTUtils;
 import org.geotools.factory.Hints;
+import org.geotools.filter.text.ecql.ECQL;
+import org.opengis.filter.Filter;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
 import org.restlet.data.Status;
@@ -81,6 +83,16 @@ public class RestoreStreamResource  extends RestoreResource {
                 }
             }
             
+            final String filter = query.getValues("filter");
+            Filter wsFilter = null;
+            if (filter != null) {
+                try {
+                    wsFilter = ECQL.toFilter(filter);
+                } catch(Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            
             getResponse().setStatus(Status.SUCCESS_ACCEPTED);
             Resource directory = BackupUtils.tmpDir();
 
@@ -92,7 +104,7 @@ public class RestoreStreamResource  extends RestoreResource {
             Resource archiveFile = RESTUtils.handleBinUpload(getAttribute("restoreId") + ".zip", directory, false, getRequest());
             
             if (archiveFile != null && Resources.exists(archiveFile) && FileUtils.sizeOf(archiveFile.file())>0) {
-                RestoreExecutionAdapter execution = getBackupFacade().runRestoreAsync(archiveFile, hints);
+                RestoreExecutionAdapter execution = getBackupFacade().runRestoreAsync(archiveFile, wsFilter, hints);
                 
                 LOGGER.log(Level.INFO, "Restore file started: " + execution.getArchiveFile());
 

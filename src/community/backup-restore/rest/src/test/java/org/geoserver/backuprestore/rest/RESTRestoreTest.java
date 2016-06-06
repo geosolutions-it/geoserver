@@ -34,7 +34,7 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
             String json = 
                     "{\"restore\": {" + 
                     "   \"archiveFile\": \""+archiveFile.path()+"\", " +  
-                    "   \"options\": { \"option\": [\"BK_DRY_RUN\", \"BK_BEST_EFFORT\"] }" +
+                    "   \"options\": { \"option\": [\"BK_DRY_RUN=true\", \"BK_BEST_EFFORT=true\"] }" +
                     "  }" + 
                     "}";
             
@@ -44,9 +44,11 @@ public class RESTRestoreTest extends BackupRestoreTestSupport {
 
             JSONObject execution = readExecutionStatus(restore.getJSONObject("execution").getLong("id"));
 
-            assertTrue("STARTED".equals(execution.getString("status")));
+            assertTrue("STARTED".equals(execution.getString("status")) || 
+                    "STARTING".equals(execution.getString("status")));
 
-            while ("STARTED".equals(execution.getString("status"))) {
+            while ("STARTED".equals(execution.getString("status")) || 
+                    "STARTING".equals(execution.getString("status"))) {
                 execution = readExecutionStatus(execution.getLong("id"));
 
                 Thread.sleep(100);

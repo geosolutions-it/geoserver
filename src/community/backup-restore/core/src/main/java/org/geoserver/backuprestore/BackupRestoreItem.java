@@ -11,6 +11,9 @@ import org.geoserver.catalog.CatalogException;
 import org.geoserver.catalog.ValidationResult;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.geotools.filter.text.cql2.CQLException;
+import org.geotools.filter.text.ecql.ECQL;
+import org.opengis.filter.Filter;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepExecution;
@@ -42,6 +45,8 @@ public abstract class BackupRestoreItem<T> {
     private boolean bestEffort;
 
     private XStreamPersisterFactory xStreamPersisterFactory;
+
+    private Filter filter;
 
     public BackupRestoreItem(Backup backupFacade, XStreamPersisterFactory xStreamPersisterFactory) {
         this.backupFacade = backupFacade;
@@ -104,6 +109,20 @@ public abstract class BackupRestoreItem<T> {
         return bestEffort;
     }
 
+    /**
+     * @return the filter
+     */
+    public Filter getFilter() {
+        return filter;
+    }
+
+    /**
+     * @param filter the filter to set
+     */
+    public void setFilter(Filter filter) {
+        this.filter = filter;
+    }
+
     @BeforeStep
     public void retrieveInterstepData(StepExecution stepExecution) {
         // Accordingly to the running execution type (Backup or Restore) we
@@ -142,6 +161,17 @@ public abstract class BackupRestoreItem<T> {
         this.bestEffort = Boolean
                 .parseBoolean(jobParameters.getString(Backup.PARAM_BEST_EFFORT_MODE, "false"));
 
+        final String cql = jobParameters.getString("filter", null);
+        if (cql != null && cql.contains("name")) {
+            try {
+                this.filter = ECQL.toFilter(cql);
+            } catch (CQLException e) {
+                throw new IllegalArgumentException("Filter is not valid!", e);
+            }
+        } else {
+            this.filter = null;
+        }
+        
         initialize(stepExecution);
     }
 

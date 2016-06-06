@@ -34,7 +34,7 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
         
         if (GeoServerSecurityFilterChainProxy.isSecurityEnabledForCurrentRequest()==false)
             return; // nothing to do
-        
+
         Authentication auth = getSession().getAuthentication();
         if(auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             // emulate what spring security url control would do so that we get a proper redirect after login
@@ -52,6 +52,17 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
         }
         else if (!getPageAuthorizer().isAccessAllowed(this.getClass(), auth))
             setResponsePage(UnauthorizedPage.class);
+        
+        if (ConfigRequest.get() == null || 
+                !(((Class)ConfigRequest.get()).getPackage().getName().startsWith(this.getPageClass().getPackage().getName()))) {
+            if (ConfigRequest.get() != GeoServerHomePage.class) {
+                setResponsePage(ServerBusyPage.class);
+            }
+        } else if(((Class)ConfigRequest.get()).getPackage().getName().startsWith(
+                ((Class)ConfigRequest.current()).getPackage().getName())) {
+            ConfigRequest.finish();
+        }
+
     }
 
     /**

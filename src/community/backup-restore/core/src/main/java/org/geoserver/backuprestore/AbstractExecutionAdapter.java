@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.geoserver.platform.resource.Resource;
+import org.opengis.filter.Filter;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
@@ -31,14 +32,16 @@ public abstract class AbstractExecutionAdapter {
 
     private Integer totalNumberOfSteps;
 
-    protected JobExecution delegate;
+    private JobExecution delegate;
 
     private List<String> options = Collections.synchronizedList(new ArrayList<String>());
 
     private List<Throwable> warningsList = Collections.synchronizedList(new ArrayList<Throwable>());
 
     private Resource archiveFile;
-
+    
+    private Filter filter;
+    
     /**
      * Default Constructor
      * 
@@ -47,6 +50,20 @@ public abstract class AbstractExecutionAdapter {
     public AbstractExecutionAdapter(JobExecution jobExecution, Integer totalNumberOfSteps) {
         this.delegate = jobExecution;
         this.totalNumberOfSteps = totalNumberOfSteps;
+    }
+
+    /**
+     * @return the delegate
+     */
+    public JobExecution getDelegate() {
+        return delegate;
+    }
+
+    /**
+     * @param delegate the delegate to set
+     */
+    public void setDelegate(JobExecution delegate) {
+        this.delegate = delegate;
     }
 
     /**
@@ -222,5 +239,19 @@ public abstract class AbstractExecutionAdapter {
      */
     public void setArchiveFile(Resource archiveFile) {
         this.archiveFile = archiveFile;
+    }
+
+    /**
+     * @return the filter
+     */
+    public Filter getFilter() {
+        return filter;
+    }
+
+    /**
+     * @param filter the filter to set
+     */
+    public void setFilter(Filter filter) {
+        this.filter = filter;
     }
 }
