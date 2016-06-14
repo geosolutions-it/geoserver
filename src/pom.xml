@@ -1257,6 +1257,7 @@
      <include>**/*.tiff</include>
      <include>**/*.zip</include>
      <include>**/*.json</include>
+     <include>**/*.nc</include>
     </includes>
     <excludes>
      <exclude>**/doc-files/**</exclude>
@@ -1440,8 +1441,8 @@
      <execution>
       <id>attach-sources</id>
       <goals>
-       <goal>jar</goal>
-       <goal>test-jar</goal>
+       <goal>jar-no-fork</goal>
+       <goal>test-jar-no-fork</goal>
       </goals>
      </execution>
     </executions>
