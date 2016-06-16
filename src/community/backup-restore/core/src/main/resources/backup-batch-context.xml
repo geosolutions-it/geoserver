@@ -36,7 +36,9 @@
 		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
 		<property name="jobRepository" ref="jobRepository" />
 		<property name="taskExecutor">
-			<bean class="org.springframework.core.task.SimpleAsyncTaskExecutor" />
+			<bean class="org.springframework.core.task.SimpleAsyncTaskExecutor">
+				<property name="concurrencyLimit" value="10"/>
+			</bean>
 		</property>		
 	</bean>
 

@@ -9,6 +9,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.apache.wicket.request.http.WebRequest;
+import org.geoserver.GeoServerConfigurationLock;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.GeoServerSecurityFilterChainProxy;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -46,21 +48,16 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
             // TODO, Justin, WebAttributes.SAVED_REQUEST has disappeared in spring security framework
             session.setAttribute(SAVED_REQUEST, savedRequest);
             
-            
             // then redirect to the login page
             setResponsePage(GeoServerLoginPage.class);
         }
         else if (!getPageAuthorizer().isAccessAllowed(this.getClass(), auth))
             setResponsePage(UnauthorizedPage.class);
         
-        if (ConfigRequest.get() == null || 
-                !(((Class)ConfigRequest.get()).getPackage().getName().startsWith(this.getPageClass().getPackage().getName()))) {
-            if (ConfigRequest.get() != GeoServerHomePage.class) {
-                setResponsePage(ServerBusyPage.class);
-            }
-        } else if(((Class)ConfigRequest.get()).getPackage().getName().startsWith(
-                ((Class)ConfigRequest.current()).getPackage().getName())) {
-            ConfigRequest.finish();
+        GeoServerConfigurationLock locker = (GeoServerConfigurationLock) GeoServerExtensions.bean("configurationLock");
+        
+        if (locker != null && auth != null && locker.getAuth() != null && !locker.getAuth().getName().equals(auth.getName())) {
+            setResponsePage(ServerBusyPage.class);
         }
 
     }

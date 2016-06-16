@@ -4,7 +4,6 @@
  */
 package org.geoserver.backuprestore.tasklet;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,20 +14,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
-import org.apache.commons.io.FileUtils;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.BackupRestoreItem;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.config.util.XStreamServiceLoader;
-import org.geoserver.gwc.config.GWCConfig;
-import org.geoserver.gwc.config.GWCConfigPersister;
-import org.geoserver.gwc.config.GeoserverXMLResourceProvider;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.GeoServerResourceLoader;
-import org.geoserver.platform.resource.Files;
-import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.platform.resource.ResourceStore;
@@ -80,11 +72,18 @@ public abstract class AbstractCatalogBackupRestoreTasklet<T> extends BackupResto
         });
         resources.put("palettes", AnyFilter.INSTANCE);
         resources.put("plugIns", AnyFilter.INSTANCE);
+        
+        // NOTE: it would be better to use ad-hoc Visitors in order to scan the 
+        //       Style Resources and download only the ones needed.
+        //       This maybe an improvement for a future release/refactoring.
         resources.put("styles", new Filter<Resource>() {
 
             @Override
             public boolean accept(Resource res) {
-                if (res.name().endsWith(".sld") || res.name().endsWith(".xml")) {
+                if (res.name().toLowerCase().endsWith("sld") || // exclude everything ends with SLD ext (SLD, YSLD, ...)
+                    res.name().toLowerCase().endsWith(".xml") ||
+                    res.name().toLowerCase().endsWith(".css")) // exclude CSS also
+                {
                     return false;
                 }
                 return true;
@@ -121,83 +120,6 @@ public abstract class AbstractCatalogBackupRestoreTasklet<T> extends BackupResto
      */
     abstract RepeatStatus doExecute(StepContribution contribution, ChunkContext chunkContext,
             JobExecution jobExecution) throws Exception;
-
-    /**
-     * @param targetBackupFolder
-     * @throws Exception
-     */
-    public void backupGWCSettings(Resource targetBackupFolder) throws Exception {
-        GWCConfigPersister gwcGeoServerConfigPersister = (GWCConfigPersister) GeoServerExtensions
-                .bean("gwcGeoServervConfigPersister");
-
-        GWCConfigPersister testGWCCP = new GWCConfigPersister(getxStreamPersisterFactory(),
-                new GeoServerResourceLoader(targetBackupFolder.dir()));
-
-        // Test that everything went well
-        try {
-            testGWCCP.save(gwcGeoServerConfigPersister.getConfig());
-
-            GWCConfig gwcConfig = testGWCCP.getConfig();
-
-            Assert.notNull(gwcConfig);
-
-            // TODO: perform more tests and integrity checks on reloaded configuration
-
-            // Store GWC Providers Configurations
-            Resource targetGWCProviderBackupDir = BackupUtils.dir(targetBackupFolder,
-                    GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
-
-            for (GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions
-                    .extensions(GeoserverXMLResourceProvider.class)) {
-                Resource providerConfigFile = Resources.fromPath(gwcProvider.getLocation());
-                if (Resources.exists(providerConfigFile)
-                        && FileUtils.sizeOf(providerConfigFile.file()) > 0) {
-                    Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir,
-                            providerConfigFile.name());
-                }
-            }
-        } catch (Exception e) {
-            logValidationExceptions((T) null, e);
-        }
-    }
-
-    /**
-     * TODO: When Restoring
-     * 
-     * 1. the securityManager should issue the listeners 2. the GWCInitializer should be re-initialized
-     * 
-     * @param sourceRestoreFolder
-     * @param baseDir
-     * @throws Exception
-     * @throws IOException
-     */
-    public void restoreGWCSettings(Resource sourceRestoreFolder, Resource baseDir)
-            throws Exception {
-        // Restore configuration files form source and Test that everything went well
-        try {
-            // - Prepare folder
-            Files.delete(
-                    baseDir.get(GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME).dir());
-
-            // Store GWC Providers Configurations
-            Resource targetGWCProviderRestoreDir = BackupUtils.dir(baseDir,
-                    GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
-
-            for (GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions
-                    .extensions(GeoserverXMLResourceProvider.class)) {
-                final File gwcProviderConfigFile = new File(gwcProvider.getLocation());
-                Resource providerConfigFile = sourceRestoreFolder.get(Paths
-                        .path(gwcProviderConfigFile.getParent(), gwcProviderConfigFile.getName()));
-                if (Resources.exists(providerConfigFile)
-                        && FileUtils.sizeOf(providerConfigFile.file()) > 0) {
-                    Resources.copy(providerConfigFile.in(), targetGWCProviderRestoreDir,
-                            providerConfigFile.name());
-                }
-            }
-        } catch (Exception e) {
-            logValidationExceptions((T) null, e);
-        }
-    }
 
     /**
      * @param resourceStore

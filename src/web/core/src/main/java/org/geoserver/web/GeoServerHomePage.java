@@ -57,11 +57,10 @@ import com.google.common.base.Stopwatch;
  * @author Andrea Aime - TOPP
  * 
  */
-public class GeoServerHomePage extends GeoServerBasePage {
+public class GeoServerHomePage extends GeoServerBasePage implements GeoServerUnlockablePage {
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public GeoServerHomePage() {
-        ConfigRequest.start(this.getPageClass());
         GeoServer gs = getGeoServer();
         ContactInfo contact = gs.getGlobal().getSettings().getContact();
 

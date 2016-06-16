@@ -41,6 +41,7 @@ import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.GeoServerSecuredPage;
+import org.geoserver.web.GeoServerUnlockablePage;
 import org.geoserver.web.data.workspace.WorkspaceChoiceRenderer;
 import org.geoserver.web.data.workspace.WorkspaceDetachableModel;
 import org.geoserver.web.data.workspace.WorkspacesModel;
@@ -59,7 +60,7 @@ import org.springframework.batch.core.launch.NoSuchJobExecutionException;
  * @author Justin Deoliveira, OpenGeo
  */
 @SuppressWarnings("serial")
-public class BackupRestoreDataPage extends GeoServerSecuredPage {
+public class BackupRestoreDataPage extends GeoServerSecuredPage implements GeoServerUnlockablePage {
     
     static Logger LOGGER = Logging.getLogger(BackupRestoreDataPage.class);
 

@@ -5,14 +5,17 @@
 package org.geoserver.backuprestore;
 
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogException;
 import org.geoserver.catalog.ValidationResult;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.text.ecql.ECQL;
+import org.geotools.util.logging.Logging;
 import org.opengis.filter.Filter;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -28,6 +31,11 @@ import com.thoughtworks.xstream.XStream;
  */
 public abstract class BackupRestoreItem<T> {
 
+    /**
+     * logger
+     */
+    private static final Logger LOGGER = Logging.getLogger(BackupRestoreItem.class);
+    
     protected Backup backupFacade;
 
     private Catalog catalog;
@@ -214,6 +222,23 @@ public abstract class BackupRestoreItem<T> {
         } else {
             getCurrentJobExecution().addWarningExceptions(Arrays.asList(validationException));
         }
+        return false;
+    }
+    
+    /**
+     * @param resource
+     * @param ws
+     * @return
+     */
+    protected boolean filteredResource(T resource, WorkspaceInfo ws, boolean strict) {
+        // Filtering Resources
+        if (getFilter() != null) {
+            if ((strict && ws == null) || (ws != null && !getFilter().evaluate(ws))) {
+                LOGGER.info("Skipped filtered resource: " + resource);
+                return true;
+            }
+        }
+
         return false;
     }
 }

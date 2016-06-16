@@ -11,7 +11,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
-import org.geoserver.backuprestore.tasklet.CatalogBackupTasklet;
+import org.geoserver.backuprestore.tasklet.CatalogBackupRestoreTasklet;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.backuprestore.writer.ResourceInfoAdditionalResourceWriter;
 import org.geoserver.backuprestore.writer.StyleInfoAdditionalResourceWriter;
@@ -111,7 +111,7 @@ public class ResourceWriterTest extends BackupRestoreTestSupport {
     public void testSidecarFilesWriter() throws Exception {
         final XStreamPersisterFactory xStreamPersisterFactory = new XStreamPersisterFactory();
 
-        CatalogBackupTasklet catalogTsklet = new CatalogBackupTasklet(backupFacade,
+        CatalogBackupRestoreTasklet catalogTsklet = new CatalogBackupRestoreTasklet(backupFacade,
                 xStreamPersisterFactory);
 
         File tmpDd = File.createTempFile("template", "tmp", new File("target"));
@@ -154,7 +154,7 @@ public class ResourceWriterTest extends BackupRestoreTestSupport {
 
         final XStreamPersisterFactory xStreamPersisterFactory = new XStreamPersisterFactory();
 
-        CatalogBackupTasklet catalogTsklet = new CatalogBackupTasklet(backupFacade,
+        CatalogBackupRestoreTasklet catalogTsklet = new CatalogBackupRestoreTasklet(backupFacade,
                 xStreamPersisterFactory);
 
         GeoServerDataDirectory td = new GeoServerDataDirectory(root);

@@ -44,6 +44,7 @@ import org.geoserver.backuprestore.RestoreExecutionAdapter;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.resource.Paths;
 import org.geoserver.web.GeoServerSecuredPage;
+import org.geoserver.web.GeoServerUnlockablePage;
 import org.geoserver.web.wicket.GeoServerDialog;
 import org.geoserver.web.wicket.Icon;
 import org.springframework.batch.core.BatchStatus;
@@ -59,7 +60,7 @@ import org.springframework.batch.core.repository.JobRestartException;
  * @author Alessio Fabiani, GeoSolutions S.A.S.
  *
  */
-public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoServerSecuredPage {
+public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoServerSecuredPage implements GeoServerUnlockablePage {
 
     public static final PackageResourceReference COMPRESS_ICON = new PackageResourceReference(
             BackupRestorePage.class, "compress.png");

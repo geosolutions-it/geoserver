@@ -35,7 +35,7 @@ public class BackupTest extends BackupRestoreTestSupport {
     public void testRunSpringBatchBackupJob() throws Exception {
         Hints hints = new Hints(new HashMap(2));
         hints.add(new Hints(new Hints.OptionKey(Backup.PARAM_BEST_EFFORT_MODE), Backup.PARAM_BEST_EFFORT_MODE));
-        
+
         BackupExecutionAdapter backupExecution = backupFacade.runBackupAsync(
                 Files.asResource(File.createTempFile("testRunSpringBatchBackupJob", ".zip")), true, null, hints);
 
@@ -261,4 +261,5 @@ public class BackupTest extends BackupRestoreTestSupport {
             assertTrue(backupExecution.getStatus() == BatchStatus.STOPPED);
         }
     }
+
 }

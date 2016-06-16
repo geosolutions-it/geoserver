@@ -13,7 +13,8 @@ import org.geoserver.catalog.ValidationResult;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.resource.Files;
+import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.security.GeoServerSecurityManager;
@@ -34,7 +35,7 @@ import org.springframework.util.Assert;
  */
 public class CatalogSecurityManagerTasklet extends AbstractCatalogBackupRestoreTasklet {
 
-    public static final String SECURITY_FOLDER_NAME = "security";
+    public static final String SECURITY_RESOURCE_NAME = "security";
 
     public CatalogSecurityManagerTasklet(Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
@@ -52,16 +53,21 @@ public class CatalogSecurityManagerTasklet extends AbstractCatalogBackupRestoreT
         final GeoServerDataDirectory dd = backupFacade.getGeoServerDataDirectory();
 
         // GeoServer Security Folder
-        final Resource security = dd.getSecurity("/");
+        // dd.getResourceStore().get(SECURITY_RESOURCE_NAME);
+        final Resource security = dd.getSecurity(Paths.BASE);
 
         if (!isNew()) {
+            /*
+             * BACKUP Security Resources
+             */
             final String outputFolderURL = jobExecution.getJobParameters()
                     .getString(Backup.PARAM_OUTPUT_FILE_PATH);
-            Resource targetBackupFolder = Resources.fromURL(outputFolderURL);
+            final Resource targetBackupFolder = Resources.fromURL(outputFolderURL);
+            final Resource securityTargetResource = BackupUtils.dir(targetBackupFolder, SECURITY_RESOURCE_NAME);
 
-            // Copy the Security files into the destination folder
+            // Copy the Security files into the destination resource
             try {
-                Resources.copy(security, BackupUtils.dir(targetBackupFolder, SECURITY_FOLDER_NAME));
+                Resources.copy(security, securityTargetResource);
             } catch (IOException e) {
                 logValidationExceptions((ValidationResult) null,
                         new UnexpectedJobExecutionException(
@@ -95,6 +101,10 @@ public class CatalogSecurityManagerTasklet extends AbstractCatalogBackupRestoreT
                 }
             }
         } else {
+            /*
+             * RESTORE Security Resources
+             */
+            
             /**
              * Create a new GeoServerSecurityManager instance using the INPUT DATA DIR.
              * 
@@ -103,19 +113,21 @@ public class CatalogSecurityManagerTasklet extends AbstractCatalogBackupRestoreT
              */
             final String inputFolderURL = jobExecution.getJobParameters()
                     .getString(Backup.PARAM_INPUT_FILE_PATH);
-            Resource sourceRestoreFolder = Resources.fromURL(inputFolderURL);
+            final Resource sourceRestoreFolder = Resources.fromURL(inputFolderURL);
+            final Resource sourceSecurityResource = BackupUtils.dir(sourceRestoreFolder, SECURITY_RESOURCE_NAME);
 
             // Test that the security folder has been correctly saved
             GeoServerSecurityManager testGssm = null;
             try {
                 testGssm = new GeoServerSecurityManager(
-                        new GeoServerDataDirectory(sourceRestoreFolder.dir()));
+                        new GeoServerDataDirectory(
+                                new GeoServerResourceLoader(sourceRestoreFolder.dir())));
                 testGssm.setApplicationContext(Backup.getContext());
                 testGssm.reload();
 
-                // TODO: Perform validation tests here using "testGssm"
+                // TODO: Perform more validation tests here using "testGssm"
 
-                // TODO: Save warnings and validation issues on the JobContext
+                // TODO: Save detailed warnings and validation issues on the JobContext
             } catch (Exception e) {
                 logValidationExceptions((ValidationResult) null,
                         new UnexpectedJobExecutionException(
@@ -135,10 +147,9 @@ public class CatalogSecurityManagerTasklet extends AbstractCatalogBackupRestoreT
             if (!isDryRun()) {
                 // Copy the Security files into the destination folder
                 // TODO: Purge datadir option
-                Files.delete(security.dir());
+                security.delete();
                 try {
-                    Resources.copy(BackupUtils.dir(sourceRestoreFolder, SECURITY_FOLDER_NAME),
-                            security);
+                    Resources.copy(sourceSecurityResource, security);
                 } catch (IOException e) {
                     logValidationExceptions((ValidationResult) null,
                             new UnexpectedJobExecutionException(

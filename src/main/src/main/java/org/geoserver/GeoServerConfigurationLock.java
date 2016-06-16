@@ -5,12 +5,14 @@
  */
 package org.geoserver;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.geotools.util.logging.Logging;
+import org.springframework.security.core.Authentication;
 
 /**
  * The global configuration lock. At the moment it is called by coarse grained request level
@@ -25,6 +27,10 @@ import org.geotools.util.logging.Logging;
  * 
  */
 public class GeoServerConfigurationLock {
+    
+    /** DEFAULT_TRY_LOCK_TIMEOUT_MS */
+    private static final int DEFAULT_TRY_LOCK_TIMEOUT_MS = 3000;
+
     private static final Level LEVEL = Level.FINE;
 
     private static final Logger LOGGER = Logging.getLogger(GeoServerConfigurationLock.class);
@@ -36,6 +42,8 @@ public class GeoServerConfigurationLock {
     };
 
     private boolean enabled;
+
+    private Authentication auth;
 
     public GeoServerConfigurationLock() {
         String pvalue = System.getProperty("GeoServerConfigurationLock.enabled");
@@ -100,7 +108,13 @@ public class GeoServerConfigurationLock {
 
         Lock lock = getLock(type);
         
-        boolean res = lock.tryLock();
+        boolean res = false;
+        try {
+            res = lock.tryLock(DEFAULT_TRY_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Thread " + Thread.currentThread().getId() + " thrown an InterruptedException on GeoServerConfigurationLock TryLock.", e);
+            res = false;
+        }
         
         if (LOGGER.isLoggable(LEVEL)) {
             if (res) {
@@ -144,6 +158,20 @@ public class GeoServerConfigurationLock {
     }
 
     /**
+     * @return the auth
+     */
+    public Authentication getAuth() {
+        return auth;
+    }
+
+    /**
+     * @param auth the auth to set
+     */
+    public void setAuth(Authentication auth) {
+        this.auth = auth;
+    }
+
+    /**
      * @param type
      * @return
      */
@@ -160,4 +188,5 @@ public class GeoServerConfigurationLock {
         }
         return lock;
     }
+
 }

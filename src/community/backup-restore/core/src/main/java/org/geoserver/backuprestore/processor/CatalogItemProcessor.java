@@ -217,23 +217,6 @@ public class CatalogItemProcessor<T> extends BackupRestoreItem<T> implements Ite
     }
 
     /**
-     * @param resource
-     * @param ws
-     * @return
-     */
-    private boolean filteredResource(T resource, WorkspaceInfo ws, boolean strict) {
-        // Filtering Resources
-        if (getFilter() != null) {
-            if ((strict && ws == null) || (ws != null && !getFilter().evaluate(ws))) {
-                LOGGER.info("Skipped filtered resource: " + resource);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Being sure the associated {@link NamespaceInfo} exists and is available on the GeoServer Catalog.
      * 
      * @param isNew

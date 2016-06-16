@@ -43,7 +43,6 @@ import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.opengis.feature.simple.SimpleFeatureType;
 
 import com.vividsolutions.jts.io.WKTReader;
@@ -76,8 +75,10 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
     protected static Backup backupFacade;
 
     @Before
-    public void setupBackupField() {
+    public void setupBackupField() throws InterruptedException {
         backupFacade = (Backup) applicationContext.getBean("backupFacade");
+        
+        ensureCleanedQueues();
     }
 
     @Override
@@ -310,4 +311,14 @@ public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {
         } while(root.exists());
     }
     
+    /**
+     * @throws InterruptedException
+     */
+    protected void ensureCleanedQueues() throws InterruptedException {
+        while (!(backupFacade.getRestoreRunningExecutions().isEmpty() && 
+                backupFacade.getBackupRunningExecutions().isEmpty())) {
+            // Wait a bit
+            Thread.sleep(10);            
+        }
+    }
 }

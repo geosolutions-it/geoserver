@@ -28,7 +28,7 @@
 	</bean>
 
 	<!-- Definition of the Backup/Restore Tasklets: those are specific tasklets which can be invoked as additional steps of the main Job -->
-		<bean id="catalogBackupTasklet" class="org.geoserver.backuprestore.tasklet.CatalogBackupTasklet">
+		<bean id="catalogBackupTasklet" class="org.geoserver.backuprestore.tasklet.CatalogBackupRestoreTasklet">
 			<constructor-arg ref="backupFacade" />
 			<constructor-arg ref="xstreamPersisterFactory" />
 		</bean>

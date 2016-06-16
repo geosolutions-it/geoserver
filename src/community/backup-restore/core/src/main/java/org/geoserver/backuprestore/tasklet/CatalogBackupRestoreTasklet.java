@@ -4,9 +4,11 @@
  */
 package org.geoserver.backuprestore.tasklet;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.utils.BackupUtils;
 import org.geoserver.catalog.CoverageInfo;
@@ -28,7 +30,13 @@ import org.geoserver.config.LoggingInfo;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.config.SettingsInfo;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.geoserver.gwc.config.GWCConfig;
+import org.geoserver.gwc.config.GWCConfigPersister;
 import org.geoserver.gwc.config.GWCInitializer;
+import org.geoserver.gwc.config.GeoserverXMLResourceProvider;
+import org.geoserver.gwc.layer.DefaultTileLayerCatalog;
+import org.geoserver.gwc.layer.GeoServerTileLayerInfo;
+import org.geoserver.gwc.layer.TileLayerCatalog;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Files;
@@ -37,12 +45,18 @@ import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.ResourceStore;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.util.Filter;
+import org.geowebcache.config.XMLConfiguration;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.UnexpectedJobExecutionException;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.util.Assert;
+
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Maps;
 
 /**
  * TODO
@@ -50,9 +64,9 @@ import org.springframework.batch.repeat.RepeatStatus;
  * @author Alessio Fabiani, GeoSolutions
  *
  */
-public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
+public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTasklet {
 
-    public CatalogBackupTasklet(Backup backupFacade,
+    public CatalogBackupRestoreTasklet(Backup backupFacade,
             XStreamPersisterFactory xStreamPersisterFactory) {
         super(backupFacade, xStreamPersisterFactory);
     }
@@ -692,4 +706,227 @@ public class CatalogBackupTasklet extends AbstractCatalogBackupRestoreTasklet {
         }
     }
 
+    // ////////////////////////////////////////////////////////////////////////////////////// //
+    //
+    // GWC Stuff
+    // ////////////////////////////////////////////////////////////////////////////////////// //
+    /**
+     * @param targetBackupFolder
+     * @throws Exception
+     */
+    private void backupGWCSettings(Resource targetBackupFolder) throws Exception {
+        GWCConfigPersister gwcGeoServerConfigPersister = (GWCConfigPersister) GeoServerExtensions
+                .bean("gwcGeoServervConfigPersister");
+
+        GWCConfigPersister testGWCCP = new GWCConfigPersister(getxStreamPersisterFactory(),
+                new GeoServerResourceLoader(targetBackupFolder.dir()));
+
+        // Test that everything went well
+        try {
+            testGWCCP.save(gwcGeoServerConfigPersister.getConfig());
+
+            GWCConfig gwcConfig = testGWCCP.getConfig();
+
+            Assert.notNull(gwcConfig);
+
+            // TODO: perform more tests and integrity checks on reloaded configuration
+
+            // Store GWC Providers Configurations
+            Resource targetGWCProviderBackupDir = BackupUtils.dir(targetBackupFolder,
+                    GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
+
+            for (GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions
+                    .extensions(GeoserverXMLResourceProvider.class)) {
+                Resource providerConfigFile = Resources.fromPath(gwcProvider.getLocation());
+                if (Resources.exists(providerConfigFile)
+                        && FileUtils.sizeOf(providerConfigFile.file()) > 0) {
+                    Resources.copy(gwcProvider.in(), targetGWCProviderBackupDir,
+                            providerConfigFile.name());
+                }
+            }
+            
+            // Store GWC Layers Configurations
+            // TODO: This should be done using the spring-batch item reader/writer, since it is not safe to save tons of single XML files.
+            //       Nonetheless, given the default implementation of GWC Catalog does not have much sense to refactor this code now.
+            final TileLayerCatalog gwcCatalog = (TileLayerCatalog) GeoServerExtensions.bean("GeoSeverTileLayerCatalog");
+            
+            if (gwcCatalog != null) {
+                final XMLConfiguration gwcXmlPersisterFactory = (XMLConfiguration) GeoServerExtensions.bean("gwcXmlConfig");
+                final GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(targetBackupFolder.dir());
+                
+                final DefaultTileLayerCatalog gwcBackupCatalog = new DefaultTileLayerCatalog(resourceLoader, gwcXmlPersisterFactory);
+                
+                for (String layerName : gwcCatalog.getLayerNames()) {
+                    GeoServerTileLayerInfo gwcLayerInfo = gwcCatalog.getLayerByName(layerName);
+                    
+                    // Persist the GWC Layer Info into the backup folder
+                    boolean persistResource = false;
+                    
+                    LayerInfo layerInfo = getCatalog().getLayerByName(layerName);
+                    
+                    if (layerInfo != null) {
+                        
+                        WorkspaceInfo ws = layerInfo.getResource() != null
+                                && layerInfo.getResource().getStore() != null
+                                && layerInfo.getResource().getStore()
+                                        .getWorkspace() != null
+                                                ? getCatalog().getWorkspaceByName(
+                                                        layerInfo.getResource().getStore()
+                                                                .getWorkspace().getName())
+                                                : null;
+                                                        
+                        if (!filteredResource(layerInfo, ws, true)) {
+                            persistResource=true;
+                        }
+                    } else {
+                        LayerGroupInfo layerGroupInfo = getCatalog().getLayerGroupByName(layerName);
+                        
+                        if (layerGroupInfo != null) {
+                            
+                            WorkspaceInfo ws = layerGroupInfo.getWorkspace() != null
+                                    ? getCatalog().getWorkspaceByName(layerGroupInfo.getWorkspace().getName())
+                                    : null;
+
+                            if (!filteredResource(layerGroupInfo, ws, false)) {
+                                persistResource=true;
+                            }
+                        }
+                    }
+                    
+                    if(persistResource) {
+                        gwcBackupCatalog.save(gwcLayerInfo);
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            logValidationExceptions(null, e);
+        }
+    }
+    
+    /**
+     * TODO: When Restoring
+     * 
+     * 1. the securityManager should issue the listeners 2. the GWCInitializer should be re-initialized
+     * 
+     * @param sourceRestoreFolder
+     * @param baseDir
+     * @throws Exception
+     * @throws IOException
+     */
+    private void restoreGWCSettings(Resource sourceRestoreFolder, Resource baseDir)
+            throws Exception {
+        // Restore configuration files form source and Test that everything went well
+        try {
+            // - Prepare folder
+            Files.delete(
+                    baseDir.get(GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME).dir());
+
+            // Restore GWC Providers Configurations
+            Resource targetGWCProviderRestoreDir = BackupUtils.dir(baseDir,
+                    GeoserverXMLResourceProvider.DEFAULT_CONFIGURATION_DIR_NAME);
+
+            for (GeoserverXMLResourceProvider gwcProvider : GeoServerExtensions
+                    .extensions(GeoserverXMLResourceProvider.class)) {
+                final File gwcProviderConfigFile = new File(gwcProvider.getLocation());
+                Resource providerConfigFile = sourceRestoreFolder.get(Paths
+                        .path(gwcProviderConfigFile.getParent(), gwcProviderConfigFile.getName()));
+                if (Resources.exists(providerConfigFile)
+                        && FileUtils.sizeOf(providerConfigFile.file()) > 0) {
+                    Resources.copy(providerConfigFile.in(), targetGWCProviderRestoreDir,
+                            providerConfigFile.name());
+                }
+            }
+            
+            // Restore GWC Layers Configurations
+            // TODO: This should be done using the spring-batch item reader/writer, since it is not safe to save tons of single XML files.
+            //       Nonetheless, given the default implementation of GWC Catalog does not have much sense to refactor this code now.
+            final TileLayerCatalog gwcCatalog = (TileLayerCatalog) GeoServerExtensions.bean("GeoSeverTileLayerCatalog");
+            BiMap<String, String> layersByName = null;
+            
+            if (gwcCatalog != null) {
+                
+                if (isDryRun()) {
+                    BiMap<String, String> baseBiMap = HashBiMap.create();
+                    layersByName = Maps.synchronizedBiMap(baseBiMap);
+                }
+                
+                final XMLConfiguration gwcXmlPersisterFactory = (XMLConfiguration) GeoServerExtensions.bean("gwcXmlConfig");
+                final GeoServerResourceLoader resourceLoader = new GeoServerResourceLoader(sourceRestoreFolder.dir());
+                
+                final DefaultTileLayerCatalog gwcRestoreCatalog = new DefaultTileLayerCatalog(resourceLoader, gwcXmlPersisterFactory);
+                
+                for (String layerName : gwcRestoreCatalog.getLayerNames()) {
+                    GeoServerTileLayerInfo gwcLayerInfo = gwcRestoreCatalog.getLayerByName(layerName);
+                    
+                    LayerInfo layerInfo = getCatalog().getLayerByName(layerName);
+                    
+                    if (layerInfo != null) {
+                        
+                        WorkspaceInfo ws = layerInfo.getResource() != null
+                                && layerInfo.getResource().getStore() != null
+                                && layerInfo.getResource().getStore()
+                                        .getWorkspace() != null
+                                                ? getCatalog().getWorkspaceByName(
+                                                        layerInfo.getResource().getStore()
+                                                                .getWorkspace().getName())
+                                                : null;
+                                                        
+                        if (!filteredResource(layerInfo, ws, true)) {
+                            restoreGWCTileLayerInfo(gwcCatalog, layersByName, layerName, gwcLayerInfo,
+                                    layerInfo.getId());
+                        }
+                    } else {
+                        LayerGroupInfo layerGroupInfo = getCatalog().getLayerGroupByName(layerName);
+                        
+                        if (layerGroupInfo != null) {
+                            
+                            WorkspaceInfo ws = layerGroupInfo.getWorkspace() != null
+                                    ? getCatalog().getWorkspaceByName(layerGroupInfo.getWorkspace().getName())
+                                    : null;
+
+                            if (!filteredResource(layerGroupInfo, ws, false)) {
+                                restoreGWCTileLayerInfo(gwcCatalog, layersByName, layerName, gwcLayerInfo,
+                                        layerGroupInfo.getId());
+                            }
+                        }
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            logValidationExceptions(null, e);
+        }
+    }
+
+    /**
+     * @param gwcCatalog
+     * @param layersByName
+     * @param layerName
+     * @param gwcLayerInfo
+     * @param layerInfo
+     * @throws IllegalArgumentException
+     */
+    private void restoreGWCTileLayerInfo(final TileLayerCatalog gwcCatalog,
+            BiMap<String, String> layersByName, String layerName,
+            GeoServerTileLayerInfo gwcLayerInfo, String layerID)
+            throws IllegalArgumentException {
+        if (!isDryRun()) {
+            // - Depersist the GWC Layer Info into the restore folder
+            GeoServerTileLayerInfo oldValue = gwcCatalog.getLayerByName(layerName);
+            gwcCatalog.delete(oldValue.getId());
+
+            // - Update the ID
+            gwcLayerInfo.setId(layerID);
+            gwcCatalog.save(gwcLayerInfo);
+        } else {
+            if (layersByName.get(layerName) == null) {
+                layersByName.put(layerName, layerID);
+            } else {
+                // - Warning or Exception
+                throw new IllegalArgumentException("TileLayer with same name already exists: "
+                        + layerName + ": <" + layerID + ">");
+            }
+        }
+    }
 }
