@@ -426,16 +426,16 @@
       </modules>
     </profile>
     <profile>
-<<<<<<< HEAD
       <id>backup-restore</id>
       <modules>
         <module>backup-restore</module>
-=======
+      </modules>
+    </profile>
+    <profile>
       <id>ncwms</id>
       <modules>
         <module>colormap</module>
         <module>ncwms</module>
->>>>>>> da7cfc3de2390cb51f0fcdd8b6a59894b342c915
       </modules>
     </profile>
   </profiles>
