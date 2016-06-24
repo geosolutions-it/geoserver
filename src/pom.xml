@@ -726,7 +726,7 @@
    <dependency>
     <groupId>commons-pool</groupId>
     <artifactId>commons-pool</artifactId>
-    <version>1.5.3</version>
+    <version>1.5.4</version>
    </dependency>
    <dependency>
     <groupId>commons-collections</groupId>
@@ -1733,7 +1733,7 @@
   <wicket.version>7.1.0</wicket.version>
   <ant.version>1.8.4</ant.version>
   <imageio-ext.version>1.1.13</imageio-ext.version>
-  <jaiext.version>1.0.9</jaiext.version>
+  <jaiext.version>1.0.10</jaiext.version>
   <java.awt.headless>true</java.awt.headless>
   <jvm.opts></jvm.opts>
   <jalopy.phase>disabled</jalopy.phase>
