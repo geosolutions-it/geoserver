@@ -72,8 +72,7 @@ public class NewLayerPageProvider extends GeoServerDataProvider<Resource> {
             Map<String, Resource> resources = new HashMap<String, Resource>();
             if(store instanceof DataStoreInfo) {
                 DataStoreInfo dstore = (DataStoreInfo) store;
-                DataStoreInfo expandedStore = getCatalog().getFactory().createDataStore();
-                getCatalog().clone(dstore, expandedStore, true);
+                DataStoreInfo expandedStore = getCatalog().getResourcePool().clone(dstore, true);
                 
                 // collect all the type names and turn them into resources
                 // for the moment we use local names as datastores are not returning
@@ -90,8 +89,7 @@ public class NewLayerPageProvider extends GeoServerDataProvider<Resource> {
                 
             } else if(store instanceof CoverageStoreInfo) {
                 CoverageStoreInfo cstore = (CoverageStoreInfo) store;
-                CoverageStoreInfo expandedStore = getCatalog().getFactory().createCoverageStore();
-                getCatalog().clone(cstore, expandedStore, true);
+                CoverageStoreInfo expandedStore = getCatalog().getResourcePool().clone(cstore, true);
                 
                 NamespaceInfo ns = getCatalog().getNamespaceByPrefix(expandedStore.getWorkspace().getName());
                 GridCoverageReader reader = expandedStore.getGridCoverageReader(null, null);
@@ -116,8 +114,7 @@ public class NewLayerPageProvider extends GeoServerDataProvider<Resource> {
                     
             } else if(store instanceof WMSStoreInfo) {
                 WMSStoreInfo wmsInfo = (WMSStoreInfo) store;
-                WMSStoreInfo expandedStore = getCatalog().getFactory().createWebMapServer();
-                getCatalog().clone(wmsInfo, expandedStore, true);
+                WMSStoreInfo expandedStore = getCatalog().getResourcePool().clone(wmsInfo, true);
                 
                 CatalogBuilder builder = new CatalogBuilder(getCatalog());
                 builder.setStore(store);

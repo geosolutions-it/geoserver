@@ -278,20 +278,4 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
     protected <T extends WorkspaceInfo> List<T> filterWorkspaces(List<T> workspaces) {
         return workspaces;
     }
-
-    @Override
-    public void clone(DataStoreInfo source, DataStoreInfo target, boolean allowEnvParametrization) {
-        delegate.clone(source, target, allowEnvParametrization);
-    }
-
-    @Override
-    public void clone(CoverageStoreInfo source, CoverageStoreInfo target,
-            boolean allowEnvParametrization) {
-        delegate.clone(source, target, allowEnvParametrization);
-    }
-
-    @Override
-    public void clone(WMSStoreInfo source, WMSStoreInfo target, boolean allowEnvParametrization) {
-        delegate.clone(source, target, allowEnvParametrization);
-    }
 }

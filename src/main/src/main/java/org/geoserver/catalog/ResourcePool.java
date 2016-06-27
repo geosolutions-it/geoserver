@@ -497,20 +497,15 @@ public class ResourcePool {
     public DataAccessFactory getDataStoreFactory( DataStoreInfo info ) throws IOException {
         DataAccessFactory factory = null;
         
-        DataStoreInfo expandedStore = getCatalog().getFactory().createDataStore();
-        getCatalog().clone(info, expandedStore, true);
+        DataStoreInfo expandedStore = clone(info, true);
         
-        try {
-            if ( info.getType() != null ) {
-                factory = DataStoreUtils.aquireFactory( info.getType() );    
-            }
-        
-            if ( factory == null && expandedStore.getConnectionParameters() != null ) {
-                Map<String, Serializable> params = getParams( expandedStore.getConnectionParameters(), catalog.getResourceLoader() );
-                factory = DataStoreUtils.aquireFactory( params);    
-            }
-        } finally {
-            catalog.remove(expandedStore);
+        if ( info.getType() != null ) {
+            factory = DataStoreUtils.aquireFactory( expandedStore.getType() );    
+        }
+
+        if ( factory == null && expandedStore.getConnectionParameters() != null ) {
+            Map<String, Serializable> params = getParams( expandedStore.getConnectionParameters(), catalog.getResourceLoader() );
+            factory = DataStoreUtils.aquireFactory( params);    
         }
         
         return factory;
@@ -528,8 +523,7 @@ public class ResourcePool {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public DataAccess<? extends FeatureType, ? extends Feature> getDataStore( DataStoreInfo info ) throws IOException {
         
-        DataStoreInfo expandedStore = getCatalog().getFactory().createDataStore();
-        getCatalog().clone(info, expandedStore, true);
+        DataStoreInfo expandedStore = clone(info, true);
         
         DataAccess<? extends FeatureType, ? extends Feature> dataStore = null;
         try {
@@ -641,8 +635,6 @@ public class ResourcePool {
             } else {
                 throw (IOException) new IOException().initCause(e);
             }
-        } finally {
-            catalog.remove(expandedStore);
         }
     }
         
@@ -1402,113 +1394,108 @@ public class ResourcePool {
     private GridCoverageReader getGridCoverageReader(CoverageStoreInfo info, CoverageInfo coverageInfo, String coverageName, Hints hints) 
         throws IOException {
         
-        CoverageStoreInfo expandedStore = getCatalog().getFactory().createCoverageStore();
-        getCatalog().clone(info, expandedStore, true);
+        CoverageStoreInfo expandedStore = clone(info, true);
         
-        try {
-            final AbstractGridFormat gridFormat = info.getFormat();
-            if(gridFormat == null) {
-                throw new IOException("Could not find the raster plugin for format " + info.getType());
-            }
-            
-            // look into the cache
-            GridCoverageReader reader = null;
-            Object key;
-            if ( hints != null && info.getId() != null) {
-                // expand the hints if necessary
-                final String formatName = gridFormat.getName();
-                if (formatName.equalsIgnoreCase(IMAGE_MOSAIC) || formatName.equalsIgnoreCase(IMAGE_PYRAMID)){
-                    if (coverageExecutor != null){
-                        if (hints != null) {
-                            // do not modify the caller hints
-                            hints = new Hints(hints);
-                            hints.add(new RenderingHints(Hints.EXECUTOR_SERVICE, coverageExecutor));
-                        } else {
-                            hints = new Hints(new RenderingHints(Hints.EXECUTOR_SERVICE, coverageExecutor));
-                        }
+        final AbstractGridFormat gridFormat = info.getFormat();
+        if(gridFormat == null) {
+            throw new IOException("Could not find the raster plugin for format " + info.getType());
+        }
+        
+        // look into the cache
+        GridCoverageReader reader = null;
+        Object key;
+        if ( hints != null && info.getId() != null) {
+            // expand the hints if necessary
+            final String formatName = gridFormat.getName();
+            if (formatName.equalsIgnoreCase(IMAGE_MOSAIC) || formatName.equalsIgnoreCase(IMAGE_PYRAMID)){
+                if (coverageExecutor != null){
+                    if (hints != null) {
+                        // do not modify the caller hints
+                        hints = new Hints(hints);
+                        hints.add(new RenderingHints(Hints.EXECUTOR_SERVICE, coverageExecutor));
+                    } else {
+                        hints = new Hints(new RenderingHints(Hints.EXECUTOR_SERVICE, coverageExecutor));
                     }
-                }
-                
-                key = new CoverageHintReaderKey(info.getId(), hints);
-                reader = hintCoverageReaderCache.get( key );
-            } else {
-                key = info.getId();
-                if(key != null) {
-                    reader = coverageReaderCache.get( key );
                 }
             }
             
-            // if not found in cache, create it
-            if(reader == null) {
-                synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
-                    if (key != null) {
-                        if (hints != null) {
-                            reader = hintCoverageReaderCache.get(key);
+            key = new CoverageHintReaderKey(info.getId(), hints);
+            reader = hintCoverageReaderCache.get( key );
+        } else {
+            key = info.getId();
+            if(key != null) {
+                reader = coverageReaderCache.get( key );
+            }
+        }
+        
+        // if not found in cache, create it
+        if(reader == null) {
+            synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
+                if (key != null) {
+                    if (hints != null) {
+                        reader = hintCoverageReaderCache.get(key);
+                    } else {
+                        reader = coverageReaderCache.get(key);
+                    }
+                }
+                if (reader == null) {
+                    /////////////////////////////////////////////////////////
+                    //
+                    // Getting coverage reader using the format and the real path.
+                    //
+                    // /////////////////////////////////////////////////////////
+                    final String url = expandedStore.getURL();
+                    GeoServerResourceLoader loader = catalog.getResourceLoader();
+                    final File obj = loader.url(url);
+
+                    // In case no File is returned, provide the original String url
+                    final Object input = obj != null ? obj : url;  
+
+                    // readers might change the provided hints, pass down a defensive copy
+                    reader = gridFormat.getReader(input, new Hints(hints));
+                    if(reader == null) {
+                        throw new IOException("Failed to create reader from " + url + " and hints " + hints);
+                    }
+                    if(key != null) {
+                        if(hints != null) {
+                            hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
                         } else {
-                            reader = coverageReaderCache.get(key);
-                        }
-                    }
-                    if (reader == null) {
-                        /////////////////////////////////////////////////////////
-                        //
-                        // Getting coverage reader using the format and the real path.
-                        //
-                        // /////////////////////////////////////////////////////////
-                        final String url = expandedStore.getURL();
-                        GeoServerResourceLoader loader = catalog.getResourceLoader();
-                        final File obj = loader.url(url);
-    
-                        // In case no File is returned, provide the original String url
-                        final Object input = obj != null ? obj : url;  
-    
-                        // readers might change the provided hints, pass down a defensive copy
-                        reader = gridFormat.getReader(input, new Hints(hints));
-                        if(reader == null) {
-                            throw new IOException("Failed to create reader from " + url + " and hints " + hints);
-                        }
-                        if(key != null) {
-                            if(hints != null) {
-                                hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
-                            } else {
-                                coverageReaderCache.put((String) key, reader);
-                            }
+                            coverageReaderCache.put((String) key, reader);
                         }
                     }
                 }
             }
-    
-            if (coverageInfo != null) {
-                MetadataMap metadata = coverageInfo.getMetadata();
-                if (metadata != null && metadata.containsKey(CoverageView.COVERAGE_VIEW)) {
-                    CoverageView coverageView = (CoverageView) metadata.get(CoverageView.COVERAGE_VIEW);
-                    return CoverageViewReader.wrap((GridCoverage2DReader) reader, coverageView, coverageInfo, hints);
-                }
+        }
+
+        if (coverageInfo != null) {
+            MetadataMap metadata = coverageInfo.getMetadata();
+            if (metadata != null && metadata.containsKey(CoverageView.COVERAGE_VIEW)) {
+                CoverageView coverageView = (CoverageView) metadata.get(CoverageView.COVERAGE_VIEW);
+                return CoverageViewReader.wrap((GridCoverage2DReader) reader, coverageView, coverageInfo, hints);
             }
-    
-            // wrap it if we are dealing with a multi-coverage reader
-            if (coverageName != null) {
-                // force the result to work against a single coverage, so that the OGC service portion of
-                // GeoServer does not need to be updated to the multicoverage stuff
-                // (we might want to introduce a hint later for code that really wants to get the
-                // multi-coverage reader)
-                return CoverageDimensionCustomizerReader.wrap((GridCoverage2DReader) reader, coverageName, info);
-            } else {
-                // In order to deal with Bands customization, we need to get a CoverageInfo.
-                // Therefore we won't wrap the reader into a CoverageDimensionCustomizerReader in case 
-                // we don't have the coverageName and the underlying reader has more than 1 coverage.
-                // Indeed, there are cases (as during first initialization) where a multi-coverage reader is requested
-                // to the resourcePool without specifying the coverageName: No way to get the proper coverageInfo in
-                // that case so returning the simple reader.
-                final int numCoverages = ((GridCoverage2DReader) reader).getGridCoverageCount();
-                if (numCoverages == 1) {
-                    return CoverageDimensionCustomizerReader.wrap((GridCoverage2DReader) reader, null, info);
-                }
-                // Avoid dimensions wrapping since we have a multi-coverage reader 
-                // but no coveragename have been specified
-                return reader;
+        }
+
+        // wrap it if we are dealing with a multi-coverage reader
+        if (coverageName != null) {
+            // force the result to work against a single coverage, so that the OGC service portion of
+            // GeoServer does not need to be updated to the multicoverage stuff
+            // (we might want to introduce a hint later for code that really wants to get the
+            // multi-coverage reader)
+            return CoverageDimensionCustomizerReader.wrap((GridCoverage2DReader) reader, coverageName, info);
+        } else {
+            // In order to deal with Bands customization, we need to get a CoverageInfo.
+            // Therefore we won't wrap the reader into a CoverageDimensionCustomizerReader in case 
+            // we don't have the coverageName and the underlying reader has more than 1 coverage.
+            // Indeed, there are cases (as during first initialization) where a multi-coverage reader is requested
+            // to the resourcePool without specifying the coverageName: No way to get the proper coverageInfo in
+            // that case so returning the simple reader.
+            final int numCoverages = ((GridCoverage2DReader) reader).getGridCoverageCount();
+            if (numCoverages == 1) {
+                return CoverageDimensionCustomizerReader.wrap((GridCoverage2DReader) reader, null, info);
             }
-        } finally {
-            catalog.remove(expandedStore);
+            // Avoid dimensions wrapping since we have a multi-coverage reader 
+            // but no coveragename have been specified
+            return reader;
         }
     }
     
@@ -1667,8 +1654,7 @@ public class ResourcePool {
      */
     public WebMapServer getWebMapServer(WMSStoreInfo info) throws IOException {
         
-        WMSStoreInfo expandedStore = getCatalog().getFactory().createWebMapServer();
-        getCatalog().clone(info, expandedStore, true);
+        WMSStoreInfo expandedStore = clone(info, true);
         
         try {
             String id = info.getId();
@@ -1692,8 +1678,6 @@ public class ResourcePool {
             throw ioe;
         } catch (Exception e) {
             throw (IOException) new IOException().initCause(e);
-        } finally {
-            catalog.remove(expandedStore);
         }
     }
     
@@ -2355,5 +2339,112 @@ public class ResourcePool {
         ContentFeatureSource featureSource;
         featureSource = contentDataStore.getFeatureSource(nativeName);
         featureSource.getState().flush();
+    }
+    
+    public DataStoreInfo clone(final DataStoreInfo source, boolean allowEnvParametrization) {
+        DataStoreInfo target = catalog.getFactory().createDataStore();
+        target.setDescription(source.getDescription());
+        target.setEnabled(source.isEnabled());
+        target.setName(source.getName());
+        target.setWorkspace(source.getWorkspace());
+        target.setType(source.getType());
+
+        target.getConnectionParameters().clear();
+        
+        if (!allowEnvParametrization) {
+            target.getConnectionParameters().putAll(source.getConnectionParameters());
+        } else {
+            // Resolve GeoServer Environment placeholders
+            final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
+            
+            for (Entry<String, Serializable> param : source.getConnectionParameters().entrySet()) {
+                String key = param.getKey();
+                Object value = param.getValue();
+                
+                if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                    value = gsEnvironment.resolveValue(value);
+                }
+                
+                target.getConnectionParameters().put(key, (Serializable) value);
+            }
+        }
+        
+        return target;
+    }
+
+    public CoverageStoreInfo clone(final CoverageStoreInfo source, boolean allowEnvParametrization) {
+        CoverageStoreInfo target = catalog.getFactory().createCoverageStore();
+        target.setDescription(source.getDescription());
+        target.setEnabled(source.isEnabled());
+        target.setName(source.getName());
+        target.setType(source.getType());
+        target.setWorkspace(source.getWorkspace());
+        
+        target.getConnectionParameters().clear();
+        
+        if (!allowEnvParametrization) {
+            target.setURL(source.getURL());
+            target.getConnectionParameters().putAll(source.getConnectionParameters());
+        } else {
+            // Resolve GeoServer Environment placeholders
+            final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
+
+            if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                target.setURL((String) gsEnvironment.resolveValue(source.getURL()));
+            } else {
+                target.setURL(source.getURL());
+            }
+
+            for (Entry<String, Serializable> param : source.getConnectionParameters().entrySet()) {
+                String key = param.getKey();
+                Object value = param.getValue();
+                
+                if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                    value = gsEnvironment.resolveValue(value);
+                }
+                
+                target.getConnectionParameters().put(key, (Serializable) value);
+            }
+        }
+        
+        return target;
+    }
+    
+    public WMSStoreInfo clone(final WMSStoreInfo source, boolean allowEnvParametrization) {
+        WMSStoreInfo target = catalog.getFactory().createWebMapServer();
+        target.setDescription(source.getDescription());
+        target.setEnabled(source.isEnabled());
+        target.setName(source.getName());
+        target.setType(source.getType());
+        target.setWorkspace(source.getWorkspace());
+
+        setConnectionParameters(source, target);            
+
+        if (allowEnvParametrization) {
+            // Resolve GeoServer Environment placeholders
+            final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
+            
+            if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                target.setCapabilitiesURL((String) gsEnvironment.resolveValue(source.getCapabilitiesURL()));
+                target.setUsername((String) gsEnvironment.resolveValue(source.getUsername()));
+                target.setPassword((String) gsEnvironment.resolveValue(source.getPassword()));
+            }
+        }
+        
+        return target;
+    }
+    
+    /**
+     * @param source
+     * @param target
+     */
+    private void setConnectionParameters(final WMSStoreInfo source, WMSStoreInfo target) {
+        target.setCapabilitiesURL(source.getCapabilitiesURL());
+        target.setUsername(source.getUsername());
+        target.setPassword(source.getPassword());
+        target.setUseConnectionPooling(source.isUseConnectionPooling());
+        target.setMaxConnections(source.getMaxConnections());
+        target.setConnectTimeout(source.getConnectTimeout());
+        target.setReadTimeout(source.getReadTimeout());
     }
 }

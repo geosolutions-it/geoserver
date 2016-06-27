@@ -339,16 +339,13 @@ public class NewLayerPage extends GeoServerSecuredPage {
         
         if(store instanceof DataStoreInfo) {
             DataStoreInfo dstore = (DataStoreInfo) store;
-            expandedStore = getCatalog().getFactory().createDataStore();
-            getCatalog().clone(dstore, (DataStoreInfo) expandedStore, true);
+            expandedStore = getCatalog().getResourcePool().clone(dstore, true);
         } else if(store instanceof CoverageStoreInfo) {
             CoverageStoreInfo cstore = (CoverageStoreInfo) store;
-            expandedStore = getCatalog().getFactory().createCoverageStore();
-            getCatalog().clone(cstore, (CoverageStoreInfo) expandedStore, true);
+            expandedStore = getCatalog().getResourcePool().clone(cstore, true);
         } else if(store instanceof WMSStoreInfo) {
             WMSStoreInfo wmsInfo = (WMSStoreInfo) store;
-            expandedStore = getCatalog().getFactory().createWebMapServer();
-            getCatalog().clone(wmsInfo, (WMSStoreInfo) expandedStore, true);
+            expandedStore = getCatalog().getResourcePool().clone(wmsInfo, true);
         }
         
         // try to build from coverage store or data store
