@@ -1768,4 +1768,27 @@ public interface Catalog extends CatalogInfo {
      */
     public void removeListeners(Class listenerClass);
 
+    /**
+     * 
+     * @param source
+     * @param target
+     * @param allowEnvParametrization
+     */
+    public void clone(final DataStoreInfo source, DataStoreInfo target, boolean allowEnvParametrization);
+    
+    /**
+     * 
+     * @param source
+     * @param target
+     * @param allowEnvParametrization
+     */
+    public void clone(final CoverageStoreInfo source, CoverageStoreInfo target, boolean allowEnvParametrization);
+    
+    /**
+     * 
+     * @param source
+     * @param target
+     * @param allowEnvParametrization
+     */
+    public void clone(final WMSStoreInfo source, WMSStoreInfo target, boolean allowEnvParametrization);
 }

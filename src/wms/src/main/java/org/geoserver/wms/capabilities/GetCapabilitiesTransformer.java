@@ -308,6 +308,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
          * Encodes the service metadata section of a WMS capabilities document.
          */
         private void handleService() {
+            WMSInfo serviceInfo = (WMSInfo) this.serviceInfo.clone(true);
             start("Service");
 
             element("Name", "OGC:WMS");
@@ -682,7 +683,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 layers = wmsConfig.getLayers();
             }
 
-            //WMSInfo serviceInfo = wmsConfig.getServiceInfo();
+            WMSInfo serviceInfo = (WMSInfo) this.serviceInfo.clone(true);
             element("Title", serviceInfo.getTitle());
             element("Abstract", serviceInfo.getAbstract());
 

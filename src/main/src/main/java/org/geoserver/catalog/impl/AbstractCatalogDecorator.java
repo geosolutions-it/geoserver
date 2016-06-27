@@ -27,6 +27,7 @@ import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.ValidationResult;
+import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -691,5 +692,21 @@ public class AbstractCatalogDecorator extends AbstractDecorator<Catalog> impleme
 
     public void removeListeners(Class listenerClass) {
         delegate.removeListeners(listenerClass);
+    }
+
+    @Override
+    public void clone(DataStoreInfo source, DataStoreInfo target, boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
+    }
+
+    @Override
+    public void clone(CoverageStoreInfo source, CoverageStoreInfo target,
+            boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
+    }
+
+    @Override
+    public void clone(WMSStoreInfo source, WMSStoreInfo target, boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
     }
 }

@@ -10,6 +10,8 @@ import java.util.List;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogInfo;
+import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerGroupVisibilityPolicy;
 import org.geoserver.catalog.LayerInfo;
@@ -19,6 +21,7 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
@@ -274,5 +277,21 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
     @Override
     protected <T extends WorkspaceInfo> List<T> filterWorkspaces(List<T> workspaces) {
         return workspaces;
+    }
+
+    @Override
+    public void clone(DataStoreInfo source, DataStoreInfo target, boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
+    }
+
+    @Override
+    public void clone(CoverageStoreInfo source, CoverageStoreInfo target,
+            boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
+    }
+
+    @Override
+    public void clone(WMSStoreInfo source, WMSStoreInfo target, boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
     }
 }

@@ -14,7 +14,6 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-import org.bouncycastle.asn1.cmp.Challenge;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogFacade;
 import org.geoserver.catalog.CatalogFactory;
@@ -1491,5 +1490,21 @@ public class SecureCatalogImpl extends AbstractDecorator<Catalog> implements Cat
 
     public void removeListeners(Class listenerClass) {
         delegate.removeListeners(listenerClass);
+    }
+
+    @Override
+    public void clone(DataStoreInfo source, DataStoreInfo target, boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
+    }
+
+    @Override
+    public void clone(CoverageStoreInfo source, CoverageStoreInfo target,
+            boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
+    }
+
+    @Override
+    public void clone(WMSStoreInfo source, WMSStoreInfo target, boolean allowEnvParametrization) {
+        delegate.clone(source, target, allowEnvParametrization);
     }
 }

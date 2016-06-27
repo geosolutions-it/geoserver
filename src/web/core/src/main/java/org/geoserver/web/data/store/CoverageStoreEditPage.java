@@ -15,6 +15,7 @@ import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ResourcePool;
 import org.geoserver.web.wicket.GeoServerDialog;
@@ -198,7 +199,13 @@ public class CoverageStoreEditPage extends AbstractCoverageStorePage {
 
             ResourcePool resourcePool = catalog.getResourcePool();
             resourcePool.clear(info);
-            catalog.validate(info, false).throwIfInvalid();
+            
+            CoverageStoreInfo expandedStore = catalog.getFactory().createCoverageStore();
+            
+            // Cloning into "expandedStore" through the super class "clone" method
+            clone(info, expandedStore);
+            catalog.validate(expandedStore, false).throwIfInvalid();
+            
             catalog.save(info);
 
             for (CoverageInfo coverage : alreadyConfigured) {

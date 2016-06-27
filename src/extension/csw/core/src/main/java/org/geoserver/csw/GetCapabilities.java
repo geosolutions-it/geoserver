@@ -278,6 +278,8 @@ public class GetCapabilities {
     }
 
     public CapabilitiesType run(GetCapabilitiesType request) throws CSWException {
+        CSWInfo csw = (CSWInfo) this.csw.clone(true);
+        
         // do the version negotiation dance
         SectionsType sections = null;
         List<String> provided = Collections.singletonList(CSW_VERSION);
