@@ -5,15 +5,13 @@
  */
 package org.geoserver.config.impl;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang.SerializationUtils;
 import org.geoserver.catalog.Keyword;
 import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
@@ -25,6 +23,7 @@ import org.geoserver.config.ServiceInfo;
 import org.geoserver.platform.GeoServerEnvironment;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geotools.util.logging.Logging;
+import org.springframework.util.Assert;
 
 public class ServiceInfoImpl implements ServiceInfo {
 
@@ -386,16 +385,7 @@ public class ServiceInfoImpl implements ServiceInfo {
 
         final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
 
-        ServiceInfo target = null;
-        Constructor<?> ctor;
-        try {
-            ctor = this.getClass().getConstructor();
-            target = (ServiceInfo) ctor.newInstance();
-        } catch (NoSuchMethodException | SecurityException | InstantiationException
-                | IllegalAccessException | IllegalArgumentException
-                | InvocationTargetException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
-        }
+        ServiceInfo target = (ServiceInfo) SerializationUtils.clone(this);
 
         if (target != null) {
             if (allowEnvParametrization && gsEnvironment != null
@@ -408,15 +398,6 @@ public class ServiceInfoImpl implements ServiceInfo {
                 target.setFees((String) gsEnvironment.resolveValue(fees));
                 target.setOnlineResource((String) gsEnvironment.resolveValue(onlineResource));
                 target.setSchemaBaseURL((String) gsEnvironment.resolveValue(schemaBaseURL));
-            } else {
-                target.setName(name);
-                target.setTitle(title);
-                target.setMaintainer(maintainer);
-                target.setAbstract(abstrct);
-                target.setAccessConstraints(accessConstraints);
-                target.setFees(fees);
-                target.setOnlineResource(onlineResource);
-                target.setSchemaBaseURL(schemaBaseURL);
             }
 
             List<KeywordInfo> kws = null;
@@ -425,12 +406,9 @@ public class ServiceInfoImpl implements ServiceInfo {
                 if (allowEnvParametrization && gsEnvironment != null
                         && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
                     for (KeywordInfo kw : keywords) {
-                        Keyword expandedKw = new Keyword(
-                                (String) gsEnvironment.resolveValue(kw.getValue()));
-                        expandedKw
-                                .setLanguage((String) gsEnvironment.resolveValue(kw.getLanguage()));
-                        expandedKw.setVocabulary(
-                                (String) gsEnvironment.resolveValue(kw.getVocabulary()));
+                        Keyword expandedKw = new Keyword((String) gsEnvironment.resolveValue(kw.getValue()));
+                        expandedKw.setLanguage((String) gsEnvironment.resolveValue(kw.getLanguage()));
+                        expandedKw.setVocabulary((String) gsEnvironment.resolveValue(kw.getVocabulary()));
                         kws.add(expandedKw);
                     }
                 } else {
@@ -438,38 +416,28 @@ public class ServiceInfoImpl implements ServiceInfo {
                 }
             }
 
-            MetadataLinkInfo mdl = new MetadataLinkInfoImpl();
+            MetadataLinkInfo mdl = null;
             if (metadataLink != null) {
+                mdl = new MetadataLinkInfoImpl();
                 if (allowEnvParametrization && gsEnvironment != null
                         && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
                     mdl.setType((String) gsEnvironment.resolveValue(metadataLink.getType()));
                     mdl.setContent((String) gsEnvironment.resolveValue(metadataLink.getContent()));
-                    mdl.setMetadataType(
-                            (String) gsEnvironment.resolveValue(metadataLink.getMetadataType()));
+                    mdl.setMetadataType((String) gsEnvironment.resolveValue(metadataLink.getMetadataType()));
                     mdl.setAbout((String) gsEnvironment.resolveValue(metadataLink.getAbout()));
                 } else {
                     mdl = metadataLink;
                 }
             }
 
-            target.setGeoServer(geoServer);
-            target.setVerbose(verbose);
-            target.setWorkspace(workspace);
-            
             target.setMetadataLink(mdl);
-
-            ((ServiceInfoImpl) target).setId(id);
-            ((ServiceInfoImpl) target).setCiteCompliant(citeCompliant);
-            ((ServiceInfoImpl) target).setClientProperties(clientProperties);
-            ((ServiceInfoImpl) target).setEnabled(enabled);
-            ((ServiceInfoImpl) target).setExceptionFormats(exceptionFormats);
-            ((ServiceInfoImpl) target).setMetadata(metadata);
-            ((ServiceInfoImpl) target).setVersions(versions);
-            ((ServiceInfoImpl) target).setWorkspace(workspace);
-            
             ((ServiceInfoImpl) target).setKeywords(kws);
         }
         
+        target.setGeoServer(geoServer);
+
+        Assert.isTrue(this.equals(target));
+
         return target;
     }
 }

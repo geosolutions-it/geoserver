@@ -2357,15 +2357,17 @@ public class ResourcePool {
             // Resolve GeoServer Environment placeholders
             final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
             
-            for (Entry<String, Serializable> param : source.getConnectionParameters().entrySet()) {
-                String key = param.getKey();
-                Object value = param.getValue();
-                
-                if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
-                    value = gsEnvironment.resolveValue(value);
+            if(source != null && source.getConnectionParameters() != null) {
+                for (Entry<String, Serializable> param : source.getConnectionParameters().entrySet()) {
+                    String key = param.getKey();
+                    Object value = param.getValue();
+                    
+                    if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                        value = gsEnvironment.resolveValue(value);
+                    }
+                    
+                    target.getConnectionParameters().put(key, (Serializable) value);
                 }
-                
-                target.getConnectionParameters().put(key, (Serializable) value);
             }
         }
         

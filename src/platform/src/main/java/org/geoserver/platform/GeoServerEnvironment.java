@@ -73,6 +73,13 @@ public class GeoServerEnvironment {
 
     private Properties props;
 
+    /**
+     * @return the props
+     */
+    public Properties getProps() {
+        return props;
+    }
+
     public GeoServerEnvironment() {
         GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
         configFile = new FileWatcher<Properties>(loader.get(PROPERTYFILENAME)) {

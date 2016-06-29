@@ -5,14 +5,13 @@
  */
 package org.geoserver.catalog.impl;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang.SerializationUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataLinkInfo;
 import org.geoserver.catalog.Keyword;
@@ -31,6 +30,7 @@ import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
 import org.opengis.feature.type.Name;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.springframework.util.Assert;
 
 import com.vividsolutions.jts.geom.Envelope;
 
@@ -40,17 +40,17 @@ import com.vividsolutions.jts.geom.Envelope;
  */
 @SuppressWarnings("serial")
 public abstract class ResourceInfoImpl implements ResourceInfo {
-    
+
     static final Logger LOGGER = Logging.getLogger(ResourceInfoImpl.class);
-    
+
     protected String id;
 
     protected String name;
 
-    protected  String nativeName;
-    
+    protected String nativeName;
+
     protected List<String> alias = new ArrayList<String>();
-    
+
     protected NamespaceInfo namespace;
 
     protected String title;
@@ -66,23 +66,23 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     protected List<DataLinkInfo> dataLinks = new ArrayList<DataLinkInfo>();
 
     protected CoordinateReferenceSystem nativeCRS;
-    
+
     protected String srs;
 
     protected ReferencedEnvelope nativeBoundingBox;
 
     protected ReferencedEnvelope latLonBoundingBox;
-    
+
     protected ProjectionPolicy projectionPolicy;
 
     protected boolean enabled;
-    
+
     protected Boolean advertised;
 
     protected MetadataMap metadata = new MetadataMap();
 
     protected StoreInfo store;
-    
+
     protected transient Catalog catalog;
 
     protected ResourceInfoImpl() {
@@ -104,11 +104,11 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     public String getId() {
         return id;
     }
-    
+
     public Catalog getCatalog() {
         return catalog;
     }
-    
+
     public void setCatalog(Catalog catalog) {
         this.catalog = catalog;
     }
@@ -116,7 +116,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     public String getName() {
         return name;
     }
-    
+
     public void setName(String name) {
         this.name = name;
     }
@@ -131,11 +131,11 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     public String getNativeName() {
         return nativeName;
     }
-    
+
     public void setNativeName(String nativeName) {
         this.nativeName = nativeName;
     }
-    
+
     /**
      * @see org.geoserver.catalog.ResourceInfo#getQualifiedNativeName()
      */
@@ -186,7 +186,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     public List<KeywordInfo> getKeywords() {
         return keywords;
     }
-    
+
     public void setKeywords(List<KeywordInfo> keywords) {
         this.keywords = keywords;
     }
@@ -218,34 +218,34 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     }
 
     public ReferencedEnvelope boundingBox() throws Exception {
-      CoordinateReferenceSystem declaredCRS = getCRS();
-      CoordinateReferenceSystem nativeCRS = getNativeCRS();
-      ProjectionPolicy php = getProjectionPolicy();
-      
-      ReferencedEnvelope nativeBox = this.nativeBoundingBox;
-      if (nativeBox == null) {
-          //back project from lat lon
-          try {
-              nativeBox = getLatLonBoundingBox().transform( declaredCRS , true );
-          } catch( Exception e ) {
-              LOGGER.log(Level.WARNING, "Failed to derive native bbox from declared one", e);
-              return null;
-          }
-      }
-      
-      ReferencedEnvelope result;
-      if ( !CRS.equalsIgnoreMetadata(declaredCRS, nativeCRS) && 
-          php == ProjectionPolicy.REPROJECT_TO_DECLARED ) {
-          result = nativeBox.transform(declaredCRS,true); 
-      } else if(php == ProjectionPolicy.FORCE_DECLARED) {
-    	  result = ReferencedEnvelope.create( (Envelope) nativeBox, declaredCRS);
-      } else {
-          result = nativeBox;
-      }
-      
-      // make sure that in no case the actual field value is returned to the client, this
-      // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own 
-      return ReferencedEnvelope.create(result);
+        CoordinateReferenceSystem declaredCRS = getCRS();
+        CoordinateReferenceSystem nativeCRS = getNativeCRS();
+        ProjectionPolicy php = getProjectionPolicy();
+
+        ReferencedEnvelope nativeBox = this.nativeBoundingBox;
+        if (nativeBox == null) {
+            // back project from lat lon
+            try {
+                nativeBox = getLatLonBoundingBox().transform(declaredCRS, true);
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Failed to derive native bbox from declared one", e);
+                return null;
+            }
+        }
+
+        ReferencedEnvelope result;
+        if (!CRS.equalsIgnoreMetadata(declaredCRS, nativeCRS)
+                && php == ProjectionPolicy.REPROJECT_TO_DECLARED) {
+            result = nativeBox.transform(declaredCRS, true);
+        } else if (php == ProjectionPolicy.FORCE_DECLARED) {
+            result = ReferencedEnvelope.create((Envelope) nativeBox, declaredCRS);
+        } else {
+            result = nativeBox;
+        }
+
+        // make sure that in no case the actual field value is returned to the client, this
+        // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own
+        return ReferencedEnvelope.create(result);
     }
 
     public ReferencedEnvelope getLatLonBoundingBox() {
@@ -263,12 +263,12 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     /**
      * @see ResourceInfo#enabled()
      */
-    public boolean enabled(){
+    public boolean enabled() {
         StoreInfo store = getStore();
         boolean storeEnabled = store != null && store.isEnabled();
         return storeEnabled && this.isEnabled();
     }
-    
+
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
@@ -280,7 +280,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     public void setMetadata(MetadataMap metaData) {
         this.metadata = metaData;
     }
-    
+
     public void setMetadataLinks(List<MetadataLinkInfo> metaDataLinks) {
         this.metadataLinks = metaDataLinks;
     }
@@ -317,57 +317,56 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     }
 
     public CoordinateReferenceSystem getCRS() {
-        if ( getSRS() == null ) {
-            return null;    
+        if (getSRS() == null) {
+            return null;
         }
-        
-        //TODO: cache this
+
+        // TODO: cache this
         try {
-        	return CRS.decode( getSRS() );
-        } catch(Exception e) {
-        	throw new RuntimeException("This is unexpected, the layer seems to be mis-configured", e);
+            return CRS.decode(getSRS());
+        } catch (Exception e) {
+            throw new RuntimeException("This is unexpected, the layer seems to be mis-configured",
+                    e);
         }
     }
 
     public ReferencedEnvelope getNativeBoundingBox() {
         return nativeBoundingBox;
     }
-    
+
     public void setNativeBoundingBox(ReferencedEnvelope box) {
         this.nativeBoundingBox = box;
     }
-    
+
     public CoordinateReferenceSystem getNativeCRS() {
         return nativeCRS;
     }
-    
+
     public void setNativeCRS(CoordinateReferenceSystem nativeCRS) {
         this.nativeCRS = nativeCRS;
     }
 
-    
-
     public ProjectionPolicy getProjectionPolicy() {
         return projectionPolicy;
     }
-    
+
     public void setProjectionPolicy(ProjectionPolicy projectionPolicy) {
         this.projectionPolicy = projectionPolicy;
     }
-    
+
     @Override
     public boolean isAdvertised() {
-        if(this.advertised != null) {
+        if (this.advertised != null) {
             return advertised;
-        } 
-        
+        }
+
         // check the metadata map for backwards compatibility with 2.1.x series
         MetadataMap md = getMetadata();
-        if(md == null) {
+        if (md == null) {
             return true;
         }
         Boolean metadataAdvertised = md.get(LayerInfoImpl.KEY_ADVERTISED, Boolean.class);
-        if(metadataAdvertised == null) {
+        if (metadataAdvertised == null) {
             metadataAdvertised = true;
         }
         return metadataAdvertised;
@@ -381,35 +380,21 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result
-                + ((getAbstract() == null) ? 0 : getAbstract().hashCode());
+        result = prime * result + ((getAbstract() == null) ? 0 : getAbstract().hashCode());
         result = prime * result + ((alias == null) ? 0 : alias.hashCode());
-        result = prime * result
-                + ((getDescription() == null) ? 0 : getDescription().hashCode());
+        result = prime * result + ((getDescription() == null) ? 0 : getDescription().hashCode());
         result = prime * result + (enabled ? 1231 : 1237);
         result = prime * result + ((id == null) ? 0 : id.hashCode());
-        result = prime * result
-                + ((getKeywords() == null) ? 0 : getKeywords().hashCode());
-        result = prime
-                * result
-                + ((latLonBoundingBox == null) ? 0 : latLonBoundingBox
-                        .hashCode());
+        result = prime * result + ((getKeywords() == null) ? 0 : getKeywords().hashCode());
+        result = prime * result + ((latLonBoundingBox == null) ? 0 : latLonBoundingBox.hashCode());
         result = prime * result
                 + ((getMetadataLinks() == null) ? 0 : getMetadataLinks().hashCode());
         result = prime * result + ((name == null) ? 0 : name.hashCode());
-        result = prime * result
-                + ((namespace == null) ? 0 : namespace.hashCode());
-        result = prime
-                * result
-                + ((nativeBoundingBox == null) ? 0 : nativeBoundingBox
-                        .hashCode());
-        result = prime * result
-                + ((nativeCRS == null) ? 0 : nativeCRS.hashCode());
-        result = prime * result
-                + ((nativeName == null) ? 0 : nativeName.hashCode());
-        result = prime
-                * result
-                + ((projectionPolicy == null) ? 0 : projectionPolicy.hashCode());
+        result = prime * result + ((namespace == null) ? 0 : namespace.hashCode());
+        result = prime * result + ((nativeBoundingBox == null) ? 0 : nativeBoundingBox.hashCode());
+        result = prime * result + ((nativeCRS == null) ? 0 : nativeCRS.hashCode());
+        result = prime * result + ((nativeName == null) ? 0 : nativeName.hashCode());
+        result = prime * result + ((projectionPolicy == null) ? 0 : projectionPolicy.hashCode());
         result = prime * result + ((srs == null) ? 0 : srs.hashCode());
         result = prime * result + ((store == null) ? 0 : store.hashCode());
         result = prime * result + ((getTitle() == null) ? 0 : getTitle().hashCode());
@@ -422,9 +407,9 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
             return true;
         if (obj == null)
             return false;
-        if (!( obj instanceof ResourceInfo) ) 
+        if (!(obj instanceof ResourceInfo))
             return false;
-        
+
         final ResourceInfo other = (ResourceInfo) obj;
         if (getAbstract() == null) {
             if (other.getAbstract() != null)
@@ -496,7 +481,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         if (srs == null) {
             if (other.getSRS() != null)
                 return false;
-        } else if (!srs.equals(other.getSRS() ))
+        } else if (!srs.equals(other.getSRS()))
             return false;
         if (store == null) {
             if (other.getStore() != null)
@@ -510,22 +495,14 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
             return false;
         return true;
     }
-    
+
     @Override
     public ResourceInfo clone(boolean allowEnvParametrization) {
 
-        final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
+        final GeoServerEnvironment gsEnvironment = GeoServerExtensions
+                .bean(GeoServerEnvironment.class);
 
-        ResourceInfo target = null;
-        Constructor<?> ctor;
-        try {
-            ctor = this.getClass().getConstructor();
-            target = (ResourceInfo) ctor.newInstance();
-        } catch (NoSuchMethodException | SecurityException | InstantiationException
-                | IllegalAccessException | IllegalArgumentException
-                | InvocationTargetException e) {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
-        }
+        ResourceInfo target = (ResourceInfo) SerializationUtils.clone(this);
 
         if (target != null) {
             if (allowEnvParametrization && gsEnvironment != null
@@ -534,11 +511,6 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
                 target.setTitle((String) gsEnvironment.resolveValue(title));
                 target.setDescription((String) gsEnvironment.resolveValue(description));
                 target.setAbstract((String) gsEnvironment.resolveValue(_abstract));
-            } else {
-                target.setName(name);
-                target.setTitle(title);
-                target.setDescription(description);
-                target.setAbstract(_abstract);
             }
 
             List<KeywordInfo> kws = null;
@@ -547,12 +519,9 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
                 if (allowEnvParametrization && gsEnvironment != null
                         && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
                     for (KeywordInfo kw : keywords) {
-                        Keyword expandedKw = new Keyword(
-                                (String) gsEnvironment.resolveValue(kw.getValue()));
-                        expandedKw
-                                .setLanguage((String) gsEnvironment.resolveValue(kw.getLanguage()));
-                        expandedKw.setVocabulary(
-                                (String) gsEnvironment.resolveValue(kw.getVocabulary()));
+                        Keyword expandedKw = new Keyword((String) gsEnvironment.resolveValue(kw.getValue()));
+                        expandedKw.setLanguage((String) gsEnvironment.resolveValue(kw.getLanguage()));
+                        expandedKw.setVocabulary((String) gsEnvironment.resolveValue(kw.getVocabulary()));
                         kws.add(expandedKw);
                     }
                 } else {
@@ -563,7 +532,8 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
             List<MetadataLinkInfo> mds = null;
             if (metadataLinks != null) {
                 mds = new ArrayList<MetadataLinkInfo>();
-                if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                if (allowEnvParametrization && gsEnvironment != null
+                        && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
                     for (MetadataLinkInfo md : metadataLinks) {
                         MetadataLinkInfo expandedMd = new MetadataLinkInfoImpl();
                         expandedMd.setType((String) gsEnvironment.resolveValue(md.getType()));
@@ -576,11 +546,12 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
                     mds.addAll(metadataLinks);
                 }
             }
-            
+
             List<DataLinkInfo> dls = null;
             if (dataLinks != null) {
                 dls = new ArrayList<DataLinkInfo>();
-                if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                if (allowEnvParametrization && gsEnvironment != null
+                        && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
                     for (DataLinkInfo dl : dataLinks) {
                         DataLinkInfo expandedDl = new DataLinkInfoImpl();
                         expandedDl.setType((String) gsEnvironment.resolveValue(dl.getType()));
@@ -593,26 +564,15 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
                 }
             }
 
-            target.setAdvertised(advertised);
-            target.setCatalog(catalog);
-            target.setEnabled(enabled);
-            target.setLatLonBoundingBox(latLonBoundingBox);
-            target.setNamespace(namespace);
-            target.setNativeBoundingBox(nativeBoundingBox);
-            target.setNativeCRS(nativeCRS);
-            target.setNativeName(nativeName);
-            target.setProjectionPolicy(projectionPolicy);
-            target.setSRS(srs);
-            target.setStore(store);
-            
-            ((ResourceInfoImpl) target).setAlias(alias);
-            ((ResourceInfoImpl) target).setId(id);
-            ((ResourceInfoImpl) target).setMetadata(metadata);
-        
             ((ResourceInfoImpl) target).setKeywords(kws);
             ((ResourceInfoImpl) target).setMetadataLinks(mds);
             ((ResourceInfoImpl) target).setDataLinks(dls);
         }
+
+        target.setCatalog(catalog);
+        target.setStore(store);
+
+        Assert.isTrue(this.equals(target));
         
         return target;
     }
