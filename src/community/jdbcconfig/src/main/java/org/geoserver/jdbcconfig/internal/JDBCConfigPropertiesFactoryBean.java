@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.geoserver.jdbcloader.JDBCLoaderProperties;
 import org.geoserver.jdbcloader.JDBCLoaderPropertiesFactoryBean;
-import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Paths;
@@ -66,12 +65,12 @@ public class JDBCConfigPropertiesFactoryBean extends JDBCLoaderPropertiesFactory
 
     @Override
     public void saveConfiguration(GeoServerResourceLoader resourceLoader) throws IOException {
-        GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        for(Resource controlflow : getFileLocations()) {
+        final Resource baseDirectory = getBaseDir();
+        for(Resource jdbcConfig : getFileLocations()) {
             Resource targetDir = 
-                    Files.asResource(resourceLoader.findOrCreateDirectory(Paths.convert(loader.getBaseDirectory(), controlflow.parent().dir())));
+                    Files.asResource(resourceLoader.findOrCreateDirectory(Paths.convert(baseDirectory.parent().dir(), jdbcConfig.parent().dir())));
             
-            Resources.copy(controlflow.file(), targetDir);
+            Resources.copy(jdbcConfig.file(), targetDir);
         }
     }
 

@@ -48,6 +48,7 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
             // TODO, Justin, WebAttributes.SAVED_REQUEST has disappeared in spring security framework
             session.setAttribute(SAVED_REQUEST, savedRequest);
             
+            
             // then redirect to the login page
             setResponsePage(GeoServerLoginPage.class);
         }

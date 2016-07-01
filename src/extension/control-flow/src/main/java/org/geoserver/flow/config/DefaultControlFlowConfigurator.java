@@ -5,7 +5,9 @@
  */
 package org.geoserver.flow.config;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -202,22 +204,39 @@ public class DefaultControlFlowConfigurator implements ControlFlowConfigurator, 
 
     @Override
     public List<Resource> getFileLocations() throws IOException {
-        GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        Resource controlflow = loader.get(PROPERTYFILENAME);
-        
         List<Resource> configurationFiles = new ArrayList<>();
-        configurationFiles.add(controlflow);
+        GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
+        if (loader != null) {
+            Resource controlflow = loader.get(PROPERTYFILENAME);
+        
+            configurationFiles.add(controlflow);
+        } else if (this.configFile != null && this.configFile.getResource() != null) {
+            configurationFiles.add(this.configFile.getResource());
+        }
         return configurationFiles;
     }
 
     @Override
     public void saveConfiguration(GeoServerResourceLoader resourceLoader) throws IOException {
         GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        for(Resource controlflow : getFileLocations()) {
-            Resource targetDir = 
-                    Files.asResource(resourceLoader.findOrCreateDirectory(Paths.convert(loader.getBaseDirectory(), controlflow.parent().dir())));
-            
-            Resources.copy(controlflow.file(), targetDir);
+        if (loader != null) {
+            for(Resource controlflow : getFileLocations()) {
+                Resource targetDir = 
+                        Files.asResource(resourceLoader.findOrCreateDirectory(Paths.convert(loader.getBaseDirectory(), controlflow.parent().dir())));
+                
+                Resources.copy(controlflow.file(), targetDir);
+            }
+        } else if (this.configFile != null && this.configFile.getResource() != null) {
+            Resources.copy(this.configFile.getFile(), Files.asResource(resourceLoader.getBaseDirectory()));
+        } else if (this.configFile != null && this.configFile.getProperties() != null) {
+            File controlFlowConfigurationFile = Resources.file(resourceLoader.get(PROPERTYFILENAME), true);
+            OutputStream out = Files.out(controlFlowConfigurationFile);
+            try {
+                this.configFile.getProperties().store(out, "");
+            } finally {
+                out.flush();
+                out.close();
+            }
         }
     }
 
@@ -225,8 +244,10 @@ public class DefaultControlFlowConfigurator implements ControlFlowConfigurator, 
     public void loadConfiguration(GeoServerResourceLoader resourceLoader) throws IOException {
         synchronized (this) {
             Resource controlflow = resourceLoader.get(PROPERTYFILENAME);
-            configFile = new PropertyFileWatcher(controlflow);
-            configFile.setKnownLastModified(System.currentTimeMillis());
+            if (Resources.exists(controlflow)) {
+                configFile = new PropertyFileWatcher(controlflow);
+                configFile.setKnownLastModified(System.currentTimeMillis());
+            }
         }
     }
 
