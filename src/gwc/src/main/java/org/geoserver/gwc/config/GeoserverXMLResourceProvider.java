@@ -9,20 +9,15 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.geoserver.data.util.IOUtils;
-import org.geoserver.gwc.GWC;
-import org.geoserver.platform.GeoServerEnvironment;
-import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.ResourceStore;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.util.Filter;
-import org.geowebcache.GeoWebCacheEnvironment;
 import org.geowebcache.config.ConfigurationException;
 import org.geowebcache.config.ConfigurationResourceProvider;
 
@@ -68,7 +63,7 @@ public class GeoserverXMLResourceProvider implements ConfigurationResourceProvid
     
     public GeoserverXMLResourceProvider(final String configFileName,
             final ResourceStore resourceStore) throws ConfigurationException {
-        this(null, configFileName, resourceStore);
+        this(null, configFileName, resourceStore);        
     }
    
 

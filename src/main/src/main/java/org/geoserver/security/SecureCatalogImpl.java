@@ -14,6 +14,7 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import org.bouncycastle.asn1.cmp.Challenge;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogFacade;
 import org.geoserver.catalog.CatalogFactory;

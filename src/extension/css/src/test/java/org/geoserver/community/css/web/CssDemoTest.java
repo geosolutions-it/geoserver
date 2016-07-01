@@ -121,7 +121,6 @@ public class CssDemoTest extends GeoServerWicketTestSupport {
         CssDemoPage page = new CssDemoPage();
         String css = "* { mark: url(\"smiley.png\");  }";
         String sld = page.cssText2sldText(css, si);
-        tester.startPage(CssDemoPage.class);
 
         // check the relative reference is still relative
         assertTrue(sld.contains("xlink:href=\"smiley.png\""));

@@ -1635,7 +1635,7 @@ public class GeoServerSecurityManager implements ApplicationContextAware,
         SecurityManagerConfig oldConfig = new SecurityManagerConfig(this.securityConfig);
         
         SecurityConfigValidator validator = new SecurityConfigValidator(this);
-        validator.validateManagerConfig(config,oldConfig);
+        validator.validateManagerConfig((SecurityManagerConfig)config.clone(true),(SecurityManagerConfig)oldConfig.clone(true));
         
         //save the current config to fall back to                
         

@@ -46,7 +46,6 @@ import org.geoserver.catalog.SLDHandler;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.Styles;
-import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geoserver.data.util.IOUtils;
@@ -281,13 +280,6 @@ public class MockCatalogBuilder {
         expect(catalog.getStoreByName(ws, name, clazz)).andReturn(s).anyTimes();
         expect(catalog.getStoreByName(ws, name, StoreInfo.class)).andReturn(s).anyTimes();
         
-        /*if (clazz == DataStoreInfo.class) {
-            expect(catalog.clone((DataStoreInfo)s, true)).andReturn((DataStoreInfo)s).anyTimes();
-        } else if (clazz == CoverageStoreInfo.class) {
-            expect(catalog.clone((CoverageStoreInfo)s, true)).andReturn((CoverageStoreInfo)s).anyTimes();            
-        } else if (clazz == WMSStoreInfo.class) {
-            expect(catalog.clone((WMSStoreInfo)s, true)).andReturn((WMSStoreInfo)s).anyTimes();
-        }*/
     }
     
     public MockCatalogBuilder featureType(String name) {

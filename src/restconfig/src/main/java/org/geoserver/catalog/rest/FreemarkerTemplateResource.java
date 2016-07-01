@@ -127,7 +127,7 @@ public class FreemarkerTemplateResource extends StoreFileResource {
      * workspaces/<workspace>/datastores/<store>/templates
      * workspaces/<workspace>/datastores/<store>/templates/<template>.ftl
      * workspaces/<workspace>/datastores/<store>/featuretypes/<ft>/templates
-     * workspaces/<workspace>/datastores/<store>/featuretypes/<ft>/templates/<template>.ftl
+     * workspaces/<workspace>/datastores/<store>/teaturetypes/<ft>/templates/<template>.ftl
      */
     public static String[] getDirectoryPath(Request request) {
         String workspace = RESTUtils.getAttribute(request, "workspace");

@@ -507,7 +507,7 @@ public class ResourcePool {
             Map<String, Serializable> params = getParams( expandedStore.getConnectionParameters(), catalog.getResourceLoader() );
             factory = DataStoreUtils.aquireFactory( params);    
         }
-        
+   
         return factory;
     }
     
@@ -1496,6 +1496,7 @@ public class ResourcePool {
             // Avoid dimensions wrapping since we have a multi-coverage reader 
             // but no coveragename have been specified
             return reader;
+
         }
     }
     
@@ -2343,9 +2344,9 @@ public class ResourcePool {
     
     public DataStoreInfo clone(final DataStoreInfo source, boolean allowEnvParametrization) {
         DataStoreInfo target = catalog.getFactory().createDataStore();
-        target.setDescription(source.getDescription());
         target.setEnabled(source.isEnabled());
         target.setName(source.getName());
+        target.setDescription(source.getDescription());
         target.setWorkspace(source.getWorkspace());
         target.setType(source.getType());
 
@@ -2356,7 +2357,11 @@ public class ResourcePool {
         } else {
             // Resolve GeoServer Environment placeholders
             final GeoServerEnvironment gsEnvironment = GeoServerExtensions.bean(GeoServerEnvironment.class);
-            
+
+            if (gsEnvironment != null && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                target.setDescription((String) gsEnvironment.resolveValue(source.getDescription()));
+            }
+
             if(source != null && source.getConnectionParameters() != null) {
                 for (Entry<String, Serializable> param : source.getConnectionParameters().entrySet()) {
                     String key = param.getKey();

@@ -50,7 +50,7 @@ public class GeoServerEnvironment {
      * Default to FALSE
      */
     public final static boolean ALLOW_ENV_PARAMETRIZATION = Boolean
-            .valueOf(System.getProperty("ALLOW_ENV_PARAMETRIZATION", "false"));
+            .valueOf(System.getProperty("ALLOW_ENV_PARAMETRIZATION", "true"));
 
     private static final String PROPERTYFILENAME = "geoserver-environment.properties";
 
@@ -74,6 +74,8 @@ public class GeoServerEnvironment {
     private Properties props;
 
     /**
+     * Internal "props" getter method.
+     * 
      * @return the props
      */
     public Properties getProps() {
@@ -81,21 +83,22 @@ public class GeoServerEnvironment {
     }
 
     public GeoServerEnvironment() {
-        GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        configFile = new FileWatcher<Properties>(loader.get(PROPERTYFILENAME)) {
-
-            @Override
-            protected Properties parseFileContents(InputStream in) throws IOException {
-                Properties p = new Properties();
-                p.load(in);
-                return p;
-            }
-
-        };
-
         try {
+            GeoServerResourceLoader loader = GeoServerExtensions
+                    .bean(GeoServerResourceLoader.class);
+            configFile = new FileWatcher<Properties>(loader.get(PROPERTYFILENAME)) {
+
+                @Override
+                protected Properties parseFileContents(InputStream in) throws IOException {
+                    Properties p = new Properties();
+                    p.load(in);
+                    return p;
+                }
+
+            };
+
             props = configFile.read();
-        } catch (IOException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.WARNING,
                     "Could not find any '" + PROPERTYFILENAME + "' property file.", e);
             props = new Properties();
@@ -106,7 +109,17 @@ public class GeoServerEnvironment {
         String propVal = null;
         propVal = resolveSystemProperty(placeholder);
 
-        if (propVal == null) {
+        if (configFile != null && configFile.isModified()) {
+            try {
+                props = configFile.read();
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING,
+                        "Could not find any '" + PROPERTYFILENAME + "' property file.", e);
+                props = new Properties();
+            }
+        }
+
+        if (props != null && propVal == null) {
             propVal = props.getProperty(placeholder);
         }
 
@@ -135,6 +148,11 @@ public class GeoServerEnvironment {
     }
 
     /**
+     * Translates placeholders in the form of Spring Property placemark ${...} into their real values.
+     * 
+     * The method first looks for System variables which take precedence on local ones, then into internal props loaded from configuration file
+     * 'geoserver-environment.properties'.
+     * 
      * @param value
      * @return
      */
@@ -146,5 +164,15 @@ public class GeoServerEnvironment {
         }
 
         return value;
+    }
+
+    /**
+     * Returns 'false' whenever the configuration file 'geoserver-environment.properties' has changed.
+     * 
+     * @param value
+     * @return
+     */
+    public boolean isStale() {
+        return this.configFile != null && this.configFile.isModified();
     }
 }

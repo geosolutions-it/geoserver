@@ -178,7 +178,7 @@ public class ServiceInfoImpl implements ServiceInfo {
     public void setVersions(List versions) {
         this.versions = versions;
     }
-
+    
     public List getExceptionFormats() {
         return exceptionFormats;
     }
@@ -285,10 +285,10 @@ public class ServiceInfoImpl implements ServiceInfo {
             return true;
         if (obj == null)
             return false;
-        if (!(obj instanceof ServiceInfo)) {
+        if (!( obj instanceof ServiceInfo ) ) {
             return false;
         }
-
+        
         final ServiceInfo other = (ServiceInfo) obj;
         if (getAbstract() == null) {
             if (other.getAbstract() != null)
@@ -435,8 +435,6 @@ public class ServiceInfoImpl implements ServiceInfo {
         }
         
         target.setGeoServer(geoServer);
-
-        Assert.isTrue(this.equals(target));
 
         return target;
     }

@@ -1091,10 +1091,6 @@ public class Dispatcher extends AbstractController {
             String msg = "Two identical service descriptors found";
             throw new IllegalStateException(msg);
         }
-        
-        for (Service service : services) {
-            Object serviceInfo = service.getService();
-        }
 
         return services;
     }
