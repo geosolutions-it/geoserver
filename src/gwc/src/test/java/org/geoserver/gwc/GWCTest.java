@@ -1241,7 +1241,7 @@ public class GWCTest {
     public void testGetDefaultAdvertisedCachedFormats() {
         // from src/main/resources/org/geoserver/gwc/advertised_formats.properties
         Set<String> defaultFormats = ImmutableSet.of("image/png", "image/png8", "image/jpeg",
-                "image/gif");
+                "image/gif", "image/vnd.jpeg-png");
 
         SetView<String> formatsWithUtfGrid = union(defaultFormats,
                 Collections.singleton("application/json;type=utfgrid"));
@@ -1270,8 +1270,7 @@ public class GWCTest {
         }
 
         // from src/main/resources/org/geoserver/gwc/advertised_formats.properties
-        Set<String> defaultFormats = ImmutableSet.of("image/png", "image/png8", "image/jpeg",
-                "image/gif");
+        Set<String> defaultFormats = ImmutableSet.of("image/png", "image/png8", "image/jpeg", "image/gif", "image/vnd.jpeg-png");
 
         // see src/test/resources/org/geoserver/gwc/advertised_formats.properties
         Set<String> expectedVector = union(defaultFormats,

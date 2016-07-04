@@ -13,11 +13,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * Protects the catalog and configuration from concurrent access from the web GUI side (will stay here until the catalog and configution will become
- * thread safe).
+ * Protects the catalog and configuration from concurrent access from the web GUI side (will stay
+ * here until the catalog and configution will become thread safe).
  * <p>
- * It locks in write mode all {@link GeoServerSecuredPage} subclasses, as those have some possibility to write on the configuration/catalog, all other
- * pages are locked in read mode.
+ * It locks in write mode all {@link GeoServerSecuredPage} subclasses, as those have some
+ * possibility to write on the configuration/catalog, all other pages are locked in read mode.
  * 
  * @author Andrea Aime - GeoSolutions
  * 

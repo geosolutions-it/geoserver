@@ -36,7 +36,7 @@ public class GeoServerSecuredPage extends GeoServerBasePage {
         
         if (GeoServerSecurityFilterChainProxy.isSecurityEnabledForCurrentRequest()==false)
             return; // nothing to do
-
+        
         Authentication auth = getSession().getAuthentication();
         if(auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             // emulate what spring security url control would do so that we get a proper redirect after login
