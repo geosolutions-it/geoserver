@@ -1,4 +1,4 @@
-/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -681,7 +681,6 @@ public class DispatcherTest extends TestCase {
         URL url = getClass().getResource("applicationContext.xml");
 
         FileSystemXmlApplicationContext context = new FileSystemXmlApplicationContext(url.toString());
-
         Dispatcher dispatcher = (Dispatcher) context.getBean("dispatcher");
         final AtomicBoolean firedCallback = new AtomicBoolean(false);
         TestDispatcherCallback callback1 = new TestDispatcherCallback();
@@ -696,7 +695,8 @@ public class DispatcherTest extends TestCase {
             @Override
             public void finished(Request request) {
                 dispatcherStatus.set(Status.FINISHED);
-                throw new RuntimeException("TestDispatcherCallbackFailFinished");
+                // cleanups must continue even if an error was thrown
+                throw new Error("TestDispatcherCallbackFailFinished");
             }
         };
         

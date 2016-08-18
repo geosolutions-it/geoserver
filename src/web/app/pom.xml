@@ -1068,7 +1068,7 @@
           <version>${gs.version}</version>
         </dependency>
       </dependencies>
-		</profile>
+    </profile>
     <profile>
       <id>importer</id>
       <dependencies>
@@ -1148,7 +1148,7 @@
       <id>grib</id>
       <dependencies>
         <dependency>
-          <groupId>org.geoserver.community</groupId>
+          <groupId>org.geoserver.extension</groupId>
           <artifactId>gs-grib</artifactId>
           <version>${project.version}</version>
         </dependency>
@@ -1319,7 +1319,7 @@
         </dependency>
       </dependencies>
    </profile>
-    <profile>
+   <profile>
       <id>gwc-s3</id>
       <dependencies>
         <dependency>
@@ -1329,5 +1329,25 @@
         </dependency>
       </dependencies>
    </profile>
+   <profile>
+      <id>geogig</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-geogig</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+   </profile>
+   <profile>
+      <id>params-extractor</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-params-extractor</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
  </profiles>
 </project>

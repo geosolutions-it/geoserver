@@ -58,7 +58,6 @@
    <!-- contains snapshot and release (including third-party-dependences)               -->
    <!-- Restlet maven Repository (http://maven.restlet.org)                             -->
    <!-- ucar (https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases) -->
-   <!-- geosolutions (http://maven.geo-solutions.it/)                                   -->
    <snapshots>
      <enabled>true</enabled>
    </snapshots>
@@ -85,14 +84,17 @@
     </snapshots>
   </repository>
 
-  <repository>
-    <id>hibspat</id>
-    <name>Hibernate Spatial</name>
-    <url>http://www.hibernatespatial.org/repository</url>
-    <snapshots>
-      <enabled>true</enabled>
-    </snapshots>
-   </repository>
+   <repository>
+      <id>geosolutions</id>
+      <name>geosolutions repository</name>
+      <url>http://maven.geo-solutions.it/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+     <releases>
+       <enabled>true</enabled>
+     </releases>
+    </repository>
  </repositories>
 
  <dependencyManagement>
@@ -176,12 +178,6 @@
     <groupId>org.geoserver</groupId>
     <artifactId>gs-gwc</artifactId>
     <version>${gs.version}</version>
-    <exclusions>
-    	<exclusion>
-    		<groupId>net.sf.json-lib</groupId>
-      		<artifactId>json-lib</artifactId>
-    	</exclusion>
-    </exclusions>
    </dependency>
    <dependency>
     <groupId>org.geoserver</groupId>
@@ -690,7 +686,14 @@
    <dependency>
     <groupId>commons-beanutils</groupId>
     <artifactId>commons-beanutils</artifactId>
-    <version>1.7.0</version>
+    <version>1.9.2</version>
+    <classifier>noclassprop</classifier>
+   </dependency>
+   <dependency>
+    <groupId>commons-beanutils</groupId>
+    <artifactId>commons-beanutils</artifactId>
+    <version>1.9.2</version>
+    <scope>provided</scope>
    </dependency>
    <dependency>
     <groupId>commons-digester</groupId>
@@ -740,7 +743,7 @@
    <dependency>
     <groupId>commons-collections</groupId>
     <artifactId>commons-collections</artifactId>
-    <version>3.1</version>
+    <version>3.2.2</version>
    </dependency>
    <dependency>
 	<groupId>org.apache.commons</groupId>
@@ -879,12 +882,17 @@
    <dependency>
      <groupId>org.slf4j</groupId>
      <artifactId>slf4j-api</artifactId>
-     <version>1.6.1</version>
+     <version>1.6.4</version>
    </dependency>
    <dependency>
      <groupId>org.slf4j</groupId>
      <artifactId>slf4j-log4j12</artifactId>
-     <version>1.7.10</version>
+     <version>1.6.4</version>
+   </dependency>
+   <dependency>
+     <groupId>org.slf4j</groupId>
+     <artifactId>log4j-over-slf4j</artifactId>
+     <version>1.6.4</version>
    </dependency>
    <dependency>
     <groupId>log4j</groupId>
@@ -950,7 +958,7 @@
    <dependency>
     <groupId>org.slf4j</groupId>
     <artifactId>jcl104-over-slf4j</artifactId>
-    <version>1.0.1</version>
+    <version>1.6.4</version>
    </dependency>
    <dependency>
     <groupId>javax.media</groupId>
@@ -966,6 +974,11 @@
     <groupId>javax.media</groupId>
     <artifactId>jai_imageio</artifactId>
     <version>1.1</version>
+   </dependency>
+   <dependency>
+    <groupId>it.geosolutions.jaiext.concurrent-tile-cache</groupId>
+    <artifactId>jt-concurrent-tile-cache</artifactId>
+    <version>${jaiext.version}</version>
    </dependency>
    <dependency>
     <groupId>org.eclipse.emf</groupId>
@@ -1008,7 +1021,18 @@
       <groupId>org.restlet</groupId>
       <artifactId>org.restlet</artifactId>
       <version>1.0.8</version>
+
+      <!-- Classifier selects a hacked JAR where we've removed a class we don't need and which has a security vulnerability.  This should be removed when we update to A current version of Restlet (2.2 or later)-->
+      <classifier>noobjrep</classifier> 
+
     </dependency>
+    <dependency>
+      <groupId>org.restlet</groupId>
+      <artifactId>org.restlet</artifactId>
+      <version>1.0.8</version>
+      <scope>provided</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.restlet</groupId>
       <artifactId>org.restlet.ext.fileupload</artifactId>
@@ -1304,7 +1328,7 @@
       <exclude>${test.exclude.pattern}</exclude>
      </excludes>
      <forkMode>once</forkMode>
-     <argLine>-Xmx${test.maxHeapSize} -XX:MaxPermSize=${test.maxPermSize} -enableassertions ${jvm.opts} -Djava.awt.headless=${java.awt.headless} -Dsun.java2d.d3d=${sun.java2d.d3d}-DremoteOwsTests=${remoteOwsTests} -DquietTests=${quietTests} -Dorg.geotools.image.test.enabled=${image.tests} -Dorg.geotools.image.test.interactive=${interactive.image} -Duser.timezone=${user.timezone} -Dwindows.leniency=${windows.leniency}</argLine>
+     <argLine>-Xmx${test.maxHeapSize} -XX:MaxPermSize=${test.maxPermSize} -enableassertions ${jvm.opts} -Djava.awt.headless=${java.awt.headless} -Dsun.java2d.d3d=${sun.java2d.d3d}-DremoteOwsTests=${remoteOwsTests} -DquietTests=${quietTests} -Dorg.geotools.image.test.enabled=${image.tests} -Dorg.geotools.image.test.interactive=${interactive.image} -Duser.timezone=${user.timezone} -Dwindows.leniency=${windows.leniency} -XX:+TieredCompilation -XX:TieredStopAtLevel=1</argLine>
      <enableAssertions>true</enableAssertions>
      <printSummary>true</printSummary>
      <testFailureIgnore>${allow.test.failure.ignore}</testFailureIgnore>
@@ -1443,7 +1467,7 @@
    <plugin>
      <groupId>pl.project13.maven</groupId>
      <artifactId>git-commit-id-plugin</artifactId>
-     <version>2.0.4</version>
+     <version>2.1.13</version>
      <executions>
        <execution>
          <goals>
@@ -1456,6 +1480,23 @@
        <failOnNoGitDirectory>false</failOnNoGitDirectory>
        <skipPoms>false</skipPoms>
        <verbose>false</verbose>
+       <injectAllReactorProjects>true</injectAllReactorProjects>
+       <runOnlyOnce>${git.commit.runOnlyOnce}</runOnlyOnce>
+       <!--
+       In order to use native git (3+ times faster) add the following in ~/.m2/settings.xml
+       <profiles>
+         <profile>
+           <id>gitNative</id>
+           <properties>
+             <git.commit.useNative>true</git.commit.useNative>
+           </properties>
+         </profile>
+       <profiles>
+       <activeProfiles>
+         <activeProfile>gitNative</activeProfile>
+       </activeProfiles>
+       -->
+       <useNativeGit>${git.commit.useNative}</useNativeGit>
      </configuration>
    </plugin>
 
@@ -1640,6 +1681,7 @@
   <wicket.version>1.4.12</wicket.version>
   <ant.version>1.8.4</ant.version>
   <imageio-ext.version>1.1.13</imageio-ext.version>
+  <jaiext.version>1.0.9</jaiext.version>
   <java.awt.headless>true</java.awt.headless>
   <jvm.opts></jvm.opts>
   <jalopy.phase>disabled</jalopy.phase>
@@ -1658,11 +1700,13 @@
   <image.tests>true</image.tests>
   <interactive.tests>false</interactive.tests>
   <windows.leniency>true</windows.leniency>
-  <gf.version>3.0-SNAPSHOT</gf.version>
+  <gf.version>3.1-SNAPSHOT</gf.version>
   <hibernate-version>3.6.0.Final</hibernate-version>
   <hibernate-generic-dao-version>1.1.0</hibernate-generic-dao-version>
   <hibernate-spatial-version>1.1.1</hibernate-spatial-version>
   <hibernate-spatial-h2-version>1.1.1</hibernate-spatial-h2-version>
+  <git.commit.useNative>false</git.commit.useNative>
+  <git.commit.runOnlyOnce>true</git.commit.runOnlyOnce>
  </properties>
 
  <profiles>

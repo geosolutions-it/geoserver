@@ -1,4 +1,4 @@
-/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -20,7 +20,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.measure.unit.SI;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -79,11 +81,13 @@ import org.junit.Test;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.thoughtworks.xstream.XStream;
+import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.LineString;
 
 public class XStreamPersisterTest {
@@ -996,6 +1000,146 @@ public class XStreamPersisterTest {
         assertEquals(vtc.getSql(),"select * from table\n");        
         assertEquals(vtc.getName(),"sqlview");
     }
+    
+    @SuppressWarnings("serial")
+    @Test
+    public void testVirtualTableMultipleGeoms() throws IOException{
+        Map<String,String> types=new HashMap<String, String>(){{
+            put("southernmost_point","com.vividsolutions.jts.geom.Geometry");
+            put("location_polygon","com.vividsolutions.jts.geom.Geometry");
+            put("centroid","com.vividsolutions.jts.geom.Geometry");
+            put("northernmost_point","com.vividsolutions.jts.geom.Geometry");
+            put("easternmost_point","com.vividsolutions.jts.geom.Geometry");
+            put("location","com.vividsolutions.jts.geom.Geometry");
+            put("location_original","com.vividsolutions.jts.geom.Geometry");
+            put("westernmost_point","com.vividsolutions.jts.geom.Geometry");       
+        }};
+    
+        Map<String,Integer> srids=new HashMap<String, Integer>(){{
+            put("southernmost_point",4326);
+            put("location_polygon",3003);
+            put("centroid",3004);
+            put("northernmost_point",3857);
+            put("easternmost_point",4326);
+            put("location",3003);
+            put("location_original",3004);
+            put("westernmost_point",3857);              
+        }};
+
+        FeatureTypeInfo ft = persister.load( getClass().getResourceAsStream("/org/geoserver/config/virtualtable_error_GEOS-7400.xml") , FeatureTypeInfo.class );
+        VirtualTable vt3 = (VirtualTable) ft.getMetadata().get(FeatureTypeInfo.JDBC_VIRTUAL_TABLE);
+                
+        assertEquals(8, vt3.getGeometries().size());
+    
+        for(String g:vt3.getGeometries()){          
+                Class<? extends Geometry> geom = vt3.getGeometryType(g);
+                assertEquals(srids.get(g).intValue(), vt3.getNativeSrid(g));
+                assertEquals(types.get(g), geom.getName());
+        }        
+    }
+    
+    /**
+     * Test for GEOS-7444.
+     * Check GridGeometry is correctly unmarshaled when XML elements are
+     * provided on an different order than the marshaling one
+     * @throws Exception
+     */
+    @Test
+    public void testGridGeometry2DConverterUnmarshalling() throws Exception {
+        Catalog catalog = new CatalogImpl();
+        CatalogFactory cFactory = catalog.getFactory();
+        
+        WorkspaceInfo ws = cFactory.createWorkspace();
+        ws.setName( "foo" );
+        catalog.add( ws );
+        
+        NamespaceInfo ns = cFactory.createNamespace();
+        ns.setPrefix("acme");
+        ns.setURI("http://acme.org");
+        catalog.add(ns);
+
+        CoverageStoreInfo cs = cFactory.createCoverageStore();
+        cs.setWorkspace(ws);
+        cs.setName("coveragestore");
+        catalog.add(cs);
+
+        CoverageInfo cv = cFactory.createCoverage();
+        cv.setStore(cs);
+        cv.setNamespace(ns);
+        cv.setName("coverage");
+        cv.setAbstract("abstract");
+        cv.setSRS("EPSG:4326");
+        cv.setNativeCRS(CRS.decode("EPSG:4326"));
+        cv.getParameters().put("foo", null);
+        
+        ByteArrayOutputStream out = out();
+        persister.save( cv, out );
+        
+        ByteArrayInputStream in = in( out );
+        Document dom = dom( in );
+        
+        Element crs = dom.createElement("crs");
+        Text t = dom.createTextNode("EPSG:4326");
+        crs.appendChild(t);
+        Element high = dom.createElement("high");
+        t = dom.createTextNode("4029 4029");
+        high.appendChild(t);
+        Element low = dom.createElement("low");
+        t = dom.createTextNode("0 0");
+        low.appendChild(t);
+        Element range = dom.createElement("range");
+        range.appendChild(high);
+        range.appendChild(low);
+        
+        Element translateX = dom.createElement("translateX");
+        t = dom.createTextNode("0");
+        translateX.appendChild(t);
+        Element translateY = dom.createElement("translateY");
+        t = dom.createTextNode("0");
+        translateY.appendChild(t);
+        Element scaleX = dom.createElement("scaleX");
+        t = dom.createTextNode("1");
+        scaleX.appendChild(t);
+        Element scaleY = dom.createElement("scaleY");
+        t = dom.createTextNode("1");
+        scaleY.appendChild(t);
+        Element shearX = dom.createElement("shearX");
+        t = dom.createTextNode("0");
+        shearX.appendChild(t);
+        Element shearY = dom.createElement("shearY");
+        t = dom.createTextNode("0");
+        shearY.appendChild(t);
+        
+        Element transform = dom.createElement("transform");
+        transform.appendChild(translateX);
+        transform.appendChild(translateY);
+        transform.appendChild(scaleX);
+        transform.appendChild(scaleY);
+        transform.appendChild(shearX);
+        transform.appendChild(shearY);
+        
+        Element grid = dom.createElement("grid");
+        grid.setAttribute("dimension", "2");
+        grid.appendChild(crs);
+        grid.appendChild(range);
+        grid.appendChild(transform);
+        
+        Element e = (Element) dom.getElementsByTagName( "coverage" ).item(0);
+        Element params = (Element) dom.getElementsByTagName( "parameters" ).item(0);
+        e.insertBefore(grid, params);
+        
+        in = in( dom );
+        
+        persister.setCatalog( catalog );
+        cv = persister.load( in, CoverageInfo.class );
+        assertNotNull( cv );
+        assertNotNull( cv.getGrid() );
+        assertNotNull( cv.getGrid().getGridRange() );
+        assertNotNull( cv.getCRS() );
+        assertNotNull( cv.getGrid().getGridToCRS() );
+        assertEquals( cv.getGrid().getGridRange().getLow(0), 0);
+    }
+
 
     ByteArrayOutputStream out() {
         return new ByteArrayOutputStream();

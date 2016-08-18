@@ -1,4 +1,4 @@
-/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -134,7 +134,7 @@ public class HTMLFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat {
                         content.process(fc, osw);
                     } catch (TemplateException e) {
                         String msg = "Error occured processing content template " + content.getName()
-                                + " for " + request.getQueryLayers().get(i);
+                                + " for " + request.getQueryLayers().get(i).getName();
                         throw (IOException) new IOException(msg).initCause(e);
                     }
                 }
@@ -175,22 +175,18 @@ public class HTMLFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat {
      */
     Template getTemplate(Name name, String templateFileName, Charset charset)
             throws IOException {
-        // setup template subsystem
-        if (templateLoader == null) {
-            templateLoader = new GeoServerTemplateLoader(getClass());
-        }
-
+        ResourceInfo ri = null;
         if (name != null) {
-            ResourceInfo ri = wms.getResourceInfo(name);
-            if (ri != null) {
-                templateLoader.setResource(ri);
-            } else {
-                throw new IllegalArgumentException("Can't find neither a FeatureType nor "
-                        + "a CoverageInfo or WMSLayerInfo named " + name);
-            }                        
+            ri = wms.getResourceInfo(name);
+            // ri can be null if the type is the result of a rendering transformation
         }
 
         synchronized (templateConfig) {
+            // setup template subsystem
+            if (templateLoader == null) {
+                templateLoader = new GeoServerTemplateLoader(getClass());
+            }
+            templateLoader.setResource(ri);
             templateConfig.setTemplateLoader(templateLoader);
             Template t = templateConfig.getTemplate(templateFileName);
             t.setEncoding(charset.name());

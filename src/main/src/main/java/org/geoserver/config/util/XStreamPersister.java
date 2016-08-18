@@ -1,4 +1,4 @@
-/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -1323,74 +1323,61 @@ public class XStreamPersister {
         @Override
         public Object unmarshal(HierarchicalStreamReader reader,
                 UnmarshallingContext context) {
-             int[] high,low;
-            
-            //reader.moveDown(); //grid
-            
-            reader.moveDown(); //range
-            
-            reader.moveDown(); //low
-            low = toIntArray( reader.getValue() );
-            reader.moveUp();
-            reader.moveDown(); //high
-            high = toIntArray( reader.getValue() );
-            reader.moveUp();
-            
-            reader.moveUp(); //range
-            
-            if ( reader.hasMoreChildren() ) {
-                reader.moveDown(); //transform or crs
-            }
-            
-            AffineTransform2D gridToCRS = null;
-            if ( "transform".equals( reader.getNodeName() ) ) {
-                double sx,sy,shx,shy,tx,ty;
-                
-                reader.moveDown(); //scaleX
-                sx = Double.parseDouble( reader.getValue() );
-                reader.moveUp();
-                
-                reader.moveDown(); //scaleY
-                sy = Double.parseDouble( reader.getValue() );
-                reader.moveUp();
-                
-                
-                reader.moveDown(); //shearX
-                shx = Double.parseDouble( reader.getValue() );
-                reader.moveUp();
-                
-                reader.moveDown(); //shearY
-                shy = Double.parseDouble( reader.getValue() );
-                reader.moveUp();
-                
-                reader.moveDown(); //translateX
-                tx = Double.parseDouble( reader.getValue() );
-                reader.moveUp();
-                
-                reader.moveDown(); //translateY
-                ty = Double.parseDouble( reader.getValue() );
-                reader.moveUp();
-                
-                
-
-                // set tranform
-                gridToCRS = new AffineTransform2D(sx, shx, shy, sy, tx, ty);
-                reader.moveUp();
-                if ( reader.hasMoreChildren() ) {
-                    reader.moveDown(); //crs
-                }
-            }
-            
+            int[] high = null, low = null;
             CoordinateReferenceSystem crs = null;
-            if ( "crs".equals( reader.getNodeName() ) ) {
-                crs = (CoordinateReferenceSystem) context.convertAnother( null, CoordinateReferenceSystem.class, 
-                    new SingleValueConverterWrapper( new SRSConverter() ));
+            AffineTransform2D gridToCRS = null;
+            GeneralGridEnvelope gridRange = null;
+            
+            while (reader.hasMoreChildren()) {
+                reader.moveDown();
+                if("range".equals(reader.getNodeName())) {
+                    while (reader.hasMoreChildren()) {
+                        reader.moveDown();
+                        if("low".equals(reader.getNodeName())) {
+                            low = toIntArray( reader.getValue() );
+                        }
+                        else if ("high".equals(reader.getNodeName())) {
+                            high = toIntArray( reader.getValue() );
+                        }
+                        reader.moveUp();
+                    }
+                    // new grid range
+                    gridRange = new GeneralGridEnvelope(low, high);
+                }
+                if ( "crs".equals( reader.getNodeName() ) ) {
+                    crs = (CoordinateReferenceSystem) context.convertAnother( null, CoordinateReferenceSystem.class, 
+                            new SingleValueConverterWrapper( new SRSConverter() ));
+                }
+                else if ("transform".equals(reader.getNodeName())) {
+                    double sx = 1.0, sy = 1.0, shx = 0.0, shy = 0.0, tx = 0.0, ty = 0.0;
+                    while (reader.hasMoreChildren()) {
+                        reader.moveDown();
+                        if("scaleX".equals(reader.getNodeName())) {
+                            sx = Double.parseDouble( reader.getValue() );
+                        }
+                        else if ("scaleY".equals(reader.getNodeName())) {
+                            sy = Double.parseDouble( reader.getValue() );
+                        }
+                        else if ("shearX".equals(reader.getNodeName())) {
+                            shx = Double.parseDouble( reader.getValue() );
+                        }
+                        else if ("shearY".equals(reader.getNodeName())) {
+                            shy = Double.parseDouble( reader.getValue() );
+                        }
+                        else if ("translateX".equals(reader.getNodeName())) {
+                            tx = Double.parseDouble( reader.getValue() );
+                        }
+                        else if ("translateY".equals(reader.getNodeName())) {
+                            ty = Double.parseDouble( reader.getValue() );
+                        }
+                        reader.moveUp();
+                    }
+                    // set tranform
+                    gridToCRS = new AffineTransform2D(sx, shx, shy, sy, tx, ty);
+                }
                 reader.moveUp();
             }
-            
-            // new grid range
-            GeneralGridEnvelope gridRange = new GeneralGridEnvelope(low, high);
-            
+
             GridGeometry2D gg = new GridGeometry2D( gridRange, gridToCRS, crs );
             return serializationMethodInvoker.callReadResolve(gg);
         }
@@ -2042,17 +2029,21 @@ public class XStreamPersister {
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
             String name = null;
             String sql = null;
-            String geomName = null;
-            Class type = null;
-            int srid = -1;
             List<String> primaryKeys = new ArrayList<String>();
             List<VirtualTableParameter> params = new ArrayList<VirtualTableParameter>();
+            List<String> geomNames=new ArrayList<String>();
+            List<Class> types=new ArrayList<Class>();
+            List<Integer> srids= new ArrayList<Integer>();
+            
             Boolean escapeSql = false;
             while (reader.hasMoreChildren()) {
                 reader.moveDown();
                 if (reader.getNodeName().equals("keyColumn")) {
                     primaryKeys.add(reader.getValue());
                 } else if (reader.getNodeName().equals("geometry")) {
+                    String geomName = null;
+                    Class type = null;
+                    int srid = -1;                    
                     while (reader.hasMoreChildren()) {
                         reader.moveDown();
                         if (reader.getNodeName().equals("name"))
@@ -2064,7 +2055,10 @@ public class XStreamPersister {
                             srid = Converters.convert(reader.getValue(), Integer.class);
                         }
                         reader.moveUp();
-                    }
+                    }                    
+                    geomNames.add(geomName);
+                    types.add(type);
+                    srids.add(srid);                    
                 } else if (reader.getNodeName().equals("parameter")) {
                     String pname = null;
                     String defaultValue = null;
@@ -2103,8 +2097,8 @@ public class XStreamPersister {
 
             VirtualTable vt = new VirtualTable(name, sql, false);
 
-            if (geomName != null && type != null) {
-                vt.addGeometryMetadatata(geomName, type, srid);
+            for(int i=0; i<geomNames.size();i++){
+                vt.addGeometryMetadatata(geomNames.get(i), types.get(i), srids.get(i));
             }
             for (VirtualTableParameter p : params) {
                 vt.addParameter(p);

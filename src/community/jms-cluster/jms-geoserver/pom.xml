@@ -58,6 +58,12 @@
     <dependency>
       <groupId>org.restlet</groupId>
       <artifactId>org.restlet</artifactId>
+      <classifier>noobjrep</classifier> <!-- remove after upgrading Restlet -->
+    </dependency>
+    <dependency>
+      <groupId>org.restlet</groupId>
+      <artifactId>org.restlet</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -234,7 +240,32 @@
       <artifactId>mockrunner</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.geoserver</groupId>
+        <artifactId>gs-main</artifactId>
+        <version>${project.version}</version>
+        <classifier>tests</classifier>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver</groupId>
+      <artifactId>gs-restconfig</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver</groupId>
+      <artifactId>gs-platform</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 </project>

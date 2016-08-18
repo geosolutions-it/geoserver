@@ -1,4 +1,4 @@
-/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -99,6 +99,7 @@ public class DownloadProcess implements GSProcess, ApplicationContextAware {
      * @param interpolation interpolation method to use when reprojecting / scaling
      * @param targetSizeX the size of the target image along the X axis
      * @param targetSizeY the size of the target image along the Y axis
+     * @param bandIndices the band indices selected for output, in case of raster input
      * @param progressListener the progress listener
      * @return the file
      * @throws ProcessException the process exception
@@ -115,6 +116,7 @@ public class DownloadProcess implements GSProcess, ApplicationContextAware {
             @DescribeParameter(name = "interpolation", description = "Interpolation function to use when reprojecting / scaling raster data.  Values are NEAREST (default), BILINEAR, BICUBIC2, BICUBIC", min = 0) Interpolation interpolation,
             @DescribeParameter(name = "targetSizeX", min = 0, minValue = 1, description = "X Size of the Target Image (applies to raster data only)") Integer targetSizeX,
             @DescribeParameter(name = "targetSizeY", min = 0, minValue = 1, description = "Y Size of the Target Image (applies to raster data only)") Integer targetSizeY,
+            @DescribeParameter(name = "selectedBands", description = "Band Selection Indices", min = 0) int[] bandIndices,
             final ProgressListener progressListener) throws ProcessException {
 
         try {
@@ -165,7 +167,7 @@ public class DownloadProcess implements GSProcess, ApplicationContextAware {
                 LOGGER.log(Level.FINE, "Running the estimator");
             }
             if (!estimator.execute(layerName, filter, targetCRS, roiCRS, roi, clip, targetSizeX,
-                    targetSizeY, progressListener)) {
+                    targetSizeY, bandIndices, progressListener)) {
                 throw new IllegalArgumentException("Download Limits Exceeded. Unable to proceed!");
             }
 
@@ -223,7 +225,7 @@ public class DownloadProcess implements GSProcess, ApplicationContextAware {
                 // convert/reproject/crop if needed the coverage
                 internalOutput = new RasterDownload(limits, resourceManager, context).execute(
                         mimeType, progressListener, cInfo, roi, targetCRS, clip, filter,
-                        interpolation, targetSizeX, targetSizeY);
+                        interpolation, targetSizeX, targetSizeY, bandIndices);
             } else {
 
                 // wrong type
