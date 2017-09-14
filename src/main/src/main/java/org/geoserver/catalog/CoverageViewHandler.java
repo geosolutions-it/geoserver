@@ -259,15 +259,25 @@ class CoverageViewHandler {
             }
 
             // Checking dimensions
-            if (metadataNames.length != this.metadataNames.length) {
+            if(metadataNames == null) {
+                if(this.metadataNames != null && this.metadataNames.length > 0) {
+                    throw new IllegalArgumentException(
+                            "The coverage metadataNames should have the same size");
+                }
+            } else if(this.metadataNames == null) {
+                if(metadataNames != null && metadataNames.length > 0) {
+                    throw new IllegalArgumentException(
+                            "The coverage metadataNames should have the same size");
+                }
+            } else if (metadataNames.length != this.metadataNames.length) {
                 throw new IllegalArgumentException(
                         "The coverage metadataNames should have the same size");
-            }
-
-            final Set<String> metadataSet = new HashSet<String>(Arrays.asList(metadataNames));
-            for (String metadataName : this.metadataNames) {
-                if (!metadataSet.contains(metadataName)) {
-                    throw new IllegalArgumentException("The coverage metadata are different");
+            } else {
+                final Set<String> metadataSet = new HashSet<String>(Arrays.asList(metadataNames));
+                for (String metadataName : this.metadataNames) {
+                    if (!metadataSet.contains(metadataName)) {
+                        throw new IllegalArgumentException("The coverage metadata are different");
+                    }
                 }
             }
 
