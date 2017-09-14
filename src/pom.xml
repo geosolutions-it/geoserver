@@ -13,7 +13,7 @@
  <groupId>org.geoserver</groupId>
  <artifactId>geoserver</artifactId>
  <packaging>pom</packaging>
- <version>2.12-SNAPSHOT</version>
+ <version>2.12-evoodas-SNAPSHOT</version>
  <name>GeoServer</name>
 
  <scm>
@@ -1482,7 +1482,7 @@
       <descriptor>release/ext-vectortiles.xml</descriptor>
       <descriptor>release/ext-ysld.xml</descriptor>
      </descriptors>
-     <finalName>geoserver-2.12-SNAPSHOT</finalName>
+     <finalName>geoserver-2.12-evoodas-SNAPSHOT</finalName>
      <outputDirectory>${project.build.directory}/release</outputDirectory>
     </configuration>
    </plugin>
@@ -1833,7 +1833,7 @@
  </modules>
 
  <properties>
-  <gs.version>2.12-SNAPSHOT</gs.version>
+  <gs.version>2.12-evoodas-SNAPSHOT</gs.version>
   <gt.version>18-SNAPSHOT</gt.version>
   <gwc.version>1.12-SNAPSHOT</gwc.version>
   <spring.version>4.3.7.RELEASE</spring.version>
