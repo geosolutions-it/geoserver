@@ -60,12 +60,12 @@ public class CoverageViewTest extends GeoServerSystemTestSupport {
 
     @BeforeClass
     public static void setupJaiExt() {
-        JAIExt.initJAIEXT(true);
+        JAIExt.initJAIEXT(true, true);
     }
     
     @AfterClass
     public static void tearDownJaiExt() {
-        JAIExt.initJAIEXT(false);
+        JAIExt.initJAIEXT(false, false);
     }
 
     static CoordinateReferenceSystem UTM32N;
