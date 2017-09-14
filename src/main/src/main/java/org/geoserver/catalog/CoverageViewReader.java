@@ -82,6 +82,8 @@ import it.geosolutions.jaiext.utilities.ImageLayout2;
  * 
  */
 public class CoverageViewReader implements GridCoverage2DReader {
+    
+    private static final int HETEROGENEOUS_RASTER_GUTTER = 10;
 
     public final static FilterFactory2 FF = CommonFactoryFinder.getFilterFactory2();
 
@@ -179,6 +181,21 @@ public class CoverageViewReader implements GridCoverage2DReader {
                             + "data one, continuing", e);
                     
                 }
+            }
+            
+            // expand the read area if we are in the heterogeneous case... it's a resampling
+            // one similar to reprojection, prone to off-by-one issues at the borders
+            if(!handler.isHomogeneousCoverages()) {
+                GridEnvelope2D range = requestedGridGeometry.getGridRange2D();
+                GridEnvelope2D expandedRange = new GridEnvelope2D(
+                        (int) range.getMinX() - HETEROGENEOUS_RASTER_GUTTER,
+                        (int) range.getMinY() - HETEROGENEOUS_RASTER_GUTTER,
+                        (int) range.getWidth() + HETEROGENEOUS_RASTER_GUTTER * 2,
+                        (int) range.getHeight() + HETEROGENEOUS_RASTER_GUTTER * 2);
+                GridGeometry2D expandedGG = new GridGeometry2D(expandedRange,
+                        requestedGridGeometry.getGridToCRS(),
+                        requestedGridGeometry.getCoordinateReferenceSystem());
+                value.setValue(expandedGG);
             }
         }
 
@@ -357,6 +374,8 @@ public class CoverageViewReader implements GridCoverage2DReader {
 
             coverage = retainBands(bandIndices, coverage, localHints);
             coverages.add(coverage);
+            
+            System.out.println(coverage.getEnvelope2D());
         }
 
 
