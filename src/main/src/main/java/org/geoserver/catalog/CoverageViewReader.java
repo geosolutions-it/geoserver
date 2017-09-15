@@ -366,7 +366,8 @@ public class CoverageViewReader implements GridCoverage2DReader {
             index++;
             // special case for dynamic alpha on single input, no need to actually select away the alpha
             Hints localHints = new Hints(hints);
-            if(dynamicAlphaSource != null && mergedBands.size() == 1 && (bandIndices.size() == 1 || bandIndices.size() == 3)) {
+            if (dynamicAlphaSource != null && mergedBands.size() == 1
+                    && (bandIndices.size() == 1 || bandIndices.size() == 3)) {
                 final int alphaBandIndex = getAlphaBandIndex(coverage);
                 addAlphaColorModelHint(localHints, bandIndices.size());
                 bandIndices.add(alphaBandIndex);
@@ -374,8 +375,11 @@ public class CoverageViewReader implements GridCoverage2DReader {
 
             coverage = retainBands(bandIndices, coverage, localHints);
             coverages.add(coverage);
-            
-            System.out.println(coverage.getEnvelope2D());
+
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, "Read coverage " + coverageName + ", result has envelope "
+                        + coverage.getEnvelope2D());
+            }
         }
 
 

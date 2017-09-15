@@ -115,6 +115,10 @@ public class CoverageViewTest extends GeoServerSystemTestSupport {
                 CompositionType.BAND_SELECT);
         final CoverageView coverageView = new CoverageView(RGB_IR_VIEW,
                 Arrays.asList(rBand, gBand, bBand, irBand));
+        // old coverage views deserialize with null in these fields, force it to test backwards
+        // compatibility
+        coverageView.setEnvelopeCompositionType(null);
+        coverageView.setSelectedResolution(null);
         return coverageView;
     }
     

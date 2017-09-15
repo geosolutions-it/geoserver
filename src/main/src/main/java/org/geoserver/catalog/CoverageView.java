@@ -344,7 +344,8 @@ public class CoverageView implements Serializable {
     }
 
     public EnvelopeCompositionType getEnvelopeCompositionType() {
-        return envelopeCompositionType;
+        // for backwards compatibility
+        return envelopeCompositionType == null ? EnvelopeCompositionType.INTERSECTION : envelopeCompositionType;
     }
 
     public void setEnvelopeCompositionType(EnvelopeCompositionType envelopeCompositionType) {
@@ -352,7 +353,8 @@ public class CoverageView implements Serializable {
     }
 
     public SelectedResolution getSelectedResolution() {
-        return selectedResolution;
+        // for backwards compatibility
+        return selectedResolution == null ? SelectedResolution.BEST : selectedResolution;
     }
 
     public void setSelectedResolution(SelectedResolution selectedResolution) {
