@@ -82,6 +82,7 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
+import org.geotools.renderer.lite.LabelCache;
 import org.geotools.renderer.lite.RendererUtilities;
 import org.geotools.renderer.lite.RenderingTransformationHelper;
 import org.geotools.renderer.lite.StreamingRenderer;
@@ -199,6 +200,8 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
      */
     private String extension = null;
     
+    private Class<? extends LabelCache> labelCache = null;
+    
     /**
      * The known producer capabilities
      */
@@ -267,6 +270,12 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
 
     public MapProducerCapabilities getCapabilities(String format) {
         return capabilities.get(format);
+    }
+    
+    
+
+    public void setLabelCache(Class<? extends LabelCache> labelCache) {
+        this.labelCache = labelCache;
     }
 
     /**
@@ -511,7 +520,13 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                 count++;
             }
         }
-        
+        if (labelCache != null) {
+            try {
+                rendererParams.put(StreamingRenderer.LABEL_CACHE_KEY, labelCache.newInstance());
+            } catch (Exception e) {
+                throw new ServiceException(e);
+            }
+        }
         renderer.setRendererHints(rendererParams);
 
         // if abort already requested bail out
