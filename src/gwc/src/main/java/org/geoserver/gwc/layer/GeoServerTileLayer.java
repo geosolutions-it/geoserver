@@ -61,6 +61,8 @@ import org.geotools.util.logging.Logging;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.config.ConfigurationException;
 import org.geowebcache.config.XMLGridSubset;
+import org.geowebcache.config.legends.LegendInfo;
+import org.geowebcache.config.legends.LegendInfoBuilder;
 import org.geowebcache.conveyor.ConveyorTile;
 import org.geowebcache.filter.parameters.ParameterException;
 import org.geowebcache.filter.parameters.ParameterFilter;
@@ -123,15 +125,7 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
 
     private WMS wms;
 
-    public GeoServerTileLayer(final PublishedInfo publishedInfo, final GWCConfig configDefaults,
-                              final GridSetBroker gridsets) {
-        this(publishedInfo, configDefaults, gridsets,
-                GeoServerExtensions.bean(LegendSample.class),
-                GeoServerExtensions.bean(WMS.class));
-    }
-
-    public GeoServerTileLayer(final PublishedInfo publishedInfo, final GWCConfig configDefaults,
-            final GridSetBroker gridsets, LegendSample legendSample, WMS wms) {
+    public GeoServerTileLayer(final PublishedInfo publishedInfo, final GWCConfig configDefaults, final GridSetBroker gridsets) {
         checkNotNull(publishedInfo, "publishedInfo");
         checkNotNull(gridsets, "gridsets");
         checkNotNull(configDefaults, "configDefaults");
@@ -139,9 +133,6 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
         this.gridSetBroker = gridsets;
         this.publishedInfo = publishedInfo;
         this.info = TileLayerInfoUtil.loadOrCreate(getPublishedInfo(), configDefaults);
-
-        this.legendSample = GeoServerExtensions.bean(LegendSample.class);
-        this.wms = GeoServerExtensions.bean(WMS.class);
     }
 
     public GeoServerTileLayer(final PublishedInfo publishedInfo, final GridSetBroker gridsets,
@@ -1291,38 +1282,38 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
     }
 
     @Override
-    public Map<String, LegendInfo> getLegendsInfo() {
+    public Map<String, org.geowebcache.config.legends.LegendInfo> getLayerLegendsInfo() {
         LayerInfo layerInfo = getLayerInfo();
         if (layerInfo == null) {
             return null;
         }
-        Map<String, LegendInfo> legends = new HashMap<>();
+        Map<String, org.geowebcache.config.legends.LegendInfo> legends = new HashMap<>();
         Set<StyleInfo> styles = new HashSet<>(layerInfo.getStyles());
         styles.add(layerInfo.getDefaultStyle());
         for (StyleInfo styleInfo : styles) {
             org.geoserver.catalog.LegendInfo legendInfo = styleInfo.getLegend();
-            LegendInfo gwcLegendInfo = new LegendInfo();
+            LegendInfoBuilder gwcLegendInfo = new LegendInfoBuilder();
             if (legendInfo != null) {
-                gwcLegendInfo.id = legendInfo.getId();
-                gwcLegendInfo.width = legendInfo.getWidth();
-                gwcLegendInfo.height = legendInfo.getHeight();
-                gwcLegendInfo.format = legendInfo.getFormat();
-                gwcLegendInfo.legendUrl = buildURL(RequestUtils.baseURL(Dispatcher.REQUEST.get().getHttpRequest()),
-                        legendInfo.getOnlineResource(), null, URLMangler.URLType.RESOURCE);
-                legends.put(styleInfo.prefixedName(), gwcLegendInfo);
+                gwcLegendInfo.withStyleName(styleInfo.getName())
+                        .withWidth(legendInfo.getWidth())
+                        .withHeight(legendInfo.getHeight())
+                        .withFormat(legendInfo.getFormat())
+                        .withCompleteUrl(buildURL(RequestUtils.baseURL(Dispatcher.REQUEST.get().getHttpRequest()),
+                                legendInfo.getOnlineResource(), null, URLMangler.URLType.RESOURCE));
+                legends.put(styleInfo.prefixedName(), gwcLegendInfo.build());
             } else {
+                int finalWidth = GetLegendGraphicRequest.DEFAULT_WIDTH;
+                int finalHeight = GetLegendGraphicRequest.DEFAULT_HEIGHT;
+                String finalFormat = GetLegendGraphicRequest.DEFAULT_FORMAT;
                 try {
-                    gwcLegendInfo.width = GetLegendGraphicRequest.DEFAULT_WIDTH;
-                    gwcLegendInfo.height = GetLegendGraphicRequest.DEFAULT_HEIGHT;
-                    Dimension dimension = legendSample.getLegendURLSize(styleInfo);
+                    Dimension dimension = getLegendSample().getLegendURLSize(styleInfo);
                     if (dimension != null) {
-                        gwcLegendInfo.width = (int) dimension.getWidth();
-                        gwcLegendInfo.height = (int) dimension.getHeight();
+                        finalWidth = (int) dimension.getWidth();
+                        finalHeight = (int) dimension.getHeight();
                     }
-                    gwcLegendInfo.format = GetLegendGraphicRequest.DEFAULT_FORMAT;
-                    if (null == wms.getLegendGraphicOutputFormat(gwcLegendInfo.format)) {
+                    if (null == getWms().getLegendGraphicOutputFormat(finalFormat)) {
                         if (LOGGER.isLoggable(Level.WARNING)) {
-                            LOGGER.warning("Default legend format (" + gwcLegendInfo.format +
+                            LOGGER.warning("Default legend format (" + finalFormat +
                                     ")is not supported (jai not available?), can't add LegendURL element");
                         }
                         continue;
@@ -1332,17 +1323,51 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer {
                 }
                 String layerName = layerInfo.prefixedName();
                 Map<String, String> params = params("service", "WMS", "request",
-                        "GetLegendGraphic", "format", gwcLegendInfo.format, "width",
-                        String.valueOf(GetLegendGraphicRequest.DEFAULT_WIDTH), "height",
-                        String.valueOf(GetLegendGraphicRequest.DEFAULT_HEIGHT), "layer", layerName);
+                        "GetLegendGraphic", "format", finalFormat, "width",
+                        String.valueOf(finalWidth), "height",
+                        String.valueOf(finalHeight), "layer", layerName);
                 if (!styleInfo.getName().equals(layerInfo.getDefaultStyle().getName())) {
                     params.put("style", styleInfo.getName());
                 }
-                gwcLegendInfo.legendUrl = buildURL(RequestUtils.baseURL(Dispatcher.REQUEST.get().getHttpRequest()),
-                        "ows", params, URLMangler.URLType.SERVICE);
-                legends.put(styleInfo.prefixedName(), gwcLegendInfo);
+                gwcLegendInfo.withStyleName(styleInfo.getName())
+                        .withWidth(finalWidth)
+                        .withHeight(finalHeight)
+                        .withFormat(finalFormat)
+                        .withCompleteUrl(buildURL(RequestUtils.baseURL(
+                                Dispatcher.REQUEST.get().getHttpRequest()), "ows", params, URLMangler.URLType.SERVICE));
+                legends.put(styleInfo.prefixedName(), gwcLegendInfo.build());
             }
         }
         return legends;
+    }
+
+    /**
+     * Helper that gets the LegendSample bean from Spring context when needed.
+     */
+    private LegendSample getLegendSample() {
+        if (legendSample == null) {
+            // no need for synchronization the bean is always the same
+            legendSample = GeoServerExtensions.bean(LegendSample.class);
+        }
+        return legendSample;
+    }
+
+    /**
+     * Helper that gets the WMS bean from Spring context when needed.
+     */
+    private WMS getWms() {
+        if (wms == null) {
+            // no need for synchronization the bean is always the same
+            wms = GeoServerExtensions.bean(WMS.class);
+        }
+        return wms;
+    }
+
+    void setLegendSample(LegendSample legendSample) {
+        this.legendSample = legendSample;
+    }
+
+    void setWms(WMS wms) {
+        this.wms = wms;
     }
 }
