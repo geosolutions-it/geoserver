@@ -202,9 +202,7 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
      * The file extension (minus the .)
      */
     private String extension = null;
-    
-    private Class<? extends LabelCache> labelCache = null;
-    
+      
     /**
      * The known producer capabilities
      */
@@ -275,12 +273,6 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         return capabilities.get(format);
     }
     
-    
-
-    public void setLabelCache(Class<? extends LabelCache> labelCache) {
-        this.labelCache = labelCache;
-    }
-
     public void setLabelCache(Function<WMSMapContent, LabelCache> labelCache) {
         this.labelCache = labelCache;
     }
@@ -533,13 +525,6 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
                     }
                 }
                 count++;
-            }
-        }
-        if (labelCache != null) {
-            try {
-                rendererParams.put(StreamingRenderer.LABEL_CACHE_KEY, labelCache.newInstance());
-            } catch (Exception e) {
-                throw new ServiceException(e);
             }
         }
         renderer.setRendererHints(rendererParams);
