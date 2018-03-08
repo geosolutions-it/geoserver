@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -173,6 +174,8 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
      * The lookup table used for data type transformation (it's really the identity one)
      */
     private static LookupTableJAI IDENTITY_TABLE = new LookupTableJAI(getTable());
+    
+    private Function<WMSMapContent, LabelCache> labelCache = null;
 
     private static byte[] getTable() {
         byte[] arr = new byte[256];
@@ -275,6 +278,10 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
     
 
     public void setLabelCache(Class<? extends LabelCache> labelCache) {
+        this.labelCache = labelCache;
+    }
+
+    public void setLabelCache(Function<WMSMapContent, LabelCache> labelCache) {
         this.labelCache = labelCache;
     }
 
@@ -480,6 +487,14 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         if (request.getFormatOptions().get("dpi") != null) {
             rendererParams.put(StreamingRenderer.DPI_KEY, (request
                     .getFormatOptions().get("dpi")));
+        }
+        
+        if (labelCache != null) {
+            try {
+                rendererParams.put(StreamingRenderer.LABEL_CACHE_KEY, labelCache.apply(mapContent));
+            } catch (Exception e) {
+                throw new ServiceException(e);
+            }
         }
 
         boolean kmplacemark = false;
