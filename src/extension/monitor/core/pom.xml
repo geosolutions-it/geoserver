@@ -60,6 +60,12 @@
    <artifactId>xmlunit</artifactId>
    <scope>test</scope>
   </dependency>
+  <dependency>
+    <groupId>org.geoserver</groupId>
+    <artifactId>gs-gwc</artifactId>
+    <version>${project.version}</version>
+    <scope>test</scope>
+  </dependency>
  </dependencies>
 
  <build>
