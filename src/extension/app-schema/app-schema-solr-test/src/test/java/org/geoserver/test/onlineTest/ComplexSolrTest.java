@@ -4,9 +4,13 @@
  */
 package org.geoserver.test.onlineTest;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeTrue;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,10 +28,12 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 
+import javax.imageio.ImageIO;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Result;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -51,10 +57,12 @@ import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.util.IOUtils;
 import org.geotools.data.solr.TestsSolrUtils;
 import org.geotools.feature.NameImpl;
+import org.geotools.image.test.ImageAssert;
 import org.geotools.util.URLs;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -85,18 +93,58 @@ public final class ComplexSolrTest extends GeoServerSystemTestSupport {
     @Test
     public void testGetStationFeatures() throws Exception {
         Document document =
-                getAsDOM("wfs?request=GetFeature&version=1.1.0&typename=st:Station");
-        checkStationData(7,"Bologna","POINT (44.5 11.34)", WFS11_XPATH_ENGINE, document);
-        checkStationData(13,"Alessandria","POINT (44.92 8.63)", WFS11_XPATH_ENGINE, document);
+                getAsDOM("wfs?request=GetFeature&version=1.1.0&srsName=EPSG:4326&typename=st:Station");
+        checkStationData(7,"Bologna","POINT (11.34 44.5)", WFS11_XPATH_ENGINE, document);
+        checkStationData(13,"Alessandria","POINT (8.63 44.92)", WFS11_XPATH_ENGINE, document);
     }
     
     @Test
     public void testFilterStationFeatures() throws Exception {
         String postContent = readResourceContent("/querys/postQuery1.xml");
         Document document =
-                postAsDOM("wfs?request=GetFeature&version=1.1.0&typename=st:Station", postContent);
-        checkStationData(7,"Bologna","POINT (44.5 11.34)", WFS11_XPATH_ENGINE, document);
+                postAsDOM("wfs?request=GetFeature&version=1.1.0&srsName=EPSG:4326&typename=st:Station", postContent);
+        checkStationData(7,"Bologna","POINT (11.34 44.5)", WFS11_XPATH_ENGINE, document);
         checkNoStationId(13, WFS11_XPATH_ENGINE, document);
+    }
+    
+    @Test
+    public void testStationsWmsGetMap() throws Exception {
+        // execute the WMS GetMap request
+        MockHttpServletResponse result =
+                getAsServletResponse(
+                        "wms?SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&STYLES&LAYERS=st:Station"
+                                + "&SRS=EPSG:4326&WIDTH=768&HEIGHT=768"
+                                + "&BBOX=5,40,15,50");
+        assertThat(result.getStatus(), is(200));
+        assertThat(result.getContentType(), is("image/png"));
+        // check that we got the expected image back
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBinary(result)));
+        ImageAssert.assertEquals(
+                URLs.urlToFile(getClass().getResource("/results/wms_result.png")), image, 10);
+    }
+    
+    @Test
+    public void testStationsWmsGetFeatureInfo() throws Exception {
+        Document document =
+                getAsDOM(
+                        "wms?SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetFeatureInfo&FORMAT=image/png&TRANSPARENT=true&QUERY_LAYERS=st:Station"
+                                + "&STYLES&LAYERS=st:Station&INFO_FORMAT=text/xml; subtype=gml/3.1.1"
+                                + "&FEATURE_COUNT=50&X=278&Y=390&SRS=EPSG:4326&WIDTH=768&HEIGHT=768"
+                                + "&BBOX=5,40,15,50");
+        checkStationData(13,"Alessandria","POINT (8.63 44.92)", WFS11_XPATH_ENGINE, document);
+        checkNoStationId(7, WFS11_XPATH_ENGINE, document);
+        
+        Document document2 =
+                getAsDOM(
+                        "wms?SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetFeatureInfo&FORMAT=image/png&TRANSPARENT=true&QUERY_LAYERS=st:Station"
+                                + "&STYLES&LAYERS=st:Station&INFO_FORMAT=text/xml; subtype=gml/3.1.1"
+                                + "&FEATURE_COUNT=50&X=486&Y=422&SRS=EPSG:4326&WIDTH=768&HEIGHT=768"
+                                + "&BBOX=5,40,15,50");
+        checkStationData(7,"Bologna","POINT (11.34 44.5)", WFS11_XPATH_ENGINE, document2);
+        checkNoStationId(13, WFS11_XPATH_ENGINE, document2);
     }
     
     private void checkStationData(Integer id, String name, String position,XpathEngine engine, 
@@ -111,7 +159,7 @@ public final class ComplexSolrTest extends GeoServerSystemTestSupport {
                 + "/st:Station[@gml:id='%s']", id));
     }
     
-    protected String getSolrCoreURL() {
+    private String getSolrCoreURL() {
         return fixture.getProperty(SOLR_URL_KEY) + "/" + CORE_NAME;
     }
     
