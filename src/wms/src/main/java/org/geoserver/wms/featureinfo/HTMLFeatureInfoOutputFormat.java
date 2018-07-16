@@ -173,7 +173,7 @@ public class HTMLFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat {
      * @throws IOException
      *             if the template can't be loaded
      */
-    Template getTemplate(Name name, String templateFileName, Charset charset)
+    protected Template getTemplate(Name name, String templateFileName, Charset charset)
             throws IOException {
         ResourceInfo ri = null;
         if (name != null) {
