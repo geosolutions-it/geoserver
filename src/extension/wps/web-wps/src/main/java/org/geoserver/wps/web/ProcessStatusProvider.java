@@ -12,11 +12,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
+
 import org.apache.wicket.extensions.markup.html.repeater.util.SortParam;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.wicket.GeoServerDataProvider;
-import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 import org.geoserver.wps.ProcessStatusStore;
 import org.geoserver.wps.executor.ExecutionStatus;
 import org.geoserver.wps.executor.ProcessStatusTracker;
@@ -70,10 +70,19 @@ public class ProcessStatusProvider extends GeoServerDataProvider<ExecutionStatus
     static final Property<ExecutionStatus> PROGRESS =
             new BeanProperty<ExecutionStatus>("progress", "progress");
 
+    static final Property<ExecutionStatus> EXPIRATION =
+            new BeanProperty<ExecutionStatus>("expiration", "expirationDate");
+
+    static final Property<ExecutionStatus> COMPLETION =
+            new BeanProperty<ExecutionStatus>("completion", "estimatedCompletion");
+
+    static final Property<ExecutionStatus> NEXT_POLL =
+            new BeanProperty<ExecutionStatus>("nextPoll", "nextPoll");
+
     static final Property<ExecutionStatus> TASK = new BeanProperty<ExecutionStatus>("task", "task");
 
     static final List<Property<ExecutionStatus>> PROPERTIES =
-            Arrays.asList(TYPE, NODE, USER, PROCESS, CREATED, PHASE, PROGRESS, TASK);
+            Arrays.asList(TYPE, NODE, USER, PROCESS, CREATED, PHASE, PROGRESS, EXPIRATION, COMPLETION, NEXT_POLL, TASK);
 
     private long first;
 

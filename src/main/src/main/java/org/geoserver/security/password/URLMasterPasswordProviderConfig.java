@@ -19,6 +19,7 @@ public class URLMasterPasswordProviderConfig extends MasterPasswordProviderConfi
 
     URL url;
     boolean encrypting;
+    boolean reset;
 
     public URLMasterPasswordProviderConfig() {}
 
@@ -46,5 +47,15 @@ public class URLMasterPasswordProviderConfig extends MasterPasswordProviderConfi
     /** Sets flag controlling whether passwords are stored encrypted. */
     public void setEncrypting(boolean encrypting) {
         this.encrypting = encrypting;
+    }
+
+    /** Flag controlling whether passwords must be refreshed or not at startup. */
+    public boolean isReset() {
+        return reset;
+    }
+
+    /** Sets flag controlling whether passwords must be refreshed or not at startup. */
+    public void setReset(boolean reset) {
+        this.reset = reset;
     }
 }

@@ -83,6 +83,7 @@
               <value>Dismiss</value>
               <value>GetExecutionStatus</value>
               <value>GetExecutionResult</value>
+              <value>GetExecutions</value>
             </list>
         </constructor-arg>
     </bean>
@@ -101,7 +102,8 @@
     <bean id="executeKvpRequestReader" class="org.geoserver.wps.kvp.ExecuteKvpRequestReader"/>
     <bean id="statusKvpRequestReader" class="org.geoserver.wps.kvp.GetExecutionStatusKvpRequestReader"/>
     <bean id="resultKvpRequestReader" class="org.geoserver.wps.kvp.GetExecutionResultKvpRequestReader"/>
-    <bean id="dismisssKvpRequestReader" class="org.geoserver.wps.kvp.DismissKvpRequestReader"/>
+    <bean id="dismissKvpRequestReader" class="org.geoserver.wps.kvp.DismissKvpRequestReader"/>
+    <bean id="wpsGetExecutionsKvpRequestReader" class="org.geoserver.wps.kvp.GetExecutionsKvpRequestReader"/>
     
 
     <!-- XML Configuration -->
