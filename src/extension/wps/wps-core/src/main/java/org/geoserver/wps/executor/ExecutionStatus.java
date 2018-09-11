@@ -118,7 +118,7 @@ public class ExecutionStatus implements Serializable {
 
     /** Date and time by wich the processing job will be finished */
     Date estimatedCompletion = null;
-    
+
     /** Date and time for the next suggested status polling */
     Date nextPoll = null;
 
@@ -292,44 +292,32 @@ public class ExecutionStatus implements Serializable {
         this.lastUpdated = lastUpdated;
     }
 
-    /**
-     * @return the expirationDate
-     */
+    /** @return the expirationDate */
     public Date getExpirationDate() {
         return expirationDate;
     }
 
-    /**
-     * @param expirationDate the expirationDate to set
-     */
+    /** @param expirationDate the expirationDate to set */
     public void setExpirationDate(Date expirationDate) {
         this.expirationDate = expirationDate;
     }
 
-    /**
-     * @return the estimatedCompletion
-     */
+    /** @return the estimatedCompletion */
     public Date getEstimatedCompletion() {
         return estimatedCompletion;
     }
 
-    /**
-     * @param estimatedCompletion the estimatedCompletion to set
-     */
+    /** @param estimatedCompletion the estimatedCompletion to set */
     public void setEstimatedCompletion(Date estimatedCompletion) {
         this.estimatedCompletion = estimatedCompletion;
     }
 
-    /**
-     * @return the nextPoll
-     */
+    /** @return the nextPoll */
     public Date getNextPoll() {
         return nextPoll;
     }
 
-    /**
-     * @param nextPoll the nextPoll to set
-     */
+    /** @param nextPoll the nextPoll to set */
     public void setNextPoll(Date nextPoll) {
         this.nextPoll = nextPoll;
     }
@@ -379,7 +367,9 @@ public class ExecutionStatus implements Serializable {
         result = prime * result + ((executionId == null) ? 0 : executionId.hashCode());
         result = prime * result + ((lastUpdated == null) ? 0 : lastUpdated.hashCode());
         result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
-        result = prime * result + ((estimatedCompletion == null) ? 0 : estimatedCompletion.hashCode());
+        result =
+                prime * result
+                        + ((estimatedCompletion == null) ? 0 : estimatedCompletion.hashCode());
         result = prime * result + ((nextPoll == null) ? 0 : nextPoll.hashCode());
         result = prime * result + ((nodeId == null) ? 0 : nodeId.hashCode());
         result = prime * result + ((phase == null) ? 0 : phase.hashCode());

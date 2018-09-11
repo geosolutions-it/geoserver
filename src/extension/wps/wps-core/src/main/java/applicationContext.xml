@@ -171,6 +171,7 @@
     <bean id="wpsStoredResourceResponse" class="org.geoserver.wps.response.StoredResourceResponse">
       <constructor-arg index="0" ref="wpsResourceManager"/>
     </bean>
+    <bean id="wpsExecutionsResponse" class="org.geoserver.wps.response.GetExecutionsResponse" scope="prototype"/>
     
     <!-- Exception handler, we need to output ows 1.1 exceptions -->
     <bean id="wpsExceptionHandler" class="org.geoserver.ows.OWS11ServiceExceptionHandler">

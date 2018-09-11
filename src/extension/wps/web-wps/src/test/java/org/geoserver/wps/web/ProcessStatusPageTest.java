@@ -8,6 +8,9 @@ package org.geoserver.wps.web;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 
 import java.net.URLEncoder;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.wicket.behavior.AbstractAjaxBehavior;
@@ -60,6 +63,10 @@ public class ProcessStatusPageTest extends WPSPagesTestSupport {
         // print(tester.getLastRenderedPage(), true, true);
         tester.assertLabel("table:listContainer:items:1:itemProperties:3:component", "gs:Monkey");
         tester.assertLabel("table:listContainer:items:1:itemProperties:5:component", "RUNNING");
+        Date today = new Date();
+        DateFormat df = new SimpleDateFormat("M/d/yy");
+        tester.assertLabel(
+                "table:listContainer:items:1:itemProperties:7:component", df.format(today));
 
         // select the process and delete it
         GeoServerTablePanel<?> table =

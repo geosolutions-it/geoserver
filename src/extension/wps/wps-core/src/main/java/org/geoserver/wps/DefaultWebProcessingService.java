@@ -102,6 +102,6 @@ public class DefaultWebProcessingService implements WebProcessingService, Applic
 
     @Override
     public Object getExecutions(GetExecutionsType request) throws WPSException {
-        return new Executions(executionManager, tracker, resources, context).run(request);
+        return new Executions(gs, executionManager, tracker, resources, context).run(request);
     }
 }

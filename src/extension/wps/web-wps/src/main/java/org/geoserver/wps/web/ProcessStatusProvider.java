@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
-
 import org.apache.wicket.extensions.markup.html.repeater.util.SortParam;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.web.GeoServerApplication;
@@ -82,7 +81,18 @@ public class ProcessStatusProvider extends GeoServerDataProvider<ExecutionStatus
     static final Property<ExecutionStatus> TASK = new BeanProperty<ExecutionStatus>("task", "task");
 
     static final List<Property<ExecutionStatus>> PROPERTIES =
-            Arrays.asList(TYPE, NODE, USER, PROCESS, CREATED, PHASE, PROGRESS, EXPIRATION, COMPLETION, NEXT_POLL, TASK);
+            Arrays.asList(
+                    TYPE,
+                    NODE,
+                    USER,
+                    PROCESS,
+                    CREATED,
+                    PHASE,
+                    PROGRESS,
+                    EXPIRATION,
+                    COMPLETION,
+                    NEXT_POLL,
+                    TASK);
 
     private long first;
 

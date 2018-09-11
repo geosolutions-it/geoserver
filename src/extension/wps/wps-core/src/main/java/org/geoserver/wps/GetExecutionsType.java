@@ -10,18 +10,22 @@ package org.geoserver.wps;
  * @author Alessio Fabiani - GeoSolutions
  */
 public class GetExecutionsType {
-    
+
     String service;
 
     String version;
-    
+
     String owner;
 
     String identifier;
 
     String status;
-    
+
     String orderBy;
+
+    Integer startIndex;
+
+    Integer maxFeatures;
 
     public String getService() {
         return service;
@@ -69,6 +73,26 @@ public class GetExecutionsType {
 
     public void setOrderBy(String orderBy) {
         this.orderBy = orderBy;
+    }
+
+    /** @return the startIndex */
+    public Integer getStartIndex() {
+        return startIndex;
+    }
+
+    /** @param startIndex the startIndex to set */
+    public void setStartIndex(Integer startIndex) {
+        this.startIndex = startIndex;
+    }
+
+    /** @return the maxFeatures */
+    public Integer getMaxFeatures() {
+        return maxFeatures;
+    }
+
+    /** @param maxFeatures the maxFeatures to set */
+    public void setMaxFeatures(Integer maxFeatures) {
+        this.maxFeatures = maxFeatures;
     }
 
     @Override

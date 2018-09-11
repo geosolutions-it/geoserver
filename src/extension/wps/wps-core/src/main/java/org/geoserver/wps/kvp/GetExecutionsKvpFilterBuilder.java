@@ -16,7 +16,7 @@ import org.opengis.filter.expression.PropertyName;
  * @author Alessio Fabiani - GeoSolutions
  */
 public class GetExecutionsKvpFilterBuilder {
-    
+
     Filter filter = null;
 
     FilterFactory ff;
@@ -35,14 +35,15 @@ public class GetExecutionsKvpFilterBuilder {
 
     protected void append(String propertyName, String propertyValue) {
         final PropertyName attribute = ff.property(propertyName);
-        final PropertyIsEqualTo propertyFilter = ff.equal(attribute, ff.literal(propertyValue), true);
+        final PropertyIsEqualTo propertyFilter =
+                ff.equal(attribute, ff.literal(propertyValue), true);
         if (filter == null) {
             filter = propertyFilter;
         } else {
             filter = ff.and(filter, propertyFilter);
-        }        
+        }
     }
-    
+
     public void appendUserNameFilter(String userName) {
         append("userName", userName);
     }
@@ -54,5 +55,4 @@ public class GetExecutionsKvpFilterBuilder {
     public void appendStatusFilter(String status) {
         append("phase", status);
     }
-
 }
