@@ -17,7 +17,8 @@ public final class RuleBuilder {
     private String transform;
     private Integer remove;
     private String combine;
-
+    private Boolean repeat;
+    
     private Pattern matchPattern;
     private Pattern activationPattern;
 
@@ -59,6 +60,13 @@ public final class RuleBuilder {
         }
         return this;
     }
+    
+    public RuleBuilder withRepeat(Boolean repeat) {
+        if (repeat != null) {
+            this.repeat = repeat;
+        }
+        return this;
+    }
 
     public RuleBuilder withRemove(Integer remove) {
         this.remove = remove;
@@ -82,6 +90,6 @@ public final class RuleBuilder {
         Utils.checkCondition(parameter != null && !parameter.isEmpty(), "Parameter attribute is mandatory it cannot be NULL or EMPTY.");
         Utils.checkCondition(transform != null && !transform.isEmpty(), "Transform attribute is mandatory it cannot be NULL or EMPTY.");
         return new Rule(id, Utils.withDefault(activated, true), position, match, activation, parameter,
-                transform, remove, combine, matchPattern, activationPattern);
+                transform, remove, combine, Utils.withDefault(repeat, false), matchPattern, activationPattern);
     }
 }

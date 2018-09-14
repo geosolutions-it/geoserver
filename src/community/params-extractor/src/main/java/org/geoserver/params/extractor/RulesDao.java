@@ -145,6 +145,7 @@ public final class RulesDao {
             writeAttribute("transform", rule.getTransform(), output);
             writeAttribute("remove", rule.getRemove(), output);
             writeAttribute("combine", rule.getCombine(), output);
+            writeAttribute("repeat", rule.getRepeat(), output);
             output.writeEndElement();
             output.writeCharacters(NEW_LINE);
         } catch (Exception exception) {
@@ -178,6 +179,7 @@ public final class RulesDao {
             getAttribute("remove", attributes, compose(Integer::valueOf, ruleBuilder::withRemove));
             getAttribute("transform", attributes, ruleBuilder::withTransform);
             getAttribute("combine", attributes, ruleBuilder::withCombine);
+            getAttribute("repeat", attributes, compose(Boolean::valueOf, ruleBuilder::withRepeat));
             rules.add(ruleBuilder.build());
             Utils.debug(LOGGER, "End parsing rule.");
         }

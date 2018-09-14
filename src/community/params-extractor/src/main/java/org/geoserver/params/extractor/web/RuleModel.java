@@ -25,6 +25,7 @@ public class RuleModel implements Serializable {
     private String transform;
     private Integer remove;
     private String combine;
+    private Boolean repeat;
     private boolean activated;
     private boolean echo;
 
@@ -50,6 +51,7 @@ public class RuleModel implements Serializable {
         transform = rule.getTransform();
         remove = rule.getRemove();
         combine = rule.getCombine();
+        repeat = rule.getRepeat();
         if (position != null && transform != null) {
             transform = transform.replace("$2", "{PARAMETER}");
         }
@@ -71,7 +73,8 @@ public class RuleModel implements Serializable {
                 .withActivation(activation)
                 .withParameter(parameter)
                 .withRemove(remove)
-                .withCombine(combine);
+                .withCombine(combine)
+                .withRepeat(repeat);
         if (position != null && transform != null) {
             ruleBuilder.withTransform(transform.replace("{PARAMETER}", "$2"));
         } else {
@@ -171,4 +174,14 @@ public class RuleModel implements Serializable {
     public boolean isEchoOnly() {
         return isForwardOnly;
     }
+
+    public Boolean getRepeat() {
+        return repeat;
+    }
+
+    public void setRepeat(Boolean repeat) {
+        this.repeat = repeat;
+    }
+    
+    
 }

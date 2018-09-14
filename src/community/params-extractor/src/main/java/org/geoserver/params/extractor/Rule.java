@@ -25,12 +25,13 @@ public final class Rule {
     private final String transform;
     private final Optional<Integer> remove;
     private final Optional<String> combine;
+    private final Boolean repeat;
 
     private final Pattern matchPattern;
     private final Optional<Pattern> activationPattern;
 
     public Rule(String id, Boolean activated, Integer position, String match, String activation, String parameter,
-                String transform, Integer remove, String combine, Pattern matchPattern, Pattern activationPattern) {
+                String transform, Integer remove, String combine, Boolean repeat, Pattern matchPattern, Pattern activationPattern) {
         this.id = id;
         this.activated = activated;
         this.position = position;
@@ -40,6 +41,7 @@ public final class Rule {
         this.transform = transform;
         this.remove = Optional.ofNullable(remove);
         this.combine = Optional.ofNullable(combine);
+        this.repeat = repeat;
         this.matchPattern = matchPattern;
         this.activationPattern = Optional.ofNullable(activationPattern);
     }
@@ -62,7 +64,7 @@ public final class Rule {
             return urlTransform;
         }
         urlTransform.removeMatch(matcher.group(remove.orElse(1)));
-        urlTransform.addParameter(parameter, URLDecoder.decode(matcher.replaceAll(transform)), combine);
+        urlTransform.addParameter(parameter, URLDecoder.decode(matcher.replaceAll(transform)), combine, repeat);
         return urlTransform;
     }
 
@@ -101,4 +103,10 @@ public final class Rule {
     public String getCombine() {
         return combine.orElse(null);
     }
+
+    public Boolean getRepeat() {
+        return repeat;
+    }
+    
+    
 }
