@@ -83,6 +83,19 @@ public abstract class AbstractNetCDFEncoder implements NetCDFEncoder {
                 }
             };
 
+    /**
+     * Global Attributes that are never copied from a NetCDF/GRIB source because they require
+     * special handling.
+     */
+    @SuppressWarnings("serial")
+    protected static final Set<String> COPY_GLOBAL_ATTRIBUTES_BLACKLIST =
+            new HashSet<String>() {
+                {
+                    // Not copying this since the UCAR writer will create it again
+                    add("_NCProperties");
+                }
+            };
+
     /** Bean related to the {@link NetCDFCFParser} */
     protected static NetCDFParserBean parserBean = GeoServerExtensions.bean(NetCDFParserBean.class);
 
@@ -210,7 +223,11 @@ public abstract class AbstractNetCDFEncoder implements NetCDFEncoder {
             try (NetcdfDataset source = getSourceNetcdfDataset(sampleGranule)) {
                 if (source != null) {
                     for (Attribute att : source.getGlobalAttributes()) {
-                        writer.addGroupAttribute(null, att);
+                        // part of the blacklist?
+                        String shortName = att.getShortName();
+                        if (!COPY_GLOBAL_ATTRIBUTES_BLACKLIST.contains(shortName)) {
+                            writer.addGroupAttribute(null, att);
+                        }
                     }
                 }
             } catch (Exception e) {
