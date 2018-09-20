@@ -114,7 +114,7 @@ public class GetExecutionsType {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
+        final int prime = 7961;
         int result = 1;
         result = prime * result + ((owner == null) ? 0 : owner.hashCode());
         result = prime * result + ((identifier == null) ? 0 : identifier.hashCode());
@@ -122,6 +122,8 @@ public class GetExecutionsType {
         result = prime * result + ((orderBy == null) ? 0 : orderBy.hashCode());
         result = prime * result + ((service == null) ? 0 : service.hashCode());
         result = prime * result + ((version == null) ? 0 : version.hashCode());
+        result = prime * result + ((startIndex == null) ? 0 : startIndex.hashCode());
+        result = prime * result + ((maxFeatures == null) ? 0 : maxFeatures.hashCode());
         return result;
     }
 
@@ -149,6 +151,12 @@ public class GetExecutionsType {
         if (version == null) {
             if (other.version != null) return false;
         } else if (!version.equals(other.version)) return false;
+        if (startIndex == null) {
+            if (other.startIndex != null) return false;
+        } else if (!startIndex.equals(other.startIndex)) return false;
+        if (maxFeatures == null) {
+            if (other.maxFeatures != null) return false;
+        } else if (!maxFeatures.equals(other.maxFeatures)) return false;
         return true;
     }
 }

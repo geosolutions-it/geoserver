@@ -70,10 +70,10 @@ public class ProcessStatusProvider extends GeoServerDataProvider<ExecutionStatus
             new BeanProperty<ExecutionStatus>("progress", "progress");
 
     static final Property<ExecutionStatus> EXPIRATION =
-            new BeanProperty<ExecutionStatus>("expiration", "expirationDate");
+            new BeanProperty<ExecutionStatus>("expirationDate", "expirationDate");
 
     static final Property<ExecutionStatus> COMPLETION =
-            new BeanProperty<ExecutionStatus>("completion", "estimatedCompletion");
+            new BeanProperty<ExecutionStatus>("estimatedCompletion", "estimatedCompletion");
 
     static final Property<ExecutionStatus> NEXT_POLL =
             new BeanProperty<ExecutionStatus>("nextPoll", "nextPoll");
@@ -184,6 +184,7 @@ public class ProcessStatusProvider extends GeoServerDataProvider<ExecutionStatus
             SortByImpl[] sortBys = new SortByImpl[1];
             final Property<?> property = getProperty(sort);
             if (property.isSearchable()) { // we really need another flag
+                sortBys[0] = new SortByImpl(FF.property(property.getName()), SortOrder.ASCENDING);
                 FF.sort(property.getName(), SortOrder.ASCENDING);
                 if (!sort.isAscending()) {
                     sortBys[0].setSortOrder(SortOrder.DESCENDING);
