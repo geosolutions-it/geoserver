@@ -94,6 +94,7 @@
           <descriptor>release/ext-qos.xml</descriptor>
           <descriptor>release/ext-web-resource.xml</descriptor>
           <descriptor>release/ext-s3-geotiff.xml</descriptor>
+          <descriptor>release/ext-generated-geometries.xml</descriptor>
         </descriptors>
       </configuration>
      </plugin>
@@ -260,6 +261,7 @@
         <module>wfs3</module>
         <!-- <module>monitor-hibernate</module> -->
         <module>qos</module>
+        <module>generated-geometries</module>
       </modules>
     </profile>
     <profile>
@@ -585,5 +587,11 @@
         <module>monitor-hibernate</module>
       </modules>
     </profile>
-  </profiles>  
+    <profile>
+      <id>generated-geometries</id>
+      <modules>
+        <module>generated-geometries</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
