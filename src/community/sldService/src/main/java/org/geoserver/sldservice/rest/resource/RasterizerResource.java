@@ -41,6 +41,7 @@ import org.geotools.styling.RasterSymbolizer;
 import org.geotools.styling.Rule;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleBuilder;
+import org.geotools.styling.StyleFactory;
 import org.geotools.styling.Symbolizer;
 import org.geotools.util.Version;
 import org.opengis.filter.FilterFactory2;
@@ -175,7 +176,6 @@ public class RasterizerResource extends AbstractCatalogResource {
 	private Style remapStyle(StyleInfo defaultStyle, RasterSymbolizer rasterSymbolizer, double min, double max, 
 	        int classes, COLORRAMP_TYPE ramp, String layerName, final int digits, final int colorMapType, String startColor, String endColor, String midColor) throws Exception {
 		StyleBuilder sb = new StyleBuilder();
-		
 		ColorMap originalColorMap = rasterSymbolizer.getColorMap();
 		ColorMap resampledColorMap = null;
 		
@@ -256,12 +256,12 @@ public class RasterizerResource extends AbstractCatalogResource {
 			return defaultStyle.getStyle();
 		}
 		
-//		StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory(null);
-//		RasterSymbolizer symbolizer = styleFactory.createRasterSymbolizer();
-//		symbolizer.setColorMap(resampledColorMap);
-		rasterSymbolizer.setColorMap(resampledColorMap);
-		Style style = sb.createStyle(layerName, rasterSymbolizer);
-		
+		StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory(null);
+		RasterSymbolizer symbolizer = styleFactory.createRasterSymbolizer();
+		symbolizer.setColorMap(resampledColorMap);
+		// rasterSymbolizer.setColorMap(resampledColorMap);
+		Style style = sb.createStyle("Feature", symbolizer);
+		style.setName(layerName);
 		return style;
 	}
 
