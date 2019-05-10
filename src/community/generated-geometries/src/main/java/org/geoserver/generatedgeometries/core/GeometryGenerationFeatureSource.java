@@ -11,6 +11,7 @@ import org.geoserver.security.decorators.DecoratingSimpleFeatureSource;
 import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.Filter;
@@ -75,5 +76,28 @@ class GeometryGenerationFeatureSource extends DecoratingSimpleFeatureSource {
     public int getCount(Query srcQuery) throws IOException {
         Query query = strategy.convertQuery(featureTypeInfo, srcQuery);
         return super.getCount(query);
+    }
+
+    @Override
+    public ReferencedEnvelope getBounds() throws IOException {
+
+        SimpleFeatureCollection features =
+                super.getFeatures(strategy.convertQuery(featureTypeInfo, Query.ALL));
+        GeometryGenerationFeatureCollection generatedGeomFC =
+                new GeometryGenerationFeatureCollection(
+                        features, featureTypeInfo, getSchema(), strategy);
+        GeneratedGeometryBoundsFinder boundsFinder =
+                new GeneratedGeometryBoundsFinder(featureTypeInfo);
+        generatedGeomFC.accepts(boundsFinder, null);
+        return boundsFinder.getBounds();
+    }
+
+    @Override
+    public ReferencedEnvelope getBounds(Query query) throws IOException {
+        SimpleFeatureCollection fc = getFeatures(query);
+        GeneratedGeometryBoundsFinder boundsFinder =
+                new GeneratedGeometryBoundsFinder(featureTypeInfo);
+        fc.accepts(boundsFinder, null);
+        return boundsFinder.getBounds();
     }
 }

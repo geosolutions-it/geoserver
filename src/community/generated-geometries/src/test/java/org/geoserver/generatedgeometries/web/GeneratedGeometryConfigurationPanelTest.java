@@ -11,8 +11,10 @@ import static org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTe
 import static org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData.LONG_LAT_NO_GEOM_ON_THE_FLY_LAYER;
 import static org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData.LONG_LAT_NO_GEOM_ON_THE_FLY_QNAME;
 import static org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData.LONG_LAT_QNAME;
+import static org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData.enableGeometryGenerationStrategy;
 import static org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData.filenameOf;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -20,6 +22,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.wicket.markup.html.form.DropDownChoice;
+import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.geoserver.catalog.Catalog;
@@ -27,11 +30,13 @@ import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourcePool;
 import org.geoserver.data.test.SystemTestData;
+import org.geoserver.generatedgeometries.core.longitudelatitude.LongLatGeometryGenerationStrategy;
 import org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData;
 import org.geoserver.generatedgeometries.dummy.DummyGGStrategy;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.GeoServerWicketTestSupport;
 import org.geoserver.web.data.resource.ResourceConfigurationPage;
+import org.geotools.referencing.CRS;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.feature.type.FeatureType;
@@ -154,5 +159,50 @@ public class GeneratedGeometryConfigurationPanelTest extends GeoServerWicketTest
         // then
         DummyGGStrategy strategy = (DummyGGStrategy) applicationContext.getBean("dummyStrategy");
         assertTrue(strategy.configured);
+    }
+
+    @Test
+    public void testThatStrategyfromModelMetadataIsSelected() throws Exception {
+
+        Catalog catalog = getGeoServerApplication().getCatalog();
+        FeatureTypeInfo featureTypeInfo = getFeatureTypeInfo(LONG_LAT_QNAME);
+        // enable latlong extension on this feature type
+        enableGeometryGenerationStrategy(catalog, featureTypeInfo);
+        LayerInfo layerInfo = catalog.getLayerByName(getLayerId(LONG_LAT_QNAME));
+        login();
+
+        // open layer info page
+        tester.startPage(new ResourceConfigurationPage(layerInfo, true));
+
+        DropDownChoice<GeometryGenerationStrategyUIGenerator> dropDown = getStrategyDropDown();
+        GeometryGenerationStrategyUIGenerator selectedGeometryGenGUI = dropDown.getModelObject();
+        assertEquals(selectedGeometryGenGUI.getName(), LongLatGeometryGenerationStrategy.NAME);
+    }
+
+    @Test
+    public void testThatNativeSRIDisSet() throws Exception {
+        Catalog catalog = getGeoServerApplication().getCatalog();
+        FeatureTypeInfo featureTypeInfo = getFeatureTypeInfo(LONG_LAT_QNAME);
+        // enable latlong extension on this feature type
+        enableGeometryGenerationStrategy(catalog, featureTypeInfo);
+        LayerInfo layerInfo = catalog.getLayerByName(getLayerId(LONG_LAT_QNAME));
+        login();
+
+        // open layer info page
+        tester.startPage(new ResourceConfigurationPage(layerInfo, true));
+
+        // get the Native SRS text Field
+        TextField<String> c =
+                (TextField<String>)
+                        tester.getComponentFromLastRenderedPage(
+                                "publishedinfo:tabs:panel:theList:1:content:referencingForm:nativeSRS:srs");
+
+        // should not be empty
+        assertFalse(new String((String) c.getModel().getObject()).isEmpty());
+
+        // should match EPSG in featureType Info
+        assertEquals(
+                featureTypeInfo.getCRS(),
+                CRS.decode(new String((String) c.getModel().getObject())));
     }
 }
