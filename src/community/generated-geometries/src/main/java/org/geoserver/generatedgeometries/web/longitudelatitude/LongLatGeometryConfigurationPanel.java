@@ -9,6 +9,7 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.apache.wicket.Component;
@@ -26,8 +27,11 @@ import org.apache.wicket.model.ResourceModel;
 import org.geoserver.catalog.AttributeTypeInfo;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourcePool;
 import org.geoserver.generatedgeometries.core.GeneratedGeometryConfigurationException;
+import org.geoserver.generatedgeometries.core.GeometryGenerationStrategy;
+import org.geoserver.generatedgeometries.core.longitudelatitude.LongLatGeometryGenerationStrategy;
 import org.geoserver.generatedgeometries.core.longitudelatitude.LongLatGeometryGenerationStrategy.LongLatConfiguration;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.wicket.CRSPanel;
@@ -67,12 +71,13 @@ public class LongLatGeometryConfigurationPanel extends Panel {
     }
 
     private void initComponents(IModel model) {
+        List<AttributeTypeInfo> attributes = getAttributes((FeatureTypeInfo) model.getObject());
+        populate(model, attributes);
         add(new Label("attrLabel", new ResourceModel("geometryAttributeNameLabel")));
         geometryAttributeNameTextField =
                 new TextField<>("geometryAttributeName", forExpression("geometryAttributeName"));
         add(geometryAttributeNameTextField);
 
-        List<AttributeTypeInfo> attributes = getAttributes((FeatureTypeInfo) model.getObject());
         lonAttributeDropDown =
                 new DropDownChoice<>(
                         "lonAttributesDropDown",
@@ -95,6 +100,41 @@ public class LongLatGeometryConfigurationPanel extends Panel {
                 lonAttributeDropDown,
                 latAttributeDropDown,
                 declaredCRS);
+    }
+
+    /**
+     * 
+     * Populates panel using Metadata related LongLat startegy configuration parameters
+     * stored inside FeatyreTyp`s MetaMap
+     * 
+     * @param model only for FeatureTypeInfo using LongLat Strategy
+     * @param attributes attributes of Feature
+     */
+    private void populate(IModel model, List<AttributeTypeInfo> attributes) {
+        // try to populate the UI fields if model belongs to this Strategy
+        Optional<String> modelStrategy =
+                GeometryGenerationStrategy.getStrategyName(((FeatureTypeInfo) model.getObject()));
+
+        if (!modelStrategy.isPresent()) return;
+        if (!modelStrategy.get().equalsIgnoreCase(LongLatGeometryGenerationStrategy.NAME)) return;
+
+        MetadataMap metadata = ((FeatureTypeInfo) model.getObject()).getMetadata();
+        if (metadata.containsKey(LongLatGeometryGenerationStrategy.GEOMETRY_ATTRIBUTE_NAME)) {
+            geometryAttributeName =
+                    metadata.get(LongLatGeometryGenerationStrategy.GEOMETRY_ATTRIBUTE_NAME)
+                            .toString();
+            selectedLonAttribute =
+                    getAttributeTypeInfo(
+                            attributes,
+                            metadata.get(LongLatGeometryGenerationStrategy.LONGITUDE_ATTRIBUTE_NAME)
+                                    .toString());
+            selectedLatAttribute =
+                    getAttributeTypeInfo(
+                            attributes,
+                            metadata.get(LongLatGeometryGenerationStrategy.LATITUDE_ATTRIBUTE_NAME)
+                                    .toString());
+            //  CRS is already set
+        }
     }
 
     private <T> PropertyModel<T> forExpression(String expression) {
@@ -147,5 +187,15 @@ public class LongLatGeometryConfigurationPanel extends Panel {
                 selectedLonAttribute.getName(),
                 selectedLatAttribute.getName(),
                 declaredCRS.getCRS());
+    }
+
+    private AttributeTypeInfo getAttributeTypeInfo(
+            List<AttributeTypeInfo> attributes, String find) {
+
+        for (AttributeTypeInfo attribute : attributes) {
+            if (attribute.getName().equalsIgnoreCase(find)) return attribute;
+        }
+
+        return null;
     }
 }

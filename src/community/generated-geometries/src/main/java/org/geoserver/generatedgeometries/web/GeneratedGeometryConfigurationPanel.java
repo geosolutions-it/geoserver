@@ -34,6 +34,7 @@ import org.apache.wicket.model.StringResourceModel;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.ResourcePool;
+import org.geoserver.generatedgeometries.core.GeometryGenerationStrategy;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.data.resource.BasicResourceConfig;
@@ -123,10 +124,19 @@ public class GeneratedGeometryConfigurationPanel extends ResourceConfigurationPa
         methodologyConfiguration.setOutputMarkupId(true);
         content.add(methodologyConfiguration);
 
+        Optional<String> modelStrategy =
+                GeometryGenerationStrategy.getStrategyName(((FeatureTypeInfo) model.getObject()));
+
         for (GeometryGenerationStrategyUIGenerator ggsp : strategies) {
             Component configuration = ggsp.createUI("configuration", model);
             componentMap.put(ggsp.getName(), configuration);
-            configuration.setVisible(false);
+            // check if this is the strategy attached with model
+            boolean isVisible =
+                    (modelStrategy.isPresent()
+                            && ggsp.getName().equalsIgnoreCase(modelStrategy.get()));
+            configuration.setVisible(isVisible);
+            // check if this is the strategy attached with model then set this as selection
+            if (isVisible) methodologyDropDown.setModelObject(ggsp);
         }
 
         methodologyConfiguration.add(
@@ -158,6 +168,7 @@ public class GeneratedGeometryConfigurationPanel extends ResourceConfigurationPa
             isGeometryCreated =
                     ((FeatureTypeInfo) model.getObject()).getFeatureType().getGeometryDescriptor()
                             != null;
+
         } catch (Exception e) {
             e.printStackTrace();
         }

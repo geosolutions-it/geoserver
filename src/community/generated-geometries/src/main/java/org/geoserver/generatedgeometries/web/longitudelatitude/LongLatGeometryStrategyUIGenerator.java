@@ -32,9 +32,7 @@ public class LongLatGeometryStrategyUIGenerator
 
     @Override
     public Component createUI(String id, IModel model) {
-        if (longLatConfigPanel == null) {
-            longLatConfigPanel = new LongLatGeometryConfigurationPanel(id, model);
-        }
+        longLatConfigPanel = new LongLatGeometryConfigurationPanel(id, model);
         return longLatConfigPanel;
     }
 

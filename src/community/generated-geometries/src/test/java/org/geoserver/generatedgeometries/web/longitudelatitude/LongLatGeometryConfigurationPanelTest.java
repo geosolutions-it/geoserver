@@ -24,6 +24,7 @@ import org.apache.wicket.model.IModel;
 import org.geoserver.catalog.AttributeTypeInfo;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourcePool;
 import org.geoserver.catalog.impl.AttributeTypeInfoImpl;
 import org.geoserver.generatedgeometries.core.GeneratedGeometryConfigurationException;
@@ -46,6 +47,7 @@ public class LongLatGeometryConfigurationPanelTest extends GeoServerWicketTestSu
 
     private GeoServerApplication application;
     private IModel model;
+    private FeatureTypeInfo info;
 
     private List<AttributeTypeInfo> attributeTypeInfoList;
     private AttributeTypeInfoImpl attributeTypeInfo1;
@@ -58,7 +60,7 @@ public class LongLatGeometryConfigurationPanelTest extends GeoServerWicketTestSu
         application = mock(GeoServerApplication.class);
         Catalog catalog = mock(Catalog.class);
         ResourcePool resourcePool = mock(ResourcePool.class);
-        FeatureTypeInfo info = mock(FeatureTypeInfo.class);
+        info = mock(FeatureTypeInfo.class);
         FeatureType featureType = mock(FeatureType.class);
         model = mock(IModel.class);
         attributeTypeInfo1 = new AttributeTypeInfoImpl();
@@ -215,5 +217,51 @@ public class LongLatGeometryConfigurationPanelTest extends GeoServerWicketTestSu
         }
 
         assertNull(longLatConfiguration);
+    }
+
+    @Test
+    public void testThatConfigurationPanelisLoadedWhenModelHasStrategyinMetaMap() {
+
+        MetadataMap metadata = new MetadataMap();
+        metadata.put(
+                LongLatGeometryGenerationStrategy.STRATEGY_METADATA_KEY,
+                LongLatGeometryGenerationStrategy.NAME);
+        metadata.put(LongLatGeometryGenerationStrategy.GEOMETRY_ATTRIBUTE_NAME, "the_geometry");
+        metadata.put(
+                LongLatGeometryGenerationStrategy.LONGITUDE_ATTRIBUTE_NAME,
+                attributeTypeInfo1.getName());
+        metadata.put(
+                LongLatGeometryGenerationStrategy.LATITUDE_ATTRIBUTE_NAME,
+                attributeTypeInfo2.getName());
+
+        // set metadata
+        when(info.getMetadata()).thenReturn(metadata);
+
+        // assertNotNull(model.getObject());
+        FormTestPage testPage =
+                new FormTestPage(
+                        id -> new LongLatGeometryConfigurationPanel(id, model, () -> application));
+
+        FormTestPage page = tester.startPage(testPage);
+        print(page, false, true, true);
+
+        DropDownChoice<AttributeTypeInfo> lonAttributesDropDown =
+                (DropDownChoice<AttributeTypeInfo>)
+                        tester.getComponentFromLastRenderedPage(
+                                page.getFormPagePath("lonAttributesDropDown"));
+        DropDownChoice<AttributeTypeInfo> latAttributesDropDown =
+                (DropDownChoice<AttributeTypeInfo>)
+                        tester.getComponentFromLastRenderedPage(
+                                page.getFormPagePath("latAttributesDropDown"));
+        TextField<String> geometryAttrField =
+                (TextField<String>)
+                        tester.getComponentFromLastRenderedPage(
+                                page.getFormPagePath("geometryAttributeName"));
+
+        // without doing any actions on the panel they should match the metadata map
+
+        assertSame(lonAttributesDropDown.getModelObject(), attributeTypeInfo1);
+        assertSame(latAttributesDropDown.getModelObject(), attributeTypeInfo2);
+        assertSame(geometryAttrField.getModelObject(), "the_geometry");
     }
 }

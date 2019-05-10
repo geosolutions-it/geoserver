@@ -5,6 +5,7 @@
 
 package org.geoserver.generatedgeometries.web;
 
+import java.io.Serializable;
 import org.apache.wicket.Component;
 import org.apache.wicket.model.IModel;
 import org.geoserver.catalog.FeatureTypeInfo;
@@ -14,7 +15,7 @@ import org.geoserver.catalog.FeatureTypeInfo;
  * org.geoserver.generatedgeometries.core.GeometryGenerationStrategy} implementation. Should be
  * instantiated as Spring bean.
  */
-public interface GeometryGenerationStrategyUIGenerator {
+public interface GeometryGenerationStrategyUIGenerator extends Serializable {
 
     /**
      * The name of the UI that can be used for identifying it. Usually it is the same as name of

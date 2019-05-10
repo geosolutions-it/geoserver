@@ -54,10 +54,11 @@ public class LongLatGeometryGenerationStrategy
     private static final long serialVersionUID = 1L;
 
     public static final String NAME = "longLat";
-    static final String LONGITUDE_ATTRIBUTE_NAME = "longitudeAttributeName";
-    static final String LATITUDE_ATTRIBUTE_NAME = "latitudeAttributeName";
-    static final String GEOMETRY_ATTRIBUTE_NAME = "geometryAttributeName";
-    static final String GEOMETRY_CRS = "geometryCRS";
+
+    public static final String LONGITUDE_ATTRIBUTE_NAME = "longitudeAttributeName";
+    public static final String LATITUDE_ATTRIBUTE_NAME = "latitudeAttributeName";
+    public static final String GEOMETRY_ATTRIBUTE_NAME = "geometryAttributeName";
+    public static final String GEOMETRY_CRS = "geometryCRS";
 
     private final transient Map<Name, SimpleFeatureType> cache = new HashMap<>();
     private final GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory();
