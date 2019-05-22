@@ -230,6 +230,7 @@ public class LongLatGeometryGenerationStrategy
     @Override
     public Query convertQuery(FeatureTypeInfo info, Query query) {
         Query q = new Query();
+        q.setHints(query.getHints());        
         q.setFilter(convertFilter(info, query.getFilter()));
         LongLatConfiguration configuration = getLongLatConfiguration(info);
         List<String> properties = new ArrayList<>();
