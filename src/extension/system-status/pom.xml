@@ -6,11 +6,11 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>org.geoserver</groupId>
-    <artifactId>extension</artifactId>
-    <version>2.15-SNAPSHOT</version>
-  </parent>
+	<parent>
+		<groupId>org.geoserver</groupId>
+		<artifactId>community</artifactId>
+		<version>2.15-SNAPSHOT-C105</version>
+	</parent>
 
 	<groupId>org.geoserver.extension</groupId>
 	<artifactId>gs-system-status</artifactId>

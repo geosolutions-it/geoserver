@@ -10,8 +10,8 @@
 
   <parent>
     <groupId>org.geoserver</groupId>
-    <artifactId>extension</artifactId>
-    <version>2.15-SNAPSHOT</version>
+    <artifactId>community</artifactId>
+    <version>2.15-SNAPSHOT-C105</version>
   </parent>
 
   <groupId>org.geoserver.extension</groupId>
