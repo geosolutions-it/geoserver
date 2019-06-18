@@ -234,7 +234,6 @@ The following illustration shows the configuration options for the LDAP authenti
    * - User Group Service
      - The user/group service to use for role assignment. Only applicable when the *Use LDAP groups for authorization* parameter is **cleared**.
 
-
 Authentication chain
 --------------------
 
