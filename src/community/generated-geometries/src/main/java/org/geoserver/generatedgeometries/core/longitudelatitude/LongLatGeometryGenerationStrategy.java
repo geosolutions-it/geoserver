@@ -13,8 +13,10 @@ import static org.geoserver.generatedgeometries.core.GeometryGenerationStrategy.
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -230,23 +232,42 @@ public class LongLatGeometryGenerationStrategy
     @Override
     public Query convertQuery(FeatureTypeInfo info, Query query) {
         Query q = new Query();
-        q.setHints(query.getHints());        
+        q.setHints(query.getHints());
         q.setFilter(convertFilter(info, query.getFilter()));
         LongLatConfiguration configuration = getLongLatConfiguration(info);
         List<String> properties = new ArrayList<>();
         try {
-            properties =
-                    info.getFeatureType()
-                            .getDescriptors()
-                            .stream()
-                            .filter(
-                                    propertyDescriptor ->
-                                            !propertyDescriptor
-                                                    .getName()
-                                                    .toString()
-                                                    .equals(configuration.geomAttributeName))
-                            .map(propertyDescriptor -> propertyDescriptor.getName().toString())
-                            .collect(Collectors.toList());
+            // no fields were sent, use all fields excluding geom field
+            if (query.getPropertyNames() == null) {
+                properties =
+                        info.getFeatureType()
+                                .getDescriptors()
+                                .stream()
+                                .filter(
+                                        propertyDescriptor ->
+                                                !propertyDescriptor
+                                                        .getName()
+                                                        .toString()
+                                                        .equals(configuration.geomAttributeName))
+                                .map(propertyDescriptor -> propertyDescriptor.getName().toString())
+                                .collect(Collectors.toList());
+            } else {
+                // else use the passed fields of this query
+                // but make sure geom field is replaced with Long and Lat fields
+                List<String> existingProperties =
+                        new LinkedList<String>(Arrays.asList(query.getPropertyNames()));
+                // remove geom column
+                existingProperties.remove(configuration.geomAttributeName);
+                // make sure longitude field is present
+                if (!existingProperties.contains(configuration.longAttributeName))
+                    existingProperties.add(configuration.longAttributeName);
+                // make sure latitude field is present
+                if (!existingProperties.contains(configuration.latAttributeName))
+                    existingProperties.add(configuration.latAttributeName);
+
+                properties = new ArrayList<>(existingProperties);
+            }
+
         } catch (Exception e) {
             String message = format("could not convert query [%s]", query);
             logger().log(WARNING, message, e);
