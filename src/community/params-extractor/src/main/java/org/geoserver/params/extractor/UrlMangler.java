@@ -32,6 +32,20 @@ public class UrlMangler implements URLMangler {
                 notify -> echoParameters = EchoParametersDao.getEchoParameters(resource.in()));
     }
 
+    private HttpServletRequest getHttpRequest(Request request) {
+        HttpServletRequest httpRequest = request.getHttpRequest();
+        while (httpRequest instanceof HttpServletRequestWrapper
+                && !(httpRequest instanceof RequestWrapper)) {
+            ServletRequest servlet = ((HttpServletRequestWrapper) httpRequest).getRequest();
+            if (servlet instanceof HttpServletRequest) {
+                httpRequest = (HttpServletRequest) servlet;
+            } else {
+                throw new RuntimeException("Only HttpRequest is supported");
+            }
+        }
+        return httpRequest;
+    }
+
     @Override
     public void mangleURL(
             StringBuilder baseURL, StringBuilder path, Map<String, String> kvp, URLType type) {
@@ -62,17 +76,6 @@ public class UrlMangler implements URLMangler {
         }
         path.delete(0, path.length());
         path.append(matcher.group(2));
-    }
-
-    private HttpServletRequest getHttpRequest(Request request) {
-        HttpServletRequest httpRequest = request.getHttpRequest();
-        if (httpRequest instanceof HttpServletRequestWrapper) {
-            ServletRequest servlet = ((HttpServletRequestWrapper) httpRequest).getRequest();
-            if (servlet instanceof HttpServletRequest) {
-                httpRequest = (HttpServletRequest) servlet;
-            }
-        }
-        return httpRequest;
     }
 
     private void forwardParameters(Map requestRawKvp, Map<String, String> kvp) {
