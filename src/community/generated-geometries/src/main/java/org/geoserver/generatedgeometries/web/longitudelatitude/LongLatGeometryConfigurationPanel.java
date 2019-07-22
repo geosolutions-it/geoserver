@@ -103,10 +103,9 @@ public class LongLatGeometryConfigurationPanel extends Panel {
     }
 
     /**
-     * 
-     * Populates panel using Metadata related LongLat startegy configuration parameters
-     * stored inside FeatyreTyp`s MetaMap
-     * 
+     * Populates panel using Metadata related LongLat startegy configuration parameters stored
+     * inside FeatyreTyp`s MetaMap
+     *
      * @param model only for FeatureTypeInfo using LongLat Strategy
      * @param attributes attributes of Feature
      */

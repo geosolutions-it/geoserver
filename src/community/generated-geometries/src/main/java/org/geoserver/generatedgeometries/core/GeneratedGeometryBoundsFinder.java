@@ -26,12 +26,12 @@ public class GeneratedGeometryBoundsFinder implements FeatureVisitor {
         else bbox.include(feature.getBounds());
     }
 
-    public ReferencedEnvelope getBounds() {        
+    public ReferencedEnvelope getBounds() {
         ReferencedEnvelope refEnv = new ReferencedEnvelope(featureTypeInfo.getCRS());
-        
-        if(bbox == null) return refEnv;
-        
-        refEnv.setBounds(bbox);        
+
+        if (bbox == null) return refEnv;
+
+        refEnv.setBounds(bbox);
         return refEnv;
     }
 }

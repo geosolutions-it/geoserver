@@ -101,6 +101,16 @@ public class LongLatWFSTest extends GeoServerSystemTestSupport {
     }
 
     @Test
+    public void testThatWFSMaxFeaturesIsRespected() throws Exception {
+
+        // when
+        Document dom = getAsDOM(wfsUrl(LONG_LAT_NO_GEOM_ON_THE_FLY_LAYER, 1), 200);
+
+        // then
+        assertXpathEvaluatesTo("1", "count(//wfs:FeatureCollection/gml:featureMember)", dom);
+    }
+
+    @Test
     public void testThatWFSReturnsFeaturesWithGeometryOnTheFly() throws Exception {
         // when
         Document dom = getAsDOM(wfsUrl(LONG_LAT_LAYER), 200);

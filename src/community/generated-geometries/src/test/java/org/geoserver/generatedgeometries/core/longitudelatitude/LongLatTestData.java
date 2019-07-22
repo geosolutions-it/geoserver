@@ -71,9 +71,13 @@ public class LongLatTestData {
     }
 
     static String wfsUrl(String layer) {
+        return wfsUrl(layer, 50);
+    }
+
+    static String wfsUrl(String layer, int maxFeatures) {
         return format(
-                "ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&maxFeatures=50",
-                layer);
+                "ows?service=WFS&version=1.0.0&request=GetFeature&typeName=%s&maxFeatures=%d",
+                layer, maxFeatures);
     }
 
     static String wmsUrl(String layer, String bbox, int width, int height) {
