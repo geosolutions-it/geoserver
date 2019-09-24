@@ -7,11 +7,16 @@ package org.geoserver.params.extractor;
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
-import javax.servlet.*;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.filters.GeoServerFilter;
 import org.geoserver.platform.ExtensionPriority;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Resource;
 import org.geotools.util.logging.Logging;
 
@@ -20,6 +25,8 @@ public final class Filter implements GeoServerFilter, ExtensionPriority {
     private static final Logger LOGGER = Logging.getLogger(Filter.class);
 
     private List<Rule> rules;
+
+    public Filter() {}
 
     public Filter(GeoServerDataDirectory dataDirectory) {
         Resource resource = dataDirectory.get(RulesDao.getRulesPath());
@@ -33,7 +40,15 @@ public final class Filter implements GeoServerFilter, ExtensionPriority {
     }
 
     @Override
-    public void init(FilterConfig filterConfig) throws ServletException {}
+    public void init(FilterConfig filterConfig) throws ServletException {
+        GeoServerDataDirectory dataDirectory =
+                GeoServerExtensions.bean(GeoServerDataDirectory.class);
+        if (dataDirectory != null) {
+            Resource resource = dataDirectory.get(RulesDao.getRulesPath());
+            rules = RulesDao.getRules(resource.in());
+            resource.addListener(notify -> rules = RulesDao.getRules(resource.in()));
+        }
+    }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
