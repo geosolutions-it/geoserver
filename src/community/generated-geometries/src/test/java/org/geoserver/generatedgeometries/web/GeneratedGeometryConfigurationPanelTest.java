@@ -29,6 +29,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourcePool;
+import org.geoserver.catalog.WMSLayerInfo;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.generatedgeometries.core.longitudelatitude.LongLatGeometryGenerationStrategy;
 import org.geoserver.generatedgeometries.core.longitudelatitude.LongLatTestData;
@@ -90,6 +91,33 @@ public class GeneratedGeometryConfigurationPanelTest extends GeoServerWicketTest
         when(application.getCatalog()).thenReturn(catalog);
         when(catalog.getResourcePool()).thenReturn(resourcePool);
         when(resourcePool.getFeatureType(info)).thenReturn(featureType);
+
+        IModel model = new Model<>(info);
+        GeneratedGeometryConfigurationPanel panel =
+                new GeneratedGeometryConfigurationPanel(
+                        "id", model, cl -> emptyList(), () -> application);
+
+        // when
+        tester.startComponentInPage(panel);
+
+        // then
+        tester.assertVisible("id:content:errorMessage");
+        IModel<?> defaultModel =
+                tester.getComponentFromLastRenderedPage("id:content:errorMessage")
+                        .getDefaultModel();
+        assertEquals(defaultModel.getObject(), "incorrectFeatureType");
+    }
+
+    @Test
+    public void testThatConfigurationIsNotAvailableForNonFeatureType() throws IOException {
+        // given a resource that is anything other than FeaturTypeInfo
+        Catalog catalog = mock(Catalog.class);
+        ResourcePool resourcePool = mock(ResourcePool.class);
+        WMSLayerInfo info = mock(WMSLayerInfo.class);
+        FeatureType featureType = mock(FeatureType.class);
+
+        when(application.getCatalog()).thenReturn(catalog);
+        when(catalog.getResourcePool()).thenReturn(resourcePool);
 
         IModel model = new Model<>(info);
         GeneratedGeometryConfigurationPanel panel =

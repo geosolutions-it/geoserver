@@ -221,7 +221,7 @@ public class GeneratedGeometryConfigurationPanel extends ResourceConfigurationPa
     private boolean isSimpleFeatureType(IModel model) {
         try {
             return SimpleFeatureType.class.isAssignableFrom(getFeatureType(model).getClass());
-        } catch (IOException e) {
+        } catch (Exception e) {
             return false;
         }
     }
