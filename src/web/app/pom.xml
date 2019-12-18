@@ -19,10 +19,6 @@
   <name>GeoServer Web Application</name>
   <dependencies>
     <dependency>
-        <groupId>org.marlin</groupId>
-        <artifactId>marlin</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.geoserver.web</groupId>
       <artifactId>gs-web-core</artifactId>
       <version>${project.version}</version>
@@ -227,6 +223,27 @@
       <groupId>xmlunit</groupId>
       <artifactId>xmlunit</artifactId>
       <scope>test</scope>
+    </dependency>
+    <!-- TOPCON required modules -->
+    <dependency>
+      <groupId>org.geoserver.extension</groupId>
+      <artifactId>gs-monitor-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver.extension</groupId>
+      <artifactId>gs-sldservice</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver.extension</groupId>
+      <artifactId>gs-control-flow</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver.extension</groupId>
+      <artifactId>gs-system-status</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
   <build>
