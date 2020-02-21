@@ -8,8 +8,6 @@ package org.geoserver.security.auth;
 import static org.junit.Assert.*;
 
 import java.security.Principal;
-import java.util.Map;
-import java.util.Map.Entry;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import org.geoserver.data.test.SystemTestData;
@@ -55,53 +53,6 @@ public class AuthenticationCacheFilterTest extends AbstractAuthenticationProvide
         config.setName(testFilterName);
 
         getSecurityManager().saveFilter(config);
-    }
-
-    Authentication getAuth(String filterName, String user, Integer idleTime, Integer liveTime) {
-
-        Map<String, byte[]> map = getCache().cache.get(filterName);
-        if (map == null) return null;
-        Authentication result = null;
-        String cacheKey = null;
-        for (Entry<String, byte[]> entry : map.entrySet()) {
-            Authentication auth = getCache().deserializeAuthentication(entry.getValue());
-            Object o = auth.getPrincipal();
-
-            if (o instanceof UserDetails) {
-                if (user.equals(((UserDetails) o).getUsername())) {
-                    result = auth;
-                    cacheKey = entry.getKey();
-                    break;
-                }
-            }
-            if (o instanceof Principal) {
-                if (user.equals(((Principal) o).getName())) {
-                    result = auth;
-                    cacheKey = entry.getKey();
-                    break;
-                }
-            }
-            if (o instanceof String) {
-                if (user.equals(((String) o))) {
-                    result = auth;
-                    cacheKey = entry.getKey();
-                    break;
-                }
-            }
-        }
-
-        if (result != null) {
-            Integer[] seconds = getCache().getExpireTimes(filterName, cacheKey);
-            if (idleTime == null)
-                assertEquals(TestingAuthenticationCache.DEFAULT_IDLE_SECS, seconds[0]);
-            else assertEquals(idleTime, seconds[0]);
-
-            if (liveTime == null)
-                assertEquals(TestingAuthenticationCache.DEFAULT_LIVE_SECS, seconds[1]);
-            else assertEquals(liveTime, seconds[1]);
-        }
-
-        return result;
     }
 
     @Test

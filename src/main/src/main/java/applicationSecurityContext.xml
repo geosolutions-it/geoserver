@@ -130,6 +130,7 @@
   <bean id="logoutFilterProvider" class="org.geoserver.security.filter.GeoServerLogoutProvider"/>  
   <bean id="securityInterceptorFilterProvider" class="org.geoserver.security.filter.GeoServerSecurityInterceptorProvider"/>  
   <bean id="credentialsFromRequestHeaderSecurityProvider" class="org.geoserver.security.filter.GeoServerCredentialsFromRequestHeaderProvider"/>
+  <bean id="simpleWebServiceSecurityProvider" class="org.geoserver.security.auth.web.SimpleWebServiceSecurityProvider"/>
   
   
   

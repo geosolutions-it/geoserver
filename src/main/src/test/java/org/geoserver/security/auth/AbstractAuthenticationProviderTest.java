@@ -6,6 +6,7 @@
 
 package org.geoserver.security.auth;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Constructor;
@@ -16,6 +17,7 @@ import java.text.MessageFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.GeoServerExtensions;
@@ -30,6 +32,7 @@ import org.geoserver.security.impl.*;
 import org.geoserver.security.password.PasswordValidator;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 
 public abstract class AbstractAuthenticationProviderTest extends AbstractSecurityServiceTest {
 
@@ -392,6 +395,53 @@ public abstract class AbstractAuthenticationProviderTest extends AbstractSecurit
                                     SignatureException {}
                 };
         request.setAttribute("javax.servlet.request.X509Certificate", new X509Certificate[] {x509});
+    }
+
+    Authentication getAuth(String filterName, String user, Integer idleTime, Integer liveTime) {
+
+        Map<String, byte[]> map = getCache().cache.get(filterName);
+        if (map == null) return null;
+        Authentication result = null;
+        String cacheKey = null;
+        for (Entry<String, byte[]> entry : map.entrySet()) {
+            Authentication auth = getCache().deserializeAuthentication(entry.getValue());
+            Object o = auth.getPrincipal();
+
+            if (o instanceof UserDetails) {
+                if (user.equals(((UserDetails) o).getUsername())) {
+                    result = auth;
+                    cacheKey = entry.getKey();
+                    break;
+                }
+            }
+            if (o instanceof Principal) {
+                if (user.equals(((Principal) o).getName())) {
+                    result = auth;
+                    cacheKey = entry.getKey();
+                    break;
+                }
+            }
+            if (o instanceof String) {
+                if (user.equals(((String) o))) {
+                    result = auth;
+                    cacheKey = entry.getKey();
+                    break;
+                }
+            }
+        }
+
+        if (result != null) {
+            Integer[] seconds = getCache().getExpireTimes(filterName, cacheKey);
+            if (idleTime == null)
+                assertEquals(TestingAuthenticationCache.DEFAULT_IDLE_SECS, seconds[0]);
+            else assertEquals(idleTime, seconds[0]);
+
+            if (liveTime == null)
+                assertEquals(TestingAuthenticationCache.DEFAULT_LIVE_SECS, seconds[1]);
+            else assertEquals(liveTime, seconds[1]);
+        }
+
+        return result;
     }
 
     //    @Override

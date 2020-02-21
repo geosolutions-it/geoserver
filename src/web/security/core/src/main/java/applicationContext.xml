@@ -165,6 +165,13 @@
         <property name="titleKey" value="CredentialsFromRequestHeaderFilterPanel.title"/>
         <property name="descriptionKey" value="CredentialsFromRequestHeaderFilterPanel.description"/>
    </bean>
+   
+   <bean id="simpleWebAuthProviderPanelInfo" class="org.geoserver.security.web.auth.SimpleWebAuthProviderPanelInfo">
+        <property name="id" value="security.simpleWebAuthProvider" />
+        <property name="shortTitleKey" value="SimpleWebAuthProviderPanel.short"/>
+        <property name="titleKey" value="SimpleWebAuthProviderPanel.title"/>
+        <property name="descriptionKey" value="SimpleWebAuthProviderPanel.description"/>
+    </bean>
     
     <!-- user group service panel infos -->
     <bean id="xmlUserGroupServicePanelInfo" class="org.geoserver.security.web.usergroup.XMLUserGroupServicePanelInfo">
