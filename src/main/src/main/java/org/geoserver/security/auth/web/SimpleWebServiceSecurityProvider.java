@@ -13,7 +13,6 @@ import org.geoserver.security.filter.GeoServerSecurityFilter;
 import org.geoserver.security.filter.GeoServerUserNamePasswordAuthenticationFilter;
 import org.geoserver.security.validation.SecurityConfigValidator;
 
-/** @author Imran Rajjad - Geo Solutions */
 public class SimpleWebServiceSecurityProvider extends GeoServerSecurityProvider {
 
     @Override
@@ -24,7 +23,6 @@ public class SimpleWebServiceSecurityProvider extends GeoServerSecurityProvider 
 
     @Override
     public void init(GeoServerSecurityManager manager) {
-        // TODO Auto-generated method stub
         super.init(manager);
     }
 
@@ -43,7 +41,6 @@ public class SimpleWebServiceSecurityProvider extends GeoServerSecurityProvider 
 
     @Override
     public Class<? extends GeoServerSecurityFilter> getFilterClass() {
-        // works with simple
         return GeoServerUserNamePasswordAuthenticationFilter.class;
     }
 

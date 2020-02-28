@@ -42,7 +42,6 @@ public class SimpleWebAuthPanelTest extends AbstractSecurityNamedServicePanelTes
 
     @Override
     protected Class<? extends Component> getNamedServicesClass() {
-//        return AuthenticationProviderPanel.class;
         return SimpleWebAuthProviderPanel.class;
     }
 
@@ -110,7 +109,6 @@ public class SimpleWebAuthPanelTest extends AbstractSecurityNamedServicePanelTes
         formTester.select("panel:content:authorizationOption", 0);
 
         String roleServiceName = getSecurityManager().getActiveRoleService().getName();
-        // sel
         // set url value
         formTester.setValue(
                 "panel:content:connectionURL",
@@ -144,6 +142,49 @@ public class SimpleWebAuthPanelTest extends AbstractSecurityNamedServicePanelTes
         assertTrue(findErrorMessage("Web Authentication Service URL http://localhost:5000/auth does not have place holders {user} and {password}"
                 ,FeedbackMessage.ERROR));
         
+        //test the place holders are not required when using headers
+        navigateToNewWebAuthPanel(webAuthProviderName);
+        formTester.setValue(
+                "panel:content:connectionURL",
+                "http://localhost:5000/auth");
+        formTester.setValue("panel:content:useHeader", true);
+        clickSave();
+        tester.assertNoErrorMessage();
+        
+    }
+    
+    @Test
+    public void testInvalidRolesRegexValidation() throws Exception {
+        
+        navigateToNewWebAuthPanel(webAuthProviderName);
+        formTester.setValue(
+                "panel:content:connectionURL",
+                "http://localhost:5000/auth?user={user}&pass={password}");
+        
+        formTester.setValue("panel:content:webAuthorizationContainer:roleRegex","[");
+        
+        clickSave();
+        assertTrue(findErrorMessage("Invalid Regex Expression",FeedbackMessage.ERROR));
+        
+    }
+    
+    @Test
+    public void testRoleServiceNameisValidated() throws Exception {
+        
+        navigateToNewWebAuthPanel(webAuthProviderName);
+        
+            // select role serice radio button
+           formTester.select("panel:content:authorizationOption", 0);
+
+           String roleServiceName = getSecurityManager().getActiveRoleService().getName();
+           // set url value
+           formTester.setValue(
+                   "panel:content:connectionURL",
+                   "http://localhost:5000/auth?user={user}&pass={password}");
+           
+           //no role service is selected and click save
+           clickSave();           
+           assertTrue(findErrorMessage("No Role Service has been selected",FeedbackMessage.ERROR));
     }
     
     private boolean findErrorMessage(String msg,int level) {

@@ -132,8 +132,7 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
     }
 
     private HTTPClient getHTTPClient(SimpleWebAuthenticationConfig config) {
-        // check for mock bindings. Since we are going to run this code in production as well,
-        // guard it so that it only triggers if the MockHttpClientProvider has any active binding
+        //support for unit testing
         if (TestHttpClientProvider.testModeEnabled()
                 && config.getConnectionURL().startsWith(TestHttpClientProvider.MOCKSERVER)) {
             HTTPClient client = TestHttpClientProvider.get(config.getConnectionURL());
