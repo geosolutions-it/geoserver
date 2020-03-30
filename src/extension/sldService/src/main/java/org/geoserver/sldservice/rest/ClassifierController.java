@@ -15,10 +15,8 @@ import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import java.awt.*;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -54,8 +52,7 @@ import org.geotools.data.Query;
 import org.geotools.data.util.NullProgressListener;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureCollection;
-import org.geotools.feature.visitor.CalcResult;
-import org.geotools.feature.visitor.StandardDeviationVisitor;
+import org.geotools.feature.visitor.*;
 import org.geotools.filter.function.RangedClassifier;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.image.util.ImageUtilities;
@@ -172,6 +169,8 @@ public class ClassifierController extends BaseSLDServiceController {
             @RequestParam(value = "bbox", required = false) ReferencedEnvelope bbox,
             @RequestParam(value = "stddevs", required = false) Double stddevs,
             @RequestParam(value = "env", required = false) String env,
+            @RequestParam(value = "percentages", required = false) boolean percentages,
+            @RequestParam(value = "percentagesScale", required = false) Integer percentagesScale,
             final HttpServletResponse response)
             throws Exception {
         LayerInfo layerInfo = catalog.getLayerByName(layerName);
@@ -226,7 +225,9 @@ public class ClassifierController extends BaseSLDServiceController {
                                 (FeatureTypeInfo) obj,
                                 ramp,
                                 bbox,
-                                stddevs);
+                                stddevs,
+                                percentages,
+                                percentagesScale);
             } else if (obj instanceof CoverageInfo) {
                 rules =
                         getRasterRules(
@@ -242,7 +243,9 @@ public class ClassifierController extends BaseSLDServiceController {
                                 ramp,
                                 continuous,
                                 bbox,
-                                stddevs);
+                                stddevs,
+                                percentages,
+                                percentagesScale);
             } else {
                 throw new RestException(
                         "The classifier can only work against vector or raster data, "
@@ -395,7 +398,9 @@ public class ClassifierController extends BaseSLDServiceController {
             ColorRamp ramp,
             boolean continuous,
             ReferencedEnvelope bbox,
-            Double stddevs)
+            Double stddevs,
+            boolean percentages,
+            Integer percentagesScale)
             throws Exception {
         int selectedBand = getRequestedBand(property); // one based band name
         // read the image to be classified
@@ -408,8 +413,8 @@ public class ClassifierController extends BaseSLDServiceController {
                         .invoke();
         boolean bandSelected = imageReader.isBandSelected();
         RenderedImage image = imageReader.getImage();
-
-        RasterSymbolizerBuilder builder = new RasterSymbolizerBuilder();
+        RasterSymbolizerBuilder builder =
+                new RasterSymbolizerBuilder(percentages, percentagesScale);
         builder.setStandardDeviations(stddevs);
         ColorMap colorMap;
         try {
@@ -430,7 +435,7 @@ public class ClassifierController extends BaseSLDServiceController {
             } else {
                 RangedClassifier classifier =
                         getCustomClassifier(customClasses, Double.class, normalize);
-                colorMap = builder.createCustomColorMap(classifier, open, continuous);
+                colorMap = builder.createCustomColorMap(image, classifier, open, continuous);
             }
         } finally {
             cleanImage(image);
@@ -546,21 +551,23 @@ public class ClassifierController extends BaseSLDServiceController {
             FeatureTypeInfo obj,
             ColorRamp ramp,
             ReferencedEnvelope bbox,
-            Double stddevs)
+            Double stddevs,
+            Boolean percentages,
+            Integer percentagesScale)
             throws IOException, TransformException, FactoryException {
         if (property == null || property.isEmpty()) {
             throw new IllegalArgumentException(
                     "Vector classification requires a classification property to be specified");
         }
 
-        RulesBuilder builder = new RulesBuilder();
+        RulesBuilder builder = new RulesBuilder(percentages, percentagesScale);
         builder.setStrokeColor(strokeColor);
         builder.setStrokeWeight(strokeWeight);
         builder.setPointSize(pointSize);
 
         final FeatureType ftType = obj.getFeatureType();
         FeatureCollection ftCollection = null;
-        if (customClasses.isEmpty()) {
+        if (customClasses.isEmpty() || percentages) {
             Query query = new Query(ftType.getName().getLocalPart(), Filter.INCLUDE);
             if (bbox != null) {
                 ReferencedEnvelope nativeBBOX =
@@ -638,6 +645,12 @@ public class ClassifierController extends BaseSLDServiceController {
             }
         } else {
             RangedClassifier groups = getCustomClassifier(customClasses, propertyType, normalize);
+            if (percentages) {
+                double[] percentagesAr =
+                        builder.getCustomPercentages(
+                                ftCollection, groups, property, propertyType, normalize);
+                groups.setPercentages(percentagesAr);
+            }
             rules =
                     open
                             ? builder.openRangedRules(groups, property, propertyType, normalize)
