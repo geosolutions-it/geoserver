@@ -33,6 +33,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticationProvider {
 
     private static final String HTTP_AUTHORIZATION_HEADER = "X-HTTP-AUTHORIZATION";
+    private static final String ROLE_PREFIX = "ROLE_";
 
     SimpleWebAuthenticationConfig config;
 
@@ -46,6 +47,8 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
     public void initializeFromConfig(SecurityNamedServiceConfig config) throws IOException {
 
         this.config = (SimpleWebAuthenticationConfig) config;
+
+        verboseLog(getName() + " configured with " + config);
     }
 
     @Override
@@ -67,15 +70,19 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
 
             if (config.isUseHeader()) headerMap = getHeader(authentication);
 
-            HTTPResponse httpResponse =
-                    client.get(
-                            getAuthenticationURL(config.getConnectionURL(), authentication),
-                            headerMap);
+            URL authenticationURL = getAuthenticationURL(config.getConnectionURL(), authentication);
+            verboseLog(
+                    "External authentication call URL:"
+                            + authenticationURL.toExternalForm()
+                            + " with headers:"
+                            + headerMap);
+            HTTPResponse httpResponse = client.get(authenticationURL, headerMap);
             responseBody = IOUtils.toString(httpResponse.getResponseStream());
             if (responseBody == null)
                 throw new UsernameNotFoundException(
                         "Web Service Authentication Failed for "
                                 + authentication.getPrincipal().toString());
+            verboseLog("External authentication service response:" + responseBody);
             roles.add(GeoServerRole.AUTHENTICATED_ROLE);
         } catch (Exception e) {
             LOGGER.severe(
@@ -110,6 +117,13 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
         UsernamePasswordAuthenticationToken result =
                 new UsernamePasswordAuthenticationToken(
                         authentication.getPrincipal(), authentication.getCredentials(), roles);
+        if (LOGGER.isLoggable(Level.FINER)) {
+            String logMessage = "user : " + authentication.getPrincipal() + "| roles: ";
+            for (GrantedAuthority role : roles) {
+                logMessage += role.getAuthority() + " ";
+            }
+            LOGGER.finer("Final Authentication:" + logMessage);
+        }
         result.setDetails(authentication.getDetails());
         return result;
     }
@@ -132,7 +146,7 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
     }
 
     private HTTPClient getHTTPClient(SimpleWebAuthenticationConfig config) {
-        //support for unit testing
+        // support for unit testing
         if (TestHttpClientProvider.testModeEnabled()
                 && config.getConnectionURL().startsWith(TestHttpClientProvider.MOCKSERVER)) {
             HTTPClient client = TestHttpClientProvider.get(config.getConnectionURL());
@@ -161,12 +175,15 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
     private Set<GrantedAuthority> extractRoles(final String responseBody, final String rolesRegex) {
         final Set<GrantedAuthority> authorities = new HashSet<GrantedAuthority>();
         final Pattern searchRolesRegex = Pattern.compile(rolesRegex);
-
+        verboseLog("extracting roles using Regex:" + rolesRegex);
         Matcher matcher = searchRolesRegex.matcher(responseBody);
         if (matcher != null && matcher.find()) {
             for (int i = 1; i <= matcher.groupCount(); i++) {
                 for (String roleName : matcher.group(i).split(",")) {
-
+                    verboseLog("found roles :" + roleName);
+                    if (!roleName.toUpperCase().startsWith(ROLE_PREFIX)) {
+                        roleName = ROLE_PREFIX + roleName.toUpperCase();
+                    }
                     authorities.add(new GeoServerRole(roleName.trim()));
                 }
             }
@@ -193,5 +210,11 @@ public class SimpleWebServiceAuthenticationProvider extends GeoServerAuthenticat
         String credentials = authentication.getPrincipal() + ":" + authentication.getCredentials();
         headerMap.put(HTTP_AUTHORIZATION_HEADER, credentials);
         return headerMap;
+    }
+
+    private void verboseLog(String traceLog) {
+        if (LOGGER.isLoggable(Level.FINER)) {
+            LOGGER.finer(traceLog);
+        }
     }
 }

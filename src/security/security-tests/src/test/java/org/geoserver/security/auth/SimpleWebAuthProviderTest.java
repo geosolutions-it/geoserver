@@ -107,7 +107,7 @@ public class SimpleWebAuthProviderTest extends AbstractAuthenticationProviderTes
         assertTrue(auth.getAuthorities().contains(GeoServerRole.AUTHENTICATED_ROLE));
 
         // role from Web Response
-        assertTrue(auth.getAuthorities().contains(new GeoServerRole("WEB_SERVICE_ROLE")));
+        assertTrue(auth.getAuthorities().contains(new GeoServerRole("ROLE_WEB_SERVICE_ROLE")));
     }
 
     @Test
@@ -152,7 +152,7 @@ public class SimpleWebAuthProviderTest extends AbstractAuthenticationProviderTes
         assertTrue(auth.getAuthorities().contains(GeoServerRole.AUTHENTICATED_ROLE));
 
         // role from Web Response
-        assertTrue(auth.getAuthorities().contains(new GeoServerRole("WEB_SERVICE_ROLE")));
+        assertTrue(auth.getAuthorities().contains(new GeoServerRole("ROLE_WEB_SERVICE_ROLE")));
     }
 
     @Test

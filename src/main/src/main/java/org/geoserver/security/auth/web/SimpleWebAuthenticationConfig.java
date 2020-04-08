@@ -133,4 +133,23 @@ public class SimpleWebAuthenticationConfig extends BaseSecurityNamedServiceConfi
     public void setUserGroupServiceName(String userGroupServiceName) {
         // empty
     }
+
+    @Override
+    public String toString() {
+        return "SimpleWebAuthenticationConfig [connectionURL="
+                + connectionURL
+                + ", readTimeoutOut="
+                + readTimeoutOut
+                + ", connectionTimeOut="
+                + connectionTimeOut
+                + ", roleRegex="
+                + roleRegex
+                + ", roleServiceName="
+                + roleServiceName
+                + ", useHeader="
+                + useHeader
+                + ", authorizationOption="
+                + authorizationOption
+                + "]";
+    }
 }
