@@ -14,7 +14,7 @@ import static org.junit.Assert.fail;
 
 import it.geosolutions.imageio.plugins.tiff.BaselineTIFFTagSet;
 import it.geosolutions.imageio.plugins.tiff.PrivateTIFFTagSet;
-import java.awt.*;
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -64,6 +64,7 @@ import org.geoserver.wps.process.RawData;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridEnvelope2D;
+import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.imageio.geotiff.GeoTiffIIOMetadataDecoder;
 import org.geotools.coverage.util.CoverageUtilities;
 import org.geotools.coverage.util.FeatureUtilities;
@@ -120,6 +121,7 @@ public class DownloadProcessTest extends WPSTestSupport {
 
     private static QName MIXED_RES = new QName(WCS_URI, "mixedres", WCS_PREFIX);
     private static QName HETEROGENEOUS_CRS = new QName(WCS_URI, "hcrs", WCS_PREFIX);
+    private static QName HETEROGENEOUS_CRS2 = new QName(WCS_URI, "hcrs2", WCS_PREFIX);
     private static QName SHORT = new QName(WCS_URI, "short", WCS_PREFIX);
     private static QName FLOAT = new QName(WCS_URI, "float", WCS_PREFIX);
 
@@ -131,6 +133,7 @@ public class DownloadProcessTest extends WPSTestSupport {
     private static Map<String, Set<String>> FORMAT_TO_EXTENSIONS = new HashMap<>();
 
     private static final CoordinateReferenceSystem WGS84;
+    private static final double DELTA = 1E-6;
 
     static {
         GTIFF_EXTENSIONS.add("tif");
@@ -299,6 +302,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         testData.addRasterLayer(MockData.USA_WORLDIMG, "usa.zip", MockData.PNG, getCatalog());
         testData.addRasterLayer(MIXED_RES, "mixedres.zip", null, getCatalog());
         testData.addRasterLayer(HETEROGENEOUS_CRS, "heterogeneous_crs.zip", null, getCatalog());
+        testData.addRasterLayer(HETEROGENEOUS_CRS2, "heterogeneous_crs2.zip", null, getCatalog());
         testData.addRasterLayer(SHORT, "short.zip", null, getCatalog());
         testData.addRasterLayer(FLOAT, "float.zip", null, getCatalog());
     }
@@ -681,13 +685,13 @@ public class DownloadProcessTest extends WPSTestSupport {
                 AutoDisposableGridCoverage2D gc = reader.read()) {
 
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
 
             // Take a pixel within the ROI
             byte[] result =
@@ -737,13 +741,13 @@ public class DownloadProcessTest extends WPSTestSupport {
                 AutoDisposableGridCoverage2D gc = reader.read()) {
 
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
 
             // Take a pixel within the ROI
             byte[] result =
@@ -797,19 +801,19 @@ public class DownloadProcessTest extends WPSTestSupport {
             Assert.assertEquals(
                     -1.457024062347863E7,
                     gcResampled.getEnvelope().getLowerCorner().getOrdinate(0),
-                    1E-6);
+                    DELTA);
             Assert.assertEquals(
                     6209706.404894806,
                     gcResampled.getEnvelope().getLowerCorner().getOrdinate(1),
-                    1E-6);
+                    DELTA);
             Assert.assertEquals(
                     -1.379838980949677E7,
                     gcResampled.getEnvelope().getUpperCorner().getOrdinate(0),
-                    1E-6);
+                    DELTA);
             Assert.assertEquals(
                     7187128.139081598,
                     gcResampled.getEnvelope().getUpperCorner().getOrdinate(1),
-                    1E-6);
+                    DELTA);
         }
     }
 
@@ -1082,13 +1086,13 @@ public class DownloadProcessTest extends WPSTestSupport {
 
             // check envelope
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.5552612829, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.5552612829, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -124.05382943906582, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -124.05382943906582, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.00577111704634, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.00577111704634, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
         }
     }
 
@@ -1140,11 +1144,13 @@ public class DownloadProcessTest extends WPSTestSupport {
 
             // check envelope
             Assert.assertEquals(
-                    -130.8866985, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
-            Assert.assertEquals(48.5552613, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    -130.8866985, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    -123.8830077, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
-            Assert.assertEquals(54.1420339, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    48.5552613, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
+            Assert.assertEquals(
+                    -123.8830077, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
+            Assert.assertEquals(
+                    54.1420339, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
         }
 
         ///////////////////////////////////////
@@ -1231,13 +1237,13 @@ public class DownloadProcessTest extends WPSTestSupport {
 
             // check envelope
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.623544058877776, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.623544058877776, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
         }
     }
 
@@ -1459,9 +1465,6 @@ public class DownloadProcessTest extends WPSTestSupport {
                 // the above tie-bow pattern would have been distorted, making
                 // this comparison fail
                 ImageAssert.assertEquals(referenceImage, gc.getRenderedImage(), 5);
-
-                // also make sure the referencing is the same
-                assertEquals(referenceGc.getEnvelope2D(), gc.getEnvelope2D());
             }
         }
     }
@@ -1542,6 +1545,87 @@ public class DownloadProcessTest extends WPSTestSupport {
                 // A reprojection will spot a not perfectly straight line
                 RenderedImage ri = gc.getRenderedImage();
                 assertFalse(hasPerfectStraightHorizontalLine(ri));
+            }
+        }
+    }
+
+    /**
+     * Test download of raster data. The source is an ImageMosaic with Heterogeneous CRS. Sending a
+     * request with a TargetCRS matching one of the underlying CRS of that mosaic should result in
+     * no reprojection on granules with that CRS as native, having matching resolution and matching
+     * alignment (when the 2 flags minimizeReprojections and bestResolutionOnMatchingCRS are set).
+     */
+    @Test
+    public void testDownloadGranuleHeterogeneousCRSMixedCRS() throws Exception {
+        // This test uses an Heterogeneous ImageMosaic made by 2 granules on
+        // 2 different EPSG, 31255 and 31256
+        final WPSResourceManager resourceManager = getResourceManager();
+
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
+        // Requesting an area containing a granule in native CRS and a granule in a different CRS
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:31256", true);
+
+        // Finally, get the original granule in that target CRS
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs2/31256.tif");
+
+        try (AutoDisposableGeoTiffReader referenceReader = new AutoDisposableGeoTiffReader(file);
+                AutoDisposableGridCoverage2D referenceGc = referenceReader.read()) {
+            String roiWkt =
+                    "POLYGON ((-102583.25 262175.25, -102332.25 262175.25, -102332.25 "
+                            + " 262042.25, -102583.25 262042.25, -102583.25 262175.25))";
+            Polygon bboxRoi = (Polygon) new WKTReader2().read(roiWkt);
+
+            Parameters parameters = new Parameters();
+            List<Parameter> parametersList = parameters.getParameters();
+            parametersList.add(new Parameter("writenodata", "false"));
+            RawData raster =
+                    downloadProcess.execute(
+                            getLayerId(HETEROGENEOUS_CRS2), // layerName
+                            null, // filter
+                            "image/tiff", // outputFormat
+                            "image/tiff",
+                            targetCRS, // targetCRS
+                            targetCRS,
+                            bboxRoi, // roi
+                            false, // cropToGeometry
+                            null, // interpolation
+                            null, // targetSizeX
+                            null, // targetSizeY
+                            null, // bandSelectIndices
+                            parameters, // Writing params
+                            true,
+                            true,
+                            new NullProgressListener() // progressListener
+                            );
+
+            try (AutoCloseableResource resource =
+                            new AutoCloseableResource(resourceManager, raster);
+                    AutoDisposableGeoTiffReader reader =
+                            new AutoDisposableGeoTiffReader(resource.getFile());
+                    AutoDisposableGridCoverage2D gc = reader.read()) {
+
+                GridGeometry2D gc2d = gc.getGridGeometry();
+                AffineTransform transform = (AffineTransform) gc2d.getGridToCRS();
+                GridGeometry2D referenceGc2d = referenceGc.getGridGeometry();
+                AffineTransform referenceTransform = (AffineTransform) referenceGc2d.getGridToCRS();
+
+                // Check that even when requesting an area overlapping 2 different CRS we are
+                // getting the native resolution
+                double resX = XAffineTransform.getScaleX0(referenceTransform);
+                double resY = XAffineTransform.getScaleY0(referenceTransform);
+                assertEquals(resX, XAffineTransform.getScaleX0(transform), DELTA);
+                assertEquals(resY, XAffineTransform.getScaleY0(transform), DELTA);
+
+                // Check proper alignment
+                double[] referenceLowerCorner =
+                        referenceGc.getEnvelope2D().getLowerCorner().getCoordinate();
+                double[] lowerCorner = gc.getEnvelope2D().getLowerCorner().getCoordinate();
+                double xPixels = Math.abs(referenceLowerCorner[0] - lowerCorner[0]) / resX;
+                double yPixels = Math.abs(referenceLowerCorner[1] - lowerCorner[1]) / resY;
+                assertTrue(Math.abs(xPixels - Math.round(xPixels)) < DELTA);
+                assertTrue(Math.abs(yPixels - Math.round(yPixels)) < DELTA);
             }
         }
     }
@@ -2209,31 +2293,25 @@ public class DownloadProcessTest extends WPSTestSupport {
         final DefaultProgressListener progressListener = new DefaultProgressListener();
         // Download the features. It should throw an exception.
 
-        try {
-            // Download the features. It should throw an exception.
-            downloadProcess.execute(
-                    getLayerId(MockData.POLYGONS), // layerName
-                    null, // filter
-                    "IAmWrong!!!", // outputFormat
-                    "",
-                    null, // targetCRS
-                    CRS.decode("EPSG:32615"), // roiCRS
-                    roi, // roi
-                    false, // cropToGeometry
-                    null, // interpolation
-                    null, // targetSizeX
-                    null, // targetSizeY
-                    null, // bandSelectIndices
-                    null, // Writing params
-                    false,
-                    false,
-                    progressListener // progressListener
-                    );
-
-            Assert.assertTrue("We did not get an exception", false);
-        } catch (Exception e) {
-            Assert.assertTrue("Everything as expected", true);
-        }
+        // Download the features. It should throw an exception.
+        downloadProcess.execute(
+                getLayerId(MockData.POLYGONS), // layerName
+                null, // filter
+                "IAmWrong!!!", // outputFormat
+                "",
+                null, // targetCRS
+                CRS.decode("EPSG:32615"), // roiCRS
+                roi, // roi
+                false, // cropToGeometry
+                null, // interpolation
+                null, // targetSizeX
+                null, // targetSizeY
+                null, // bandSelectIndices
+                null, // Writing params
+                false,
+                false,
+                progressListener // progressListener
+                );
     }
 
     /**
@@ -2371,8 +2449,8 @@ public class DownloadProcessTest extends WPSTestSupport {
             double resX = transform2D.getScaleX();
             double resY = transform2D.getScaleY();
 
-            Assert.assertEquals(expectedX, resX, 1E-6);
-            Assert.assertEquals(expectedY, resY, 1E-6);
+            Assert.assertEquals(expectedX, resX, DELTA);
+            Assert.assertEquals(expectedY, resY, DELTA);
         }
     }
 
