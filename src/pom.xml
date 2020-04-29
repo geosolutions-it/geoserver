@@ -1792,6 +1792,11 @@
       <artifactId>wagon-webdav</artifactId>
       <version>1.0-beta-2</version>
     </extension>
+	<extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ftp</artifactId>
+                <version>2.10</version>
+            </extension>
   </extensions>
 
  </build>
@@ -1923,19 +1928,19 @@
  </reporting>
 
  <distributionManagement>
-    <repository>
-      <id>boundless</id>
-      <name>Boundless Release Repository</name>
-      <url>https://repo.boundlessgeo.com/release/</url>
-      <uniqueVersion>false</uniqueVersion>
-    </repository>
-    <snapshotRepository>
-      <id>boundless</id>
-      <uniqueVersion>false</uniqueVersion>
-      <name>Boundless Snapshot Repository</name>
-      <url>https://repo.boundlessgeo.com/snapshot/</url>
-    </snapshotRepository>
- </distributionManagement>
+	<!-- use the following if you're not using a snapshot version. -->
+	<repository>
+		<uniqueVersion>false</uniqueVersion>
+		<id>geosolutions</id>
+		<url>ftp://maven.geo-solutions.it/</url>
+	</repository>
+	<!-- use the following if you ARE using a snapshot version. -->
+	<snapshotRepository>
+		<uniqueVersion>false</uniqueVersion>
+		<id>geosolutions</id>
+		<url>ftp://maven.geo-solutions.it/</url>
+	</snapshotRepository>
+</distributionManagement>
 
  <modules>
   <module>platform</module>
