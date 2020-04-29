@@ -27,9 +27,12 @@ import javax.media.jai.*;
 import javax.media.jai.operator.MosaicDescriptor;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.platform.resource.Resource;
+import org.geoserver.web.wps.VerticalCRSConfigurationPanel;
 import org.geoserver.wps.WPSException;
+import org.geoserver.wps.gs.download.vertical.VerticalResampler;
 import org.geoserver.wps.ppio.ComplexPPIO;
 import org.geoserver.wps.ppio.ProcessParameterIO;
 import org.geoserver.wps.resource.GridCoverageResource;
@@ -49,6 +52,7 @@ import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.process.ProcessException;
 import org.geotools.process.raster.BandSelectProcess;
 import org.geotools.process.raster.CropCoverage;
+import org.geotools.referencing.CRS;
 import org.geotools.referencing.operation.builder.GridToEnvelopeMapper;
 import org.geotools.referencing.operation.transform.ProjectiveTransform;
 import org.geotools.renderer.crs.ProjectionHandler;
@@ -155,7 +159,7 @@ class RasterDownload {
      *     targetCRS
      * @param bestResolutionOnMatchingCRS When dealing with a Heterogeneous CRS mosaic, given a ROI
      *     and a TargetCRS, with no target size being specified, get the best resolution of data
-     *     having nativeCrs matching the TargetCRS
+     * @param targetVerticalCRS
      */
     public Resource execute(
             String mimeType,
@@ -171,7 +175,8 @@ class RasterDownload {
             int[] bandIndices,
             Parameters writeParams,
             boolean minimizeReprojections,
-            boolean bestResolutionOnMatchingCRS)
+            boolean bestResolutionOnMatchingCRS,
+            CoordinateReferenceSystem targetVerticalCRS)
             throws Exception {
 
         List<GridCoverage2D> disposableSources = new ArrayList<GridCoverage2D>();
@@ -363,6 +368,33 @@ class RasterDownload {
                 }
             }
             disposableSources.add(gridCoverage);
+
+            CoordinateReferenceSystem sourceVerticalCRS = null;
+            if (targetVerticalCRS != null) {
+                MetadataMap metadata = coverageInfo.getMetadata();
+                if (metadata != null
+                        && metadata.containsKey(VerticalCRSConfigurationPanel.VERTICAL_CRS_KEY)) {
+                    String sourceVerticalCRSvalue =
+                            metadata.get(VerticalCRSConfigurationPanel.VERTICAL_CRS_KEY).toString();
+                    if (sourceVerticalCRSvalue != null) {
+                        sourceVerticalCRS = CRS.decode(sourceVerticalCRSvalue);
+                    }
+                }
+                if (sourceVerticalCRS == null) {
+                    throw new WPSException(
+                            "A VerticalCRS reprojection has been required but no source"
+                                    + " VerticalCRS has been configured in the coverage.");
+                }
+                if (!CRS.equalsIgnoreMetadata(sourceVerticalCRS, targetVerticalCRS)) {
+                    VerticalResampler verticalResampler =
+                            new VerticalResampler(
+                                    sourceVerticalCRS,
+                                    targetVerticalCRS,
+                                    GC_FACTORY,
+                                    progressListener);
+                    gridCoverage = verticalResampler.resample(gridCoverage);
+                }
+            }
 
             //
             // Writing

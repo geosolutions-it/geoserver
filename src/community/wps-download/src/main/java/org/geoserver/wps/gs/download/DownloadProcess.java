@@ -107,6 +107,8 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
      * @param bestResolutionOnMatchingCRS When dealing with a Heterogeneous CRS mosaic, given a ROI
      *     and a TargetCRS, with no target size being specified, get the best resolution of data
      *     having nativeCrs matching the TargetCRS
+     * @param targetVerticalCRS the target VerticalCRS when downloading elevation/height related
+     *     data
      * @param progressListener the progress listener
      * @return the file
      * @throws ProcessException the process exception
@@ -195,6 +197,12 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
                         min = 0
                     )
                     Boolean bestResolutionOnMatchingCRS,
+            @DescribeParameter(
+                        name = "targetVerticalCRS",
+                        description = "Optional Target VerticalCRS ",
+                        min = 0
+                    )
+                    CoordinateReferenceSystem targetVerticalCRS,
             final ProgressListener progressListener)
             throws ProcessException {
 
@@ -240,6 +248,7 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
                         (Interpolation)
                                 ImageUtilities.NN_INTERPOLATION_HINT.get(JAI.KEY_INTERPOLATION);
             }
+
             // Default behavior is false for backward compatibility
             if (bestResolutionOnMatchingCRS == null) {
                 bestResolutionOnMatchingCRS = false;
@@ -347,7 +356,8 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
                                         bandIndices,
                                         writeParameters,
                                         minimizeReprojections,
-                                        bestResolutionOnMatchingCRS);
+                                        bestResolutionOnMatchingCRS,
+                                        targetVerticalCRS);
             } else {
 
                 // wrong type
