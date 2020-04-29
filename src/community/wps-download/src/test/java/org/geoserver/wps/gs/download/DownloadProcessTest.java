@@ -1651,6 +1651,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             parameters, // Writing params
                             true,
                             true,
+                            null,
                             new NullProgressListener() // progressListener
                             );
 
