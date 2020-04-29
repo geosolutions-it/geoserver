@@ -7,12 +7,12 @@
 	<parent>
 		<groupId>org.geoserver.community</groupId>
 		<artifactId>gs-jms-cluster-container</artifactId>
-		<version>2.16-SNAPSHOT</version>
+		<version>2.16-BEV-SNAPSHOT</version>
 	</parent>
 
 	<groupId>org.geoserver.community</groupId>
 	<artifactId>activemqBroker</artifactId>
-	<version>2.16-SNAPSHOT</version>
+	<version>2.16-BEV-SNAPSHOT</version>
 	<packaging>war</packaging>
 
 	<name>ActiveMQ</name>
