@@ -26,6 +26,7 @@ import org.geotools.gce.imagemosaic.Utils;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
+import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
 import org.opengis.feature.simple.SimpleFeature;
@@ -34,7 +35,6 @@ import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.PropertyName;
 import org.opengis.geometry.BoundingBox;
-import org.opengis.geometry.Envelope;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
@@ -205,7 +205,7 @@ class CRSRequestHandler {
                         && originalTargetCRS != null
                         && descriptors.containsKey(DimensionDescriptor.CRS)
                         && (referenceFeatureForAlignment =
-                                        haveGranulesMatchingTargetCRS(
+                                        getFirstGranuleMatchingCRS(
                                                 reader, originalTargetCRS, roi, filter))
                                 != null
                         && !CRS.equalsIgnoreMetadata(originalNativeCRS, originalTargetCRS)
@@ -260,7 +260,7 @@ class CRSRequestHandler {
      *
      * @return
      */
-    private SimpleFeature haveGranulesMatchingTargetCRS(
+    private SimpleFeature getFirstGranuleMatchingCRS(
             GridCoverage2DReader reader,
             CoordinateReferenceSystem targetCRS,
             Geometry roi,
@@ -298,6 +298,7 @@ class CRSRequestHandler {
         // Set the query filter
         query = new Query();
         query.setFilter(Predicates.and(filters));
+        query.setHints(new Hints(GranuleSource.NATIVE_BOUNDS, true));
         SimpleFeatureCollection features = granules.getGranules(query);
         if (features != null && !features.isEmpty()) {
             try (SimpleFeatureIterator iterator = features.features()) {
@@ -329,8 +330,8 @@ class CRSRequestHandler {
         }
     }
 
-    public BoundingBox computeBBoxReproject(SimpleFeature feature,
-            CoordinateReferenceSystem schemaCRS)
+    public BoundingBox computeBBoxReproject(
+            SimpleFeature feature, CoordinateReferenceSystem schemaCRS)
             throws IOException, FactoryException, TransformException {
         String granuleCrsCode = (String) feature.getAttribute(crsAttribute);
         CoordinateReferenceSystem granuleCRS = getCRS(granuleCrsCode);
