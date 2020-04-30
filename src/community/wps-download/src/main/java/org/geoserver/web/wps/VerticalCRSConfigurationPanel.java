@@ -4,6 +4,7 @@
  */
 package org.geoserver.web.wps;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,7 +57,7 @@ public class VerticalCRSConfigurationPanel extends ResourceConfigurationPanel {
                 new PropertyModel<MetadataMap>(model, "metadata");
         MetadataMap objectMetadata = metadata.getObject();
         if (objectMetadata != null) {
-            String verticalCRSvalue = objectMetadata.get(VERTICAL_CRS_KEY).toString();
+            Serializable verticalCRSvalue = objectMetadata.get(VERTICAL_CRS_KEY);
             if (verticalCRSvalue != null) {
                 verticalCRS = verticalCRSvalue.toString();
             }

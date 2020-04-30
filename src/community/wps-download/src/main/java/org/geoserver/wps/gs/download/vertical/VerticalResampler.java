@@ -4,6 +4,7 @@
  */
 package org.geoserver.wps.gs.download.vertical;
 
+import it.geosolutions.jaiext.range.NoDataContainer;
 import it.geosolutions.jaiext.range.Range;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
@@ -30,14 +31,12 @@ import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.image.ImageWorker;
 import org.geotools.image.util.ImageUtilities;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.factory.epsg.CoordinateOperationFactoryUsingWKT;
 import org.geotools.referencing.operation.DefaultMathTransformFactory;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.referencing.operation.transform.ConcatenatedTransform;
-import org.geotools.util.SimpleInternationalString;
 import org.geotools.util.SoftValueHashMap;
 import org.geotools.util.URLs;
 import org.geotools.util.logging.Logging;
@@ -210,12 +209,17 @@ public class VerticalResampler {
         PlanarImage image = null;
         WritableRaster raster = null;
         RandomIter iter = null;
+        NoDataContainer noDataContainer = null;
         try {
+            double srcNoDataValue = Double.NaN;
             image = PlanarImage.wrapRenderedImage(gridCoverage.getRenderedImage());
-            ImageWorker worker = new ImageWorker(image);
-            Range sourceNodata = worker.extractNoDataProperty(image);
-            double srcNoDataValue =
-                    sourceNodata != null ? sourceNodata.getMin().doubleValue() : Double.NaN;
+            Object property = image.getProperty(NoDataContainer.GC_NODATA);
+            if (property != null) {
+                if (property instanceof NoDataContainer) {
+                    noDataContainer = ((NoDataContainer) property);
+                    srcNoDataValue = noDataContainer.getAsSingleValue();
+                }
+            }
 
             // This iterator goes through tiled images if any
             iter = RandomIterFactory.create(image, image.getBounds());
@@ -236,18 +240,9 @@ public class VerticalResampler {
 
             double[] srcPoints = new double[3];
             double[] destPoints = new double[3];
-            float progress = progressListener.getProgress();
-            progressListener.setTask(new SimpleInternationalString("Vertical Reprojection"));
-            final float remainingProgress = 100 - progress;
             final int maxY = image.getMaxY();
             final float range = (maxY - minY);
-            final int progressSteps = (int) (range / remainingProgress);
-            final float progressIncrement = (remainingProgress / progressSteps);
             for (int j = minY; j < maxY; j++) {
-                if (j % progressSteps == 0) {
-                    progress = progressListener.getProgress();
-                    progressListener.progress(progress + progressIncrement);
-                }
                 for (int i = minX; i < image.getMaxX(); i++) {
                     srcPoints[0] = i;
                     srcPoints[1] = j;
@@ -278,6 +273,6 @@ public class VerticalResampler {
         if (raster == null) {
             throw new WPSException("Unable to create a raster with the updated vertical values.");
         }
-        return gcFactory.create(gridCoverage.getName(), raster, gridCoverage.getEnvelope());
+        return gcFactory.create(gridCoverage.getName(), raster, gridCoverage.getEnvelope(), gridCoverage.getSampleDimensions());
     }
 }
