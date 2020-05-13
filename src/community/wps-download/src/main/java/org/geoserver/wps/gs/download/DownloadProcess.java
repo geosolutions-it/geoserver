@@ -203,6 +203,17 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
                         min = 0
                     )
                     CoordinateReferenceSystem targetVerticalCRS,
+            @DescribeParameter(
+                        name = "resolutionsDifferenceTolerance",
+                        description =
+                                "When a reprojection with a TargetCRS and no target size specified is being requested,"
+                                        + " the parameter allows to specifies a tolerance value to control the use"
+                                        + " of native resolution of the data: if the percentage difference between original"
+                                        + " and reprojected coverages resolutions is below the specified value,"
+                                        + " the reprojected coverage will be forced to use native resolutions",
+                        min = 0
+                    )
+                    Double resolutionsDifferenceTolerance,
             final ProgressListener progressListener)
             throws ProcessException {
 
@@ -260,6 +271,13 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
                 minimizeReprojections = false;
                 if (LOGGER.isLoggable(Level.FINE)) {
                     LOGGER.log(Level.FINE, "Minimize reprojections is disabled");
+                }
+            }
+
+            if (resolutionsDifferenceTolerance == null) {
+                resolutionsDifferenceTolerance = 0d;
+                if (LOGGER.isLoggable(Level.FINE)) {
+                    LOGGER.log(Level.FINE, "Use native resolution is disabled");
                 }
             }
             //
@@ -357,7 +375,8 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
                                         writeParameters,
                                         minimizeReprojections,
                                         bestResolutionOnMatchingCRS,
-                                        targetVerticalCRS);
+                                        targetVerticalCRS,
+                                        resolutionsDifferenceTolerance);
             } else {
 
                 // wrong type

@@ -280,6 +280,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -354,6 +355,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             false,
                             false,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -420,6 +422,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -453,6 +456,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -527,6 +531,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -592,6 +597,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -666,6 +672,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -738,6 +745,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -856,6 +864,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -969,6 +978,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1061,6 +1071,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1140,6 +1151,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1205,6 +1217,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1264,6 +1277,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1336,6 +1350,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1389,6 +1404,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1467,6 +1483,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             true,
                             false,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -1552,6 +1569,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             true,
                             true,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -1652,6 +1670,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             true,
                             true,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -1745,6 +1764,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             true,
                             true,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -1839,6 +1859,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             true,
                             true,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -1872,6 +1893,89 @@ public class DownloadProcessTest extends WPSTestSupport {
             double yPixels = Math.abs(referenceLowerCorner[1] - lowerCorner[1]) / resY;
             assertTrue(Math.abs(xPixels - Math.round(xPixels)) < DELTA);
             assertTrue(Math.abs(yPixels - Math.round(yPixels)) < DELTA);
+
+        } finally {
+            if (gc != null) {
+                CoverageCleanerCallback.disposeCoverage(gc);
+            }
+            if (reader != null) {
+                reader.dispose();
+            }
+            if (referenceGc != null) {
+                CoverageCleanerCallback.disposeCoverage(referenceGc);
+            }
+            if (referenceReader != null) {
+                referenceReader.dispose();
+            }
+            // clean up process
+            resourceManager.finished(resourceManager.getExecutionId(true));
+        }
+    }
+
+    @Test
+    public void testDownloadGranuleHeterogeneousCRSUsingNativeResolutions() throws Exception {
+        // This test check that by specifying a resolutionDifferenceTolerance parameter
+        // after reprojection we got the native resolution.
+        final WPSResourceManager resourceManager = getResourceManager();
+
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
+        // Requesting an area containing a granule in native CRS and a granule in a different CRS
+        GeoTiffReader referenceReader = null;
+        GeoTiffReader reader = null;
+        GridCoverage2D referenceGc = null;
+        GridCoverage2D gc = null;
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:31256", true);
+        try {
+            String roiWkt =
+                    "POLYGON ((-102583.25 262175.25, -102332.25 262175.25, -102332.25 262042.25, -102583.25 262042.25, -102583.25 262175.25))";
+            Polygon bboxRoi = (Polygon) new WKTReader2().read(roiWkt);
+
+            Parameters parameters = new Parameters();
+            List<Parameter> parametersList = parameters.getParameters();
+            parametersList.add(new Parameter("writenodata", "false"));
+            File rasterZip =
+                    downloadProcess.execute(
+                            getLayerId(HETEROGENEOUS_CRS2), // layerName
+                            null, // filter
+                            "image/tiff", // outputFormat
+                            targetCRS, // targetCRS
+                            targetCRS,
+                            bboxRoi, // roi
+                            false, // cropToGeometry
+                            null, // interpolation
+                            null, // targetSizeX
+                            null, // targetSizeY
+                            null, // bandSelectIndices
+                            parameters, // Writing params
+                            false,
+                            false,
+                            null,
+                            10d,
+                            new NullProgressListener() // progressListener
+                            );
+
+            Assert.assertNotNull(rasterZip);
+            final File[] tiffFiles = extractFiles(rasterZip, "GTIFF");
+            reader = new GeoTiffReader(tiffFiles[0]);
+            gc = reader.read(null);
+            GridGeometry2D gc2d = gc.getGridGeometry();
+            AffineTransform transform = (AffineTransform) gc2d.getGridToCRS();
+
+            // Finally, get the original granule
+            final File file =
+                    new File(this.getTestData().getDataDirectoryRoot(), "hcrs2/31255.tif");
+            referenceReader = new GeoTiffReader(file);
+            referenceGc = referenceReader.read(null);
+            GridGeometry2D referenceGc2d = referenceGc.getGridGeometry();
+            AffineTransform referenceTransform = (AffineTransform) referenceGc2d.getGridToCRS();
+
+            // Checking that resolutions are equal
+            double resX = XAffineTransform.getScaleX0(referenceTransform);
+            double resY = XAffineTransform.getScaleY0(referenceTransform);
+            assertEquals(resX, XAffineTransform.getScaleX0(transform), 0d);
+            assertEquals(resY, XAffineTransform.getScaleY0(transform), 0d);
 
         } finally {
             if (gc != null) {
@@ -1971,6 +2075,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -2041,6 +2146,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     new NullProgressListener() // progressListener
                     );
 
@@ -2103,6 +2209,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     new NullProgressListener() // progressListener
                     );
 
@@ -2158,6 +2265,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -2193,6 +2301,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     new NullProgressListener() // progressListener
                     );
 
@@ -2253,6 +2362,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             false,
                             false,
                             null,
+                            0d,
                             new NullProgressListener() // progressListener
                             );
 
@@ -2317,6 +2427,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     new NullProgressListener() // progressListener
                     );
 
@@ -2408,6 +2519,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     new NullProgressListener() // progressListener
                     );
 
@@ -2472,6 +2584,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     listener // progressListener
                     );
 
@@ -2534,6 +2647,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     listener // progressListener
                     );
 
@@ -2588,6 +2702,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     false,
                     false,
                     null,
+                    0d,
                     progressListener // progressListener
                     );
 
@@ -2673,6 +2788,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -2730,6 +2846,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 
@@ -2822,6 +2939,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         false,
                         false,
                         null,
+                        0d,
                         new NullProgressListener() // progressListener
                         );
 

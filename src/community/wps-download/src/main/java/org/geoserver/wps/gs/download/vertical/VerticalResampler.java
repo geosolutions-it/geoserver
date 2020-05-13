@@ -5,7 +5,6 @@
 package org.geoserver.wps.gs.download.vertical;
 
 import it.geosolutions.jaiext.range.NoDataContainer;
-import it.geosolutions.jaiext.range.Range;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.SampleModel;
@@ -273,6 +272,10 @@ public class VerticalResampler {
         if (raster == null) {
             throw new WPSException("Unable to create a raster with the updated vertical values.");
         }
-        return gcFactory.create(gridCoverage.getName(), raster, gridCoverage.getEnvelope(), gridCoverage.getSampleDimensions());
+        return gcFactory.create(
+                gridCoverage.getName(),
+                raster,
+                gridCoverage.getEnvelope(),
+                gridCoverage.getSampleDimensions());
     }
 }
