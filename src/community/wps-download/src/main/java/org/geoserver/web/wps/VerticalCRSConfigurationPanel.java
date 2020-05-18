@@ -19,9 +19,13 @@ import org.geoserver.web.wicket.CRSPanel;
 import org.geoserver.web.wicket.SRSToCRSModel;
 import org.opengis.coverage.SampleDimensionType;
 
+/**
+ * A CRS Configuration panel being plugged on Layer's Data config panel when WPS-Download plugin is
+ * installed and the underlying gridCoverage could potentially represent vertical data.
+ */
 public class VerticalCRSConfigurationPanel extends ResourceConfigurationPanel {
 
-    static final Set<SampleDimensionType> GOOD_CANDIDATES_FOR_VERTICAL_CRS;
+    private static final Set<SampleDimensionType> GOOD_CANDIDATES_FOR_VERTICAL_CRS;
 
     static {
         GOOD_CANDIDATES_FOR_VERTICAL_CRS = new HashSet<SampleDimensionType>();
@@ -47,7 +51,7 @@ public class VerticalCRSConfigurationPanel extends ResourceConfigurationPanel {
         List<CoverageDimensionInfo> dimensions = ci.getDimensions();
         boolean isGoodCandidateForVerticalCRS = false;
         if (dimensions != null && dimensions.size() == 1) {
-            // We assume that only single band coverages with proper
+            // We assume that only single band coverage with proper
             // datatype is a good candidate to represent vertical data
             CoverageDimensionInfo dimension = dimensions.get(0);
             SampleDimensionType type = dimension.getDimensionType();

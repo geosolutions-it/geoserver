@@ -26,7 +26,7 @@ import org.geotools.util.logging.Logging;
 import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterValue;
 
-/** A Vertical Grid Shift implementation based on a GeoTIFF file */
+/** A Vertical Grid Shift implementation based on an underlying GeoTIFF file */
 public class GeoTIFFVerticalGridShift implements VerticalGridShift {
 
     private static final int DEFAULT_IN_MEMORY_READ_SIZE_THRESHOLD = 1024 * 1024 * 8;
@@ -45,7 +45,7 @@ public class GeoTIFFVerticalGridShift implements VerticalGridShift {
     /** The valid area being covered by this grid */
     private final GeneralEnvelope validArea;
 
-    /** The Grid's 2D CoordinateReferenceSystem (epsg code number) */
+    /** The Grid's 2D CoordinateReferenceSystem (EPSG code number) */
     private final int crsCode;
 
     /** The Grid Datatype */
@@ -154,11 +154,9 @@ public class GeoTIFFVerticalGridShift implements VerticalGridShift {
         int gridJ0 = (int) Math.round(Math.floor(gridY));
 
         if (!(gridI0 >= 0 && gridI0 < width)) {
-            z[0] = Double.NaN;
             return false;
         }
         if (!(gridJ0 >= 0 && gridJ0 < height)) {
-            z[0] = Double.NaN;
             return false;
         }
 
@@ -190,7 +188,11 @@ public class GeoTIFFVerticalGridShift implements VerticalGridShift {
                         "Grid samples dataType isn't supported: " + dataType);
         }
 
-        z[0] = pixelValue;
+        if (Double.isNaN(pixelValue)) {
+            return false;
+        }
+        // Finally apply the shift
+        z[0] += pixelValue;
         return true;
     }
 

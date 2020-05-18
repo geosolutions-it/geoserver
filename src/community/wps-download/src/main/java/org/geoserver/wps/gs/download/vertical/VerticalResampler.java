@@ -47,6 +47,11 @@ import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import org.opengis.util.ProgressListener;
 
+/**
+ * A Resampling class applying a Vertical Grid Transform to an input coverage representing height
+ * data expressed in a source VerticalCRS to produce an output coverage with heigh data expressed in
+ * a target VerticalCRS.
+ */
 public class VerticalResampler {
 
     private static final double DELTA = 1E-6;
@@ -54,7 +59,7 @@ public class VerticalResampler {
     /** The LOGGER. */
     private static final Logger LOGGER = Logging.getLogger(VerticalResampler.class);
 
-    /** A cache containing the GridShift for a <source,target> key mapping */
+    /** A cache containing the VerticalGridTransform for a <source,target> key mapping */
     private static final SoftValueHashMap<String, VerticalGridTransform>
             CRS_MAPPING_TO_VERTICAL_GRID_TRANSFORM = new SoftValueHashMap<>();
 
@@ -63,6 +68,7 @@ public class VerticalResampler {
     static {
         // Let's load the user_projections/epsg_operations.properties and extract the vertical grid
         // definitions
+
         GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
         File geoserverDataDir = loader.getBaseDirectory();
         final String epsgPropertyFilePath =
@@ -116,6 +122,7 @@ public class VerticalResampler {
 
     private final GridCoverageFactory gcFactory;
 
+    /** The VerticalGridTransform being used by this resampler */
     private VerticalGridTransform verticalGridTransform;
 
     /** Source Vertical CRS */
@@ -127,6 +134,15 @@ public class VerticalResampler {
     /** VerticalGrid's internal CRS */
     private CoordinateReferenceSystem gridCRS;
 
+    /**
+     * VerticalResampler constructor
+     *
+     * @param sourceVerticalCRS the source VerticalCRS
+     * @param targetVerticalCRS the target VerticalCRS
+     * @param gcFactory a GridCoverageFactory being used to produce an output GridCoverage
+     * @param progressListener
+     * @throws FactoryException
+     */
     public VerticalResampler(
             CoordinateReferenceSystem sourceVerticalCRS,
             CoordinateReferenceSystem targetVerticalCRS,
@@ -240,7 +256,6 @@ public class VerticalResampler {
             double[] srcPoints = new double[3];
             double[] destPoints = new double[3];
             final int maxY = image.getMaxY();
-            final float range = (maxY - minY);
             for (int j = minY; j < maxY; j++) {
                 for (int i = minX; i < image.getMaxX(); i++) {
                     srcPoints[0] = i;
@@ -250,8 +265,9 @@ public class VerticalResampler {
                             || Math.abs(srcNoDataValue - srcPoints[2]) < DELTA) {
                         destPoints[2] = srcPoints[2];
                     } else {
-                        // Transform the vertical value of the current position
+                        // Transform the pixel coordinate to the coordinate in the vertical grid crs
                         pixelToVerticalGridTransform.transform(srcPoints, 0, srcPoints, 0, 1);
+                        // Transform the vertical value of the current position
                         verticalGridTransform.transform(srcPoints, 0, destPoints, 0, 1);
                         if (Double.isNaN(destPoints[2])) {
                             destPoints[2] = srcNoDataValue;

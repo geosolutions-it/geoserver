@@ -65,10 +65,11 @@ public class VerticalGridShiftFactory extends ReferencingFactory implements Buff
      * Creates a VerticalGrid.
      *
      * @param gridLocation The Vertical grid file location
+     * @param gridCRSCode the EPSG code of the grid's CRS
      * @return the grid
      * @throws FactoryException if grid cannot be created
      */
-    public VerticalGridShift createVerticalGrid(URL gridLocation, int interpolationCRSCode)
+    public VerticalGridShift createVerticalGrid(URL gridLocation, int gridCRSCode)
             throws FactoryException {
         if (gridLocation == null) {
             throw new FactoryException("The grid location must be not null");
@@ -80,7 +81,7 @@ public class VerticalGridShiftFactory extends ReferencingFactory implements Buff
                 return grid; // - Return
             } else { // Not cached:
                 if (gridLocation != null) {
-                    grid = loadVerticalGrid(gridLocation, interpolationCRSCode); // - Load
+                    grid = loadVerticalGrid(gridLocation, gridCRSCode); // - Load
                     if (grid != null) {
                         verticalGridCache.put(gridLocation.toExternalForm(), grid); // - Cache
                         return grid; // - Return
@@ -92,16 +93,13 @@ public class VerticalGridShiftFactory extends ReferencingFactory implements Buff
         }
     }
     /**
-     * Loads the grid in memory.
-     *
-     * <p>If file cannot be loaded, the cause is logged at {@link Level#SEVERE severe level}.
+     * Loads the grid
      *
      * @param url the vertical grid file absolute path
-     * @param interpolationCRSCode
+     * @param gridCRSCode
      * @return the grid, or {@code null} on error
      */
-    private VerticalGridShift loadVerticalGrid(URL url, int interpolationCRSCode)
-            throws FactoryException {
+    private VerticalGridShift loadVerticalGrid(URL url, int gridCRSCode) throws FactoryException {
         try {
             if (url.getProtocol().equals("file")) {
                 File file = URLs.urlToFile(url);
@@ -109,7 +107,7 @@ public class VerticalGridShiftFactory extends ReferencingFactory implements Buff
                 if (!file.exists() || !file.canRead()) {
                     throw new IOException(Errors.format(ErrorKeys.FILE_DOES_NOT_EXIST_$1, file));
                 }
-                return loadGridShift(file, interpolationCRSCode);
+                return loadGridShift(file, gridCRSCode);
             }
             throw new FactoryException(
                     "URL " + url + " doesn't refer a supported Vertical Grid file");
@@ -130,20 +128,19 @@ public class VerticalGridShiftFactory extends ReferencingFactory implements Buff
      * EPSG code. Current implementation only support GeoTIFF Vertical Grids.
      *
      * @param file the File containing the Vertical Grid
-     * @param interpolationCRSCode the EPSG code to be assigned as CRS of the underlying Vertical
-     *     Grid
+     * @param gridCRSCode the EPSG code to be assigned as CRS of the underlying Vertical Grid
      * @return the {@link VerticalGridShift} instance
      * @throws IOException
      * @throws FactoryException
      */
-    public static VerticalGridShift loadGridShift(File file, int interpolationCRSCode)
+    public static VerticalGridShift loadGridShift(File file, int gridCRSCode)
             throws IOException, FactoryException {
         // In the future, if we start supporting multiple type of grids (csv, gtx, geotiff) we can
         // leverage on an SPI mechanism and a finder.
         String path = file.getAbsolutePath();
         String extension = FilenameUtils.getExtension(FilenameUtils.getName(path));
         if (extension.toUpperCase().endsWith("TIF")) {
-            return new GeoTIFFVerticalGridShift(file, interpolationCRSCode);
+            return new GeoTIFFVerticalGridShift(file, gridCRSCode);
         }
         throw new IOException("File " + file + " is not a supported Vertical Grid Offset File");
     }

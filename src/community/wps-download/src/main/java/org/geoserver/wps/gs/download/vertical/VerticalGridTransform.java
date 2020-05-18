@@ -155,9 +155,9 @@ public class VerticalGridTransform extends AbstractMathTransform {
             dstPts[dstOff++] = x;
             dstPts[dstOff++] = y;
             if (!shifted) {
-                if (LOGGER.isLoggable(Level.FINE)) {
+                if (LOGGER.isLoggable(Level.FINER)) {
                     LOGGER.log(
-                            Level.FINE,
+                            Level.FINER,
                             "Point ("
                                     + srcPts[srcOff - 3]
                                     + ", "
@@ -168,7 +168,7 @@ public class VerticalGridTransform extends AbstractMathTransform {
                                     + " it will not be shifted.");
                 }
             }
-            dstPts[dstOff++] = z + val[0];
+            dstPts[dstOff++] = val[0];
         }
     }
 
