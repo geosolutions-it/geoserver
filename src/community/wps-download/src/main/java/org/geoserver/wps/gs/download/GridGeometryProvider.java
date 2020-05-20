@@ -298,6 +298,19 @@ class GridGeometryProvider {
         /** Gets granules' resolution if it is equal for all the granules, otherwise returns null */
         public double[] getGranulesNativeResolutionIfSame(GranuleSource granuleSource)
                 throws IOException, TransformException, FactoryException {
+
+            Query query = initQuery(granuleSource);
+            SimpleFeatureCollection granules = granuleSource.getGranules(query);
+            return getGranulesNativeResolutionIfSame(granules);
+        }
+
+        /** Gets granules' resolution if it is equal for all the granules, otherwise returns null */
+        public double[] getGranulesNativeResolutionIfSame(SimpleFeatureCollection granules) {
+            if (granules == null || granules.isEmpty()) return null;
+
+            SimpleFeatureIterator iterator = granules.features();
+            TreeSet<Double> resolutionsX = new TreeSet<>();
+            TreeSet<Double> resolutionsY = new TreeSet<>();
             Map<String, DimensionDescriptor> descriptors = crsRequestHandler.getDescriptors();
             DimensionDescriptor resDescriptor = descriptors.get(DimensionDescriptor.RESOLUTION);
             DimensionDescriptor resXDescriptor = descriptors.get(DimensionDescriptor.RESOLUTION_X);
@@ -310,19 +323,17 @@ class GridGeometryProvider {
                     hasBothResolutions
                             ? resYDescriptor.getStartAttribute()
                             : resDescriptor.getStartAttribute();
-
-            Query query = initQuery(granuleSource);
-            SimpleFeatureCollection granules = granuleSource.getGranules(query);
-            SimpleFeatureIterator iterator = granules.features();
-            TreeSet<Double> resolutionsX = new TreeSet<>();
-            TreeSet<Double> resolutionsY = new TreeSet<>();
+            GeneralEnvelope envelope = null;
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
                 resolutionsX.add((Double) feature.getAttribute(resXAttribute));
                 resolutionsY.add((Double) feature.getAttribute(resYAttribute));
             }
-            if (resolutionsX.size() > 1 || resolutionsY.size() > 1) return null;
-            return new double[] {resolutionsX.first(), resolutionsY.first()};
+            if (resolutionsX.size() > 1 || resolutionsY.size() > 1) {
+                return null;
+            } else {
+                return new double[] {resolutionsX.first(), resolutionsY.first()};
+            }
         }
 
         public double[] getResolution(GridCoverage2D coverage2D) {
@@ -365,7 +376,6 @@ class GridGeometryProvider {
             String coverageName = structuredReader.getGridCoverageNames()[0];
 
             ResolutionProvider provider = new ResolutionProvider(crsRequestHandler);
-
             //
             // Do we have any resolution descriptor available?
             // if not, go to standard computation.
@@ -380,7 +390,8 @@ class GridGeometryProvider {
             }
 
             GranuleSource granules = structuredReader.getGranules(coverageName, true);
-
+            // Initialize resolution with infinite numbers
+            double[] resolution = new double[] {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY};
             // Setup a query on top of ROI and input filter (if any)
             Query query = initQuery(granules);
             SimpleFeatureCollection features = granules.getGranules(query);
@@ -392,9 +403,34 @@ class GridGeometryProvider {
                 }
                 return getNativeResolutionGridGeometry();
             }
-            // Initialize resolution with infinite numbers
-            double[] resolution = new double[] {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY};
-            ReferencedEnvelope envelope = provider.getBestResolution(features, resolution);
+            ReferencedEnvelope envelope = null;
+
+            double resolutionsDifferenceTolerance =
+                    crsRequestHandler.getResolutionsDifferenceTolerance();
+
+            if (!crsRequestHandler.needsReprojection() && resolutionsDifferenceTolerance != 0d) {
+                // no reprojection but has been request to try to preserve native
+                // resolution
+                resolution = provider.getGranulesNativeResolutionIfSame(features);
+                double[] testResolution =
+                        new double[] {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY};
+                // get best resolution to have a reference
+                envelope = provider.getBestResolution(features, testResolution);
+                // comparing resolutions
+                double diffPercentageX = Math.abs((resolution[0] / testResolution[0]) - 1) * 100;
+                double diffPercentageY = Math.abs((resolution[1] / testResolution[1]) - 1) * 100;
+                if (!(diffPercentageX < resolutionsDifferenceTolerance
+                        && diffPercentageY < resolutionsDifferenceTolerance)) {
+                    // difference is beyond the tolerance limit
+                    // setting the best resolution
+                    resolution = testResolution;
+                }
+            }
+
+            if (envelope == null) {
+                envelope = provider.getBestResolution(features, resolution);
+            }
+
             AffineTransform at =
                     new AffineTransform(
                             resolution[0],
@@ -421,11 +457,11 @@ class GridGeometryProvider {
      *
      * If the above conditions are not matched the method returns null
      */
-    public GridGeometry2D getReprojectedGridGeometryWithNativeResolution(
-            GridCoverage2D originalCoverage,
-            GridCoverage2D testCoverage,
-            double resolutionsDifferenceTolerance)
+    public GridGeometry2D getGridGeometryWithNativeResolution(
+            GridCoverage2D originalCoverage, GridCoverage2D testCoverage)
             throws TransformException, IOException, FactoryException {
+        double resolutionsDifferenceTolerance =
+                crsRequestHandler.getResolutionsDifferenceTolerance();
         if (!crsRequestHandler.hasStructuredReader()) return null;
         ResolutionProvider resProvider = new ResolutionProvider(crsRequestHandler);
         StructuredGridCoverage2DReader structured = crsRequestHandler.getStructuredReader();
@@ -453,11 +489,8 @@ class GridGeometryProvider {
         }
         if (canUseNative) {
             double[] resolutionsResampled = resProvider.getResolution(testCoverage);
-            double[] resolutionsInput = resProvider.getResolution(originalCoverage);
-            double diffPercentageX =
-                    Math.abs((resolutionsInput[0] / resolutionsResampled[0]) - 1) * 100;
-            double diffPercentageY =
-                    Math.abs((resolutionsInput[1] / resolutionsResampled[1]) - 1) * 100;
+            double diffPercentageX = Math.abs((resolution[0] / resolutionsResampled[0]) - 1) * 100;
+            double diffPercentageY = Math.abs((resolution[1] / resolutionsResampled[1]) - 1) * 100;
             if (diffPercentageX < resolutionsDifferenceTolerance
                     && diffPercentageY < resolutionsDifferenceTolerance) {
                 ReferencedEnvelope envelope =
@@ -520,7 +553,8 @@ class GridGeometryProvider {
                                 PixelInCell.CELL_CORNER, tx, envelope, GeoTools.getDefaultHints());
             }
         }
-        if (crsRequestHandler.needsReprojection()) {
+        if (crsRequestHandler.needsReprojection()
+                || crsRequestHandler.getResolutionsDifferenceTolerance() != 0d) {
             // Apply padding to read extra pixels.
             MathTransform2D worldToScreen = gg2d.getCRSToGrid2D(PixelOrientation.UPPER_LEFT);
             GridEnvelope2D gridRange = gg2d.getGridRange2D();

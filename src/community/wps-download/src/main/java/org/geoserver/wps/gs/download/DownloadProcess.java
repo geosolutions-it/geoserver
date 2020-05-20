@@ -104,11 +104,11 @@ public class DownloadProcess implements GeoServerProcess, ApplicationContextAwar
      * @param minimizeReprojections When dealing with a Heterogeneous CRS mosaic, avoid
      *     reprojections of the granules within the ROI, having their nativeCRS equal to the
      *     targetCRS
+     * @param targetVerticalCRS the target VerticalCRS when downloading elevation/height related
+     *     data
      * @param bestResolutionOnMatchingCRS When dealing with a Heterogeneous CRS mosaic, given a ROI
      *     and a TargetCRS, with no target size being specified, get the best resolution of data
      *     having nativeCrs matching the TargetCRS
-     * @param targetVerticalCRS the target VerticalCRS when downloading elevation/height related
-     *     data
      * @param progressListener the progress listener
      * @return the file
      * @throws ProcessException the process exception
