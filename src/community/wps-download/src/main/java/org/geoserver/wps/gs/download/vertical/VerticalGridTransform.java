@@ -275,4 +275,9 @@ public class VerticalGridTransform extends AbstractMathTransform {
     public VerticalGridShift getVerticalGridShift() {
         return verticalGridShift;
     }
+
+    @Override
+    public int hashCode() {
+        return this.grid.hashCode();
+    }
 }

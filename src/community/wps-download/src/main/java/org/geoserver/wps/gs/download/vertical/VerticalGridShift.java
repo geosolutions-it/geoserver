@@ -21,7 +21,7 @@ public interface VerticalGridShift {
     /** Return true if the specified coordinate is within the valid area of the Grid */
     boolean isInValidArea(double x, double y);
 
-    /** Return the valid are (the bbox) of the Grid */
+    /** Return the valid area (the bbox) of the Grid */
     GeneralEnvelope getValidArea();
 
     /** Return the resolution of the Grid */

@@ -32,7 +32,7 @@ public class GeoTIFFVerticalGridShift implements VerticalGridShift {
     private static final int DEFAULT_IN_MEMORY_READ_SIZE_THRESHOLD = 1024 * 1024 * 8;
 
     public static final String IN_MEMORY_READ_SIZE_THRESHOLD_KEY =
-            "-Dorg.geotools.verticalgrid.inmemory.threshold";
+            "org.geotools.verticalgrid.inmemory.threshold";
 
     private static final int IN_MEMORY_READ_SIZE_THRESHOLD =
             Integer.getInteger(
@@ -177,15 +177,12 @@ public class GeoTIFFVerticalGridShift implements VerticalGridShift {
 
         double pixelValue = Double.NaN;
         switch (dataType) {
-            case DataBuffer.TYPE_DOUBLE:
-                pixelValue = interpolateDouble(gridX, gridY, gridI0, gridI1, gridJ0, gridJ1);
-                break;
             case DataBuffer.TYPE_FLOAT:
                 pixelValue = interpolateFloat(gridX, gridY, gridI0, gridI1, gridJ0, gridJ1);
                 break;
             default:
-                throw new UnsupportedOperationException(
-                        "Grid samples dataType isn't supported: " + dataType);
+                pixelValue = interpolateDouble(gridX, gridY, gridI0, gridI1, gridJ0, gridJ1);
+                break;
         }
 
         if (Double.isNaN(pixelValue)) {

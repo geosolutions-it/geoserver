@@ -195,13 +195,17 @@ public class VerticalResampler {
         }
 
         ReferencedEnvelope gridEnvelope = new ReferencedEnvelope(gridShift.getValidArea());
-        if (!gridEnvelope.contains(dataEnvelope)) {
-            throw new WPSException(
-                    "The computed gridCoverage is not within the valid area of the available grid."
-                            + " Data Envelope: "
-                            + dataEnvelope
-                            + " Vertical Grid File Envelope: "
-                            + gridEnvelope);
+        if (!gridEnvelope.intersects(dataEnvelope)) {
+            if (LOGGER.isLoggable(Level.INFO)) {
+                LOGGER.info(
+                        "The computed GridCoverage doesn't intersect the the valid area of the available grid.\""
+                                + " Data Envelope: "
+                                + dataEnvelope
+                                + " Vertical Grid File Envelope: "
+                                + gridEnvelope
+                                + ".\n Returning the coverage without vertical interpolation being applied");
+            }
+            return gridCoverage;
         }
         GridGeometry2D gridGeometry = gridCoverage.getGridGeometry();
         MathTransform gridToCrs = gridGeometry.getGridToCRS(PixelInCell.CELL_CENTER);

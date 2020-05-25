@@ -473,13 +473,8 @@ public class DownloadProcessTest extends WPSTestSupport {
         Assert.assertEquals(rawSource.size(), rawTarget.size());
     }
 
-    /**
-     * This method is used for extracting only the tiff file from a Tiff/GeoTiff output file
-     *
-     * @param gtiffZip
-     * @throws IOException
-     */
-    private File[] extractFiles(final File zipFile, String format) throws IOException {
+    /** This method is used for extracting only the specified format files from a zipfile archive */
+    public static File[] extractFiles(final File zipFile, String format) throws IOException {
         IOUtils.decompress(zipFile, zipFile.getParentFile());
         Set<String> extensions = FORMAT_TO_EXTENSIONS.get(format);
 
