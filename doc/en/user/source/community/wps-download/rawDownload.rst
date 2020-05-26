@@ -470,20 +470,22 @@ A typical :file:`indexer.properties` of such ImageMosaic will look like this::
 
 .. _vertical_resampling:
 
-Vertical data resampling (through Vertical Offset by Grid Interpolation)
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Vertical data resampling on download
+++++++++++++++++++++++++++++++++++++
 Coverages containing elevations data (i.e. DTM/DEM/DSM) have pixel values representing elevations/heights referred in a specific VerticalCRS.
+
 The associated VerticalCRS can be specified in the layer configuration, at the very bottom of the page, where a new optional Vertical Coordinate Reference System section shows up. 
+
 The following example shows a DSM layer being configured to specify EPSG:5778 as adopted VerticalCRS. 
 
   .. figure:: images/verticalCRS.png
     :align: center
 
-This panel will only show up when:
+This section will only show up when:
 
  * The wps-download module is deployed in GeoServer
- * The underlying data is single-band where datatype is at least 16 bit. (i.e.: no Byte datatype, no RGB images, ...)
-
+ * The underlying data is single-band and datatype is at least 16 bit. (i.e.: no Byte datatype, no RGB images, ...)
+ 
 WPS Download - Vertical resampling
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Resampling the data to a different VerticalCRS as part of the Raster Download Process is possible by specifying the **targetVerticalCRS** parameter in the WPS Download request. For example:
@@ -497,11 +499,12 @@ Resampling the data to a different VerticalCRS as part of the Raster Download Pr
       </wps:Data>
     </wps:Input>
 
-An exception will be thrown when specifying a targetVerticalCRS but no VerticalCRS has been specified on the requested layer.
+.. note::
+   An exception will be thrown when specifying a targetVerticalCRS but no VerticalCRS has been specified on the requested layer.
 
 Custom VerticalCRS definitions and grid transformations
 ```````````````````````````````````````````````````````
-Custom verticalCRS definitions can be specified in GeoServer via properties file as any other Coordinate Reference System, as explained in (see :ref:`Custom CRS Definitions <crs_custom>`) page.
+Custom verticalCRS definitions can be specified in GeoServer via properties file as any other Coordinate Reference System, as explained in :ref:`Custom CRS Definitions <crs_custom>` page.
 
 This is an example of the above VerticalCRS being added as a WKT in the :file:`user_projections/epsg.properties` file::
 
@@ -513,15 +516,17 @@ This is an example of the above VerticalCRS being added as a WKT in the :file:`u
       AUTHORITY["EPSG","9274"]]
 
 Transformations between VerticalCRSs can be supported through Vertical Grid Shift files (similarly to how NTV2 Grid Shift can be used in support of 2D grid transformation).
+
 Custom Coordinate Operations are defined in :file:`user_projections/epsg_operations.properties` file within the data directory (create it if it doesn't exist).
 
 Each line in :file:`epsg_operations.properties` will describe a coordinate operation consisting of a `source CRS`, a `target CRS`, and a math transform with its parameter values. Use the following syntax::
 
   <source crs code>,<target crs code>=<WKT math transform>
 
-The Math Transform is a **Vertical Offset by Grid Interpolation** requiring 2 parameters:
-#. A **Vertical offset file** referring an offset file being stored in the :file:`user_projections` directory, containing a vertical offset for each pixel of the grid.
-#. An **Interpolation CRS code** referring the EPSG code of the 2D CoordinateReferenceSystem of the offset file.
+The Math Transform is a ``Vertical Offset by Grid Interpolation`` requiring 2 parameters:
+
+#. A ``Vertical offset file`` referring an offset file containing a vertical offset for each pixel of the grid. The referred file need to be available in the :file:`user_projections` directory,
+#. An ``Interpolation CRS code`` containing  the EPSG code of the 2D CoordinateReferenceSystem of the grid file.
 
 Example
 ```````
@@ -529,12 +534,12 @@ Example
 Custom Vertical Grid Shift file for the transformation between the above Vertical CRSs ::
 
   5778,9274=PARAM_MT["Vertical Offset by Grid Interpolation", \
-  PARAMETER["Vertical offset file", "GV_Hoehengrid_V1.tif"],\
+  PARAMETER["Vertical offset file", "GV_Hoehengrid_V1.tif"], \
   PARAMETER["Interpolation CRS code", 4312]]
 
 
 .. note::
-   Only GeoTIFF vertical offset file are supported at the moment
+   Only GeoTIFF vertical offset files are supported at the moment
 
 .. note::
-   By default, the raster stored on the Vertical offset file will be fully loaded in memory if its memory footprint (width * height * bytes for each pixel) is less than 8MB. This value might be revisited in the future when several vertical offset files start getting supported. Anyway, you can modify this threshold value by setting a ``org.geotools.verticalgrid.inmemory.threshold`` property to the ``JAVA_OPTS`` representing the threshold value (expressed in bytes)
+   By default, the raster stored on the Vertical offset file will be fully loaded in memory if its memory footprint (width * height * bytes for each pixel) is less than 8MB. This value might be revisited in the future when several vertical offset files start getting supported. Anyway, you can modify this threshold value by setting a ``org.geotools.verticalgrid.inmemory.threshold`` property to ``JAVA_OPTS``, representing the threshold value (expressed in bytes)
