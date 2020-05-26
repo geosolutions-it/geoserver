@@ -2035,7 +2035,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             null, // bandSelectIndices
                             parameters, // Writing params
                             true,
-                            false,
+                            true,
                             null,
                             1d,
                             new NullProgressListener() // progressListener
