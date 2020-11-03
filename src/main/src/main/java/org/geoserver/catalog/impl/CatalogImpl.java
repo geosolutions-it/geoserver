@@ -954,14 +954,14 @@ public class CatalogImpl implements Catalog {
                             + layerGroup.getWorkspace().getName());
         }
 
-        checkLayerGroupResourceIsInWorkspace(layerGroup.getRootLayer(), ws);
+        checkLayerGroupResourceIsInWorkspace(layerGroup, layerGroup.getRootLayer(), ws);
         checkLayerGroupResourceIsInWorkspace(layerGroup.getRootLayerStyle(), ws);
         if (layerGroup.getLayers() != null) {
             for (PublishedInfo p : layerGroup.getLayers()) {
                 if (p instanceof LayerGroupInfo) {
                     checkLayerGroupResourceIsInWorkspace((LayerGroupInfo) p, ws);
                 } else if (p instanceof LayerInfo) {
-                    checkLayerGroupResourceIsInWorkspace((LayerInfo) p, ws);
+                    checkLayerGroupResourceIsInWorkspace(layerGroup, (LayerInfo) p, ws);
                 }
             }
         }
@@ -985,10 +985,19 @@ public class CatalogImpl implements Catalog {
         }
     }
 
-    private void checkLayerGroupResourceIsInWorkspace(LayerInfo layer, WorkspaceInfo ws) {
+    private void checkLayerGroupResourceIsInWorkspace(
+            LayerGroupInfo layerGroup, LayerInfo layer, WorkspaceInfo ws) {
         if (layer == null) return;
 
         ResourceInfo r = layer.getResource();
+        if (r == null) {
+            throw new IllegalArgumentException(
+                    "Layer group "
+                            + layerGroup.getName()
+                            + " references a layer ("
+                            + layer.getId()
+                            + ") without a proper Resource attached");
+        }
         if (r.getStore().getWorkspace() != null && !ws.equals(r.getStore().getWorkspace())) {
             throw new IllegalArgumentException(
                     "Layer group within a workspace ("
