@@ -2439,6 +2439,18 @@
         </plugins>
       </build>  
     </profile>
+
+   <profile>
+    <id>deploygeosolutions</id>
+     <distributionManagement>
+      <repository>
+       <uniqueVersion>false</uniqueVersion>
+       <id>geosolutions</id>
+       <url>ftp://demo.geo-solutions.it</url>
+      </repository>
+    </distributionManagement>
+    </profile>
+	
   </profiles>
 
 </project>
