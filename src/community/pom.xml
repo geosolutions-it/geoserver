@@ -717,18 +717,18 @@
          </plugin>
        </plugins>
 	   
-	  <extensions>
-		<!--extension>
+	  <!--extensions>
+		<extension>
 		  <groupId>org.apache.maven.wagon</groupId>
 		  <artifactId>wagon-webdav</artifactId>
 		  <version>1.0-beta-2</version>
-		</extension-->
+		</extension>
 		<extension>
 		  <groupId>org.apache.maven.wagon</groupId>
 		  <artifactId>wagon-ftp</artifactId>
 		  <version>1.0-beta-2</version>
 		</extension>
-	  </extensions>
+	  </extensions-->
 
       </build>
     </profile>
