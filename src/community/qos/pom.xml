@@ -10,13 +10,13 @@
  <parent>
   <groupId>org.geoserver</groupId>
   <artifactId>community</artifactId>
-  <version>2.18.2</version>
+  <version>C105.2.18.2.00</version>
  </parent>
 
  <groupId>org.geoserver.community</groupId>
  <artifactId>gs-qos</artifactId>
  <packaging>jar</packaging>
- <version>2.18.2</version>
+ <version>C105.2.18.2.00</version>
  <name>GeoServer Quality of Service GetCapabilities module</name>
 
  <dependencies>
