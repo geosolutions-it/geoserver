@@ -4,8 +4,18 @@
  */
 package org.geoserver.wms.featureinfo;
 
-import freemarker.template.*;
-import java.io.*;
+import freemarker.cache.NullCacheStorage;
+import freemarker.template.Configuration;
+import freemarker.template.SimpleHash;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import freemarker.template.TemplateHashModel;
+import freemarker.template.TemplateModel;
+import freemarker.template.TemplateModelException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.List;
 import net.opengis.wfs.FeatureCollectionType;
@@ -76,6 +86,14 @@ public abstract class FreeMarkerTemplateManager {
                         return (TemplateHashModel) getStaticModels().get(path);
                     }
                 });
+        // as we want to look up different templates for each resource, the templates cannot
+        // be cached by name. Freemarker used to clear the cache when setting the loader,
+        // but does not do that anymore since
+        // https://github.com/apache/freemarker/commit/fc9eba51492c3cd4da3547ba15b95c7db9b3d237
+        // because we use the same loader, we just re-configure it to point to a different resource
+        templateConfig.setCacheStorage(new NullCacheStorage());
+
+        templateConfig.setDefaultEncoding("UTF-8");
     }
 
     private GeoServerResourceLoader resourceLoader;
@@ -198,8 +216,6 @@ public abstract class FreeMarkerTemplateManager {
                 // throws exception just for text/html that completely rely on templates
                 if (format.equals(OutputFormat.HTML)) throw ex;
             }
-
-            if (t != null) t.setEncoding(charset.name());
 
             return t;
         }
