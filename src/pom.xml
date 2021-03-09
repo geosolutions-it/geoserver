@@ -13,7 +13,7 @@
  <groupId>org.geoserver</groupId>
  <artifactId>geoserver</artifactId>
  <packaging>pom</packaging>
- <version>C105.2.18.2.01</version>
+ <version>C105.2.18.2.02</version>
  <name>GeoServer</name>
 
  <scm>

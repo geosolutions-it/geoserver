@@ -9,7 +9,7 @@
   <parent>
     <groupId>org.geoserver</groupId>
     <artifactId>extension</artifactId>
-    <version>C105.2.18.2.01</version>
+    <version>C105.2.18.2.02</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
