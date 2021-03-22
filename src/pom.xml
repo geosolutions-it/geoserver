@@ -54,12 +54,12 @@
   <repository>
    <id>boundless</id>
    <name>Boundless Maven Repository</name>
-   <url>https://repo.osgeo.org/main/</url>
+   <url>https://repo.osgeo.org/repository/release/</url>
    <!-- contains snapshot and release (including third-party-dependences)               -->
    <!-- Restlet maven Repository (http://maven.restlet.org)                             -->
    <!-- ucar (https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases) -->
    <snapshots>
-     <enabled>true</enabled>
+     <enabled>false</enabled>
    </snapshots>
    <releases>
      <enabled>true</enabled>
@@ -82,7 +82,7 @@
    <repository>
       <id>geosolutions</id>
       <name>geosolutions repository</name>
-      <url>http://maven.geo-solutions.it/</url>
+      <url>https://maven.geo-solutions.it/</url>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
@@ -284,7 +284,7 @@
     <artifactId>gt-xsd-core</artifactId>
     <version>${gt.version}</version>
    </dependency>
-    <dependency>
+   <dependency>
     <groupId>org.geotools.xsd</groupId>
     <artifactId>gt-xsd-ows</artifactId>
     <version>${gt.version}</version>
@@ -2101,8 +2101,8 @@
         <plugins>
           <plugin>
             <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.6</version>
+	    <artifactId>jacoco-maven-plugin</artifactId>
+	    <version>0.8.0</version>
             <executions>
               <execution>
                 <id>pre-unit-test</id>
