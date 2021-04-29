@@ -81,6 +81,10 @@ public class RasterizerController extends BaseSLDServiceController {
 
     private static final String DEFAULT_MAX = "100.0";
 
+    private static final String DEFAULT_CLIP_MIN = "0.0";
+
+    private static final String DEFAULT_CLIP_MAX = "0.0";
+
     private static final Double DEFAULT_MIN_DECREMENT = 0.000000001;
 
     private static final String DEFAULT_CLASSES = "100";
@@ -106,6 +110,10 @@ public class RasterizerController extends BaseSLDServiceController {
             @PathVariable String layerName,
             @RequestParam(value = "min", required = false, defaultValue = DEFAULT_MIN) double min,
             @RequestParam(value = "max", required = false, defaultValue = DEFAULT_MAX) double max,
+            @RequestParam(value = "clipMin", required = false, defaultValue = DEFAULT_CLIP_MIN)
+                    double clipMin,
+            @RequestParam(value = "clipMax", required = false, defaultValue = DEFAULT_CLIP_MAX)
+                    double clipMax,
             @RequestParam(value = "classes", required = false, defaultValue = DEFAULT_CLASSES)
                     int classes,
             @RequestParam(value = "digits", required = false, defaultValue = DEFAULT_DIGITS)
@@ -144,6 +152,10 @@ public class RasterizerController extends BaseSLDServiceController {
                 (ramp != null ? COLORRAMP_TYPE.valueOf(ramp.toUpperCase()) : COLORRAMP_TYPE.RED);
 
         if (min == max) min = min - Double.MIN_VALUE;
+        if (clipMin == 0.0 && clipMax == 0.0) {
+            clipMin = Double.NEGATIVE_INFINITY;
+            clipMax = Double.POSITIVE_INFINITY;
+        }
 
         LayerInfo layerInfo = catalog.getLayerByName(layerName);
         if (layerInfo != null) {
@@ -177,6 +189,8 @@ public class RasterizerController extends BaseSLDServiceController {
                                     startColor,
                                     endColor,
                                     midColor,
+                                    clipMin,
+                                    clipMax,
                                     closed);
 
                 } catch (Exception e) {
@@ -233,6 +247,8 @@ public class RasterizerController extends BaseSLDServiceController {
             String startColor,
             String endColor,
             String midColor,
+            double clipMin,
+            double clipMax,
             boolean closed)
             throws Exception {
         StyleBuilder sb = new StyleBuilder();
@@ -241,8 +257,8 @@ public class RasterizerController extends BaseSLDServiceController {
 
         if (classes > 0) {
             final int extraClasses = closed ? 2 : 1;
-            final String[] labels = new String[classes + extraClasses];
-            final double[] quantities = new double[classes + extraClasses];
+            String[] labels = new String[classes + extraClasses];
+            double[] quantities = new double[classes + extraClasses];
 
             ColorRamp colorRamp = null;
             quantities[0] = min - DEFAULT_MIN_DECREMENT;
@@ -297,6 +313,69 @@ public class RasterizerController extends BaseSLDServiceController {
                 realColorRamp.add(Color.BLACK);
                 quantities[quantities.length - 1] = max + DEFAULT_MIN_DECREMENT;
                 labels[labels.length - 1] = "transparent";
+            }
+            if (clipMin != Double.NEGATIVE_INFINITY || clipMax != Double.POSITIVE_INFINITY) {
+                int start = 1;
+                int end = closed ? quantities.length - 2 : quantities.length - 1;
+                for (int count = 1;
+                        count <= (closed ? quantities.length - 2 : quantities.length - 1);
+                        count++) {
+                    double quantity = quantities[count];
+                    if (clipMin >= quantity) {
+                        start = count;
+                    }
+                    if (clipMax >= quantity) {
+                        end = count;
+                    }
+                }
+                final String[] newLabels = new String[(end - start + 1) + extraClasses];
+                newLabels[0] = labels[0];
+                if (closed) {
+                    newLabels[newLabels.length - 1] = labels[labels.length - 1];
+                }
+                for (int count = start; count <= end; count++) {
+                    if (count == start) {
+                        newLabels[count - start + 1] =
+                                String.format(
+                                        Locale.US, format, Math.max(clipMin, quantities[count]));
+                    } else if (count == end) {
+                        newLabels[count - start + 1] =
+                                String.format(
+                                        Locale.US, format, Math.min(clipMax, quantities[count]));
+                    } else {
+                        newLabels[count - start + 1] = labels[count];
+                    }
+                }
+                labels = newLabels;
+
+                final double[] newQuantities = new double[(end - start + 1) + extraClasses];
+                newQuantities[0] = quantities[0];
+                if (closed) {
+                    newQuantities[newQuantities.length - 1] =
+                            Math.min(
+                                    quantities[quantities.length - 1],
+                                    clipMax + DEFAULT_MIN_DECREMENT);
+                }
+                for (int count = start; count <= end; count++) {
+                    if (count == start) {
+                        newQuantities[count - start + 1] = Math.max(clipMin, quantities[count]);
+                    } else if (count == end) {
+                        newQuantities[count - start + 1] = Math.min(clipMax, quantities[count]);
+                    } else {
+                        newQuantities[count - start + 1] = quantities[count];
+                    }
+                }
+                quantities = newQuantities;
+
+                List<Color> newColorRamp = new ArrayList<Color>();
+                newColorRamp.add(realColorRamp.get(0));
+                for (int count = start; count <= end; count++) {
+                    newColorRamp.add(realColorRamp.get(count));
+                }
+                if (closed) {
+                    newColorRamp.add(realColorRamp.get(realColorRamp.size() - 1));
+                }
+                realColorRamp = newColorRamp;
             }
 
             resampledColorMap =
