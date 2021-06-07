@@ -309,4 +309,7 @@
   	<constructor-arg ref="geoServer"/>
   </bean>
   
+
+  <bean id="nearestMatchWarningAppender" class="org.geoserver.util.HTTPWarningAppender"/>
+
 </beans>

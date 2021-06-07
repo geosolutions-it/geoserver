@@ -5,6 +5,7 @@
  */
 package org.geoserver.wms;
 
+import static org.geoserver.util.HTTPWarningAppender.addWarning;
 import static org.geoserver.wms.NearestMatchWarningAppender.WarningType.Nearest;
 import static org.geoserver.wms.NearestMatchWarningAppender.WarningType.NotFound;
 
@@ -16,6 +17,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -50,6 +52,8 @@ import org.geoserver.config.JAIInfo;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
+import org.geoserver.util.DimensionWarning;
+import org.geoserver.util.NearestMatchFinder;
 import org.geoserver.wms.WMSInfo.WMSInterpolation;
 import org.geoserver.wms.WatermarkInfo.Position;
 import org.geoserver.wms.dimension.DimensionDefaultValueSelectionStrategy;
@@ -1107,7 +1111,11 @@ public class WMS implements ApplicationContextAware {
             List<Object> fixedTimes = new ArrayList<Object>(times);
             for (int i = 0; i < fixedTimes.size(); i++) {
                 if (fixedTimes.get(i) == null) {
-                    fixedTimes.set(i, getDefaultTime(coverage));
+                    Object defaultTime = getDefaultTime(coverage);
+                    fixedTimes.set(i, defaultTime);
+                    addWarning(
+                            DimensionWarning.defaultValue(
+                                    mapLayerInfo.getResource(), ResourceInfo.TIME, defaultTime));
                 }
 
                 // nearest time support
@@ -1130,7 +1138,13 @@ public class WMS implements ApplicationContextAware {
             List<Object> fixedElevations = new ArrayList<Object>(elevations);
             for (int i = 0; i < fixedElevations.size(); i++) {
                 if (fixedElevations.get(i) == null) {
-                    fixedElevations.set(i, getDefaultElevation(coverage));
+                    Object defaultElevation = getDefaultElevation(coverage);
+                    fixedElevations.set(i, defaultElevation);
+                    addWarning(
+                            DimensionWarning.defaultValue(
+                                    mapLayerInfo.getResource(),
+                                    ResourceInfo.ELEVATION,
+                                    defaultElevation));
                 }
             }
             readParameters =
@@ -1221,19 +1235,23 @@ public class WMS implements ApplicationContextAware {
 
         // see if we have any custom domain for which we have to set the default value
         if (!customDomains.isEmpty()) {
-            for (String name : customDomains) {
+            for (String dimensionName : customDomains) {
                 final DimensionInfo customInfo =
                         metadata.get(
-                                ResourceInfo.CUSTOM_DIMENSION_PREFIX + name, DimensionInfo.class);
+                                ResourceInfo.CUSTOM_DIMENSION_PREFIX + dimensionName,
+                                DimensionInfo.class);
                 if (customInfo != null && customInfo.isEnabled()) {
                     Object val =
                             dimensions.convertDimensionValue(
-                                    name,
-                                    getDefaultCustomDimensionValue(name, coverage, String.class));
-
+                                    dimensionName,
+                                    getDefaultCustomDimensionValue(
+                                            dimensionName, coverage, String.class));
+                    addWarning(
+                            DimensionWarning.defaultValue(
+                                    mapLayerInfo.getResource(), dimensionName, val));
                     readParameters =
                             CoverageUtils.mergeParameter(
-                                    parameterDescriptors, readParameters, val, name);
+                                    parameterDescriptors, readParameters, val, dimensionName);
                 }
             }
         }
@@ -1297,6 +1315,20 @@ public class WMS implements ApplicationContextAware {
                             foundDates.add(date);
                         });
         return foundDates;
+    }
+
+    private static List<Object> getNearestTimeMatch(
+            ResourceInfo coverage,
+            DimensionInfo dimension,
+            List<Object> queryRanges,
+            int maxRenderingTime)
+            throws IOException {
+        NearestMatchFinder finder = NearestMatchFinder.get(coverage, dimension, ResourceInfo.TIME);
+        if (finder != null) {
+            return finder.getMatches(coverage, ResourceInfo.TIME, queryRanges, maxRenderingTime);
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     /** Query and returns the times for the given layer, in the given time range */
@@ -1636,6 +1668,8 @@ public class WMS implements ApplicationContextAware {
                 if (datetime == null) {
                     // this is "default"
                     datetime = getDefaultTime(typeInfo);
+                    addWarning(
+                            DimensionWarning.defaultValue(typeInfo, ResourceInfo.TIME, datetime));
                 }
                 defaultedTimes.add(datetime);
             }
@@ -1658,6 +1692,9 @@ public class WMS implements ApplicationContextAware {
                 if (elevation == null) {
                     // this is "default"
                     elevation = getDefaultElevation(typeInfo);
+                    addWarning(
+                            DimensionWarning.defaultValue(
+                                    typeInfo, ResourceInfo.ELEVATION, elevation));
                 }
                 defaultedElevations.add(elevation);
             }

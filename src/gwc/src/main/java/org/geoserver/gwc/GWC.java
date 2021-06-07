@@ -24,10 +24,13 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,6 +46,9 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.XMLConstants;
+
+import org.apache.commons.httpclient.util.DateParseException;
+import org.apache.commons.httpclient.util.DateUtil;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
@@ -64,6 +70,7 @@ import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.gwc.layer.GeoServerTileLayerInfo;
 import org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl;
 import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.HttpErrorCodeException;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.Response;
 import org.geoserver.platform.GeoServerEnvironment;
@@ -75,6 +82,8 @@ import org.geoserver.security.DataAccessLimits;
 import org.geoserver.security.WMSAccessLimits;
 import org.geoserver.security.WrapperPolicy;
 import org.geoserver.security.decorators.SecuredLayerInfo;
+import org.geoserver.threadlocals.ThreadLocalsTransfer;
+import org.geoserver.util.HTTPWarningAppender;
 import org.geoserver.wfs.kvp.BBoxKvpParser;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.WMS;
@@ -97,6 +106,7 @@ import org.geowebcache.config.BlobStoreInfo;
 import org.geowebcache.config.ConfigurationException;
 import org.geowebcache.config.ConfigurationPersistenceException;
 import org.geowebcache.config.TileLayerConfiguration;
+import org.geowebcache.conveyor.Conveyor;
 import org.geowebcache.conveyor.ConveyorTile;
 import org.geowebcache.diskquota.DiskQuotaConfig;
 import org.geowebcache.diskquota.DiskQuotaMonitor;
@@ -135,6 +145,7 @@ import org.geowebcache.storage.DefaultStorageFinder;
 import org.geowebcache.storage.StorageBroker;
 import org.geowebcache.storage.StorageException;
 import org.geowebcache.storage.TileRange;
+import org.geowebcache.util.ServletUtils;
 import org.locationtech.jts.densify.Densifier;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
@@ -2655,6 +2666,37 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         return gwcEnvironment;
     }
 
+    public static void setCacheControlHeaders(
+            Map<String, String> map, TileLayer layer, int zoomLevel) {
+        if (skipCaching(layer)) {
+            setupNoCacheHeaders(map);
+        } else {
+            Integer cacheAgeMax = getCacheAge(layer, zoomLevel);
+            log.log(Level.FINE, "Using cacheAgeMax {0}", cacheAgeMax);
+            if (cacheAgeMax != null) {
+                map.put("Cache-Control", "max-age=" + cacheAgeMax + ", must-revalidate");
+                map.put("Expires", ServletUtils.makeExpiresHeader(cacheAgeMax));
+            } else {
+                setupNoCacheHeaders(map);
+            }
+        }
+    }
+
+    private static boolean skipCaching(TileLayer layer) {
+        // pre-conditions, there is a set of cache skip configs, and warnings have been issued
+        if (!(layer instanceof GeoServerTileLayer) || HTTPWarningAppender.getWarnings().isEmpty())
+            return false;
+
+        // check if any of the warnings configured has been accumulated
+        GeoServerTileLayer gtl = (GeoServerTileLayer) layer;
+        return HTTPWarningAppender.anyMatch(gtl.getInfo().getCacheWarningSkips());
+    }
+
+    private static void setupNoCacheHeaders(Map<String, String> map) {
+        map.put("Cache-Control", "no-cache, no-store, must-revalidate");
+        map.put("Pragma", "no-cache");
+        map.put("Expires", "0");
+    }
     /**
      * Returns the list of pending tasks in the tile breeder
      *
@@ -2663,4 +2705,103 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
     public Iterator<GWCTask> getPendingTasks() {
         return tileBreeder.getPendingTasks();
     }
+
+    /**
+     * Computes and sets the conditional headers, eTag, LastModified, and will throw a
+     * HttpErrorCodeException in case no modification has been done on the tile
+     *
+     * @param map The target map where the headers are set
+     * @param cachedTile The tile
+     * @param etag The etag
+     * @param ifModSinceHeader The if-Modified-Since header value
+     */
+    public static void setConditionalGetHeaders(
+            Map<String, String> map,
+            ConveyorTile cachedTile,
+            String etag,
+            String ifModSinceHeader) {
+        map.put("ETag", etag);
+
+        final long tileTimeStamp = cachedTile.getTSCreated();
+        // commons-httpclient's DateUtil can encode and decode timestamps formatted as per RFC-1123,
+        // which is one of the three formats allowed for Last-Modified and If-Modified-Since headers
+        // (e.g. 'Sun, 06 Nov 1994 08:49:37 GMT'). See
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1
+
+        final String lastModified =
+                org.apache.commons.httpclient.util.DateUtil.formatDate(new Date(tileTimeStamp));
+        map.put("Last-Modified", lastModified);
+
+        final Date ifModifiedSince;
+        if (ifModSinceHeader != null && ifModSinceHeader.length() > 0) {
+            try {
+                ifModifiedSince = DateUtil.parseDate(ifModSinceHeader);
+                // the HTTP header has second precision
+                long ifModSinceSeconds = 1000 * (ifModifiedSince.getTime() / 1000);
+                long tileTimeStampSeconds = 1000 * (tileTimeStamp / 1000);
+                if (ifModSinceSeconds >= tileTimeStampSeconds) {
+                    throw new HttpErrorCodeException(HttpServletResponse.SC_NOT_MODIFIED);
+                }
+            } catch (DateParseException e) {
+                if (log.isLoggable(Level.FINER)) {
+                    log.finer(
+                            "Can't parse client's If-Modified-Since header: '"
+                                    + ifModSinceHeader
+                                    + "'");
+                }
+            }
+        }
+    }
+
+    /**
+     * Computes and sets all the common geowebache-* response headers
+     *
+     * @param map The target map where the headers are set
+     * @param cachedTile The tile
+     * @param layer The tile layer
+     */
+    public static void setCacheMetadataHeaders(
+            Map<String, String> map, ConveyorTile cachedTile, TileLayer layer) {
+        long[] tileIndex = cachedTile.getTileIndex();
+        Conveyor.CacheResult cacheResult = cachedTile.getCacheResult();
+        GridSubset gridSubset = layer.getGridSubset(cachedTile.getGridSetId());
+        BoundingBox tileBounds = gridSubset.boundsFromIndex(tileIndex);
+
+        String cacheResultHeader = cacheResult == null ? "UNKNOWN" : cacheResult.toString();
+        map.put("geowebcache-layer", layer.getName());
+        map.put("geowebcache-cache-result", cacheResultHeader);
+        map.put("geowebcache-tile-index", Arrays.toString(tileIndex));
+        map.put("geowebcache-tile-bounds", tileBounds.toString());
+        map.put("geowebcache-gridset", gridSubset.getName());
+        map.put("geowebcache-crs", gridSubset.getSRS().toString());
+    }
+
+    private static Integer getCacheAge(TileLayer layer, int zoomLevel) {
+        int value = layer.getExpireClients(zoomLevel);
+        if (value == 0) return null;
+        return value;
+    }
+
+    /** Computes and returns the etag of a tile given its byte contents */
+    public static String getETag(byte[] tileBytes) throws NoSuchAlgorithmException {
+        final byte[] hash = MessageDigest.getInstance("MD5").digest(tileBytes);
+        final String etag = toHexString(hash);
+        return etag;
+    }
+
+    private static String toHexString(byte[] hash) {
+
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < hash.length; i += 4) {
+            int c1 = 0xFF & hash[i];
+            int c2 = 0xFF & hash[i + 1];
+            int c3 = 0xFF & hash[i + 2];
+            int c4 = 0xFF & hash[i + 3];
+            int integer = ((c1 << 24) + (c2 << 16) + (c3 << 8) + (c4 << 0));
+            sb.append(Integer.toHexString(integer));
+        }
+        return sb.toString();
+    }
+   
 }

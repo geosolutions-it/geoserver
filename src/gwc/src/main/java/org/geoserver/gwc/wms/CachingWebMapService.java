@@ -15,6 +15,7 @@ import java.nio.channels.Channels;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletResponse;
@@ -126,92 +127,15 @@ public class CachingWebMapService implements MethodInterceptor {
         map.setContentDispositionHeader(
                 null, "." + cachedTile.getMimeType().getFileExtension(), false);
 
-        Integer cacheAgeMax = getCacheAge(layer);
-        LOGGER.log(Level.FINE, "Using cacheAgeMax {0}", cacheAgeMax);
-        if (cacheAgeMax != null) {
-            map.setResponseHeader("Cache-Control", "max-age=" + cacheAgeMax);
-        } else {
-            map.setResponseHeader("Cache-Control", "no-cache");
-        }
-
-        setConditionalGetHeaders(map, cachedTile, request, etag);
-        setCacheMetadataHeaders(map, cachedTile, layer);
+        LinkedHashMap<String, String> headers = new LinkedHashMap<>();
+        GWC.setCacheControlHeaders(headers, layer, (int) cachedTile.getTileIndex()[2]);
+        GWC.setConditionalGetHeaders(
+                headers, cachedTile, etag, request.getHttpRequestHeader("If-Modified-Since"));
+        GWC.setCacheMetadataHeaders(headers, cachedTile, layer);
+        headers.forEach((k, v) -> map.setResponseHeader(k, v));
 
         return map;
     }
-
-    private void setConditionalGetHeaders(
-            RawMap map, ConveyorTile cachedTile, GetMapRequest request, String etag) {
-        map.setResponseHeader("ETag", etag);
-
-        final long tileTimeStamp = cachedTile.getTSCreated();
-        final String ifModSinceHeader = request.getHttpRequestHeader("If-Modified-Since");
-        // commons-httpclient's DateUtil can encode and decode timestamps formatted as per RFC-1123,
-        // which is one of the three formats allowed for Last-Modified and If-Modified-Since headers
-        // (e.g. 'Sun, 06 Nov 1994 08:49:37 GMT'). See
-        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1
-
-        final String lastModified =
-                org.apache.commons.httpclient.util.DateUtil.formatDate(new Date(tileTimeStamp));
-        map.setResponseHeader("Last-Modified", lastModified);
-
-        final Date ifModifiedSince;
-        if (ifModSinceHeader != null && ifModSinceHeader.length() > 0) {
-            try {
-                ifModifiedSince = DateUtil.parseDate(ifModSinceHeader);
-                // the HTTP header has second precision
-                long ifModSinceSeconds = 1000 * (ifModifiedSince.getTime() / 1000);
-                long tileTimeStampSeconds = 1000 * (tileTimeStamp / 1000);
-                if (ifModSinceSeconds >= tileTimeStampSeconds) {
-                    throw new HttpErrorCodeException(HttpServletResponse.SC_NOT_MODIFIED);
-                }
-            } catch (DateParseException e) {
-                if (LOGGER.isLoggable(Level.FINER)) {
-                    LOGGER.finer(
-                            "Can't parse client's If-Modified-Since header: '"
-                                    + ifModSinceHeader
-                                    + "'");
-                }
-            }
-        }
-    }
-
-    private void setCacheMetadataHeaders(RawMap map, ConveyorTile cachedTile, TileLayer layer) {
-        long[] tileIndex = cachedTile.getTileIndex();
-        CacheResult cacheResult = cachedTile.getCacheResult();
-        GridSubset gridSubset = layer.getGridSubset(cachedTile.getGridSetId());
-        BoundingBox tileBounds = gridSubset.boundsFromIndex(tileIndex);
-
-        String cacheResultHeader = cacheResult == null ? "UNKNOWN" : cacheResult.toString();
-        map.setResponseHeader("geowebcache-layer", layer.getName());
-        map.setResponseHeader("geowebcache-cache-result", cacheResultHeader);
-        map.setResponseHeader("geowebcache-tile-index", Arrays.toString(tileIndex));
-        map.setResponseHeader("geowebcache-tile-bounds", tileBounds.toString());
-        map.setResponseHeader("geowebcache-gridset", gridSubset.getName());
-        map.setResponseHeader("geowebcache-crs", gridSubset.getSRS().toString());
-    }
-
-    private Integer getCacheAge(TileLayer layer) {
-        Integer cacheAge = null;
-        if (layer instanceof GeoServerTileLayer) {
-            PublishedInfo published = ((GeoServerTileLayer) layer).getPublishedInfo();
-            // configuring caching does not appear possible for layergroup
-            if (published instanceof LayerInfo) {
-                LayerInfo layerInfo = (LayerInfo) published;
-                MetadataMap metadata = layerInfo.getResource().getMetadata();
-                Boolean enabled = metadata.get(ResourceInfo.CACHING_ENABLED, Boolean.class);
-                if (enabled != null && enabled) {
-                    cacheAge =
-                            layerInfo
-                                    .getResource()
-                                    .getMetadata()
-                                    .get(ResourceInfo.CACHE_AGE_MAX, Integer.class);
-                }
-            }
-        }
-        return cacheAge;
-    }
-
     private GetMapRequest getRequest(MethodInvocation invocation) {
         final Method method = invocation.getMethod();
         checkArgument(method.getDeclaringClass().equals(WebMapService.class));
