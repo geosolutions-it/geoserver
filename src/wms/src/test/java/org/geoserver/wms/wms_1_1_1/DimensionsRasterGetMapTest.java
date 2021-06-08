@@ -23,7 +23,6 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.ows.kvp.TimeParser;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMap;
 import org.geoserver.wms.GetMapCallback;
 import org.geoserver.wms.GetMapCallbackAdapter;
@@ -35,7 +34,6 @@ import org.geoserver.wms.WMSMapContent;
 import org.geotools.gce.imagemosaic.ImageMosaicFormat;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.w3c.dom.Document;
 
 public class DimensionsRasterGetMapTest extends WMSDimensionsTestSupport {
 
@@ -669,14 +667,16 @@ public class DimensionsRasterGetMapTest extends WMSDimensionsTestSupport {
         assertWarningCount(1);
         assertNearestTimeWarning(getLayerId(TIMERANGES), "2008-11-07T00:00:00.000Z");
 
-        // after last range, as a range, small enough that it won't be found,
+        // after last range, as a range, small enough that it won't be found
         setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "P1D");
-        Document doc = getAsDOM(baseUrl + "&TIME=2018-11-8/2018-11-09");
-        checkLegacyException(doc, ServiceException.INVALID_DIMENSION_VALUE, "time");
+        getAsImage(baseUrl + "&TIME=2018-11-8/2018-11-09", "image/png");
+        assertWarningCount(1);
+        assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
 
         // same as above, but with an instant
-        doc = getAsDOM(baseUrl + "&TIME=20018-11-05");
-        checkLegacyException(doc, ServiceException.INVALID_DIMENSION_VALUE, "time");
+        getAsImage(baseUrl + "&TIME=20018-11-05", "image/png");
+        assertWarningCount(1);
+        assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
 
         // in the middle hole, closer to the latest value, but with a search radius that will match
         // the earlier one
@@ -693,12 +693,14 @@ public class DimensionsRasterGetMapTest extends WMSDimensionsTestSupport {
 
         // before first range, as a range, with a range that won't allow match
         setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "P1D");
-        doc = getAsDOM(baseUrl + "&TIME=2000-10-31/2000-10-31");
-        checkLegacyException(doc, ServiceException.INVALID_DIMENSION_VALUE, "time");
+        getAsImage(baseUrl + "&TIME=2000-10-31/2000-10-31", "image/png");
+        assertWarningCount(1);
+        assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
 
         // same as above, as an instant
-        doc = getAsDOM(baseUrl + "&TIME=2000-10-31");
-        checkLegacyException(doc, ServiceException.INVALID_DIMENSION_VALUE, "time");
+        getAsImage(baseUrl + "&TIME=2000-10-31", "image/png");
+        assertWarningCount(1);
+        assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
     }
 
     @Test

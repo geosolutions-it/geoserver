@@ -6,6 +6,7 @@
 package org.geoserver.wms;
 
 import static org.geoserver.wms.NearestMatchWarningAppender.WarningType.Nearest;
+import static org.geoserver.wms.NearestMatchWarningAppender.WarningType.NotFound;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
@@ -1687,10 +1688,15 @@ public class WMS implements ApplicationContextAware {
         for (Object value : values) {
             Object nearest = finder.getNearest(value);
             if (nearest == null) {
-                throw new ServiceException(
-                        "No nearest match found for " + value,
-                        ServiceException.INVALID_DIMENSION_VALUE,
-                        dimensionName);
+                // no way to specify there is no match yet, so we'll use the original value, which
+                // will not match
+                NearestMatchWarningAppender.addWarning(
+                        resourceInfo.prefixedName(),
+                        dimensionName,
+                        null,
+                        dimension.getUnits(),
+                        NotFound);
+                result.add(value);
             } else if (value.equals(nearest)) {
                 result.add(value);
             } else {

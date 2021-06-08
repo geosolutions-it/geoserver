@@ -438,8 +438,9 @@ public class DimensionsVectorGetMapTest extends WMSDimensionsTestSupport {
 
         // too small range, won't match
         setupNearestMatch(V_TIME_ELEVATION, ResourceInfo.TIME, true, "PT1M");
-        Document dom = getAsDOM(baseURL + "&time=2011-05-02T01:00:00Z");
-        checkLegacyException(dom, ServiceException.INVALID_DIMENSION_VALUE, "time");
+        getAsImage(baseURL + "&time=2011-05-02T01:00:00Z", "image/png");
+        assertWarningCount(1);
+        assertNoNearestWarning(getLayerId(V_TIME_ELEVATION), ResourceInfo.TIME);
 
         // big enough towards future
         setupNearestMatch(V_TIME_ELEVATION, ResourceInfo.TIME, true, "PT0M/P1D");
