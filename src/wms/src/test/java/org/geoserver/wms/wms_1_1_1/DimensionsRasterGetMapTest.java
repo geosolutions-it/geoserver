@@ -252,8 +252,8 @@ public class DimensionsRasterGetMapTest extends WMSDimensionsTestSupport {
 
         // now one that's not big enough
         setupNearestMatch(WATTEMP, ResourceInfo.TIME, true, "PT4H/P0D");
-        Document doc = getAsDOM(BASE_PNG_URL + "&time=2008-10-31T08:00:00.000Z");
-        checkLegacyException(doc, ServiceException.INVALID_DIMENSION_VALUE, "time");
+        getAsImage(BASE_PNG_URL + "&time=2008-10-31T08:00:00.000Z", "image/png");
+        assertNoNearestWarning(getLayerId(WATTEMP), "time");
 
         // now force a search in the future only
         setupNearestMatch(WATTEMP, ResourceInfo.TIME, true, "P0D/P10D");
