@@ -13,23 +13,14 @@ import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.nio.channels.Channels;
 import java.security.MessageDigest;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletResponse;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.apache.commons.httpclient.util.DateParseException;
-import org.apache.commons.httpclient.util.DateUtil;
-import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.MetadataMap;
-import org.geoserver.catalog.PublishedInfo;
-import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.config.GWCConfig;
-import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.HttpErrorCodeException;
 import org.geoserver.wms.GetMapRequest;
@@ -37,10 +28,7 @@ import org.geoserver.wms.WebMap;
 import org.geoserver.wms.WebMapService;
 import org.geoserver.wms.map.RawMap;
 import org.geotools.util.logging.Logging;
-import org.geowebcache.conveyor.Conveyor.CacheResult;
 import org.geowebcache.conveyor.ConveyorTile;
-import org.geowebcache.grid.BoundingBox;
-import org.geowebcache.grid.GridSubset;
 import org.geowebcache.io.ByteArrayResource;
 import org.geowebcache.io.Resource;
 import org.geowebcache.layer.TileLayer;
@@ -136,6 +124,7 @@ public class CachingWebMapService implements MethodInterceptor {
 
         return map;
     }
+
     private GetMapRequest getRequest(MethodInvocation invocation) {
         final Method method = invocation.getMethod();
         checkArgument(method.getDeclaringClass().equals(WebMapService.class));

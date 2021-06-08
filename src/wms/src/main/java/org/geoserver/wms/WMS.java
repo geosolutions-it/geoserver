@@ -6,8 +6,6 @@
 package org.geoserver.wms;
 
 import static org.geoserver.util.HTTPWarningAppender.addWarning;
-import static org.geoserver.wms.NearestMatchWarningAppender.WarningType.Nearest;
-import static org.geoserver.wms.NearestMatchWarningAppender.WarningType.NotFound;
 
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
@@ -17,7 +15,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -53,7 +50,7 @@ import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.util.DimensionWarning;
-import org.geoserver.util.NearestMatchFinder;
+import org.geoserver.util.HTTPWarningAppender;
 import org.geoserver.wms.WMSInfo.WMSInterpolation;
 import org.geoserver.wms.WatermarkInfo.Position;
 import org.geoserver.wms.dimension.DimensionDefaultValueSelectionStrategy;
@@ -1317,20 +1314,6 @@ public class WMS implements ApplicationContextAware {
         return foundDates;
     }
 
-    private static List<Object> getNearestTimeMatch(
-            ResourceInfo coverage,
-            DimensionInfo dimension,
-            List<Object> queryRanges,
-            int maxRenderingTime)
-            throws IOException {
-        NearestMatchFinder finder = NearestMatchFinder.get(coverage, dimension, ResourceInfo.TIME);
-        if (finder != null) {
-            return finder.getMatches(coverage, ResourceInfo.TIME, queryRanges, maxRenderingTime);
-        } else {
-            return Collections.emptyList();
-        }
-    }
-
     /** Query and returns the times for the given layer, in the given time range */
     public TreeSet<Object> queryFeatureTypeTimes(
             FeatureTypeInfo typeInfo, DateRange range, int maxItems) throws IOException {
@@ -1727,22 +1710,14 @@ public class WMS implements ApplicationContextAware {
             if (nearest == null) {
                 // no way to specify there is no match yet, so we'll use the original value, which
                 // will not match
-                NearestMatchWarningAppender.addWarning(
-                        resourceInfo.prefixedName(),
-                        dimensionName,
-                        null,
-                        dimension.getUnits(),
-                        NotFound);
+                HTTPWarningAppender.addWarning(
+                        DimensionWarning.notFound(resourceInfo, dimensionName));
                 result.add(value);
             } else if (value.equals(nearest)) {
                 result.add(value);
             } else {
-                NearestMatchWarningAppender.addWarning(
-                        resourceInfo.prefixedName(),
-                        dimensionName,
-                        nearest,
-                        dimension.getUnits(),
-                        Nearest);
+                HTTPWarningAppender.addWarning(
+                        DimensionWarning.nearest(resourceInfo, dimensionName, nearest));
                 result.add(nearest);
             }
 

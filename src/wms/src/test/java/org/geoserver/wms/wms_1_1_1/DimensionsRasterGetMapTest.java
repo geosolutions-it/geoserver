@@ -665,23 +665,23 @@ public class DimensionsRasterGetMapTest extends WMSDimensionsTestSupport {
         // after last range, as a range, large enough acceptable range to find it
         setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "P100Y");
         getAsImage(baseUrl + "&TIME=2018-11-8/2018-11-09", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNearestTimeWarning(getLayerId(TIMERANGES), "2008-11-07T00:00:00.000Z");
 
         // same as above but with an instant
         getAsImage(baseUrl + "&TIME=2018-11-05", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNearestTimeWarning(getLayerId(TIMERANGES), "2008-11-07T00:00:00.000Z");
 
         // after last range, as a range, small enough that it won't be found
         setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "P1D");
         getAsImage(baseUrl + "&TIME=2018-11-8/2018-11-09", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
 
         // same as above, but with an instant
         getAsImage(baseUrl + "&TIME=20018-11-05", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
 
         // in the middle hole, closer to the latest value, but with a search radius that will match
@@ -689,26 +689,26 @@ public class DimensionsRasterGetMapTest extends WMSDimensionsTestSupport {
         setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "P1D/P0D");
         getAsImage(
                 baseUrl + "&TIME=2008-11-04T12:00:00.000Z/2008-11-04T16:00:00.000Z", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNearestTimeWarning(getLayerId(TIMERANGES), "2008-11-04T00:00:00.000Z");
 
         // same as above, but with an instant
         getAsImage(baseUrl + "&TIME=2008-11-04T16:00:00.000Z", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNearestTimeWarning(getLayerId(TIMERANGES), "2008-11-04T00:00:00.000Z");
 
         // before first range, as a range, with a range that won't allow match
         setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "P1D");
         getAsImage(baseUrl + "&TIME=2000-10-31/2000-10-31", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
 
         // same as above, as an instant
         getAsImage(baseUrl + "&TIME=2000-10-31", "image/png");
-        assertWarningCount(1);
+        assertWarningCount(2);
         assertNoNearestWarning(getLayerId(TIMERANGES), ResourceInfo.TIME);
     }
-    
+
     @Test
     public void testTimeRangeNearestMatchAcceptableRangeNonStructured() throws Exception {
         NearestMatchFinder.ENABLE_STRUCTURED_READER_SUPPORT = false;

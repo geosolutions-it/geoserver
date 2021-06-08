@@ -46,7 +46,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.XMLConstants;
-
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.geoserver.catalog.Catalog;
@@ -82,7 +81,6 @@ import org.geoserver.security.DataAccessLimits;
 import org.geoserver.security.WMSAccessLimits;
 import org.geoserver.security.WrapperPolicy;
 import org.geoserver.security.decorators.SecuredLayerInfo;
-import org.geoserver.threadlocals.ThreadLocalsTransfer;
 import org.geoserver.util.HTTPWarningAppender;
 import org.geoserver.wfs.kvp.BBoxKvpParser;
 import org.geoserver.wms.GetMapRequest;
@@ -2803,5 +2801,4 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         }
         return sb.toString();
     }
-   
 }
