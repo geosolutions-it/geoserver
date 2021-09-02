@@ -208,6 +208,8 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
     private final Map<String, MapProducerCapabilities> capabilities =
             new HashMap<String, MapProducerCapabilities>();
 
+    private final MarkFactoryHintsInjector markFactoryHintsInjector;
+
     /** */
     public RenderedImageMapOutputFormat(WMS wms) {
         this(DEFAULT_MAP_FORMAT, wms);
@@ -230,6 +232,7 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
     public RenderedImageMapOutputFormat(String mime, String[] outputFormats, WMS wms) {
         super(mime, outputFormats);
         this.wms = wms;
+        this.markFactoryHintsInjector = new MarkFactoryHintsInjector(wms.getGeoServer());
 
         // the capabilities of this produce are actually linked to the map response that is going to
         // be used, this class just generates a rendered image
@@ -440,6 +443,8 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
         StreamingRenderer renderer = buildRenderer();
         renderer.setThreadPool(DefaultWebMapService.getRenderingPool());
         renderer.setMapContent(mapContent);
+        // add the GeoServer MarkFactories provider settings
+        markFactoryHintsInjector.addMarkFactoryHints(hints);
         renderer.setJava2DHints(hints);
 
         // setup the renderer hints
