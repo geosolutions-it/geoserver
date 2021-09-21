@@ -9,6 +9,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -398,7 +399,6 @@ public class WMSAdminPage extends BaseServiceAdminPage<WMSInfo> {
         remoteStylesMaxRequestTime.add(RangeValidator.minimum(1));
         form.add(remoteStylesMaxRequestTime);
         form.add(new CheckBox("defaultGroupStyleEnabled"));
-        form.add(new LocalesDropdown("defaultLocale", new PropertyModel<>(info, "defaultLocale")));
         // add mark factory optimization
         addMarkFactoryLoadOptimizationPanel(metadataModel, form);
     }
