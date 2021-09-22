@@ -6,8 +6,11 @@
 package org.geoserver.wms.web;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +18,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.IteratorUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.markup.html.AjaxLink;
@@ -407,13 +411,60 @@ public class WMSAdminPage extends BaseServiceAdminPage<WMSInfo> {
     protected void addMarkFactoryLoadOptimizationPanel(
             PropertyModel<Map<String, ?>> metadataModel, Form<?> form) {
         checkAndInitializeMapData(metadataModel);
-        MapModel<List<String>> markFactoryList =
+        MapModel<String> mapMarkFactoryList =
                 new MapModel<>(metadataModel, MarkFactoryHintsInjector.MARK_FACTORY_LIST);
-        if (markFactoryList.getObject() == null) {
-            markFactoryList.setObject(new ArrayList<>());
+        IModel<List<String>> markFactoryList =
+                new IModel<List<String>>() {
+
+                    @Override
+                    public void detach() {}
+
+                    @Override
+                    public List<String> getObject() {
+                        String value = mapMarkFactoryList.getObject();
+                        if (StringUtils.isNotBlank(value)) {
+                            return new ArrayList<>(Arrays.asList(value.split(",")));
+                        }
+                        return new ArrayList<>();
+                    }
+
+                    @Override
+                    public void setObject(List<String> object) {
+                        if (object == null) {
+                            mapMarkFactoryList.setObject("");
+                        }
+                        StringBuilder builder = new StringBuilder();
+                        boolean started = false;
+                        for (String value : object) {
+                            if (started) builder.append(",");
+                            builder.append(value);
+                            started = true;
+                        }
+                        mapMarkFactoryList.setObject(builder.toString());
+                    }
+                };
+        Collection<String> liveCollection = new ModelList(markFactoryList);
+        if (mapMarkFactoryList.getObject() == null) {
+            mapMarkFactoryList.setObject("");
         }
+        IModel<Collection<String>> tempModel =
+                new IModel<Collection<String>>() {
+
+                    @Override
+                    public void detach() {}
+
+                    @Override
+                    public void setObject(Collection<String> object) {
+                        markFactoryList.setObject(new ArrayList<>(object));
+                    }
+
+                    @Override
+                    public Collection<String> getObject() {
+                        return liveCollection;
+                    }
+                };
         LiveCollectionModel<String, List<String>> markFactoriesLiveCollectionModel =
-                LiveCollectionModel.list(markFactoryList);
+                LiveCollectionModel.list(tempModel);
         Palette<String> factoriesSetupPallete =
                 buildMarkFactoryPalleteComponent(markFactoriesLiveCollectionModel);
         factoriesSetupPallete.setOutputMarkupPlaceholderTag(true);
@@ -439,6 +490,97 @@ public class WMSAdminPage extends BaseServiceAdminPage<WMSInfo> {
                 buildMarkFactoryEnableCheck(label, factoriesSetupPallete, enableModel);
         enableCheckBox.setOutputMarkupId(true);
         form.add(enableCheckBox);
+    }
+
+    static class ModelList implements Collection<String>, Serializable {
+
+        IModel<List<String>> markFactoryList;
+
+        public ModelList(IModel<List<String>> markFactoryList) {
+            this.markFactoryList = markFactoryList;
+        }
+
+        @Override
+        public <T> T[] toArray(T[] arg0) {
+            return (T[]) markFactoryList.getObject().toArray();
+        }
+
+        @Override
+        public Object[] toArray() {
+            return markFactoryList.getObject().toArray();
+        }
+
+        @Override
+        public int size() {
+            return markFactoryList.getObject().size();
+        }
+
+        @Override
+        public boolean retainAll(Collection<?> arg0) {
+            List<String> list = markFactoryList.getObject();
+            boolean removeAll = markFactoryList.getObject().retainAll(arg0);
+            markFactoryList.setObject(list);
+            return removeAll;
+        }
+
+        @Override
+        public boolean removeAll(Collection<?> arg0) {
+            List<String> list = markFactoryList.getObject();
+            boolean removeAll = markFactoryList.getObject().removeAll(arg0);
+            markFactoryList.setObject(list);
+            return removeAll;
+        }
+
+        @Override
+        public boolean remove(Object arg0) {
+            List<String> list = markFactoryList.getObject();
+            boolean removeAll = markFactoryList.getObject().remove(arg0);
+            markFactoryList.setObject(list);
+            return removeAll;
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return markFactoryList.getObject().iterator();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return markFactoryList.getObject().isEmpty();
+        }
+
+        @Override
+        public boolean containsAll(Collection<?> arg0) {
+            return markFactoryList.getObject().containsAll(arg0);
+        }
+
+        @Override
+        public boolean contains(Object arg0) {
+            return markFactoryList.getObject().contains(arg0);
+        }
+
+        @Override
+        public void clear() {
+            List<String> list = markFactoryList.getObject();
+            list.clear();
+            markFactoryList.setObject(list);
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends String> arg0) {
+            List<String> list = markFactoryList.getObject();
+            boolean addAll = list.addAll(arg0);
+            markFactoryList.setObject(list);
+            return addAll;
+        }
+
+        @Override
+        public boolean add(String arg0) {
+            List<String> list = markFactoryList.getObject();
+            boolean addAll = list.add(arg0);
+            markFactoryList.setObject(list);
+            return addAll;
+        }
     }
 
     private AjaxCheckBox buildMarkFactoryEnableCheck(
@@ -519,8 +661,8 @@ public class WMSAdminPage extends BaseServiceAdminPage<WMSInfo> {
         @SuppressWarnings({"rawtypes", "unchecked"})
         PropertyModel<Map<String, Object>> mapModel = (PropertyModel) metadataModel;
         Object object = mapModel.getObject().get(MarkFactoryHintsInjector.MARK_FACTORY_LIST);
-        if (!(object instanceof List)) {
-            mapModel.getObject().put(MarkFactoryHintsInjector.MARK_FACTORY_LIST, new ArrayList<>());
+        if (!(object instanceof String)) {
+            mapModel.getObject().put(MarkFactoryHintsInjector.MARK_FACTORY_LIST, "");
         }
     }
 

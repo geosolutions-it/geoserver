@@ -5,6 +5,7 @@
 package org.geoserver.wms.map;
 
 import java.awt.RenderingHints;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -75,8 +76,9 @@ public class MarkFactoryHintsInjector {
     private List<String> getMarkFactoryList(WMSInfo wmsInfo) {
         if (wmsInfo.getMetadata().containsKey(MARK_FACTORY_LIST)) {
             Object factoriesObj = wmsInfo.getMetadata().get(MARK_FACTORY_LIST);
-            if (factoriesObj instanceof List) {
-                return (List<String>) factoriesObj;
+            if (factoriesObj instanceof String) {
+                String[] split = ((String) factoriesObj).split(",");
+                return Arrays.asList(split);
             }
         }
         return Collections.emptyList();
