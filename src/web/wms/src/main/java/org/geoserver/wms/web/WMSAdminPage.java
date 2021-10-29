@@ -399,7 +399,6 @@ public class WMSAdminPage extends BaseServiceAdminPage<WMSInfo> {
         remoteStylesMaxRequestTime.add(RangeValidator.minimum(1));
         form.add(remoteStylesMaxRequestTime);
         form.add(new CheckBox("defaultGroupStyleEnabled"));
-        form.add(new LocalesDropdown("defaultLocale", new PropertyModel<>(info, "defaultLocale")));
         // add mark factory optimization
         addMarkFactoryLoadOptimizationPanel(metadataModel, form);
     }
