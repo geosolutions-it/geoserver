@@ -87,8 +87,8 @@
   </distributionManagement>
 
   <properties>
-    <gs.version>2.19.3</gs.version>
-    <gt.version>25.3</gt.version>
+    <gs.version>C105.2.19.3.01</gs.version>
+    <gt.version>25.3.01</gt.version>
     <gwc.version>1.19.1</gwc.version>
     <jts.version>1.18.1</jts.version>
     <spring.version>5.1.20.RELEASE</spring.version>
