@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.geoserver</groupId>
   <artifactId>geoserver</artifactId>
-  <version>C105.2.20.1.05</version>
+  <version>C105.2.20.1.06</version>
   <packaging>pom</packaging>
   <name>GeoServer</name>
   <inceptionYear>2006</inceptionYear>
@@ -87,8 +87,8 @@
   </distributionManagement>
 
   <properties>
-    <gs.version>C105.2.20.1.05</gs.version>
-    <gt.version>26.1.04</gt.version>
+    <gs.version>C105.2.20.1.06</gs.version>
+    <gt.version>26.1.06</gt.version>
     <gwc.version>1.20.0</gwc.version>
     <jts.version>1.18.2</jts.version>
     <spring.version>5.1.20.RELEASE</spring.version>
