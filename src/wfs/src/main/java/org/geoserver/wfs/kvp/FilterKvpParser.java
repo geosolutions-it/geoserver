@@ -67,7 +67,6 @@ public abstract class FilterKvpParser extends KvpParser {
         List filters = new ArrayList();
 
         Iterator i = unparsed.listIterator();
-
         while (i.hasNext()) {
             String string = (String) i.next();
             if ("".equals(string.trim())) {
@@ -112,7 +111,7 @@ public abstract class FilterKvpParser extends KvpParser {
         // translate string into a proper SAX input source
         InputSource requestSource = new InputSource(rawRequest);
 
-        // instantiante parsers and content handlers
+        // instantiate parsers and content handlers
         FilterHandlerImpl contentHandler = new FilterHandlerImpl();
         contentHandler.setEntityResolver(entityResolverProvider.getEntityResolver());
         FilterFilter filterParser = new FilterFilter(contentHandler, null);
