@@ -3447,7 +3447,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         targetCRS,
                         writeParams);
 
-        // got a single file from the source, it's exactly the same
+        // got a single file from the source, but the compression is not the same
         final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
         try (FileInputStream is = new FileInputStream(file);
                 InputStream os = raster.getInputStream()) {
@@ -3501,7 +3501,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         targetCRS,
                         writeParams);
 
-        // got a single file from the source, it's exactly the same
+        // got a single file from the source, but the tiling is different
         final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
         try (FileInputStream is = new FileInputStream(file);
                 InputStream os = raster.getInputStream()) {
@@ -3586,7 +3586,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         new NullProgressListener() // progressListener
                         );
 
-        // got a single file from the source, it's exactly the same
+        // got a single file from the source, but it's different due to ROI
         try (FileInputStream is = new FileInputStream(file);
                 InputStream os = raster.getInputStream()) {
             assertFalse(org.apache.commons.io.IOUtils.contentEquals(is, os));
