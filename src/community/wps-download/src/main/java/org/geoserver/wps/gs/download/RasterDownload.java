@@ -5,6 +5,31 @@
  */
 package org.geoserver.wps.gs.download;
 
+import it.geosolutions.imageio.stream.output.FileImageOutputStreamExtImpl;
+import it.geosolutions.io.output.adapter.OutputStreamAdapter;
+import it.geosolutions.jaiext.utilities.ImageLayout2;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
+import java.awt.image.RenderedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.IIOException;
+import javax.imageio.stream.ImageOutputStream;
+import javax.media.jai.BorderExtender;
+import javax.media.jai.ImageLayout;
+import javax.media.jai.Interpolation;
+import javax.media.jai.InterpolationNearest;
+import javax.media.jai.JAI;
+import javax.media.jai.operator.MosaicDescriptor;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.data.util.CoverageUtils;
@@ -54,34 +79,6 @@ import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import org.opengis.util.ProgressListener;
 import org.springframework.context.ApplicationContext;
-
-import java.awt.Rectangle;
-import java.awt.RenderingHints;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.NoninvertibleTransformException;
-import java.awt.image.RenderedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.imageio.IIOException;
-import javax.imageio.stream.ImageOutputStream;
-import javax.media.jai.BorderExtender;
-import javax.media.jai.ImageLayout;
-import javax.media.jai.Interpolation;
-import javax.media.jai.InterpolationNearest;
-import javax.media.jai.JAI;
-import javax.media.jai.operator.MosaicDescriptor;
-
-import it.geosolutions.imageio.stream.output.FileImageOutputStreamExtImpl;
-import it.geosolutions.io.output.adapter.OutputStreamAdapter;
-import it.geosolutions.jaiext.utilities.ImageLayout2;
 
 /**
  * Implements the download services for raster data. If limits are configured this class will use

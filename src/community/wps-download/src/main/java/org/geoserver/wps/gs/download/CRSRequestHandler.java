@@ -215,7 +215,8 @@ class CRSRequestHandler {
                 && originalTargetCRS != null
                 && descriptors.containsKey(DimensionDescriptor.CRS)
                 && (referenceFeatureForAlignment =
-                    haveGranulesMatchingTargetCRS(reader, originalTargetCRS, roi, filter))
+                                haveGranulesMatchingTargetCRS(
+                                        reader, originalTargetCRS, roi, filter))
                         != null) canUseTargetCRSAsNative = true;
 
         MathTransform reprojectionTransform = null;

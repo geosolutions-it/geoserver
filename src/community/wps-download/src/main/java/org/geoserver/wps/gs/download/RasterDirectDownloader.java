@@ -10,33 +10,6 @@ import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEHE
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEWIDTH;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILING;
 
-import it.geosolutions.imageio.plugins.tiff.BaselineTIFFTagSet;
-import it.geosolutions.imageio.stream.input.FileImageInputStreamExtImpl;
-import it.geosolutions.imageioimpl.plugins.tiff.TIFFImageMetadata;
-import it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReader;
-import it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi;
-import it.geosolutions.jaiext.range.NoDataContainer;
-import it.geosolutions.jaiext.vectorbin.ROIGeometry;
-import java.awt.image.RenderedImage;
-import java.awt.image.renderable.ParameterBlock;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.metadata.IIOMetadataNode;
-import javax.imageio.stream.FileImageInputStream;
-import javax.imageio.stream.ImageInputStream;
-import javax.media.jai.ImageLayout;
-import javax.media.jai.PlanarImage;
-import javax.media.jai.ROI;
-import javax.media.jai.RenderedOp;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.wps.resource.WPSResourceManager;
@@ -49,6 +22,38 @@ import org.geotools.util.Converters;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
 import org.w3c.dom.Node;
+
+import java.awt.image.RenderedImage;
+import java.awt.image.SampleModel;
+import java.awt.image.renderable.ParameterBlock;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.metadata.IIOMetadataNode;
+import javax.imageio.stream.FileImageInputStream;
+import javax.imageio.stream.ImageInputStream;
+import javax.media.jai.ImageLayout;
+import javax.media.jai.PlanarImage;
+import javax.media.jai.ROI;
+import javax.media.jai.RenderedOp;
+
+import it.geosolutions.imageio.plugins.tiff.BaselineTIFFTagSet;
+import it.geosolutions.imageio.stream.input.FileImageInputStreamExtImpl;
+import it.geosolutions.imageioimpl.plugins.tiff.TIFFImageMetadata;
+import it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReader;
+import it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi;
+import it.geosolutions.jaiext.range.NoDataContainer;
+import it.geosolutions.jaiext.vectorbin.ROIGeometry;
 
 /**
  * Checks if the download process has been effectively returned a source image "as is" (despite all
@@ -304,21 +309,76 @@ class RasterDirectDownloader {
         if (op.getNumSources() != 1) return false;
         PlanarImage source = op.getSourceImage(0);
 
-        // same image layout?
-        if (!new ImageLayout(op).equals(new ImageLayout(source))) return false;
+        // same image layout (ignoring internal tiling, as the source data might have
+        // a tiling structure not matching the current output one, but we may not care
+        // when the operation required no tiling directives... we are not going handle that
+        // checking the write parameters instead)
+        ImageLayout opLayout = new ImageLayout(op);
+        ImageLayout sourceLayout = new ImageLayout(source);
+        if (opLayout.getWidth(null) != sourceLayout.getWidth(null)
+                || opLayout.getHeight(null) != sourceLayout.getHeight(null)
+                || !similarSampleModel(
+                        opLayout.getSampleModel(null), sourceLayout.getSampleModel(null))
+                || !Objects.equals(
+                        opLayout.getColorModel(null), sourceLayout.getColorModel(null))) {
+            LOGGER.fine(
+                    () ->
+                            "Skipping direct download, found a mosaic operation without the same structure as requested.\nSource layout: "
+                                    + sourceLayout
+                                    + "\nMosaic layout: "
+                                    + opLayout);
+            return false;
+        }
 
         // same nodata?
         Object sourceNoData = source.getProperty(NoDataContainer.GC_NODATA);
-        if (!Objects.equals(sourceNoData, op.getProperty(NoDataContainer.GC_NODATA))) return false;
+        Object mosaicNoData = op.getProperty(NoDataContainer.GC_NODATA);
+        if (!sameNoData(sourceNoData, mosaicNoData)) {
+            LOGGER.fine(
+                    () ->
+                            "Skipping direct download, found a mosaic operation without the same NODATA.\nSource NODATA: "
+                                    + sourceNoData
+                                    + "\nMosaic NODATA: "
+                                    + mosaicNoData);
+            return false;
+        }
 
         // check what the mosaic has been instructed to do
         ParameterBlock pb = op.getParameterBlock();
         ROI[] rois = (ROI[]) pb.getObjectParameter(2);
-        if (rois != null && rois.length == 1 && !isFullROI(rois[0], source)) return false;
+        if (rois != null && rois.length == 1 && !isFullROI(rois[0], source)) {
+            LOGGER.fine(
+                    () ->
+                            "Skipping direct download, found a mosaic operation with a ROI that does not cover the full file.\nROI:"
+                                    + Arrays.toString(rois));
+        }
 
         // TODO check also background and threshold?
 
         return true;
+    }
+
+    private boolean sameNoData(Object o1, Object o2) {
+        // null safe checks
+        if (o1 == o2) return true;
+        if (!(o1 instanceof NoDataContainer) || !(o2 instanceof NoDataContainer)) return false;
+
+        // check the nodata at the single value level, there is no actuals support for
+        // 
+        NoDataContainer nd1 = (NoDataContainer) o1;
+        NoDataContainer nd2 = (NoDataContainer) o2;
+        return nd1.getAsSingleValue() == nd2.getAsSingleValue(); // no tolerance on purpose
+    }
+
+    /**
+     * Compares two sample models by number of bands and data type, ignoring the width/height as
+     * that might be affected by tiling
+     */
+    private boolean similarSampleModel(SampleModel sm1, SampleModel sm2) {
+        if (Objects.equals(sm1, sm2)) return true;
+        if (sm1 == null || sm2 == null) return false;
+
+        return sm1.getNumBands() == sm2.getNumBands() && sm1.getDataType() == sm2.getDataType();
     }
 
     private boolean isFullROI(ROI roi, PlanarImage source) {
