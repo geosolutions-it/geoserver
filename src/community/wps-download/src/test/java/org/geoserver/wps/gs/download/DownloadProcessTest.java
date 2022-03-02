@@ -8,7 +8,6 @@ package org.geoserver.wps.gs.download;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEHEIGHT;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEWIDTH;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILING;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -129,6 +128,8 @@ public class DownloadProcessTest extends WPSTestSupport {
     private static QName MIXED_RES = new QName(WCS_URI, "mixedres", WCS_PREFIX);
     private static QName HETEROGENEOUS_CRS = new QName(WCS_URI, "hcrs", WCS_PREFIX);
     private static QName HETEROGENEOUS_CRS2 = new QName(WCS_URI, "hcrs2", WCS_PREFIX);
+    private static QName HETEROGENEOUS_NODATA = new QName(WCS_URI, "hcrs_nodata", WCS_PREFIX);
+    private static QName TIMESERIES = new QName(WCS_URI, "timeseries", WCS_PREFIX);
     private static QName SHORT = new QName(WCS_URI, "short", WCS_PREFIX);
     private static QName FLOAT = new QName(WCS_URI, "float", WCS_PREFIX);
 
@@ -311,8 +312,10 @@ public class DownloadProcessTest extends WPSTestSupport {
         testData.addRasterLayer(MIXED_RES, "mixedres.zip", null, getCatalog());
         testData.addRasterLayer(HETEROGENEOUS_CRS, "heterogeneous_crs.zip", null, getCatalog());
         testData.addRasterLayer(HETEROGENEOUS_CRS2, "heterogeneous_crs2.zip", null, getCatalog());
+        testData.addRasterLayer(HETEROGENEOUS_NODATA, "hetero_nodata.zip", null, null, DownloadProcessTest.class, getCatalog());
         testData.addRasterLayer(SHORT, "short.zip", null, getCatalog());
         testData.addRasterLayer(FLOAT, "float.zip", null, getCatalog());
+        testData.addRasterLayer(TIMESERIES, "timeseries.zip", null, getCatalog());
     }
 
     @Override
@@ -2991,6 +2994,54 @@ public class DownloadProcessTest extends WPSTestSupport {
         try (FileInputStream is = new FileInputStream(file);
                 InputStream os = raster.getInputStream()) {
             assertFalse(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    /**
+     * This image mosaic has NODATA in the source files
+     */
+    @Test
+    public void testDirectDownloadHeteroNoData() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32634", true);
+        Filter filter = FF.like(FF.property("location"), "20170421T100031027Z_T34VCJ.tif");
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(HETEROGENEOUS_NODATA),
+                        "image/tiff",
+                        filter,
+                        targetCRS,
+                        null);
+
+        // got a single file from the source, it's exactly the same
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs_nodata/20170421T100031027Z_T34VCJ.tif");
+        try (FileInputStream is = new FileInputStream(file);
+             InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    /**
+     * This image mosaic has NODATA (-30000) in the source files and has uniform structure
+     */
+    @Test
+    public void testDirectDownloadTimeseriesNoData() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326", true);
+        Filter filter = FF.equals(FF.property("time"), FF.literal("2016-01-01"));
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(TIMESERIES),
+                        "image/tiff",
+                        filter,
+                        targetCRS,
+                        null);
+
+        // got a single file from the source, it's exactly the same
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "timeseries/sst_20160101.tiff");
+        try (FileInputStream is = new FileInputStream(file);
+             InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
         }
     }
 
