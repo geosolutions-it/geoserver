@@ -868,6 +868,7 @@ class RasterDownload {
         RenderedImage image = gridCoverage.getRenderedImage();
         RasterDirectDownloader directDownloader = new RasterDirectDownloader(resourceManager);
         if (directDownloader.canCopySourceFile(image, mimeType, writeParams)) {
+            LOGGER.fine("Request and generated image qualify for direct download, executing it");
             return directDownloader.copySourceFile(image);
         }
 

@@ -312,7 +312,13 @@ public class DownloadProcessTest extends WPSTestSupport {
         testData.addRasterLayer(MIXED_RES, "mixedres.zip", null, getCatalog());
         testData.addRasterLayer(HETEROGENEOUS_CRS, "heterogeneous_crs.zip", null, getCatalog());
         testData.addRasterLayer(HETEROGENEOUS_CRS2, "heterogeneous_crs2.zip", null, getCatalog());
-        testData.addRasterLayer(HETEROGENEOUS_NODATA, "hetero_nodata.zip", null, null, DownloadProcessTest.class, getCatalog());
+        testData.addRasterLayer(
+                HETEROGENEOUS_NODATA,
+                "hetero_nodata.zip",
+                null,
+                null,
+                DownloadProcessTest.class,
+                getCatalog());
         testData.addRasterLayer(SHORT, "short.zip", null, getCatalog());
         testData.addRasterLayer(FLOAT, "float.zip", null, getCatalog());
         testData.addRasterLayer(TIMESERIES, "timeseries.zip", null, getCatalog());
@@ -2997,9 +3003,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         }
     }
 
-    /**
-     * This image mosaic has NODATA in the source files
-     */
+    /** This image mosaic has NODATA in the source files */
     @Test
     public void testDirectDownloadHeteroNoData() throws Exception {
         CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32634", true);
@@ -3007,23 +3011,20 @@ public class DownloadProcessTest extends WPSTestSupport {
 
         RawData raster =
                 executeRasterDownload(
-                        getLayerId(HETEROGENEOUS_NODATA),
-                        "image/tiff",
-                        filter,
-                        targetCRS,
-                        null);
+                        getLayerId(HETEROGENEOUS_NODATA), "image/tiff", filter, targetCRS, null);
 
         // got a single file from the source, it's exactly the same
-        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs_nodata/20170421T100031027Z_T34VCJ.tif");
+        final File file =
+                new File(
+                        this.getTestData().getDataDirectoryRoot(),
+                        "hcrs_nodata/20170421T100031027Z_T34VCJ.tif");
         try (FileInputStream is = new FileInputStream(file);
-             InputStream os = raster.getInputStream()) {
+                InputStream os = raster.getInputStream()) {
             assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
         }
     }
 
-    /**
-     * This image mosaic has NODATA (-30000) in the source files and has uniform structure
-     */
+    /** This image mosaic has NODATA (-30000) in the source files and has uniform structure */
     @Test
     public void testDirectDownloadTimeseriesNoData() throws Exception {
         CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326", true);
@@ -3031,16 +3032,13 @@ public class DownloadProcessTest extends WPSTestSupport {
 
         RawData raster =
                 executeRasterDownload(
-                        getLayerId(TIMESERIES),
-                        "image/tiff",
-                        filter,
-                        targetCRS,
-                        null);
+                        getLayerId(TIMESERIES), "image/tiff", filter, targetCRS, null);
 
         // got a single file from the source, it's exactly the same
-        final File file = new File(this.getTestData().getDataDirectoryRoot(), "timeseries/sst_20160101.tiff");
+        final File file =
+                new File(this.getTestData().getDataDirectoryRoot(), "timeseries/sst_20160101.tiff");
         try (FileInputStream is = new FileInputStream(file);
-             InputStream os = raster.getInputStream()) {
+                InputStream os = raster.getInputStream()) {
             assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
         }
     }
