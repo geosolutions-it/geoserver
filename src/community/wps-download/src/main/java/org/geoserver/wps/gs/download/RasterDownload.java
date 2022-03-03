@@ -5,6 +5,9 @@
  */
 package org.geoserver.wps.gs.download;
 
+import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.COMPRESSION;
+import static org.geoserver.wps.gs.download.RasterDirectDownloader.AUTO;
+
 import it.geosolutions.imageio.stream.output.FileImageOutputStreamExtImpl;
 import it.geosolutions.io.output.adapter.OutputStreamAdapter;
 import it.geosolutions.jaiext.utilities.ImageLayout2;
@@ -870,6 +873,14 @@ class RasterDownload {
         if (directDownloader.canCopySourceFile(image, mimeType, writeParams)) {
             LOGGER.fine("Request and generated image qualify for direct download, executing it");
             return directDownloader.copySourceFile(image);
+        }
+
+        // if direct download could not handle the request, switch "auto" compression to "deflate"
+        if (writeParams != null
+                && AUTO.equalsIgnoreCase(writeParams.getParametersMap().get(COMPRESSION))) {
+            for (org.geoserver.wps.gs.download.Parameter p : writeParams.getParameters()) {
+                if (COMPRESSION.equalsIgnoreCase(p.key)) p.value = "Deflate";
+            }
         }
 
         // limits

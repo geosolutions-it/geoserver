@@ -63,6 +63,8 @@ class RasterDirectDownloader {
     static final Logger LOGGER = Logging.getLogger(RasterDirectDownloader.class);
     private static final String IMAGE_TIFF = "image/tiff";
     private static final double EPS = 1e-6;
+    /** Automatic compression. Will use Deflate */
+    protected static final String AUTO = "auto";
 
     private final WPSResourceManager resourceManager;
 
@@ -175,7 +177,7 @@ class RasterDirectDownloader {
                 String actual = getCompression(file);
                 // oddity of tiff spec, two deflates, one identified as "zlib"
                 if ("zlib".equalsIgnoreCase(actual)) actual = "Deflate";
-                if (!expected.equalsIgnoreCase(actual)) {
+                if (!AUTO.equalsIgnoreCase(expected) && !expected.equalsIgnoreCase(actual)) {
                     LOGGER.fine(
                             "TIFF compression is not a match, required "
                                     + expected
@@ -200,7 +202,7 @@ class RasterDirectDownloader {
         }
     }
 
-    private String getCompression(File file) throws IOException {
+    static String getCompression(File file) throws IOException {
         final TIFFImageReader reader =
                 (TIFFImageReader) new TIFFImageReaderSpi().createReaderInstance();
         try (FileImageInputStream fis = new FileImageInputStream(file)) {
@@ -225,7 +227,7 @@ class RasterDirectDownloader {
         }
     }
 
-    IIOMetadataNode getTiffField(Node rootNode, final int tag) {
+    static IIOMetadataNode getTiffField(Node rootNode, final int tag) {
         Node node = rootNode.getFirstChild();
         if (node != null) {
             node = node.getFirstChild();
