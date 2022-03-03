@@ -5,6 +5,7 @@
  */
 package org.geoserver.wps.gs.download;
 
+import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.COMPRESSION;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEHEIGHT;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEWIDTH;
 import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILING;
@@ -66,6 +67,7 @@ import org.geoserver.wps.ppio.ComplexPPIO;
 import org.geoserver.wps.ppio.WFSPPIO;
 import org.geoserver.wps.ppio.ZipArchivePPIO;
 import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.ResourceRawData;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridEnvelope2D;
@@ -2823,11 +2825,26 @@ public class DownloadProcessTest extends WPSTestSupport {
 
     @Test
     public void testDirectDownloadCompression() throws Exception {
+        checkDownloadCompression("Deflate", true);
+    }
+
+    @Test
+    public void testDirectDownloadAutoCompression() throws Exception {
+        checkDownloadCompression("Auto", true);
+    }
+
+    @Test
+    public void testDirectDownloadDifferentCompression() throws Exception {
+        checkDownloadCompression("JPEG", false);
+    }
+
+    private void checkDownloadCompression(String compression, boolean contentEquals)
+            throws FactoryException, IOException {
         CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
         Filter filter = FF.like(FF.property("location"), "green.tif");
 
         Parameters writeParams = new Parameters();
-        writeParams.getParameters().add(new Parameter("compression", "Deflate"));
+        writeParams.getParameters().add(new Parameter("compression", compression));
 
         RawData raster =
                 executeRasterDownload(
@@ -2841,31 +2858,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
         try (FileInputStream is = new FileInputStream(file);
                 InputStream os = raster.getInputStream()) {
-            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
-        }
-    }
-
-    @Test
-    public void testDirectDownloadDifferentCompression() throws Exception {
-        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
-        Filter filter = FF.like(FF.property("location"), "green.tif");
-
-        Parameters writeParams = new Parameters();
-        writeParams.getParameters().add(new Parameter("compression", "JPEG"));
-
-        RawData raster =
-                executeRasterDownload(
-                        getLayerId(HETEROGENEOUS_CRS),
-                        "image/tiff",
-                        filter,
-                        targetCRS,
-                        writeParams);
-
-        // got a single file from the source, but the compression is not the same
-        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
-        try (FileInputStream is = new FileInputStream(file);
-                InputStream os = raster.getInputStream()) {
-            assertFalse(org.apache.commons.io.IOUtils.contentEquals(is, os));
+            assertEquals(contentEquals, org.apache.commons.io.IOUtils.contentEquals(is, os));
         }
     }
 
@@ -2906,6 +2899,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         writeParams.getParameters().add(new Parameter(TILING, "true"));
         writeParams.getParameters().add(new Parameter(TILEWIDTH, "512"));
         writeParams.getParameters().add(new Parameter(TILEHEIGHT, "512"));
+        writeParams.getParameters().add(new Parameter(COMPRESSION, "Auto"));
 
         RawData raster =
                 executeRasterDownload(
@@ -2921,6 +2915,10 @@ public class DownloadProcessTest extends WPSTestSupport {
                 InputStream os = raster.getInputStream()) {
             assertFalse(org.apache.commons.io.IOUtils.contentEquals(is, os));
         }
+
+        // check it has been compressed Deflate with "auto" compression on
+        File rasterFile = ((ResourceRawData) raster).getResource().file();
+        assertEquals("Deflate", RasterDirectDownloader.getCompression(rasterFile));
     }
 
     @Test
