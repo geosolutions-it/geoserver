@@ -4,6 +4,8 @@
  */
 package org.geoserver.gwc.wmts.dimensions;
 
+import static org.geoserver.gwc.wmts.MultiDimensionalExtension.SIDECAR_TYPE;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
@@ -27,6 +30,7 @@ import org.geoserver.util.ISO8601Formatter;
 import org.geoserver.wms.WMS;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.util.FeatureUtilities;
+import org.geotools.data.DataAccess;
 import org.geotools.data.FeatureSource;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureCollection;
@@ -41,9 +45,11 @@ import org.geotools.renderer.crs.ProjectionHandler;
 import org.geotools.renderer.crs.ProjectionHandlerFinder;
 import org.geotools.util.Converters;
 import org.geotools.util.Range;
+import org.geotools.util.factory.GeoTools;
 import org.geowebcache.service.OWSException;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.type.FeatureType;
+import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
 import org.opengis.filter.FilterFactory2;
@@ -307,6 +313,41 @@ public final class DimensionsUtils {
     }
 
     /**
+     * Returns the first qualified name matching the given simple name, or throws an exception in
+     * case it's not found
+     */
+    public static Name getFullName(String name, DataStoreInfo dsi) throws IOException {
+        DataAccess<?, ?> da = dsi.getDataStore(null);
+        return da.getNames()
+                .stream()
+                .filter(n -> name.equals(n.getLocalPart()))
+                .findFirst()
+                .orElseThrow(
+                        () ->
+                                new IllegalArgumentException(
+                                        "Could not find type "
+                                                + name
+                                                + " inside store "
+                                                + dsi.getName()));
+    }
+
+    /**
+     * Returns the features for the given resource info, taking into account the eventual sidecar
+     * feature type for fast dimensional queries
+     */
+    public static FeatureSource getFeatures(ResourceInfo resource) throws IOException {
+        String sidecar = resource.getMetadata().get(SIDECAR_TYPE, String.class);
+        // sidecar table available?
+        if (sidecar != null) {
+            DataStoreInfo dsi = (DataStoreInfo) resource.getStore();
+            Name name = getFullName(sidecar, dsi);
+            return dsi.getDataStore(null).getFeatureSource(name);
+        }
+        // simple case
+        return ((FeatureTypeInfo) resource).getFeatureSource(null, GeoTools.getDefaultHints());
+    }
+
+    /**
      * Compute the resource bounds based on the provided filter
      *
      * @param resource
@@ -316,10 +357,7 @@ public final class DimensionsUtils {
     public static ReferencedEnvelope getBounds(ResourceInfo resource, Filter filter) {
         try {
             if (resource instanceof FeatureTypeInfo) {
-                FeatureSource featureSource =
-                        ((FeatureTypeInfo) resource).getFeatureSource(null, null);
-                FeatureCollection features = featureSource.getFeatures(filter);
-                return features.getBounds();
+                return getFeatures(resource).getFeatures(filter).getBounds();
             } else if (resource instanceof CoverageInfo) {
                 CoverageDimensionsReader reader =
                         CoverageDimensionsReader.instantiateFrom((CoverageInfo) resource);
