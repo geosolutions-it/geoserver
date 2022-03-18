@@ -43,6 +43,8 @@ public abstract class TestsSupport extends WMSTestSupport {
             new QName(MockData.SF_URI, "ElevationWithStartEnd", MockData.SF_PREFIX);
     protected static final QName VECTOR_ELEVATION =
             new QName(MockData.SF_URI, "ElevationWithStartEnd", MockData.SF_PREFIX);
+    protected static final QName SIDECAR_VECTOR_ET =
+            new QName(MockData.SF_URI, "SidecarTimeElevationWithStartEnd", MockData.SF_PREFIX);
     protected static final QName VECTOR_TIME =
             new QName(MockData.SF_URI, "TimeWithStartEnd", MockData.SF_PREFIX);
     protected static final QName VECTOR_CUSTOM =
@@ -84,6 +86,12 @@ public abstract class TestsSupport extends WMSTestSupport {
                 VECTOR_ELEVATION,
                 Collections.emptyMap(),
                 "/TimeElevationWithStartEnd.properties",
+                this.getClass(),
+                getCatalog());
+        testData.addVectorLayer(
+                SIDECAR_VECTOR_ET,
+                Collections.emptyMap(),
+                "/SidecarTimeElevationWithStartEnd.properties",
                 this.getClass(),
                 getCatalog());
         // vector with time dimension

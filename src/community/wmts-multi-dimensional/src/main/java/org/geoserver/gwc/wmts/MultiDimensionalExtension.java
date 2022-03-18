@@ -96,6 +96,14 @@ public final class MultiDimensionalExtension extends WMTSExtensionImpl {
     public static final String EXPAND_LIMIT = "expandLimit";
     public static final String DOMAIN_VALUES_LIMIT = "limit";
 
+    /**
+     * Points to a secondary feature type with the same dimension columns as the main one, but with
+     * a structure allowing faster extraction of data (e.g., a summary of the unique dimension
+     * values rather than all of original records, which might report the same dimension value
+     * several times).
+     */
+    public static final String SIDECAR_TYPE = "wmtsMultidimSidecarType";
+
     private final FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
     private final GeoServer geoServer;
 
