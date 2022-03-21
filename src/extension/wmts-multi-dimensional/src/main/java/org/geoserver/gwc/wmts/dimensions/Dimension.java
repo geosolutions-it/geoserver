@@ -6,6 +6,7 @@ package org.geoserver.gwc.wmts.dimensions;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -76,12 +77,33 @@ public abstract class Dimension {
      */
     public abstract List<Comparable> getDomainValues(Filter filter, boolean noDuplicates);
 
+    private TreeSet<Comparable> getFixedValueRangeComp(String spec) {
+        TreeSet<Comparable> result = new TreeSet<>();
+        if (spec == null || spec.trim().isEmpty()) {
+            return null;
+        }
+        List<String> fixedValueList = Arrays.asList(spec.split(","));
+        if (!fixedValueList.isEmpty()) {
+            for (String fixedValue : fixedValueList) {
+                result.add(fixedValue);
+            }
+        }
+
+        return result;
+    }
+
     /**
      * Returns the domain summary. If the count is lower than <code>expandLimit</code> then only the
      * count will be returned, otherwise min and max will also be returned
      */
     protected DomainSummary getDomainSummary(
             FeatureCollection features, String attribute, int expandLimit) {
+        if (dimensionInfo.getFixedValues() != null) {
+            TreeSet<Comparable> fixedValues =
+                    getFixedValueRangeComp(dimensionInfo.getFixedValues());
+            return new DomainSummary(new TreeSet<>(fixedValues));
+        }
+
         // grab domain, but at most expandLimit + 1, to know if there are too many
         if (expandLimit != 0) {
             Set<Comparable> uniqueValues =

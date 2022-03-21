@@ -37,12 +37,18 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.xml.namespace.QName;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxEventBehavior;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.extensions.markup.html.tabs.TabbedPanel;
+import org.apache.wicket.markup.Markup;
+import org.apache.wicket.markup.html.form.CheckBox;
+import org.apache.wicket.markup.html.form.Form;
+import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.repeater.data.DataView;
+import org.apache.wicket.model.Model;
 import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.catalog.AttributeTypeInfo;
 import org.geoserver.catalog.Catalog;
@@ -50,8 +56,11 @@ import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.CatalogFactory;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.DimensionInfo;
+import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.TestHttpClientProvider;
 import org.geoserver.catalog.WMSLayerInfo;
@@ -59,6 +68,7 @@ import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WMTSLayerInfo;
 import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.catalog.impl.DataStoreInfoImpl;
+import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.catalog.impl.FeatureTypeInfoImpl;
 import org.geoserver.catalog.impl.WMSStoreInfoImpl;
 import org.geoserver.catalog.impl.WMTSStoreInfoImpl;
@@ -99,6 +109,9 @@ public class ResourceConfigurationPageTest extends GeoServerWicketTestSupport {
             new QName(MockData.SF_URI, "timeranges", MockData.SF_PREFIX);
 
     protected static QName LINES = new QName(MockData.SF_URI, "null_srid_line", MockData.SF_PREFIX);
+
+    private static final String markup =
+            "<form wicket:id=\"form\"><div wicket:id=\"dimEditor\" /></form>";
 
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
@@ -943,5 +956,108 @@ public class ResourceConfigurationPageTest extends GeoServerWicketTestSupport {
         AttributeTypeInfo att = attributes.get(0);
         assertEquals("abstract", att.getName());
         assertEquals(cql, att.getSource());
+    }
+
+    @Test
+    public void testDimensionFixedValueElevationFormEditor() {
+        final LayerInfo layer =
+                getCatalog().getLayerByName(MockData.SF_PREFIX.concat(":").concat("timeranges"));
+        login();
+        tester.startPage(new ResourceConfigurationPage(layer, false));
+        tester.clickLink("publishedinfo:tabs:tabs-container:tabs:2:link");
+
+        FormTester form = tester.newFormTester("publishedinfo");
+        form.setValue("tabs:panel:elevation:enabled", true);
+        tester.executeAjaxEvent("publishedinfo:tabs:panel:elevation:enabled", "click");
+        form.setValue("tabs:panel:elevation:configContainer:configs:fixedValue", true);
+        tester.executeAjaxEvent(
+                "publishedinfo:tabs:panel:elevation:configContainer:configs:fixedValue", "click");
+        form.select("tabs:panel:elevation:configContainer:configs:presentation", 0);
+        form = tester.newFormTester("publishedinfo");
+        form.setValue(
+                "tabs:panel:elevation:configContainer:configs:fixedValueRangeContainer:fixedValues",
+                "1.0,2.0");
+        form.submit("save");
+        tester.assertNoErrorMessage();
+
+        final LayerInfo layerInfo = getCatalog().getLayerByName(getLayerId(TIMERANGES));
+        final MetadataMap metadataMap = layerInfo.getResource().getMetadata();
+        DimensionInfo dimensionInfo = metadataMap.get(ResourceInfo.ELEVATION, DimensionInfo.class);
+        assertEquals("1.0,2.0", dimensionInfo.getFixedValues());
+    }
+
+    @Test
+    public void testDimensionFixedValuePersistFormEditor() {
+        final Catalog catalog = getCatalog();
+        final LayerInfo layer =
+                getCatalog().getLayerByName(MockData.SF_PREFIX.concat(":").concat("timeranges"));
+        final MetadataMap metadataMap = layer.getResource().getMetadata();
+        DimensionInfo dimension = new DimensionInfoImpl();
+        dimension.setEnabled(true);
+        dimension.setAttribute("name");
+        dimension.setPresentation(DimensionPresentation.LIST);
+        dimension.setFixedValues("1.0");
+        metadataMap.put("dim_name", dimension);
+        catalog.save(layer);
+        login();
+        tester.startPage(new ResourceConfigurationPage(layer, false));
+        tester.clickLink("publishedinfo:tabs:tabs-container:tabs:2:link");
+
+        FormTester form = tester.newFormTester("publishedinfo");
+        form.setValue("tabs:panel:elevation:enabled", true);
+        tester.executeAjaxEvent("publishedinfo:tabs:panel:elevation:enabled", "click");
+        form.setValue("tabs:panel:elevation:configContainer:configs:fixedValue", true);
+        tester.executeAjaxEvent(
+                "publishedinfo:tabs:panel:elevation:configContainer:configs:fixedValue", "click");
+        form.select("tabs:panel:elevation:configContainer:configs:presentation", 0);
+        form = tester.newFormTester("publishedinfo");
+        form.setValue(
+                "tabs:panel:elevation:configContainer:configs:fixedValueRangeContainer:fixedValues",
+                "2.0");
+        form.submit("save");
+        tester.assertNoErrorMessage();
+
+        final LayerInfo layerInfo = getCatalog().getLayerByName(getLayerId(TIMERANGES));
+        final MetadataMap metadataMap1 = layerInfo.getResource().getMetadata();
+        DimensionInfo dimensionInfo = metadataMap1.get(ResourceInfo.ELEVATION, DimensionInfo.class);
+        assertEquals("2.0", dimensionInfo.getFixedValues());
+    }
+
+    @Test
+    public void testDimensionFixedValuesEditor() {
+        final Catalog catalog = getCatalog();
+        final LayerInfo layerInfo = getCatalog().getLayerByName("RoadSegments");
+        assertTrue(layerInfo.getResource() instanceof FeatureTypeInfo);
+        final FeatureTypeInfo featureTypeInfo = (FeatureTypeInfo) layerInfo.getResource();
+        final MetadataMap metadataMap = featureTypeInfo.getMetadata();
+        final DimensionInfo dimension = new DimensionInfoImpl();
+        dimension.setEnabled(true);
+        dimension.setAttribute("name");
+        dimension.setPresentation(DimensionPresentation.LIST);
+        dimension.setFixedValues("2017-02-27 14:00:10");
+        metadataMap.put("dim_name", dimension);
+        catalog.save(featureTypeInfo);
+        Pair<String, DimensionInfo> entry = Pair.of("dim_name", dimension);
+        VectorCustomDimensionEntry dimEntry = new VectorCustomDimensionEntry(entry);
+        VectorCustomDimensionEditor editor =
+                new VectorCustomDimensionEditor(
+                        "dimEditor", Model.of(dimEntry), featureTypeInfo, Serializable.class);
+        Form form = new Form("form");
+        form.add(editor);
+        form = tester.startComponentInPage(form, Markup.of(markup));
+        form.onFormSubmitted();
+
+        @SuppressWarnings("unchecked")
+        CheckBox dimFixedValueCheckBoxInput =
+                (CheckBox)
+                        tester.getComponentFromLastRenderedPage(
+                                "form:dimEditor:configContainer:configs:fixedValue");
+        assertEquals(true, dimFixedValueCheckBoxInput.getModelObject());
+
+        TextArea dimFixedValueRangeInput =
+                (TextArea)
+                        tester.getComponentFromLastRenderedPage(
+                                "form:dimEditor:configContainer:configs:fixedValueRangeContainer:fixedValues");
+        assertEquals("2017-02-27 14:00:10", dimFixedValueRangeInput.getModelObject());
     }
 }

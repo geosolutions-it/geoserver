@@ -1282,4 +1282,154 @@ public class MultiDimensionalExtensionTest extends TestsSupport {
         // TileLayer implementations
         extension.encodeLayer(xml, tileLayer);
     }
+
+    /** Helper method that will register a fixed value dimension for some layer. */
+    private void registerLayerFixedValueDimension(
+            ResourceInfo info,
+            String dimensionName,
+            String attributeName,
+            DimensionPresentation presentation,
+            DimensionDefaultValueSetting defaultValue,
+            String fixedValue) {
+        DimensionInfo dimension = new DimensionInfoImpl();
+        dimension.setEnabled(true);
+        dimension.setPresentation(presentation);
+        dimension.setDefaultValue(defaultValue);
+        dimension.setAttribute(attributeName);
+        dimension.setFixedValues(fixedValue);
+        info.getMetadata().put(dimensionName, dimension);
+        getCatalog().save(info);
+    }
+
+    @Test
+    public void testGetCapabilitiesFixedValueElevationRaster() throws Exception {
+        CoverageInfo coverageInfo = setupWaterTempTwoBandsView();
+        String fixedValueElevation = "0,100";
+        // enable dimensions
+        registerLayerFixedValueDimension(
+                coverageInfo,
+                ResourceInfo.ELEVATION,
+                null,
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                minimumValue(),
+                fixedValueElevation);
+        // perform the get capabilities request
+        MockHttpServletResponse response =
+                getAsServletResponse("gwc/service/wmts?request=GetCapabilities");
+        Document result = getResultAsDocument(response, "text/xml");
+        // four total dimensions that we are going to check one by one
+        checkXpathCount(result, "/wmts:Contents/wmts:Layer/wmts:Dimension", "6");
+        // note, the capabilities output follows the same config as WMS, it's not dynamic like
+        // DescribeDomains
+        // check fixed value elevation dimension
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='watertemp']/wmts:Dimension[wmts:Default='0.0']",
+                "1");
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='watertemp']/wmts:Dimension[wmts:Value='0']",
+                "1");
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='watertemp']/wmts:Dimension[wmts:Value='100']",
+                "1");
+    }
+
+    @Test
+    public void testGetCapabilitiesFixedValueVectorElevation() throws Exception {
+        CoverageInfo coverageInfo = setupWaterTempTwoBandsView();
+        String fixedValueElevation = "1.0,5.0";
+        // enable dimensions
+        registerLayerFixedValueDimension(
+                coverageInfo,
+                ResourceInfo.ELEVATION,
+                null,
+                DimensionPresentation.LIST,
+                minimumValue(),
+                fixedValueElevation);
+        // perform the get capabilities request
+        MockHttpServletResponse response =
+                getAsServletResponse("gwc/service/wmts?request=GetCapabilities");
+        Document result = getResultAsDocument(response, "text/xml");
+        // four total dimensions that we are going to check one by one
+        checkXpathCount(result, "/wmts:Contents/wmts:Layer/wmts:Dimension", "6");
+        // note, the capabilities output follows the same config as WMS, it's not dynamic like
+        // DescribeDomains
+        // check fixed value elevation dimension
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='ElevationWithStartEnd']/wmts:Dimension[wmts:Default='1.0']",
+                "1");
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='ElevationWithStartEnd']/wmts:Dimension[wmts:Value='1.0--5.0']",
+                "1");
+    }
+
+    @Test
+    public void testGetCapabilitiesFixedValueTimeContinuousInterval() throws Exception {
+        CoverageInfo coverageInfo = setupWaterTempTwoBandsView();
+        String fixedValueTime = "2008-10-31T00:00:00.000Z,2008-11-01T00:00:00.000Z";
+        // enable dimensions
+        registerLayerFixedValueDimension(
+                coverageInfo,
+                ResourceInfo.TIME,
+                null,
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                minimumValue(),
+                fixedValueTime);
+        // perform the get capabilities request
+        MockHttpServletResponse response =
+                getAsServletResponse("gwc/service/wmts?request=GetCapabilities");
+        Document result = getResultAsDocument(response, "text/xml");
+        // four total dimensions that we are going to check one by one
+        checkXpathCount(result, "/wmts:Contents/wmts:Layer/wmts:Dimension", "6");
+        // note, the capabilities output follows the same config as WMS, it's not dynamic like
+        // DescribeDomains
+        // check fixed value elevation dimension
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='watertemp']/wmts:Dimension[wmts:Default='0.0']",
+                "1");
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='watertemp']/wmts:Dimension[wmts:Value='2008-10-31T00:00:00.000Z--2008-11-01T00:00:00.000Z']",
+                "1");
+    }
+
+    @Test
+    public void testGetCapabilitiesFixedValueTime() throws Exception {
+        CoverageInfo coverageInfo = setupWaterTempTwoBandsView();
+        String fixedValueTime = "2012-02-11T00:00:00.000Z,2012-02-12T00:00:00.000Z";
+        // enable dimensions
+        registerLayerFixedValueDimension(
+                coverageInfo,
+                ResourceInfo.TIME,
+                null,
+                DimensionPresentation.LIST,
+                minimumValue(),
+                fixedValueTime);
+        // perform the get capabilities request
+        MockHttpServletResponse response =
+                getAsServletResponse("gwc/service/wmts?request=GetCapabilities");
+        Document result = getResultAsDocument(response, "text/xml");
+        // four total dimensions that we are going to check one by one
+        checkXpathCount(result, "/wmts:Contents/wmts:Layer/wmts:Dimension", "6");
+        // note, the capabilities output follows the same config as WMS, it's not dynamic like
+        // DescribeDomains
+        // check fixed value elevation dimension
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='ElevationWithStartEnd']/wmts:Dimension[wmts:Default='2012-02-11T00:00:00Z']",
+                "1");
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='ElevationWithStartEnd']/wmts:Dimension[wmts:Value='2012-02-11T00:00:00.000Z']",
+                "1");
+        checkXpathCount(
+                result,
+                "/wmts:Contents/wmts:Layer[ows:Title='ElevationWithStartEnd']/wmts:Dimension[wmts:Value='2012-02-12T00:00:00.000Z']",
+                "1");
+    }
 }

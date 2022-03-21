@@ -122,4 +122,14 @@ public interface DimensionInfo extends Serializable {
      * #getAcceptableInterval()}.
      */
     public void setAcceptableInterval(String acceptableInterval);
+
+    /**
+     * Returns a string specifying the fixed values. Can be empty, a single value (to be parsed in
+     * the data type of the dimension, in particular, it will be either time format or double format
+     * for elevation)
+     */
+    public String getFixedValues();
+
+    /** Allows setting the fixed value range for dimension, see also {@link #getFixedValues()}. */
+    public void setFixedValues(String fixedValues);
 }

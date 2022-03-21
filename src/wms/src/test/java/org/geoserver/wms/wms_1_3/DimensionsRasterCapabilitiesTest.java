@@ -7,11 +7,15 @@ package org.geoserver.wms.wms_1_3;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 
+import java.math.BigDecimal;
+import javax.xml.namespace.QName;
+import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionDefaultValueSetting;
 import org.geoserver.catalog.DimensionDefaultValueSetting.Strategy;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.wms.WMSDimensionsTestSupport;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -248,5 +252,112 @@ public class DimensionsRasterCapabilitiesTest extends WMSDimensionsTestSupport {
         assertXpathEvaluatesTo("1", "count(//wms:Layer/wms:Dimension)", dom);
         assertXpathEvaluatesTo("time", "//wms:Layer/wms:Dimension/@name", dom);
         assertXpathEvaluatesTo("P1M/PRESENT", "//wms:Layer/wms:Dimension/@default", dom);
+    }
+
+    /**
+     * Configures the fixed value dimension of a vector layer
+     *
+     * @param layer
+     * @param dimensionName
+     * @param presentation
+     * @param resolution
+     * @param units
+     * @param unitSymbol
+     * @param fixedValue
+     */
+    protected void setupRasterFixedValueDimension(
+            QName layer,
+            String dimensionName,
+            DimensionPresentation presentation,
+            Double resolution,
+            String units,
+            String unitSymbol,
+            String fixedValue) {
+        CoverageInfo info = getCatalog().getCoverageByName(layer.getLocalPart());
+        DimensionInfo di = new DimensionInfoImpl();
+        di.setEnabled(true);
+        di.setPresentation(presentation);
+        if (resolution != null) {
+            di.setResolution(BigDecimal.valueOf(resolution));
+        }
+        di.setUnits(units);
+        di.setUnitSymbol(unitSymbol);
+        di.setFixedValues(fixedValue);
+        info.getMetadata().put(dimensionName, di);
+        getCatalog().save(info);
+    }
+
+    @Test
+    public void testFixedValueRangeTimeList() throws Exception {
+        String fixedValueTime = "2011-05-01T00:00:00.000Z,2011-05-04T00:00:00.000Z";
+        setupRasterFixedValueDimension(
+                TIMERANGES,
+                ResourceInfo.TIME,
+                DimensionPresentation.LIST,
+                null,
+                null,
+                null,
+                fixedValueTime);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.3.0"), false);
+
+        // check dimension has been declared
+        assertXpathEvaluatesTo("1", "count(//wms:Layer/wms:Dimension)", dom);
+        assertXpathEvaluatesTo("time", "//wms:Layer/wms:Dimension/@name", dom);
+        assertXpathEvaluatesTo("ISO8601", "//wms:Layer/wms:Dimension/@units", dom);
+        // check we have the wms:Dimension
+        assertXpathEvaluatesTo("time", "//wms:Layer/wms:Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                DimensionDefaultValueSetting.TIME_CURRENT,
+                "//wms:Layer/wms:Dimension/@default",
+                dom);
+        assertXpathEvaluatesTo(
+                "2011-05-01T00:00:00.000Z,2011-05-04T00:00:00.000Z",
+                "//wms:Layer/wms:Dimension",
+                dom);
+    }
+
+    @Test
+    public void testFixedValueRangeElevationContinousInterval() throws Exception {
+        String fixedValueElevation = "1.0,5.0";
+        setupRasterFixedValueDimension(
+                TIMERANGES,
+                ResourceInfo.ELEVATION,
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                UNITS,
+                UNIT_SYMBOL,
+                fixedValueElevation);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.3.0"), false);
+
+        // check dimension has been declared
+        assertXpathEvaluatesTo("1", "count(//wms:Layer/wms:Dimension)", dom);
+        assertXpathEvaluatesTo("elevation", "//wms:Layer/wms:Dimension/@name", dom);
+        // check we have the wms:Dimension
+        assertXpathEvaluatesTo("elevation", "//wms:Layer/wms:Dimension/@name", dom);
+        assertXpathEvaluatesTo("1.0,5.0", "//wms:Layer/wms:Dimension", dom);
+    }
+
+    @Test
+    public void testFixedValueRangeElevationList() throws Exception {
+        String fixedValueElevation = "1.0,5.0";
+        setupRasterFixedValueDimension(
+                TIMERANGES,
+                ResourceInfo.ELEVATION,
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                UNITS,
+                UNIT_SYMBOL,
+                fixedValueElevation);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.3.0"), false);
+
+        // check dimension has been declared
+        assertXpathEvaluatesTo("1", "count(//wms:Layer/wms:Dimension)", dom);
+        assertXpathEvaluatesTo("elevation", "//wms:Layer/wms:Dimension/@name", dom);
+        // check we have the wms:Dimension
+        assertXpathEvaluatesTo("elevation", "//wms:Layer/wms:Dimension/@name", dom);
+        assertXpathEvaluatesTo("1.0,5.0", "//wms:Layer/wms:Dimension", dom);
     }
 }

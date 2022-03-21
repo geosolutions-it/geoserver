@@ -12,15 +12,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Map;
+import javax.xml.namespace.QName;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.MetadataLinkInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.config.GeoServerInfo;
 import org.geoserver.config.ResourceErrorHandling;
 import org.geoserver.data.test.MockData;
@@ -390,5 +394,39 @@ public class GetCapabilitiesTest extends WCSTestSupport {
         String base = "//wcs:CoverageOfferingBrief[wcs:name='sf:timeranges']//wcs:lonLatEnvelope";
         assertXpathEvaluatesTo("2008-10-31T00:00:00.000Z", base + "/gml:timePosition[1]", dom);
         assertXpathEvaluatesTo("2008-11-07T00:00:00.000Z", base + "/gml:timePosition[2]", dom);
+    }
+
+    protected void setupFixedValueRasterDimension(
+            QName layer,
+            String metadata,
+            DimensionPresentation presentation,
+            Double resolution,
+            String fixedValues) {
+        CoverageInfo info = getCatalog().getCoverageByName(layer.getLocalPart());
+        DimensionInfo di = new DimensionInfoImpl();
+        di.setEnabled(true);
+        di.setFixedValues(fixedValues);
+        di.setPresentation(presentation);
+        if (resolution != null) {
+            di.setResolution(BigDecimal.valueOf(resolution));
+        }
+        info.getMetadata().put(metadata, di);
+        getCatalog().save(info);
+    }
+
+    @Test
+    public void testFixedValueTimeRasterCoverage() throws Exception {
+        String fixedValueTime = "2008-11-09T00:00:00.000Z";
+        setupFixedValueRasterDimension(
+                WATTEMP, ResourceInfo.TIME, DimensionPresentation.LIST, null, fixedValueTime);
+
+        Document dom = getAsDOM(BASEPATH + "?request=GetCapabilities&service=WCS&version=1.0.0");
+        // print(dom);
+        checkValidationErrors(dom, WCS10_GETCAPABILITIES_SCHEMA);
+
+        // check the envelopes
+        String base = "//wcs:CoverageOfferingBrief[wcs:name='wcs:watertemp']//wcs:lonLatEnvelope";
+        assertXpathEvaluatesTo("2008-11-09T00:00:00.000Z", base + "/gml:timePosition[1]", dom);
+        assertXpathEvaluatesTo("2008-11-09T00:00:00.000Z", base + "/gml:timePosition[2]", dom);
     }
 }
