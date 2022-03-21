@@ -645,7 +645,8 @@ public class Wcs10CapsTransformer extends TransformerBase {
 
                 DimensionInfo timeInfo =
                         cv.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
-                ReaderDimensionsAccessor dimensions = new ReaderDimensionsAccessor(reader);
+                ReaderDimensionsAccessor dimensions =
+                        new ReaderDimensionsAccessor(reader, timeInfo);
                 handleEnvelope(cv.getLatLonBoundingBox(), timeInfo, dimensions);
                 handleKeywords(cv.getKeywords());
 

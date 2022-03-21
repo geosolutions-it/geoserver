@@ -8,7 +8,10 @@ package org.geoserver.wms.wms_1_1_1;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.junit.Assert.assertEquals;
 
+import java.math.BigDecimal;
+import javax.xml.namespace.QName;
 import org.geoserver.catalog.CatalogBuilder;
+import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionDefaultValueSetting;
 import org.geoserver.catalog.DimensionDefaultValueSetting.Strategy;
 import org.geoserver.catalog.DimensionInfo;
@@ -16,6 +19,7 @@ import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.catalog.impl.LayerGroupInfoImpl;
 import org.geoserver.wms.WMSDimensionsTestSupport;
 import org.junit.Test;
@@ -373,5 +377,90 @@ public class DimensionsRasterCapabilitiesTest extends WMSDimensionsTestSupport {
         assertXpathEvaluatesTo("elevation", "//Layer/Extent/@name", dom);
         assertXpathEvaluatesTo("20.0", "//Layer/Extent/@default", dom);
         assertXpathEvaluatesTo("20.0/150.0/0", "//Layer/Extent", dom);
+    }
+
+    @Test
+    public void testFixedValueRangeTimeList() throws Exception {
+        String fixedValueTime = "2011-05-01T00:00:00.000Z,2011-05-04T00:00:00.000Z";
+        setupFixedValueRasterDimension(
+                TIMERANGES,
+                ResourceInfo.TIME,
+                DimensionPresentation.LIST,
+                null,
+                null,
+                null,
+                fixedValueTime);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        // check dimension has been declared
+        assertXpathEvaluatesTo("time", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo("ISO8601", "//Layer/Dimension/@units", dom);
+        // check we have the extent, we should get a single range as times do overlap
+        assertXpathEvaluatesTo("time", "//Layer/Extent/@name", dom);
+        assertXpathEvaluatesTo(
+                DimensionDefaultValueSetting.TIME_CURRENT, "//Layer/Extent/@default", dom);
+    }
+
+    @Test
+    public void testFixedValueRangeElevationContinousInterval() throws Exception {
+        String fixedValueElevation = "1.0,5.0";
+        setupFixedValueRasterDimension(
+                TIMERANGES,
+                ResourceInfo.ELEVATION,
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                UNITS,
+                UNIT_SYMBOL,
+                fixedValueElevation);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        // check dimension has been declared
+        assertXpathEvaluatesTo("elevation", "//Layer/Dimension/@name", dom);
+        // check we have the extent, we should get a single range as times do overlap
+        assertXpathEvaluatesTo("elevation", "//Layer/Extent/@name", dom);
+    }
+
+    @Test
+    public void testFixedValueRangeElevationList() throws Exception {
+        String fixedValueElevation = "1.0,5.0";
+        setupFixedValueRasterDimension(
+                TIMERANGES,
+                ResourceInfo.ELEVATION,
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                UNITS,
+                UNIT_SYMBOL,
+                fixedValueElevation);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        // check dimension has been declared
+        assertXpathEvaluatesTo("elevation", "//Layer/Dimension/@name", dom);
+        // check we have the extent, we should get a single range as times do overlap
+        assertXpathEvaluatesTo("elevation", "//Layer/Extent/@name", dom);
+    }
+
+    private void setupFixedValueRasterDimension(
+            QName layer,
+            String dimensionName,
+            DimensionPresentation presentation,
+            Double resolution,
+            String units,
+            String unitSymbol,
+            String fixedValue) {
+        CoverageInfo info = getCatalog().getCoverageByName(layer.getLocalPart());
+        DimensionInfo di = new DimensionInfoImpl();
+        di.setFixedValues(fixedValue);
+        di.setEnabled(true);
+        di.setPresentation(presentation);
+        if (resolution != null) {
+            di.setResolution(BigDecimal.valueOf(resolution));
+        }
+        di.setUnits(units);
+        di.setUnitSymbol(unitSymbol);
+        info.getMetadata().put(dimensionName, di);
+        getCatalog().save(info);
     }
 }

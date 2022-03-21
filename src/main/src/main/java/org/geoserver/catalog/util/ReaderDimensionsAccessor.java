@@ -26,6 +26,7 @@ import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.StructuredCoverageViewReader;
 import org.geoserver.ows.kvp.TimeParser;
 import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
@@ -122,13 +123,21 @@ public class ReaderDimensionsAccessor {
 
     private final List<String> metadataNames = new ArrayList<>();
 
+    private final DimensionInfo dimensionInfo;
+
     public ReaderDimensionsAccessor(GridCoverage2DReader reader) throws IOException {
+        this(reader, null);
+    }
+
+    public ReaderDimensionsAccessor(GridCoverage2DReader reader, DimensionInfo dimensionInfo)
+            throws IOException {
         Utilities.ensureNonNull("reader", reader);
         this.reader = reader;
         final String[] dimensions = reader.getMetadataNames();
         if (dimensions != null) {
             metadataNames.addAll(Arrays.asList(dimensions));
         }
+        this.dimensionInfo = dimensionInfo;
     }
 
     /** True if the reader has a time dimension */
@@ -145,15 +154,20 @@ public class ReaderDimensionsAccessor {
         if (!hasTime()) {
             Collections.emptySet();
         }
-        final SimpleDateFormat df = getTimeFormat();
-        String domain = reader.getMetadataValue(TIME_DOMAIN);
-        String[] timeInstants = domain.split("\\s*,\\s*");
-        TreeSet<Object> values = new TreeSet<>(TEMPORAL_COMPARATOR);
-        for (String tp : timeInstants) {
-            try {
-                values.add(parseTimeOrRange(df, tp));
-            } catch (ParseException e) {
-                LOGGER.log(Level.WARNING, e.getMessage(), e);
+        TreeSet<Object> values = null;
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            values = getFixedValueRange(dimensionInfo.getFixedValues());
+        } else {
+            final SimpleDateFormat df = getTimeFormat();
+            String domain = reader.getMetadataValue(TIME_DOMAIN);
+            String[] timeInstants = domain.split("\\s*,\\s*");
+            values = new TreeSet<>(TEMPORAL_COMPARATOR);
+            for (String tp : timeInstants) {
+                try {
+                    values.add(parseTimeOrRange(df, tp));
+                } catch (ParseException e) {
+                    LOGGER.log(Level.WARNING, e.getMessage(), e);
+                }
             }
         }
 
@@ -171,24 +185,28 @@ public class ReaderDimensionsAccessor {
         }
 
         TreeSet<Object> result = null;
-        if (reader instanceof StructuredGridCoverage2DReader) {
-            StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
-            result = getDimensionValuesInRange("time", range, maxEntries, sr);
-        }
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            result = getFixedValueRange(dimensionInfo.getFixedValues());
+        } else {
+            if (reader instanceof StructuredGridCoverage2DReader) {
+                StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
+                result = getDimensionValuesInRange("time", range, maxEntries, sr);
+            }
 
-        // if we got here, the optimization did not work, do the normal path
-        if (result == null) {
-            result = new TreeSet<>(TEMPORAL_COMPARATOR);
-            TreeSet<Object> fullDomain = getTimeDomain();
+            // if we got here, the optimization did not work, do the normal path
+            if (result == null) {
+                result = new TreeSet<>(TEMPORAL_COMPARATOR);
+                TreeSet<Object> fullDomain = getTimeDomain();
 
-            for (Object o : fullDomain) {
-                if (o instanceof Date) {
-                    if (range.contains((Date) o)) {
-                        result.add(o);
-                    }
-                } else if (o instanceof DateRange) {
-                    if (range.intersects((DateRange) o)) {
-                        result.add(o);
+                for (Object o : fullDomain) {
+                    if (o instanceof Date) {
+                        if (range.contains((Date) o)) {
+                            result.add(o);
+                        }
+                    } else if (o instanceof DateRange) {
+                        if (range.intersects((DateRange) o)) {
+                            result.add(o);
+                        }
                     }
                 }
             }
@@ -246,15 +264,23 @@ public class ReaderDimensionsAccessor {
         if (!hasTime()) {
             return null;
         }
-        final String currentTime =
-                reader.getMetadataValue(AbstractGridCoverage2DReader.TIME_DOMAIN_MAXIMUM);
-        if (currentTime == null) {
-            return null;
-        }
-        try {
-            return getTimeFormat().parse(currentTime);
-        } catch (ParseException e) {
-            throw new RuntimeException("Failed to get CURRENT time from coverage reader", e);
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            try {
+                return getTimeFormat().parse(dimensionInfo.getFixedValues());
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to get minimum time from coverage reader", e);
+            }
+        } else {
+            final String currentTime =
+                    reader.getMetadataValue(AbstractGridCoverage2DReader.TIME_DOMAIN_MAXIMUM);
+            if (currentTime == null) {
+                return null;
+            }
+            try {
+                return getTimeFormat().parse(currentTime);
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to get CURRENT time from coverage reader", e);
+            }
         }
     }
 
@@ -263,15 +289,23 @@ public class ReaderDimensionsAccessor {
         if (!hasTime()) {
             return null;
         }
-        final String currentTime =
-                reader.getMetadataValue(AbstractGridCoverage2DReader.TIME_DOMAIN_MINIMUM);
-        if (currentTime == null) {
-            return null;
-        }
-        try {
-            return getTimeFormat().parse(currentTime);
-        } catch (ParseException e) {
-            throw new RuntimeException("Failed to get minimum time from coverage reader", e);
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            try {
+                return getTimeFormat().parse(dimensionInfo.getFixedValues());
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to get minimum time from coverage reader", e);
+            }
+        } else {
+            final String currentTime =
+                    reader.getMetadataValue(AbstractGridCoverage2DReader.TIME_DOMAIN_MINIMUM);
+            if (currentTime == null) {
+                return null;
+            }
+            try {
+                return getTimeFormat().parse(currentTime);
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to get minimum time from coverage reader", e);
+            }
         }
     }
 
@@ -287,6 +321,22 @@ public class ReaderDimensionsAccessor {
         return "true".equalsIgnoreCase(reader.getMetadataValue(HAS_ELEVATION_DOMAIN));
     }
 
+    /** Returns a Fixed Values for the given dimension */
+    public TreeSet<Object> getFixedValueRange(String fixedValues) {
+        TreeSet<Object> result = new TreeSet<>();
+        if (fixedValues == null || fixedValues.trim().isEmpty()) {
+            return null;
+        }
+        List<String> fixedValueList = Arrays.asList(fixedValues.split(","));
+        if (!fixedValueList.isEmpty()) {
+            for (String fixedValue : fixedValueList) {
+                result.add(fixedValue);
+            }
+        }
+
+        return result;
+    }
+
     /**
      * Returns the full set of elevation values (either as Double or NumberRange), sorted from
      * smaller to higher
@@ -295,14 +345,19 @@ public class ReaderDimensionsAccessor {
         if (!hasElevation()) {
             return null;
         }
-        // parse the values from the reader, they are exposed as strings...
-        String[] elevationValues = reader.getMetadataValue(ELEVATION_DOMAIN).split(",");
-        TreeSet<Object> elevations = new TreeSet<>(ELEVATION_COMPARATOR);
-        for (String val : elevationValues) {
-            try {
-                elevations.add(parseNumberOrRange(val));
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getMessage(), e);
+        TreeSet<Object> elevations = null;
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            elevations = getFixedValueRange(dimensionInfo.getFixedValues());
+        } else {
+            // parse the values from the reader, they are exposed as strings...
+            String[] elevationValues = reader.getMetadataValue(ELEVATION_DOMAIN).split(",");
+            elevations = new TreeSet<>(ELEVATION_COMPARATOR);
+            for (String val : elevationValues) {
+                try {
+                    elevations.add(parseNumberOrRange(val));
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, e.getMessage(), e);
+                }
             }
         }
 
@@ -323,24 +378,28 @@ public class ReaderDimensionsAccessor {
 
         // special optimization for structured coverage readers
         TreeSet<Object> result = null;
-        if (reader instanceof StructuredGridCoverage2DReader) {
-            StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
-            result = getDimensionValuesInRange("elevation", range, maxEntries, sr);
-        }
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            result = getFixedValueRange(dimensionInfo.getFixedValues());
+        } else {
+            if (reader instanceof StructuredGridCoverage2DReader) {
+                StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
+                result = getDimensionValuesInRange("elevation", range, maxEntries, sr);
+            } else {
+                // if we got here, the optimization did not work, do the normal path
+                if (result == null) {
+                    result = new TreeSet<>();
+                    TreeSet<Object> fullDomain = getElevationDomain();
 
-        // if we got here, the optimization did not work, do the normal path
-        if (result == null) {
-            result = new TreeSet<>();
-            TreeSet<Object> fullDomain = getElevationDomain();
-
-            for (Object o : fullDomain) {
-                if (o instanceof Double) {
-                    if (range.contains((Number) o)) {
-                        result.add(o);
-                    }
-                } else if (o instanceof NumberRange) {
-                    if (range.intersects((NumberRange) o)) {
-                        result.add(o);
+                    for (Object o : fullDomain) {
+                        if (o instanceof Double) {
+                            if (range.contains((Number) o)) {
+                                result.add(o);
+                            }
+                        } else if (o instanceof NumberRange) {
+                            if (range.intersects((NumberRange) o)) {
+                                result.add(o);
+                            }
+                        }
                     }
                 }
             }
@@ -393,8 +452,14 @@ public class ReaderDimensionsAccessor {
         if (!hasElevation()) {
             return null;
         }
-        final String elevation =
-                reader.getMetadataValue(AbstractGridCoverage2DReader.ELEVATION_DOMAIN_MAXIMUM);
+        String elevation = null;
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            elevation = String.valueOf(getFixedValueRange(dimensionInfo.getFixedValues()));
+        } else {
+            elevation =
+                    reader.getMetadataValue(AbstractGridCoverage2DReader.ELEVATION_DOMAIN_MAXIMUM);
+        }
+
         if (elevation == null) {
             return null;
         }
@@ -410,8 +475,14 @@ public class ReaderDimensionsAccessor {
         if (!hasElevation()) {
             return null;
         }
-        final String elevation =
-                reader.getMetadataValue(AbstractGridCoverage2DReader.ELEVATION_DOMAIN_MINIMUM);
+        String elevation = null;
+        if (dimensionInfo != null && dimensionInfo.getFixedValues() != null) {
+            elevation = String.valueOf(getFixedValueRange(dimensionInfo.getFixedValues()));
+        } else {
+            elevation =
+                    reader.getMetadataValue(AbstractGridCoverage2DReader.ELEVATION_DOMAIN_MINIMUM);
+        }
+
         if (elevation == null) {
             return null;
         }

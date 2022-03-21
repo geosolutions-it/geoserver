@@ -297,7 +297,8 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
                 DimensionInfo timeInfo =
                         ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
                 if (timeInfo != null && timeInfo.isEnabled()) {
-                    ReaderDimensionsAccessor dimensions = new ReaderDimensionsAccessor(reader);
+                    ReaderDimensionsAccessor dimensions =
+                            new ReaderDimensionsAccessor(reader, timeInfo);
                     SimpleDateFormat format = dimensions.getTimeFormat();
                     element("gml:timePosition", format.format(dimensions.getMinTime()));
                     element("gml:timePosition", format.format(dimensions.getMaxTime()));
@@ -345,7 +346,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             }
 
             DimensionInfo timeInfo = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
-            ReaderDimensionsAccessor dimensions = new ReaderDimensionsAccessor(reader);
+            ReaderDimensionsAccessor dimensions = new ReaderDimensionsAccessor(reader, timeInfo);
             start("wcs:domainSet");
             start("wcs:spatialDomain");
             handleBoundingBox(ci.getSRS(), ci.getNativeBoundingBox(), timeInfo, dimensions);
@@ -558,7 +559,8 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
                                     + ci.getStore().getFormat().getName());
                 }
 
-                ReaderDimensionsAccessor dimensions = new ReaderDimensionsAccessor(reader);
+                ReaderDimensionsAccessor dimensions =
+                        new ReaderDimensionsAccessor(reader, elevationInfo);
                 if (dimensions.hasElevation()) {
                     // we can only report values one at a time here, there is no interval concept
                     start("wcs:axisDescription");

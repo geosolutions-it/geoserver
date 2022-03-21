@@ -475,76 +475,89 @@ abstract class DimensionHelper {
         final StringBuilder buff = new StringBuilder();
 
         if (DimensionPresentation.LIST == dimension.getPresentation()) {
-            for (Object val : values) {
-                if (val instanceof Number) {
-                    buff.append(val);
-                } else {
-                    NumberRange range = (NumberRange) val;
-                    buff.append(range.getMinimum())
-                            .append("/")
-                            .append(range.getMaximum())
-                            .append("/0");
-                }
-                buff.append(",");
-            }
-            elevationMetadata =
-                    buff.substring(0, buff.length() - 1)
-                            .replaceAll("\\[", "")
-                            .replaceAll("\\]", "")
-                            .replaceAll(" ", "");
-        } else if (DimensionPresentation.CONTINUOUS_INTERVAL == dimension.getPresentation()) {
-            NumberRange range = getMinMaxZInterval(values);
-            buff.append(range.getMinimum());
-            buff.append("/");
-            buff.append(range.getMaximum());
-            buff.append("/0");
-
-            elevationMetadata = buff.toString();
-        } else if (DimensionPresentation.DISCRETE_INTERVAL == dimension.getPresentation()) {
-            final NumberRange range = getMinMaxZInterval(values);
-            final Class<?> typeBinding = values.first().getClass();
-            final boolean isDecimal = isDecimal(typeBinding);
-            String minStr, maxStr;
-            if (isDecimal) {
-                minStr = String.valueOf(range.getMinimum());
-                maxStr = String.valueOf(range.getMaximum());
+            if (dimension.getFixedValues() != null) {
+                elevationMetadata = dimension.getFixedValues();
             } else {
-                minStr = String.valueOf(Double.valueOf(range.getMinimum()).longValue());
-                maxStr = String.valueOf(Double.valueOf(range.getMaximum()).longValue());
-            }
-            buff.append(minStr);
-            buff.append("/");
-            buff.append(maxStr);
-            buff.append("/");
-
-            BigDecimal resolution = dimension.getResolution();
-            if (resolution != null) {
-                buff.append(resolution.doubleValue());
-            } else {
-                if (values.size() >= 2 && allNumbers(values)) {
-                    int count = 2, i = 2;
-                    Number[] zPositions = new Number[count];
-                    // convert all to double
-                    final List<Number> numberValues =
-                            values.stream().map(x -> (Number) x).collect(Collectors.toList());
-                    for (Object val : numberValues) {
-                        zPositions[count - i--] = (Number) val;
-                        if (i == 0) break;
+                for (Object val : values) {
+                    if (val instanceof Number) {
+                        buff.append(val);
+                    } else {
+                        NumberRange range = (NumberRange) val;
+                        buff.append(range.getMinimum())
+                                .append("/")
+                                .append(range.getMaximum())
+                                .append("/0");
                     }
-                    if (isDecimal)
-                        buff.append(
-                                zPositions[count - 1].doubleValue()
-                                        - zPositions[count - 2].doubleValue());
-                    else
-                        buff.append(
-                                zPositions[count - 1].longValue()
-                                        - zPositions[count - 2].longValue());
-                } else {
-                    buff.append(0);
+                    buff.append(",");
                 }
+                elevationMetadata =
+                        buff.substring(0, buff.length() - 1)
+                                .replaceAll("\\[", "")
+                                .replaceAll("\\]", "")
+                                .replaceAll(" ", "");
             }
 
-            elevationMetadata = buff.toString();
+        } else if (DimensionPresentation.CONTINUOUS_INTERVAL == dimension.getPresentation()) {
+            if (dimension.getFixedValues() != null) {
+                elevationMetadata = dimension.getFixedValues();
+            } else {
+                NumberRange range = getMinMaxZInterval(values);
+                buff.append(range.getMinimum());
+                buff.append("/");
+                buff.append(range.getMaximum());
+                buff.append("/0");
+
+                elevationMetadata = buff.toString();
+            }
+        } else if (DimensionPresentation.DISCRETE_INTERVAL == dimension.getPresentation()) {
+            if (dimension.getFixedValues() != null) {
+                elevationMetadata = dimension.getFixedValues();
+            } else {
+                final NumberRange range = getMinMaxZInterval(values);
+                final Class<?> typeBinding = values.first().getClass();
+                final boolean isDecimal = isDecimal(typeBinding);
+                String minStr, maxStr;
+                if (isDecimal) {
+                    minStr = String.valueOf(range.getMinimum());
+                    maxStr = String.valueOf(range.getMaximum());
+                } else {
+                    minStr = String.valueOf(Double.valueOf(range.getMinimum()).longValue());
+                    maxStr = String.valueOf(Double.valueOf(range.getMaximum()).longValue());
+                }
+                buff.append(minStr);
+                buff.append("/");
+                buff.append(maxStr);
+                buff.append("/");
+
+                BigDecimal resolution = dimension.getResolution();
+                if (resolution != null) {
+                    buff.append(resolution.doubleValue());
+                } else {
+                    if (values.size() >= 2 && allNumbers(values)) {
+                        int count = 2, i = 2;
+                        Number[] zPositions = new Number[count];
+                        // convert all to double
+                        final List<Number> numberValues =
+                                values.stream().map(x -> (Number) x).collect(Collectors.toList());
+                        for (Object val : numberValues) {
+                            zPositions[count - i--] = (Number) val;
+                            if (i == 0) break;
+                        }
+                        if (isDecimal)
+                            buff.append(
+                                    zPositions[count - 1].doubleValue()
+                                            - zPositions[count - 2].doubleValue());
+                        else
+                            buff.append(
+                                    zPositions[count - 1].longValue()
+                                            - zPositions[count - 2].longValue());
+                    } else {
+                        buff.append(0);
+                    }
+                }
+
+                elevationMetadata = buff.toString();
+            }
         }
 
         return elevationMetadata;
@@ -565,51 +578,65 @@ abstract class DimensionHelper {
         final ISO8601Formatter df = new ISO8601Formatter();
 
         if (DimensionPresentation.LIST == dimension.getPresentation()) {
-            for (Object date : values) {
-                buff.append(df.format(date));
-                buff.append(",");
-            }
-            timeMetadata =
-                    buff.substring(0, buff.length() - 1)
-                            .replaceAll("\\[", "")
-                            .replaceAll("\\]", "")
-                            .replaceAll(" ", "");
-        } else if (DimensionPresentation.CONTINUOUS_INTERVAL == dimension.getPresentation()) {
-            DateRange interval = getMinMaxTimeInterval(values);
-            buff.append(df.format(interval.getMinValue()));
-            buff.append("/");
-            buff.append(df.format(interval.getMaxValue()));
-            buff.append("/PT1S");
-            timeMetadata = buff.toString();
-        } else if (DimensionPresentation.DISCRETE_INTERVAL == dimension.getPresentation()) {
-            DateRange interval = getMinMaxTimeInterval(values);
-            buff.append(df.format(interval.getMinValue()));
-            buff.append("/");
-            buff.append(df.format(interval.getMaxValue()));
-            buff.append("/");
-
-            final BigDecimal resolution = dimension.getResolution();
-            if (resolution != null) {
-                // resolution has been provided
-                buff.append(new DefaultPeriodDuration(resolution.longValue()).toString());
+            if (dimension.getFixedValues() != null) {
+                timeMetadata = dimension.getFixedValues();
             } else {
-                if (values.size() >= 2 && allDates(values)) {
-                    int count = 2, i = 2;
-                    Date[] timePositions = new Date[count];
-                    for (Object date : values) {
-                        timePositions[count - i--] = (Date) date;
-                        if (i == 0) break;
-                    }
-                    long durationInMilliSeconds =
-                            timePositions[count - 1].getTime() - timePositions[count - 2].getTime();
-                    buff.append(new DefaultPeriodDuration(durationInMilliSeconds).toString());
-                } else {
-                    // assume 1 second and be done with it...
-                    buff.append("PT1S");
+                for (Object date : values) {
+                    buff.append(df.format(date));
+                    buff.append(",");
                 }
+                timeMetadata =
+                        buff.substring(0, buff.length() - 1)
+                                .replaceAll("\\[", "")
+                                .replaceAll("\\]", "")
+                                .replaceAll(" ", "");
             }
 
-            timeMetadata = buff.toString();
+        } else if (DimensionPresentation.CONTINUOUS_INTERVAL == dimension.getPresentation()) {
+            if (dimension.getFixedValues() != null) {
+                timeMetadata = dimension.getFixedValues();
+            } else {
+                DateRange interval = getMinMaxTimeInterval(values);
+                buff.append(df.format(interval.getMinValue()));
+                buff.append("/");
+                buff.append(df.format(interval.getMaxValue()));
+                buff.append("/PT1S");
+                timeMetadata = buff.toString();
+            }
+        } else if (DimensionPresentation.DISCRETE_INTERVAL == dimension.getPresentation()) {
+            if (dimension.getFixedValues() != null) {
+                timeMetadata = dimension.getFixedValues();
+            } else {
+                DateRange interval = getMinMaxTimeInterval(values);
+                buff.append(df.format(interval.getMinValue()));
+                buff.append("/");
+                buff.append(df.format(interval.getMaxValue()));
+                buff.append("/");
+
+                final BigDecimal resolution = dimension.getResolution();
+                if (resolution != null) {
+                    // resolution has been provided
+                    buff.append(new DefaultPeriodDuration(resolution.longValue()).toString());
+                } else {
+                    if (values.size() >= 2 && allDates(values)) {
+                        int count = 2, i = 2;
+                        Date[] timePositions = new Date[count];
+                        for (Object date : values) {
+                            timePositions[count - i--] = (Date) date;
+                            if (i == 0) break;
+                        }
+                        long durationInMilliSeconds =
+                                timePositions[count - 1].getTime()
+                                        - timePositions[count - 2].getTime();
+                        buff.append(new DefaultPeriodDuration(durationInMilliSeconds).toString());
+                    } else {
+                        // assume 1 second and be done with it...
+                        buff.append("PT1S");
+                    }
+                }
+
+                timeMetadata = buff.toString();
+            }
         }
 
         return timeMetadata;

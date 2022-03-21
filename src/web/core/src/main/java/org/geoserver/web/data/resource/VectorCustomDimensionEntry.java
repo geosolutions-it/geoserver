@@ -159,6 +159,16 @@ public class VectorCustomDimensionEntry implements DimensionInfo {
         dimensionInfo.setRawNearestMatchEnabled(false);
     }
 
+    @Override
+    public String getFixedValues() {
+        return dimensionInfo.getFixedValues();
+    }
+
+    @Override
+    public void setFixedValues(String fixedValues) {
+        dimensionInfo.setFixedValues(fixedValues);
+    }
+
     public String getKey() {
         return key;
     }

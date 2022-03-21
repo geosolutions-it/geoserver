@@ -7,6 +7,7 @@ package org.geoserver.web.data.resource;
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -23,8 +24,10 @@ import org.apache.wicket.markup.html.form.CheckBox;
 import org.apache.wicket.markup.html.form.ChoiceRenderer;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.FormComponentPanel;
+import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.model.IModel;
+import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.validation.IValidatable;
 import org.apache.wicket.validation.IValidator;
@@ -87,6 +90,10 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
     private final CheckBox rawNearestMatch;
 
     private final TextField<String> acceptableInterval;
+
+    private final CheckBox fixedValueCheckbox;
+
+    private final TextArea<String> fixedValues;
 
     boolean time;
 
@@ -417,6 +424,46 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
                                                 .setVariable("actual", validatable.getValue()));
                             }
                         });
+
+        // add support for Fixed Value Range
+        boolean checkResult = false;
+        if (model.getObject().getFixedValues() != null) {
+            checkResult = true;
+        }
+        final WebMarkupContainer fixedValueRangeContainer =
+                new WebMarkupContainer("fixedValueRangeContainer");
+        fixedValueRangeContainer.setOutputMarkupId(true);
+
+        fixedValues = new TextArea<>("fixedValues", new PropertyModel<>(model, "fixedValues"));
+        fixedValues.setVisible(checkResult);
+        fixedValueRangeContainer.add(fixedValues);
+        fixedValues.add(
+                (IValidator<String>)
+                        validatable -> {
+                            try {
+                                checkFixedValueRange(validatable.getValue(), getAttributeType());
+                            } catch (Exception e) {
+                                String messageKey = "invalidFixedValueRange";
+                                validatable.error(
+                                        new ValidationError(messageKey)
+                                                .addKey(messageKey)
+                                                .setVariable("actual", validatable.getValue()));
+                            }
+                        });
+        fixedValueCheckbox = new CheckBox("fixedValue", Model.of(checkResult));
+        configs.add(fixedValueCheckbox);
+        fixedValueCheckbox.add(
+                new AjaxFormComponentUpdatingBehavior("click") {
+
+                    @Override
+                    protected void onUpdate(AjaxRequestTarget target) {
+                        Boolean visible = fixedValueCheckbox.getModelObject();
+                        fixedValues.setVisible(visible);
+                        target.add(fixedValueRangeContainer);
+                    }
+                });
+        configs.add(fixedValueRangeContainer);
+
         initComponents();
     }
 
@@ -452,6 +499,40 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
             resTime.setRequired(false);
             resElevation.setRequired(true);
             resElevation.setVisible(true);
+        }
+    }
+
+    public boolean isDouble(String value) {
+        try {
+            Double.parseDouble(value);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    protected void checkFixedValueRange(String fixedValues, Class<?> dataType) {
+        List<String> fixedValueList = Arrays.asList(fixedValues.split(","));
+        if (!fixedValueList.isEmpty()) {
+            for (String fixedValue : fixedValueList) {
+                if (Number.class.isAssignableFrom(dataType)) {
+                    boolean checkresult = isDouble(fixedValue);
+                    if (!checkresult) {
+                        throw new IllegalArgumentException(
+                                "Invalid Fixed Value range specification");
+                    }
+                } else if (Date.class.isAssignableFrom(dataType)) {
+                    TimeParser parser = new TimeParser();
+                    try {
+                        parser.parse(fixedValue);
+                    } catch (ParseException e) {
+                        throw new IllegalArgumentException(
+                                "Invalid Fixed Value range specification");
+                    }
+                } else {
+                    throw new IllegalArgumentException("Invalid Fixed Value range specification");
+                }
+            }
         }
     }
 
@@ -571,6 +652,10 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
         } else {
             info.setRawNearestMatchEnabled(false);
         }
+
+        fixedValues.processInput();
+
+        info.setFixedValues(fixedValues.getModelObject());
 
         convertInputExtensions(info);
 

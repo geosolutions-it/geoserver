@@ -12,6 +12,8 @@ import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -21,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -221,6 +224,10 @@ public class WMS implements ApplicationContextAware {
     public static final String DISPOSAL_METHOD_PREVIOUS = "previous";
 
     public static final String DISPOSAL_METHOD_DEFAULT = DISPOSAL_METHOD_NONE;
+
+    private static final String UTC_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+
+    private static final TimeZone UTC_TIME_ZONE = TimeZone.getTimeZone("UTC");
 
     public static final String[] DISPOSAL_METHODS = {
         DISPOSAL_METHOD_NONE,
@@ -1253,6 +1260,42 @@ public class WMS implements ApplicationContextAware {
         return queryFeatureTypeDimension(typeInfo, range, maxItems, ResourceInfo.TIME);
     }
 
+    /** Returns a {@link SimpleDateFormat} using the UTC_PATTERN and the UTC time zone */
+    public SimpleDateFormat getTimeFormat() {
+        final SimpleDateFormat df = new SimpleDateFormat(UTC_PATTERN);
+        df.setTimeZone(UTC_TIME_ZONE);
+        return df;
+    }
+
+    /**
+     * Returns available fixed values for a Time dimension.
+     *
+     * @param spec info that holds the Time dimension.
+     * @return fixed values date type list.
+     */
+    public TreeSet<Date> getFixedValueRangeTimes(String spec) {
+        TreeSet<Date> result = new TreeSet<>();
+        SimpleDateFormat outputDateFormat = getTimeFormat();
+        if (spec == null || spec.trim().isEmpty()) {
+            return null;
+        }
+
+        List<String> fixedValueList = Arrays.asList(spec.split(","));
+        if (!fixedValueList.isEmpty()) {
+            for (String fixedValues : fixedValueList) {
+                Date date = null;
+                try {
+                    date = outputDateFormat.parse(fixedValues);
+                } catch (ParseException e) {
+                    LOGGER.log(Level.FINE, "", e);
+                }
+                result.add(date);
+            }
+        }
+
+        return result;
+    }
+
     /**
      * Returns the list of time values for the specified typeInfo based on the dimension
      * representation: all values for {@link DimensionPresentation#LIST}, otherwise min and max
@@ -1264,34 +1307,49 @@ public class WMS implements ApplicationContextAware {
             throw new ServiceException(
                     "Layer " + typeInfo.prefixedName() + " does not have time support enabled");
         }
-
         FeatureCollection collection = getDimensionCollection(typeInfo, time);
 
         TreeSet<Date> result = new TreeSet<>();
         if (time.getPresentation() == DimensionPresentation.LIST) {
-            final UniqueVisitor visitor = new UniqueVisitor(time.getAttribute());
-            collection.accepts(visitor, null);
+            if (time.getFixedValues() != null) {
+                TreeSet<Date> fixedValueResult = getFixedValueRangeTimes(time.getFixedValues());
+                for (Date value : fixedValueResult) {
+                    result.add(value);
+                }
 
-            @SuppressWarnings("unchecked")
-            Set<Date> values = visitor.getUnique();
-            if (values.isEmpty()) {
-                result = null;
             } else {
-                // we might get null values out of the visitor, strip them
-                values.remove(null);
-                result.addAll(values);
+                final UniqueVisitor visitor = new UniqueVisitor(time.getAttribute());
+                collection.accepts(visitor, null);
+
+                @SuppressWarnings("unchecked")
+                Set<Date> values = visitor.getUnique();
+                if (values.isEmpty()) {
+                    result = null;
+                } else {
+                    // we might get null values out of the visitor, strip them
+                    values.remove(null);
+                    result.addAll(values);
+                }
             }
         } else {
-            final MinVisitor min = new MinVisitor(time.getAttribute());
-            collection.accepts(min, null);
-            CalcResult minResult = min.getResult();
-            // check calcresult first to avoid potential IllegalStateException if no features are in
-            // collection
-            if (minResult != CalcResult.NULL_RESULT) {
-                result.add((Date) min.getMin());
-                final MaxVisitor max = new MaxVisitor(time.getAttribute());
-                collection.accepts(max, null);
-                result.add((Date) max.getMax());
+            if (time.getFixedValues() != null) {
+                TreeSet<Date> fixedValueResult = getFixedValueRangeTimes(time.getFixedValues());
+                for (Date value : fixedValueResult) {
+                    result.add(value);
+                }
+            } else {
+                final MinVisitor min = new MinVisitor(time.getAttribute());
+                collection.accepts(min, null);
+                CalcResult minResult = min.getResult();
+                // check calcresult first to avoid potential IllegalStateException if no features
+                // are in
+                // collection
+                if (minResult != CalcResult.NULL_RESULT) {
+                    result.add((Date) min.getMin());
+                    final MaxVisitor max = new MaxVisitor(time.getAttribute());
+                    collection.accepts(max, null);
+                    result.add((Date) max.getMax());
+                }
             }
         }
 
@@ -1328,6 +1386,28 @@ public class WMS implements ApplicationContextAware {
     }
 
     /**
+     * Returns available fixed values for a Elevation dimension.
+     *
+     * @param fixedValue info that holds the elevation dimension.
+     * @return fixed values double list.
+     */
+    public TreeSet<Double> getFixedValueRangeElevation(String fixedValue) {
+        TreeSet<Double> result = new TreeSet<>();
+        if (fixedValue == null || fixedValue.trim().isEmpty()) {
+            return null;
+        }
+
+        List<String> fixedValueList = Arrays.asList(fixedValue.split(","));
+        if (!fixedValueList.isEmpty()) {
+            for (String fixedValues : fixedValueList) {
+                result.add(Double.valueOf(fixedValues));
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Returns the list of elevation values for the specified typeInfo based on the dimension
      * representation: all values for {@link DimensionPresentation#LIST}, otherwise min and max
      */
@@ -1348,29 +1428,47 @@ public class WMS implements ApplicationContextAware {
         if (elevation.getPresentation() == DimensionPresentation.LIST
                 || (elevation.getPresentation() == DimensionPresentation.DISCRETE_INTERVAL
                         && elevation.getResolution() == null)) {
-            final UniqueVisitor visitor = new UniqueVisitor(elevation.getAttribute());
-            collection.accepts(visitor, null);
-
-            @SuppressWarnings("unchecked")
-            Set<Object> values = visitor.getUnique();
-            if (values.isEmpty()) {
-                result = null;
+            if (elevation.getFixedValues() != null) {
+                Set<Double> fixedValueresult =
+                        getFixedValueRangeElevation(elevation.getFixedValues());
+                for (Double obj : fixedValueresult) {
+                    result.add(obj);
+                }
             } else {
-                for (Object value : values) {
-                    result.add(((Number) value).doubleValue());
+
+                final UniqueVisitor visitor = new UniqueVisitor(elevation.getAttribute());
+                collection.accepts(visitor, null);
+
+                @SuppressWarnings("unchecked")
+                Set<Object> values = visitor.getUnique();
+                if (values.isEmpty()) {
+                    result = null;
+                } else {
+                    for (Object value : values) {
+                        result.add(((Number) value).doubleValue());
+                    }
                 }
             }
         } else {
-            final MinVisitor min = new MinVisitor(elevation.getAttribute());
-            collection.accepts(min, null);
-            // check calcresult first to avoid potential IllegalStateException if no features are in
-            // collection
-            CalcResult calcResult = min.getResult();
-            if (calcResult != CalcResult.NULL_RESULT) {
-                result.add(((Number) min.getMin()).doubleValue());
-                final MaxVisitor max = new MaxVisitor(elevation.getAttribute());
-                collection.accepts(max, null);
-                result.add(((Number) max.getMax()).doubleValue());
+            if (elevation.getFixedValues() != null) {
+                Set<Double> fixedValueresult =
+                        getFixedValueRangeElevation(elevation.getFixedValues());
+                for (Double obj : fixedValueresult) {
+                    result.add(obj);
+                }
+            } else {
+                final MinVisitor min = new MinVisitor(elevation.getAttribute());
+                collection.accepts(min, null);
+                // check calcresult first to avoid potential IllegalStateException if no features
+                // are in
+                // collection
+                CalcResult calcResult = min.getResult();
+                if (calcResult != CalcResult.NULL_RESULT) {
+                    result.add(((Number) min.getMin()).doubleValue());
+                    final MaxVisitor max = new MaxVisitor(elevation.getAttribute());
+                    collection.accepts(max, null);
+                    result.add(((Number) max.getMax()).doubleValue());
+                }
             }
         }
 
@@ -1755,6 +1853,28 @@ public class WMS implements ApplicationContextAware {
     }
 
     /**
+     * Returns available fixed values for a dimension.
+     *
+     * @param fixedValue info that holds the custom dimension.
+     * @return fixed values list.
+     */
+    public TreeSet<Object> getFixedValueRange(String fixedValue) {
+        TreeSet<Object> result = new TreeSet<>();
+        if (fixedValue == null || fixedValue.trim().isEmpty()) {
+            return null;
+        }
+
+        List<String> fixedValueList = Arrays.asList(fixedValue.split(","));
+        if (!fixedValueList.isEmpty()) {
+            for (String fixedValues : fixedValueList) {
+                result.add(fixedValues);
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Returns available values for a custom dimension.
      *
      * @param typeInfo feature type info that holds the custom dimension.
@@ -1764,27 +1884,43 @@ public class WMS implements ApplicationContextAware {
     public TreeSet<Object> getDimensionValues(FeatureTypeInfo typeInfo, DimensionInfo dimensionInfo)
             throws IOException {
         final FeatureCollection fcollection = getDimensionCollection(typeInfo, dimensionInfo);
-
         final TreeSet<Object> result = new TreeSet<>();
         if (dimensionInfo.getPresentation() == DimensionPresentation.LIST
                 || (dimensionInfo.getPresentation() == DimensionPresentation.DISCRETE_INTERVAL
                         && dimensionInfo.getResolution() == null)) {
-            final UniqueVisitor uniqueVisitor = new UniqueVisitor(dimensionInfo.getAttribute());
-            fcollection.accepts(uniqueVisitor, null);
-            @SuppressWarnings("unchecked")
-            Set<Object> uniqueValues = uniqueVisitor.getUnique();
-            for (Object obj : uniqueValues) {
-                result.add(obj);
+
+            if (dimensionInfo.getFixedValues() != null) {
+                Set<Object> fixedValueresult = getFixedValueRange(dimensionInfo.getFixedValues());
+                for (Object obj : fixedValueresult) {
+                    result.add(obj);
+                }
+            } else {
+
+                final UniqueVisitor uniqueVisitor = new UniqueVisitor(dimensionInfo.getAttribute());
+                fcollection.accepts(uniqueVisitor, null);
+                @SuppressWarnings("unchecked")
+                Set<Object> uniqueValues = uniqueVisitor.getUnique();
+                for (Object obj : uniqueValues) {
+                    result.add(obj);
+                }
             }
+
         } else {
-            final MinVisitor minVisitor = new MinVisitor(dimensionInfo.getAttribute());
-            fcollection.accepts(minVisitor, null);
-            final CalcResult minResult = minVisitor.getResult();
-            if (minResult != CalcResult.NULL_RESULT) {
-                result.add(minResult.getValue());
-                final MaxVisitor maxVisitor = new MaxVisitor(dimensionInfo.getAttribute());
-                fcollection.accepts(maxVisitor, null);
-                result.add(maxVisitor.getMax());
+            if (dimensionInfo.getFixedValues() != null) {
+                Set<Object> fixedValueresult = getFixedValueRange(dimensionInfo.getFixedValues());
+                for (Object obj : fixedValueresult) {
+                    result.add(obj);
+                }
+            } else {
+                final MinVisitor minVisitor = new MinVisitor(dimensionInfo.getAttribute());
+                fcollection.accepts(minVisitor, null);
+                final CalcResult minResult = minVisitor.getResult();
+                if (minResult != CalcResult.NULL_RESULT) {
+                    result.add(minResult.getValue());
+                    final MaxVisitor maxVisitor = new MaxVisitor(dimensionInfo.getAttribute());
+                    fcollection.accepts(maxVisitor, null);
+                    result.add(maxVisitor.getMax());
+                }
             }
         }
 
