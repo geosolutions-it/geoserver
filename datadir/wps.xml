@@ -47,4 +47,6 @@
   <maxSynchronousExecutionTime>0</maxSynchronousExecutionTime>
   <maxAsynchronousExecutionTime>9000</maxAsynchronousExecutionTime>
   <maxAsynchronousTotalTime>12000</maxAsynchronousTotalTime>
+  <remoteInputDisabled>true</remoteInputDisabled>
 </wps>
+
