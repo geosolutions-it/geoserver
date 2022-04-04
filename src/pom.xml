@@ -485,7 +485,6 @@
      <artifactId>jdom2</artifactId>
      <version>2.0.6</version>
    </dependency>
-
    <dependency>
      <groupId>com.google.code.gson</groupId>
      <artifactId>gson</artifactId>
@@ -1427,9 +1426,36 @@
       <artifactId>joda-time</artifactId>
       <version>${joda-time.version}</version> 
     </dependency>
+
+    <!-- ImageIO-EXT Fixed dependencies -->
+    <dependency>
+      <groupId>it.geosolutions</groupId>
+      <artifactId>imageio-ext-arcgrid</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>it.geosolutions</groupId>
+      <artifactId>imageio-ext-geocore</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>it.geosolutions</groupId>
+      <artifactId>imageio-ext-imagereadmt</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
     <dependency>
       <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-png</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>it.geosolutions</groupId>
+      <artifactId>imageio-ext-streams</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>it.geosolutions</groupId>
+      <artifactId>imageio-ext-tiff</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
@@ -1437,6 +1463,12 @@
       <artifactId>imageio-ext-turbojpeg</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
+    <dependency>
+      <groupId>it.geosolutions</groupId>
+      <artifactId>imageio-ext-utilities</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>no.ecc.vectortile</groupId>
       <artifactId>java-vector-tile</artifactId>
@@ -2147,7 +2179,7 @@
   <poi.version>4.0.0</poi.version>
   <wicket.version>7.6.0</wicket.version>
   <ant.version>1.8.4</ant.version>
-  <imageio-ext.version>1.3.9</imageio-ext.version>
+  <imageio-ext.version>1.3.9-C068-WP2-v19</imageio-ext.version>
   <jaiext.version>1.1.12.1-EOWS</jaiext.version>
   <java.awt.headless>true</java.awt.headless>
   <sun.java2d.d3d>true</sun.java2d.d3d>
