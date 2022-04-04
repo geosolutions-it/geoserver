@@ -100,6 +100,7 @@
           <descriptor>release/ext-geostyler.xml</descriptor>
           <descriptor>release/ext-csw-iso.xml</descriptor>
           <descriptor>release/ext-importer-jdbc.xml</descriptor>
+              <descriptor>release/ext-libdeflate.xml</descriptor>
         </descriptors>
       </configuration>
      </plugin>
@@ -279,6 +280,7 @@
         <module>ogcapi</module>
         <module>csw-iso</module>
         <module>importer-jdbc</module>
+        <module>libdeflate</module>
       </modules>
     </profile>
     <profile>
@@ -646,5 +648,11 @@
         <module>importer-jdbc</module>
       </modules>
     </profile>
-  </profiles>  
+    <profile>
+      <id>libdeflate</id>
+      <modules>
+        <module>libdeflate</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
