@@ -100,7 +100,7 @@
           <descriptor>release/ext-geostyler.xml</descriptor>
           <descriptor>release/ext-csw-iso.xml</descriptor>
           <descriptor>release/ext-importer-jdbc.xml</descriptor>
-              <descriptor>release/ext-libdeflate.xml</descriptor>
+          <descriptor>release/ext-libdeflate.xml</descriptor>
         </descriptors>
       </configuration>
      </plugin>
