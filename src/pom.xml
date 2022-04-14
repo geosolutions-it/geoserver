@@ -1254,18 +1254,23 @@
 
     <!-- ImageIO-EXT Fixed dependencies -->
     <dependency>
-      <groupId>it.geosolutions</groupId>
+      <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-arcgrid</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
-      <groupId>it.geosolutions</groupId>
+      <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-geocore</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
-      <groupId>it.geosolutions</groupId>
+      <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-imagereadmt</artifactId>
+      <version>${imageio-ext.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>it.geosolutions.imageio-ext</groupId>
+      <artifactId>imageio-ext-libdeflate</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
@@ -1274,12 +1279,12 @@
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
-      <groupId>it.geosolutions</groupId>
+      <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-streams</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
-      <groupId>it.geosolutions</groupId>
+      <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-tiff</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
@@ -1289,7 +1294,7 @@
       <version>${imageio-ext.version}</version>
     </dependency>
     <dependency>
-      <groupId>it.geosolutions</groupId>
+      <groupId>it.geosolutions.imageio-ext</groupId>
       <artifactId>imageio-ext-utilities</artifactId>
       <version>${imageio-ext.version}</version>
     </dependency>
