@@ -9,9 +9,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Logger;
+
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wms.featureinfo.GetFeatureInfoOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapResponse;
+import org.geotools.util.logging.Logging;
 import org.springframework.context.ApplicationContext;
 
 /**
@@ -21,6 +24,8 @@ import org.springframework.context.ApplicationContext;
  * @version $Id$
  */
 public class WMSExtensions {
+
+    static final Logger LOGGER = Logging.getLogger(WMS.class);
 
     /** Finds out the registered GetMapOutputFormats in the application context. */
     public static List<GetMapOutputFormat> findMapProducers(final ApplicationContext context) {
@@ -40,7 +45,18 @@ public class WMSExtensions {
             final String outputFormat, final ApplicationContext applicationContext) {
 
         final Collection<GetMapOutputFormat> producers;
+        LOGGER.severe("=====>>>>> Looking for outputFormat: " + outputFormat);
         producers = WMSExtensions.findMapProducers(applicationContext);
+        LOGGER.severe("=====>>>>> Available producers:");
+        for (GetMapOutputFormat format: producers) {
+            StringBuilder message = new StringBuilder();
+            message.append("mimeType: " + format.getMimeType() + ";" + format + "\n");
+            Set<String> formatNames = format.getOutputFormatNames();
+            for (String formatName : formatNames) {
+                message.append(formatName + ";");
+            }
+            LOGGER.severe(message.toString());
+        }
 
         return findMapProducer(outputFormat, producers);
     }
