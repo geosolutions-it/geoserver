@@ -405,7 +405,7 @@ public class GetMapKvpRequestReader extends KvpRequestReader
 
             InputStream input = null;
             if (styleUrl.getProtocol().toLowerCase().indexOf("http") == 0) {
-                input = getHttpInputStream(styleUrl);
+                input = getHttpInputStream(styleUrl, getMap.getHttpRequestHeader("Authorization"));
             } else {
                 try {
                     input = Requests.getInputStream(styleUrl);
@@ -681,12 +681,16 @@ public class GetMapKvpRequestReader extends KvpRequestReader
         return getMap;
     }
 
-    private InputStream getHttpInputStream(URL styleUrl) throws IOException {
+    private InputStream getHttpInputStream(URL styleUrl, String authorizationHeader)
+            throws IOException {
         InputStream input = null;
         HttpCacheContext cacheContext = HttpCacheContext.create();
         CloseableHttpResponse response = null;
         try {
             HttpGet httpget = new HttpGet(styleUrl.toExternalForm());
+            if (authorizationHeader != null) {
+                httpget.addHeader("Authorization", authorizationHeader);
+            }
             response = httpClient.execute(httpget, cacheContext);
 
             if (cacheContext != null) {
