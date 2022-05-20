@@ -117,9 +117,6 @@ public class Dispatcher extends AbstractController {
     /** flag to control wether the dispatcher is cite compliant */
     boolean citeCompliant = false;
 
-    /** buffer size for incoming XML POST requests */
-    int xmlPostRequestLogBufferSize = 1024;
-
     /** thread local variable for the request */
     public static final ThreadLocal<Request> REQUEST = new InheritableThreadLocal<Request>();
 
@@ -362,20 +359,11 @@ public class Dispatcher extends AbstractController {
                 request.setInput(reader(httpRequest));
             }
 
-            char[] req = new char[xmlPostRequestLogBufferSize];
-            int read = request.getInput().read(req, 0, xmlPostRequestLogBufferSize);
-
-            if (logger.isLoggable(Level.FINE)) {
-                if (read == -1) {
-                    request.setInput(null);
-                } else if (read < xmlPostRequestLogBufferSize) {
-                    logger.fine("Raw XML request: " + new String(req));
-                } else if (xmlPostRequestLogBufferSize != 0) {
-                    logger.fine("Raw XML request starts with: " + new String(req) + "...");
-                }
+            if (-1 == request.getInput().read()) {
+                request.setInput(null);
+            } else {
+                request.getInput().reset();
             }
-            if (read == -1) request.setInput(null);
-            else request.getInput().reset();
         }
         // parse the request path into two components. (1) the 'path' which
         // is the string after the last '/', and the 'context' which is the
@@ -1824,13 +1812,5 @@ public class Dispatcher extends AbstractController {
     protected static boolean isSecurityException(Throwable t) {
         return t != null
                 && t.getClass().getPackage().getName().startsWith("org.springframework.security");
-    }
-
-    public int getXMLPostRequestLogBufferSize() {
-        return xmlPostRequestLogBufferSize;
-    }
-
-    public void setXMLPostRequestLogBufferSize(int bufferSize) {
-        this.xmlPostRequestLogBufferSize = bufferSize;
     }
 }
