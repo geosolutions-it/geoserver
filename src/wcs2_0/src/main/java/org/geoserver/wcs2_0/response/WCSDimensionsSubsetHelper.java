@@ -475,39 +475,7 @@ public class WCSDimensionsSubsetHelper {
                 }
 
                 // now decide what to do
-                if (dim instanceof DimensionTrimType) {
-
-                    // TRIMMING
-                    final DimensionTrimType trim = (DimensionTrimType) dim;
-                    final Date low = PARSER.parseDateTime(trim.getTrimLow());
-                    final Date high = PARSER.parseDateTime(trim.getTrimHigh());
-
-                    // low > high???
-                    if (low.compareTo(high) > 0) {
-                        throw new WCS20Exception(
-                                "Low greater than High: "
-                                        + trim.getTrimLow()
-                                        + ", "
-                                        + trim.getTrimHigh(),
-                                WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
-                                "subset");
-                    }
-
-                    timeSubset = new DateRange(low, high);
-                } else if (dim instanceof DimensionSliceType) {
-
-                    // SLICING
-                    final DimensionSliceType slicing = (DimensionSliceType) dim;
-                    final String slicePointS = slicing.getSlicePoint();
-                    final Date slicePoint = PARSER.parseDateTime(slicePointS);
-                    timeSubset = new DateRange(slicePoint, slicePoint);
-                } else {
-                    throw new WCS20Exception(
-                            "Invalid element found while attempting to parse dimension subsetting request: "
-                                    + dim.getClass().toString(),
-                            WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
-                            "subset");
-                }
+                timeSubset = parseTimeSubset(dim);
             }
 
             // right now we don't support trimming
@@ -527,13 +495,48 @@ public class WCSDimensionsSubsetHelper {
         return timeSubset;
     }
 
-    /**
-     * Nearest interpolation against time
-     *
-     * @param timeSubset
-     * @param accessor
-     * @throws IOException
-     */
+    private DateRange parseTimeSubset(DimensionSubsetType dim) {
+        try {
+            if (dim instanceof DimensionTrimType) {
+                // TRIMMING
+                final DimensionTrimType trim = (DimensionTrimType) dim;
+                final Date low = PARSER.parseDateTime(trim.getTrimLow());
+                final Date high = PARSER.parseDateTime(trim.getTrimHigh());
+
+                // low > high???
+                if (low.compareTo(high) > 0) {
+                    throw new WCS20Exception(
+                            "Low greater than High: "
+                                    + trim.getTrimLow()
+                                    + ", "
+                                    + trim.getTrimHigh(),
+                            WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
+                            "subset");
+                }
+
+                return new DateRange(low, high);
+            } else if (dim instanceof DimensionSliceType) {
+                // SLICING
+                final DimensionSliceType slicing = (DimensionSliceType) dim;
+                final String slicePointS = slicing.getSlicePoint();
+                final Date slicePoint = PARSER.parseDateTime(slicePointS);
+                return new DateRange(slicePoint, slicePoint);
+            } else {
+                throw new WCS20Exception(
+                        "Invalid element found while attempting to parse dimension subsetting request: "
+                                + dim.getClass().toString(),
+                        WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
+                        "subset");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new WCS20Exception(
+                    "Invalid time subset",
+                    WCS20Exception.WCS20ExceptionCode.InvalidEncodingSyntax,
+                    "subset",
+                    e);
+        }
+    }
+
     private DateRange interpolateTime(DateRange timeSubset, ReaderDimensionsAccessor accessor)
             throws IOException {
         TreeSet<Object> domain = accessor.getTimeDomain();
