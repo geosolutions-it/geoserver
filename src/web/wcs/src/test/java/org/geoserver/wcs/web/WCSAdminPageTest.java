@@ -38,7 +38,6 @@ public class WCSAdminPageTest extends GeoServerWicketCoverageTestSupport {
         ft.setValue("maxOutputMemory", "1");
         ft.setValue("maxRequestedDimensionValues", "1");
 
-        ft.select("defaultLocale", 11);
         ft.setValue("defaultDeflateCompressionLevel", "20");
         ft.submit();
         // there should be an error
