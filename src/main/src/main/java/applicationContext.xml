@@ -334,5 +334,20 @@
   <bean id="coverageReaderFileConverter" class="org.geoserver.catalog.CoverageReaderFileConverter">
     <constructor-arg ref="catalog"/>
   </bean>
-    
+
+  <bean id="defaultResourceAccessManager" class="org.geoserver.security.impl.DefaultResourceAccessManager">
+    <constructor-arg ref="accessRulesDao"/>
+    <constructor-arg ref="rawCatalog"/>
+    <property name="groupsCache" ref="layerGroupContainmentCache"/>
+  </bean>
+
+  <bean id="layerGroupContainmentCache" class="org.geoserver.security.impl.LayerGroupContainmentCache">
+    <constructor-arg ref="rawCatalog"/>
+  </bean>
+
+  <bean id="charSeparatedViewParamsFormatParser" class="org.geoserver.ows.kvp.CharSeparatedViewParamsFormatParser">
+  </bean>
+  <bean id="xmlViewParamsFormatParser" class="org.geoserver.ows.kvp.XMLViewParamsFormatParser">
+  </bean>
+
 </beans>
