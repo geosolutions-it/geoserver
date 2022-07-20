@@ -36,6 +36,7 @@ import javax.xml.namespace.QName;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.spi.LoggingEvent;
+import org.apache.log4j.spi.ThrowableInformation;
 import org.custommonkey.xmlunit.XMLAssert;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -57,6 +58,7 @@ import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.data.test.SystemTestData.LayerProperty;
 import org.geoserver.data.test.TestData;
+import org.geoserver.ows.Dispatcher;
 import org.geoserver.test.RemoteOWSTestSupport;
 import org.geoserver.wms.GetMap;
 import org.geoserver.wms.GetMapOutputFormat;
@@ -512,6 +514,46 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                                 + "&srs=EPSG:900913");
         assertEquals("image/png", response.getContentType());
         assertEquals("inline; filename=sf-states.png", response.getHeader("Content-Disposition"));
+    }
+
+    @Test
+    public void testInvalidDateNotLogged() throws Exception {
+        org.apache.log4j.Logger l4jLogger = getLog4JLogger(Dispatcher.class, "logger");
+        l4jLogger.addAppender(
+                new AppenderSkeleton() {
+
+                    @Override
+                    public boolean requiresLayout() {
+                        return false;
+                    }
+
+                    @Override
+                    public void close() {}
+
+                    @Override
+                    protected void append(LoggingEvent event) {
+                        if (event.getThrowableInformation() != null) {
+                            ThrowableInformation info = event.getThrowableInformation();
+                            String message = info.getThrowable().getMessage();
+                            if (message.startsWith("Invalid")) {
+                                fail("The error message is still there!");
+                            }
+                        }
+                    }
+                });
+
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bbox=-9.6450076761637E7,-3.9566251818225E7,9.6450076761637E7,3.9566251818225E7"
+                                + "&styles=&layers="
+                                + layers
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&srs=EPSG:900913"
+                                + "&time=\"2022-6-20T5:30:0:00.000Z\"");
+        assertEquals("text/xml", response.getContentType());
     }
 
     private org.apache.log4j.Logger getLog4JLogger(Class targetClass, String fieldName)
