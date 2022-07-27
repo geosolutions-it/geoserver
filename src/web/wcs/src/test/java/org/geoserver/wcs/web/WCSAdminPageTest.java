@@ -5,6 +5,7 @@
  */
 package org.geoserver.wcs.web;
 
+import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.web.wicket.KeywordsEditor;
 import org.junit.Test;
@@ -24,5 +25,23 @@ public class WCSAdminPageTest extends GeoServerWicketCoverageTestSupport {
         // test that components have been filled as expected
         tester.assertComponent("form:keywords", KeywordsEditor.class);
         tester.assertModelValue("form:keywords", wcs.getKeywords());
+    }
+
+    @Test
+    public void testDefaultDeflate() {
+        login();
+        // start the page
+        tester.startPage(WCSAdminPage.class);
+        FormTester ft = tester.newFormTester("form");
+        // mandatory fields
+        ft.setValue("maxInputMemory", "1");
+        ft.setValue("maxOutputMemory", "1");
+        ft.setValue("maxRequestedDimensionValues", "1");
+
+        ft.setValue("defaultDeflateCompressionLevel", "20");
+        ft.submit();
+        // there should be an error
+        tester.assertErrorMessages(
+                "The value of 'Default Deflate Compression Level' must be between 1 and 9.");
     }
 }

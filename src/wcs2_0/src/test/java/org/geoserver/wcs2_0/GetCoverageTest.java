@@ -5,21 +5,30 @@
 package org.geoserver.wcs2_0;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import javax.xml.namespace.QName;
 import net.opengis.wcs20.GetCoverageType;
 import net.opengis.wcs20.ScalingType;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.config.GeoServer;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
+import org.geoserver.ows.util.CaseInsensitiveMap;
+import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wcs.WCSInfo;
+import org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate;
 import org.geoserver.wcs2_0.kvp.WCS20GetCoverageRequestReader;
 import org.geoserver.wcs2_0.response.MIMETypeMapper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
+import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.junit.Before;
@@ -76,8 +85,62 @@ public class GetCoverageTest extends WCSTestSupport {
         assertScalingByHalf(raw);
     }
 
+    @Test
+    public void testDeflateCompressionLevel() throws Exception {
+        CoverageInfo ci = getCatalog().getCoverageByName(getLayerId(RAIN));
+        GetCoverageType gc =
+                parse(
+                        "wcs?request=GetCoverage&service=WCS&version=2.0.1"
+                                + "&coverageId=rain"
+                                + "&format=image/tiff&geotiff:compression=DEFLATE");
+        coverageReader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
+        GeoServer geoserver = getGeoServer();
+        WCSInfo service = geoserver.getService(WCSInfo.class);
+        service.setDefaultDeflateCompressionLevel(9);
+        geoserver.save(service);
+        EnvelopeAxesLabelsMapper axesMapper =
+                GeoServerExtensions.bean(EnvelopeAxesLabelsMapper.class);
+        MIMETypeMapper mimeMapper = GeoServerExtensions.bean(MIMETypeMapper.class);
+
+        GetCoverage getCoverage = new GetCoverage(service, getCatalog(), axesMapper, mimeMapper);
+        GridCoverage gridCoverage = getCoverage.run(gc);
+        GeoTIFFCoverageResponseDelegate delegate =
+                new GeoTIFFCoverageResponseDelegate(getGeoServer());
+        long small = getEncodingLength(delegate, gridCoverage);
+        service = geoserver.getService(WCSInfo.class);
+        service.setDefaultDeflateCompressionLevel(1);
+        geoserver.save(service);
+        long big = getEncodingLength(delegate, gridCoverage);
+        assertTrue(big > small);
+        scheduleForCleaning(gridCoverage);
+    }
+
+    private long getEncodingLength(
+            GeoTIFFCoverageResponseDelegate delegate, GridCoverage gridCoverage)
+            throws IOException {
+        File file = File.createTempFile("wcs", "deflate.tif");
+        file.deleteOnExit();
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+
+            delegate.encode(
+                    (GridCoverage2D) gridCoverage,
+                    "image/tiff",
+                    Collections.singletonMap("compression", "DEFLATE"),
+                    fos);
+            return file.length();
+        }
+    }
+
+    protected GetCoverageType parse(String url) throws Exception {
+        Map<String, String> rawKvp = new CaseInsensitiveMap(KvpUtils.parseQueryString(url));
+        Map<String, String> kvp = new CaseInsensitiveMap(parseKvp(rawKvp));
+        WCS20GetCoverageRequestReader reader = new WCS20GetCoverageRequestReader();
+        GetCoverageType gc = (GetCoverageType) reader.createRequest();
+        return (GetCoverageType) reader.read(gc, kvp, rawKvp);
+    }
+
     private void assertScalingByHalf(Map<String, String> raw) throws Exception {
-        Map kvp = parseKvp(raw);
+        Map<String, Object> kvp = parseKvp(raw);
         WCS20GetCoverageRequestReader reader = new WCS20GetCoverageRequestReader();
         GetCoverageType getCoverageRequest =
                 (GetCoverageType) reader.read(reader.createRequest(), kvp, raw);
