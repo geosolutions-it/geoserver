@@ -87,7 +87,7 @@
   </distributionManagement>
 
   <properties>
-    <gs.version>C105.2.21.0.02</gs.version>
+    <gs.version>C105.2.21.0.03</gs.version>
     <gt.version>27.0</gt.version>
     <gwc.version>1.21.0</gwc.version>
     <jts.version>1.18.2</jts.version>
