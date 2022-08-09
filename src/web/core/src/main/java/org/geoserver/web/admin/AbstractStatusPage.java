@@ -16,12 +16,10 @@ import org.apache.wicket.extensions.markup.html.tabs.PanelCachingTab;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.ResourceModel;
-import org.apache.wicket.model.StringResourceModel;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.GeoServer;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.web.GeoServerApplication;
-import org.geoserver.web.system.status.SystemStatusMonitorPanel;
 
 public abstract class AbstractStatusPage extends ServerAdminPage {
 
@@ -56,19 +54,9 @@ public abstract class AbstractStatusPage extends ServerAdminPage {
                                 return new ModuleStatusPanel(id, AbstractStatusPage.this);
                             }
                         });
-        PanelCachingTab systemStatusTab =
-                new PanelCachingTab(
-                        new AbstractTab(new StringResourceModel("MonitoringPanel.title")) {
-                            private static final long serialVersionUID = -5301288750339244612L;
-
-                            public Panel getPanel(String id) {
-                                return new SystemStatusMonitorPanel(id);
-                            }
-                        });
 
         tabs.add(statusTab);
         tabs.add(moduleStatusTab);
-        tabs.add(systemStatusTab);
 
         // extension point for adding extra tabs that will be ordered using the extension priority
         GeoServerExtensions.extensions(StatusPage.TabDefinition.class)
