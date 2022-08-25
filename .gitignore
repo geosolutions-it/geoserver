@@ -26,3 +26,7 @@ data/citensg-1.0/gwc/cite*
 data/citensg-1.0/gwc/geowebcache_*.bak
 data/citensg-1.0/legendsamples/
 data/citensg-1.0/logs/geoserver.log
+
+# Spotless indexes
+.spotless-index
+

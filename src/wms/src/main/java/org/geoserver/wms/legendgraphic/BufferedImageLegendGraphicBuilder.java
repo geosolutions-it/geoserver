@@ -12,7 +12,6 @@ import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,7 +119,10 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
         // list of images to be rendered for the layers (more than one if
         // a layer group is given)
         setup(request);
-        List<RenderedImage> layersImages = new ArrayList<RenderedImage>();
+
+        Tally tally = new Tally(request.getWms());
+        ImageList layersImages = new ImageList(tally);
+
         for (LegendRequest legend : layers) {
             FeatureType layer = legend.getFeatureType();
 
@@ -139,7 +141,7 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
             gt2Style = resizeForDPI(request, gt2Style);
 
             final boolean transparent = request.isTransparent();
-            RenderedImage titleImage = null;
+            BufferedImage titleImage = null;
             // if we have more than one layer, we put a title on top of each layer legend
             if (layers.size() > 1 && !forceTitlesOff) {
                 titleImage = getLayerTitle(legend, w, h, transparent, request);
@@ -155,7 +157,7 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
             // Just checks LegendInfo currently, should check gtStyle
             final boolean useProvidedLegend = layer != null && legend.getLayerInfo() != null;
 
-            RenderedImage legendImage = null;
+            BufferedImage legendImage = null;
             if (useProvidedLegend) {
                 legendImage = getLayerLegend(legend, w, h, transparent, request, titleImage);
             }
@@ -168,7 +170,7 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
             } else if (buildRasterLegend) {
                 final RasterLayerLegendHelper rasterLegendHelper =
                         new RasterLayerLegendHelper(request, gt2Style, ruleName);
-                BufferedImage image = rasterLegendHelper.getLegend();
+                final BufferedImage image = rasterLegendHelper.getLegend(tally.getRemaining());
                 if (image != null) {
                     if (titleImage != null) {
                         layersImages.add(titleImage);
@@ -206,12 +208,6 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
                 final NumberRange<Double> scaleRange =
                         NumberRange.create(scaleDenominator, scaleDenominator);
                 final int ruleCount = applicableRules.length;
-
-                /**
-                 * A legend graphic is produced for each applicable rule. They're being held here
-                 * until the process is done and then painted on a "stack" like legend.
-                 */
-                final List<RenderedImage> legendsStack = new ArrayList<RenderedImage>(ruleCount);
 
                 final SLDStyleFactory styleFactory = new SLDStyleFactory();
 
@@ -269,7 +265,6 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
                         applicableRules,
                         scaleRange,
                         ruleCount,
-                        legendsStack,
                         styleFactory,
                         minimumSymbolSize,
                         rescalingRequired,
@@ -280,9 +275,15 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
         BufferedImage finalLegend =
                 mergeGroups(
                         layersImages, null, request, forceLabelsOn, forceLabelsOff, forceTitlesOff);
-        if (finalLegend == null) {
-            throw new IllegalArgumentException("no legend passed");
-        }
+
+        // final checks
+        if (finalLegend == null) throw new IllegalArgumentException("no legend passed");
+        int maxMemory = layersImages.getTally().getMaxMemory();
+        if (maxMemory != Tally.UNLIMITED && Tally.computeImageSize(finalLegend) > maxMemory)
+            throw new ServiceException(
+                    LegendGraphicBuilder.MEMORY_USAGE_EXCEEDED,
+                    ServiceException.MAX_MEMORY_EXCEEDED);
+
         return finalLegend;
     }
 
@@ -310,30 +311,28 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
      */
     private void renderRules(
             GetLegendGraphicRequest request,
-            List<RenderedImage> layersImages,
+            ImageList layersImages,
             boolean forceLabelsOn,
             boolean forceLabelsOff,
             boolean forceTitlesOff,
             FeatureType layer,
             final boolean transparent,
-            RenderedImage titleImage,
+            BufferedImage titleImage,
             final Feature sampleFeature,
             final double scaleDenominator,
             Rule[] applicableRules,
             final NumberRange<Double> scaleRange,
             final int ruleCount,
-            final List<RenderedImage> legendsStack,
             final SLDStyleFactory styleFactory,
             double minimumSymbolSize,
             boolean rescalingRequired,
             java.util.function.Function<Double, Double> rescaler) {
         MetaBufferEstimator estimator = new MetaBufferEstimator(sampleFeature);
+        ImageList legendsStack = new ImageList(layersImages.getTally().getRemaining());
         for (int i = 0; i < ruleCount; i++) {
 
-            final RenderedImage image =
-                    ImageUtils.createImage(w, h, (IndexColorModel) null, transparent);
-            final Map<RenderingHints.Key, Object> hintsMap =
-                    new HashMap<RenderingHints.Key, Object>();
+            final BufferedImage image = ImageUtils.createImage(w, h, null, transparent);
+            final Map<RenderingHints.Key, Object> hintsMap = new HashMap<>();
             final Graphics2D graphics =
                     ImageUtils.prepareTransparency(
                             transparent, LegendUtils.getBackgroundColor(request), image, hintsMap);
@@ -462,7 +461,7 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
      * @param request GetLegendGraphicRequest being built
      * @return image with the title
      */
-    private RenderedImage getLayerTitle(
+    private BufferedImage getLayerTitle(
             LegendRequest legend,
             int w,
             int h,
@@ -482,7 +481,7 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
      * @param transparent (should the image be transparent)
      * @param request GetLegendGraphicRequest being built
      */
-    private RenderedImage getLayerLegend(
+    private BufferedImage getLayerLegend(
             LegendRequest legend,
             int w,
             int h,
@@ -548,7 +547,7 @@ public class BufferedImageLegendGraphicBuilder extends LegendGraphicBuilder {
      * @throws IllegalArgumentException if the list is empty
      */
     private BufferedImage mergeGroups(
-            List<RenderedImage> imageStack,
+            ImageList imageStack,
             Rule[] rules,
             GetLegendGraphicRequest req,
             boolean forceLabelsOn,

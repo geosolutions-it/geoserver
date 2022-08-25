@@ -10,7 +10,6 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,7 +35,7 @@ public class LegendMerger {
      * @author mauro.bartolomeoli@geo-solutions.it
      */
     public static class MergeOptions {
-        List<RenderedImage> imageStack;
+        ImageList imageStack;
         int dx;
         int dy;
         int margin;
@@ -76,7 +75,7 @@ public class LegendMerger {
          * @param forceTitlesOff force titles to be never rendered
          */
         public MergeOptions(
-                List<RenderedImage> imageStack,
+                ImageList imageStack,
                 int dx,
                 int dy,
                 int margin,
@@ -126,7 +125,7 @@ public class LegendMerger {
          * @param forceTitlesOff force titles to be never rendered
          */
         public MergeOptions(
-                List<RenderedImage> imageStack,
+                ImageList imageStack,
                 int dx,
                 int dy,
                 int margin,
@@ -155,11 +154,12 @@ public class LegendMerger {
                     forceTitlesOff);
         }
 
-        public List<RenderedImage> getImageStack() {
+        @SuppressWarnings("unchecked")
+        public ImageList getImageStack() {
             return imageStack;
         }
 
-        public void setImageStack(List<RenderedImage> imageStack) {
+        public void setImageStack(ImageList imageStack) {
             this.imageStack = imageStack;
         }
 
@@ -292,7 +292,7 @@ public class LegendMerger {
         }
 
         public static MergeOptions createFromRequest(
-                List<RenderedImage> imageStack,
+                ImageList imageStack,
                 int dx,
                 int dy,
                 int margin,
@@ -322,22 +322,19 @@ public class LegendMerger {
      * @return the legend image with all the images on the argument list.
      */
     public static BufferedImage mergeRasterLegends(MergeOptions mergeOptions) {
-        List<RenderedImage> imageStack = mergeOptions.getImageStack();
+        ImageList imageStack = mergeOptions.getImageStack();
         LegendLayout layout = mergeOptions.getLayout();
 
-        List<BufferedImage> nodes = new ArrayList<BufferedImage>();
-        final int imgCount = imageStack.size();
-        for (int i = 0; i < imgCount; i++) {
-            nodes.add((BufferedImage) imageStack.get(i));
+        ImageList nodes = new ImageList(imageStack.getTally().getFull());
+        for (RenderedImage renderedImage : imageStack) {
+            nodes.add((BufferedImage) renderedImage);
         }
 
         BufferedImage finalLegend = null;
         if (layout == LegendLayout.HORIZONTAL) {
             Row[] rows = createRows(nodes, mergeOptions.getRowWidth(), mergeOptions.getRows());
             finalLegend = buildFinalHLegend(rows, mergeOptions);
-        }
-
-        if (layout == LegendLayout.VERTICAL) {
+        } else if (layout == LegendLayout.VERTICAL) {
             Column[] columns =
                     createColumns(
                             nodes,
@@ -364,17 +361,17 @@ public class LegendMerger {
      */
     public static BufferedImage mergeLegends(
             Rule[] rules, GetLegendGraphicRequest req, MergeOptions mergeOptions) {
-        List<RenderedImage> imageStack = mergeOptions.getImageStack();
+        ImageList imageStack = mergeOptions.getImageStack();
 
         // Builds legend nodes (graphics + label)
         final int imgCount = imageStack.size();
-        List<BufferedImage> nodes = new ArrayList<BufferedImage>();
+        ImageList nodes = new ImageList(imageStack.getTally().getFull());
         // Single legend, no rules, no force label
         if (imgCount == 1 && (!mergeOptions.isForceLabelsOn() || rules == null)) {
-            return (BufferedImage) imageStack.get(0);
+            return imageStack.get(0);
         } else {
             for (int i = 0; i < imgCount; i++) {
-                BufferedImage img = (BufferedImage) imageStack.get(i);
+                BufferedImage img = imageStack.get(i);
                 if (rules != null && rules[i] != null) {
                     BufferedImage label = renderLabel(img, rules[i], req, mergeOptions);
                     if (label != null) {
@@ -401,9 +398,7 @@ public class LegendMerger {
         if (layout == LegendLayout.HORIZONTAL) {
             Row[] rows = createRows(nodes, mergeOptions.getRowWidth(), mergeOptions.getRows());
             finalLegend = buildFinalHLegend(rows, mergeOptions);
-        }
-
-        if (layout == LegendLayout.VERTICAL) {
+        } else if (layout == LegendLayout.VERTICAL) {
             Column[] columns =
                     createColumns(
                             nodes,
@@ -428,24 +423,24 @@ public class LegendMerger {
      * @return the image with all the images on the argument list.
      */
     public static BufferedImage mergeGroups(Rule[] rules, MergeOptions mergeOptions) {
-        List<RenderedImage> imageStack = mergeOptions.getImageStack();
+        ImageList imageStack = mergeOptions.getImageStack();
 
         final int imgCount = imageStack.size();
         if (imgCount == 1 && (!mergeOptions.isForceLabelsOn() || rules == null)) {
-            return (BufferedImage) imageStack.get(0);
+            return imageStack.get(0);
         }
 
-        List<BufferedImage> nodes = new ArrayList<BufferedImage>(imgCount / 2);
+        ImageList nodes = new ImageList(imageStack.getTally().getFull());
 
         if (mergeOptions.isForceTitlesOff()) {
-            for (RenderedImage img : imageStack) {
-                nodes.add((BufferedImage) img);
+            for (BufferedImage img : imageStack) {
+                nodes.add(img);
             }
         } else {
             // merge layer titles with legend images
             for (int i = 0; i < imgCount; i = i + 2) {
-                BufferedImage lbl = (BufferedImage) imageStack.get(i);
-                BufferedImage img = (BufferedImage) imageStack.get(i + 1);
+                BufferedImage lbl = imageStack.get(i);
+                BufferedImage img = imageStack.get(i + 1);
                 img =
                         joinBufferedImageVertically(
                                 lbl,
@@ -480,7 +475,7 @@ public class LegendMerger {
 
         private int height;
 
-        private List<BufferedImage> nodes = new ArrayList<BufferedImage>();
+        private List<BufferedImage> nodes = new ArrayList<>();
 
         public void addNode(BufferedImage img) {
             nodes.add(img);
@@ -507,7 +502,7 @@ public class LegendMerger {
 
         private int height;
 
-        private List<BufferedImage> nodes = new ArrayList<BufferedImage>();
+        private List<BufferedImage> nodes = new ArrayList<>();
 
         public void addNode(BufferedImage img) {
             nodes.add(img);
@@ -539,7 +534,7 @@ public class LegendMerger {
      * @param checkColor check for presence of color in legend
      */
     private static Column[] createColumns(
-            List<BufferedImage> nodes,
+            ImageList nodes,
             int maxHeight,
             int maxColumns,
             GetLegendGraphicRequest req,
@@ -644,7 +639,7 @@ public class LegendMerger {
      * @param maxWidth maximum width of legend
      * @param maxRows maximum number of rows
      */
-    private static Row[] createRows(List<BufferedImage> nodes, int maxWidth, int maxRows) {
+    private static Row[] createRows(ImageList nodes, int maxWidth, int maxRows) {
         Row[] legendMatrix = new Row[0];
         /*
          * Limit max height
@@ -731,9 +726,8 @@ public class LegendMerger {
         // buffer the width a bit
         totalWidth += 2;
         final BufferedImage finalLegend =
-                ImageUtils.createImage(
-                        totalWidth, totalHeight, (IndexColorModel) null, options.isTransparent());
-        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<RenderingHints.Key, Object>();
+                ImageUtils.createImage(totalWidth, totalHeight, null, options.isTransparent());
+        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<>();
         Graphics2D finalGraphics =
                 ImageUtils.prepareTransparency(
                         options.isTransparent(),
@@ -794,9 +788,8 @@ public class LegendMerger {
         // buffer the width a bit
         totalWidth += 2;
         final BufferedImage finalLegend =
-                ImageUtils.createImage(
-                        totalWidth, totalHeight, (IndexColorModel) null, options.isTransparent());
-        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<RenderingHints.Key, Object>();
+                ImageUtils.createImage(totalWidth, totalHeight, null, options.isTransparent());
+        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<>();
         Graphics2D finalGraphics =
                 ImageUtils.prepareTransparency(
                         options.isTransparent(),
@@ -853,9 +846,8 @@ public class LegendMerger {
         int wid = img.getWidth() + label.getWidth() + labelXOffset;
         int height = Math.max(img.getHeight(), label.getHeight());
         // create a new buffer and draw two image into the new image
-        BufferedImage newImage =
-                ImageUtils.createImage(wid, height, (IndexColorModel) null, transparent);
-        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<RenderingHints.Key, Object>();
+        BufferedImage newImage = ImageUtils.createImage(wid, height, null, transparent);
+        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<>();
         Graphics2D g2 =
                 ImageUtils.prepareTransparency(transparent, backgroundColor, newImage, hintsMap);
         g2.setFont(labelFont);
@@ -898,9 +890,8 @@ public class LegendMerger {
         int height = img.getHeight() + label.getHeight() + offset;
         int wid = Math.max(img.getWidth(), label.getWidth()) + offset;
         // create a new buffer and draw two image into the new image
-        BufferedImage newImage =
-                ImageUtils.createImage(wid, height, (IndexColorModel) null, transparent);
-        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<RenderingHints.Key, Object>();
+        BufferedImage newImage = ImageUtils.createImage(wid, height, null, transparent);
+        final Map<RenderingHints.Key, Object> hintsMap = new HashMap<>();
         Graphics2D g2 =
                 ImageUtils.prepareTransparency(transparent, backgroundColor, newImage, hintsMap);
         g2.setFont(labelFont);
@@ -944,10 +935,6 @@ public class LegendMerger {
     /**
      * Renders a label on the given image, using parameters from the request for the rendering
      * style.
-     *
-     * @param image
-     * @param label
-     * @param request
      */
     protected static BufferedImage getRenderedLabel(
             BufferedImage image, String label, GetLegendGraphicRequest req) {
