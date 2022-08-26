@@ -78,7 +78,19 @@ public class OWS20ServiceExceptionHandler extends ServiceExceptionHandler {
 
     /** Writes out an OWS ExceptionReport document. */
     public void handleServiceException(ServiceException exception, Request request) {
-        LOGGER.warning("OWS20SEH: handling " + exception);
+        String errorCode = exception.getCode();
+        String message = exception.getMessage();
+        Level level = Level.WARNING;
+
+        if ((errorCode != null && errorCode.toUpperCase().startsWith("INVALID"))
+            || (errorCode == null
+                        && message != null
+                        && message.toUpperCase().startsWith("INVALID"))) {
+            // Log Exceptions dealing with "Invalid" to INFO
+            level = Level.INFO;
+        }
+
+        LOGGER.log(level, "OWS20SEH: handling " + exception);
 
         String version = null;
         if (useServiceVersion && request.getServiceDescriptor() != null) {
