@@ -1,0 +1,58 @@
+<html xmlns:wicket="http://wicket.apache.org/">
+<head></head>
+<body>
+<form name="theForm">
+  <wicket:panel>
+  <h3><wicket:message key="defaultTitle">WMS Settings</wicket:message></h3>
+  <ul>
+    <li>
+      <fieldset>
+        <legend><span><wicket:message key="layerSettings">Layer Settings</wicket:message></span></legend>
+        <ul class="choiceList">
+          <li>
+            <input id="queryableEnabled" type="checkbox" wicket:id="queryableEnabled"></input>
+            <label for="queryableEnabled"><wicket:message key="queryable">Queryable</wicket:message></label>
+          </li>
+        </ul>
+        <ul class="choiceList">
+          <li>
+            <input id="opaqueEnabled" type="checkbox" wicket:id="opaqueEnabled"></input>
+            <label for="opaqueEnabled"><wicket:message key="opaque">Opaque</wicket:message></label>
+          </li>
+        </ul>
+        <ul wicket:id="styles">
+          <li>
+            <label for="defaultStyle"><wicket:message key="defaultStyle">Default Style</wicket:message></label>
+            <select id="defaultStyle" class="select" wicket:id="defaultStyle"></select>
+          </li>
+          <li>
+			<img wicket:id="defaultStyleLegendGraphic"></img>
+          </li>
+          <li> 
+            <label><wicket:message key="additionalStyles">Additional Styles</wicket:message></label>
+            <span wicket:id="extraStyles"></span>
+          </li>
+          <li>
+            <label for="buffer"><wicket:message key="defaultRenderingBuffer">def. rendering buffer</wicket:message></label>
+            <input id="buffer" class="text" wicket:id="renderingBuffer" type="text"></input> 
+          </li>
+        </ul>
+        <ul>
+          <li>
+            <label for="wmsPath"><wicket:message key="defaultWmsPath">Default WMS Path</wicket:message></label>
+            <input id="wmsPath" class="text" wicket:id="wmsPath" type="text"></input> 
+          </li>
+        </ul>
+        <ul>
+          <li>
+            <label for="defaultInterpolationMethod"><wicket:message key="interpolationLabel">Default Interpolation Method</wicket:message></label>
+            <select id="defaultInterpolationMethod" wicket:id="defaultInterpolationMethod" class="text"/>
+          </li>
+        </ul>
+      </fieldset>
+    </li>
+  </ul>
+  </wicket:panel>
+</form>
+</body>
+</html>
