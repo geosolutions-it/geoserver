@@ -47,6 +47,9 @@ build:
       - "**/src/web/app/target/geoserver.war"
     expire_in: 1 week
 
+tests:
+  allow_failure: true
+
 
 package:
   script:
