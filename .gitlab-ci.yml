@@ -18,12 +18,13 @@ variables:
 build: 
   stage: build
   script:
-    - cd src
+    - cd geoserver/src
     - mvn $MAVEN_CLI_OPTS $MAVEN_ACTIVE_PROFILES -am clean install
     - cd web/app
     - mvn $MAVEN_CLI_OPTS $MAVEN_ACTIVE_PROFILES -am clean install
     # - curl -T target/geoserver.war ftp://${FTP_UPLOAD_LOCATION}/geoserver_latest.war --user ${FTP_USER}:${FTP_PASSWORD}
   artifacts:
     paths:
-    - src/web/app/target/geoserver.war
+      - "**/target"
+      - "target"
     expire_in: 1 week
