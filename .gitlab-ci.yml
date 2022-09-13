@@ -25,6 +25,5 @@ build:
     # - curl -T target/geoserver.war ftp://${FTP_UPLOAD_LOCATION}/geoserver_latest.war --user ${FTP_USER}:${FTP_PASSWORD}
   artifacts:
     paths:
-      - "**/target/geoserver.war"
-      - "target/geoserver.war"
+      - "**/src/web/app/target/geoserver.war"
     expire_in: 1 week
