@@ -1,0 +1,4 @@
+include:
+  - project: 'eows/common/cicd-pipeline'
+    ref: main
+    file: '/wms/gradlew.gitlab-ci.yml'
