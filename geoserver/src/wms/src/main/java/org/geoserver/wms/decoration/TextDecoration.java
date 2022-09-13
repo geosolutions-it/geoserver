@@ -5,6 +5,9 @@
  */
 package org.geoserver.wms.decoration;
 
+import static org.geoserver.wms.decoration.MapDecorationLayout.FF;
+import static org.geoserver.wms.decoration.MapDecorationLayout.getOption;
+
 import freemarker.ext.beans.BeansWrapper;
 import freemarker.ext.beans.StringModel;
 import freemarker.template.Template;
@@ -12,7 +15,14 @@ import freemarker.template.TemplateException;
 import freemarker.template.TemplateHashModel;
 import freemarker.template.TemplateModel;
 import freemarker.template.TemplateModelException;
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
@@ -27,6 +37,8 @@ import org.geoserver.template.TemplateUtils;
 import org.geoserver.wms.WMSMapContent;
 import org.geotools.renderer.style.FontCache;
 import org.geotools.util.Converters;
+import org.opengis.filter.expression.Expression;
+import org.opengis.filter.expression.Literal;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 
@@ -55,35 +67,35 @@ public class TextDecoration implements MapDecoration {
 
     Color haloColor;
 
-    String messageTemplate;
+    Expression message;
 
     Color fontColor;
 
     @Override
-    public void loadOptions(Map<String, String> options) throws Exception {
+    public void loadOptions(Map<String, Expression> options) throws Exception {
         // message
-        this.messageTemplate = options.get("message");
-        if (messageTemplate == null) {
-            messageTemplate = "You forgot to set the 'message' option";
+        this.message = options.get("message");
+        if (message == null) {
+            message = FF.literal("You forgot to set the 'message' option");
         }
         // font
-        this.fontFamily = options.get("font-family");
+        this.fontFamily = getOption(options, "font-family");
         if (options.get("font-italic") != null) {
-            this.fontItalic = Boolean.parseBoolean(options.get("font-italic"));
+            this.fontItalic = getOption(options, "font-italic", Boolean.class);
         }
         if (options.get("font-bold") != null) {
-            this.fontBold = Boolean.parseBoolean(options.get("font-bold"));
+            this.fontBold = getOption(options, "font-bold", Boolean.class);
         }
         if (options.get("font-size") != null) {
             try {
-                this.fontSize = Float.parseFloat(options.get("font-size"));
+                this.fontSize = getOption(options, "font-size", Float.class);
             } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "'font-size' must be a float.", e);
+                LOGGER.log(Level.WARNING, "'font-size' must be a float", e);
             }
         }
         if (options.get("font-color") != null) {
             try {
-                this.fontColor = MapDecorationLayout.parseColor(options.get("font-color"));
+                this.fontColor = MapDecorationLayout.parseColor(getOption(options, "font-color"));
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "'font-color' must be a color in #RRGGBB[AA] format.", e);
             }
@@ -94,14 +106,14 @@ public class TextDecoration implements MapDecoration {
         // halo
         if (options.get("halo-radius") != null) {
             try {
-                this.haloRadius = Float.parseFloat(options.get("halo-radius"));
+                this.haloRadius = getOption(options, "halo-radius", Float.class);
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "'halo-radius' must be a float.", e);
             }
         }
         if (options.get("halo-color") != null) {
             try {
-                this.haloColor = MapDecorationLayout.parseColor(options.get("halo-color"));
+                this.haloColor = MapDecorationLayout.parseColor(getOption(options, "halo-color"));
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "'halo-color' must be a color in #RRGGBB[AA] format.", e);
             }
@@ -135,12 +147,24 @@ public class TextDecoration implements MapDecoration {
     }
 
     String evaluateMessage(WMSMapContent content) throws IOException, TemplateException {
+        // template expansion is allowed only if the source was a literal,
+        // to avoid allowing execution of templates requested from the URL (whicih coul
+        // open a log4shell-like attack vector). The options loader is already taking
+        // care of this, but just to be on the safe side, in case other code is building
+        // decorations, the check is repeated here too.
+        String expandedMessage = message.evaluate(null, String.class);
+        if (message instanceof Literal) {
+            return evaluateAsTemplate(content, expandedMessage);
+        }
+        return expandedMessage;
+    }
+
+    private String evaluateAsTemplate(WMSMapContent content, String message)
+            throws IOException, TemplateException {
         final Map env = content.getRequest().getEnv();
         Template t =
                 new Template(
-                        "name",
-                        new StringReader(messageTemplate),
-                        TemplateUtils.getSafeConfiguration());
+                        "name", new StringReader(message), TemplateUtils.getSafeConfiguration());
         final BeansWrapper bw = new BeansWrapper();
         return FreeMarkerTemplateUtils.processTemplateIntoString(
                 t,

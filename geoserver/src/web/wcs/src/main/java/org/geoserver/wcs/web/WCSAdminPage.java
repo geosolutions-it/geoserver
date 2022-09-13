@@ -63,6 +63,10 @@ public class WCSAdminPage extends BaseServiceAdminPage<WCSInfo> {
         TextField maxOutputMemory = new TextField("maxOutputMemory");
         maxOutputMemory.add(RangeValidator.minimum(0l));
         form.add(maxOutputMemory);
+        TextField<Integer> defaultDeflateCompressionLevel =
+                new TextField<>("defaultDeflateCompressionLevel");
+        defaultDeflateCompressionLevel.add(RangeValidator.range(1, 9));
+        form.add(defaultDeflateCompressionLevel);
         // max dimension values
         TextField<Integer> maxRequestedDimensionValues =
                 new TextField<Integer>("maxRequestedDimensionValues");

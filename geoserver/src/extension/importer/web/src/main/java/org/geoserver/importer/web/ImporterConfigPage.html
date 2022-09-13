@@ -29,6 +29,17 @@
                 </ul>
             </fieldset>
         </li>
+        <li>
+            <fieldset>
+                <legend><span><wicket:message key="maintenance">maintenance</wicket:message></span></legend>
+                <ul>
+                    <li>
+                        <label><wicket:message key="expiration">expiration</wicket:message></label>
+                        <input wicket:id="expiration" class="field text"/>
+                    </li>
+                </ul>
+            </fieldset>
+        </li>
         <li class="button-group selfclear">
             <button wicket:id="submit" type="submit"><wicket:message key="submit"/></button>
             <button wicket:id="cancel" type="submit"><wicket:message key="cancel"/></button>

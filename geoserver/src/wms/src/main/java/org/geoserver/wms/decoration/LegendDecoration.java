@@ -5,6 +5,8 @@
  */
 package org.geoserver.wms.decoration;
 
+import static org.geoserver.wms.decoration.MapDecorationLayout.evaluate;
+
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Dimension;
@@ -26,8 +28,10 @@ import java.util.function.Predicate;
 import org.geoserver.catalog.*;
 import org.geoserver.ows.AbstractDispatcherCallback;
 import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.KvpParser;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.util.CaseInsensitiveMap;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
@@ -38,6 +42,7 @@ import org.geoserver.wms.map.ImageUtils;
 import org.geotools.map.Layer;
 import org.geotools.renderer.lite.RendererUtilities;
 import org.geotools.styling.FeatureTypeStyle;
+import org.opengis.filter.expression.Expression;
 import org.opengis.style.Rule;
 
 public class LegendDecoration extends AbstractDispatcherCallback implements MapDecoration {
@@ -45,8 +50,8 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
     private static double BETWEEN_LEGENDS_PERCENT_INDENT = 0.05;
 
     private final WMS wms;
-    private Map<String, String> options;
-    private ThreadLocal<List<LayerLegend>> legends = new ThreadLocal<List<LayerLegend>>();
+    private Map<String, Expression> options;
+    private ThreadLocal<List<LayerLegend>> legends = new ThreadLocal<>();
     private List<String> layers;
     private boolean useSldTitle;
 
@@ -63,20 +68,30 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
         this.legends.remove();
     }
 
-    public void loadOptions(Map<String, String> options) {
-        this.options = new HashMap(options);
-        String layers = this.options.remove("layers");
+    private <T> T remove(Map<String, Expression> options, String key, Class<T> target) {
+        Expression expression = options.remove(key);
+        return evaluate(expression, target);
+    }
+
+    private String remove(Map<String, Expression> options, String key) {
+        return remove(options, key, String.class);
+    }
+
+    @Override
+    public void loadOptions(Map<String, Expression> options) {
+        this.options = new HashMap<>(options);
+        String layers = remove(this.options, "layers");
         if (layers != null) {
             String[] splittedLayers = layers.split(",");
             this.layers.addAll(Arrays.asList(splittedLayers));
         }
 
-        String sldTitle = this.options.remove("sldTitle");
+        String sldTitle = remove(this.options, "sldTitle");
         if ("true".equalsIgnoreCase(sldTitle) || "on".equalsIgnoreCase(sldTitle)) {
             useSldTitle = true;
         }
 
-        String legendOptions = this.options.remove("legend_options");
+        String legendOptions = remove(this.options, "legend_options");
         if (legendOptions != null && !legendOptions.isEmpty()) {
             legendOptionsMap = new HashMap<String, String>();
             String[] splittedLegendOptions = legendOptions.split(";");
@@ -86,9 +101,9 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
             }
         }
 
-        String opacity = this.options.remove("opacity");
-        if (opacity != null && !opacity.isEmpty()) {
-            opacityOption = Float.parseFloat(opacity);
+        Float opacity = remove(this.options, "opacity", Float.class);
+        if (opacity != null) {
+            opacityOption = opacity;
         }
     }
 
@@ -386,5 +401,34 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
             legendLayers.add(legend);
         }
         return legendLayers;
+    }
+
+    private Map<String, Object> getLegendOptions() {
+        CaseInsensitiveMap result = new CaseInsensitiveMap(new HashMap<>());
+        List parsers = GeoServerExtensions.extensions(KvpParser.class);
+        for (Map.Entry<String, Expression> entry : options.entrySet()) {
+            String key = entry.getKey();
+            String value = evaluate(entry.getValue(), String.class);
+            Object parsed = null;
+
+            for (Object o : parsers) {
+                KvpParser parser = (KvpParser) o;
+                if (key.equalsIgnoreCase(parser.getKey())) {
+                    try {
+                        parsed = parser.parse(value);
+                        if (parsed != null) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        throw new IllegalArgumentException("Failed to parse key " + key, e);
+                    }
+                }
+            }
+            if (parsed == null) {
+                parsed = value;
+            }
+            result.put(key, parsed);
+        }
+        return result;
     }
 }

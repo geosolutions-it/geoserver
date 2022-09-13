@@ -5,6 +5,10 @@
  */
 package org.geoserver.wps.gs.download;
 
+import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.COMPRESSION;
+import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEHEIGHT;
+import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILEWIDTH;
+import static org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate.TILING;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -14,8 +18,12 @@ import static org.junit.Assert.fail;
 
 import it.geosolutions.imageio.plugins.tiff.BaselineTIFFTagSet;
 import it.geosolutions.imageio.plugins.tiff.PrivateTIFFTagSet;
+import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.DataBuffer;
+import java.awt.image.Raster;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,6 +32,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -40,8 +49,10 @@ import javax.imageio.stream.FileImageInputStream;
 import javax.xml.namespace.QName;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.config.GeoServer;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.GeoServerExtensions;
@@ -56,9 +67,11 @@ import org.geoserver.wps.ppio.ComplexPPIO;
 import org.geoserver.wps.ppio.WFSPPIO;
 import org.geoserver.wps.ppio.ZipArchivePPIO;
 import org.geoserver.wps.process.RawData;
+import org.geoserver.wps.process.ResourceRawData;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridEnvelope2D;
+import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.imageio.geotiff.GeoTiffIIOMetadataDecoder;
 import org.geotools.coverage.util.CoverageUtilities;
 import org.geotools.coverage.util.FeatureUtilities;
@@ -73,10 +86,13 @@ import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.geometry.DirectPosition2D;
 import org.geotools.geometry.jts.JTS;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.geometry.jts.WKTReader2;
+import org.geotools.image.test.ImageAssert;
 import org.geotools.process.ProcessException;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.referencing.operation.matrix.XAffineTransform;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.util.URLs;
 import org.geotools.util.logging.Logging;
@@ -112,6 +128,12 @@ public class DownloadProcessTest extends WPSTestSupport {
     private static final FilterFactory2 FF = FeatureUtilities.DEFAULT_FILTER_FACTORY;
 
     private static QName MIXED_RES = new QName(WCS_URI, "mixedres", WCS_PREFIX);
+    private static QName HETEROGENEOUS_CRS = new QName(WCS_URI, "hcrs", WCS_PREFIX);
+    private static QName HETEROGENEOUS_CRS2 = new QName(WCS_URI, "hcrs2", WCS_PREFIX);
+    private static QName HETEROGENEOUS_NODATA = new QName(WCS_URI, "hcrs_nodata", WCS_PREFIX);
+    private static QName TIMESERIES = new QName(WCS_URI, "timeseries", WCS_PREFIX);
+    private static QName SHORT = new QName(WCS_URI, "short", WCS_PREFIX);
+    private static QName FLOAT = new QName(WCS_URI, "float", WCS_PREFIX);
 
     private static Set<String> GTIFF_EXTENSIONS = new HashSet<String>();
     private static Set<String> PNG_EXTENSIONS = new HashSet<String>();
@@ -119,6 +141,9 @@ public class DownloadProcessTest extends WPSTestSupport {
     private static Set<String> XML_EXTENSIONS = new HashSet<String>();
     private static Set<String> JSON_EXTENSIONS = new HashSet<String>();
     private static Map<String, Set<String>> FORMAT_TO_EXTENSIONS = new HashMap<>();
+
+    private static final CoordinateReferenceSystem WGS84;
+    private static final double DELTA = 1E-6;
 
     static {
         GTIFF_EXTENSIONS.add("tif");
@@ -138,6 +163,11 @@ public class DownloadProcessTest extends WPSTestSupport {
 
         JSON_EXTENSIONS.add("json");
         FORMAT_TO_EXTENSIONS.put("JSON", JSON_EXTENSIONS);
+        try {
+            WGS84 = CRS.decode("EPSG:4326", true);
+        } catch (FactoryException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static class AutoCloseableResource implements AutoCloseable {
@@ -280,7 +310,20 @@ public class DownloadProcessTest extends WPSTestSupport {
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
         testData.addRasterLayer(MockData.USA_WORLDIMG, "usa.zip", MockData.PNG, getCatalog());
+        testData.addRasterLayer(MockData.WORLD, "world.tiff", MockData.TIFF, getCatalog());
         testData.addRasterLayer(MIXED_RES, "mixedres.zip", null, getCatalog());
+        testData.addRasterLayer(HETEROGENEOUS_CRS, "heterogeneous_crs.zip", null, getCatalog());
+        testData.addRasterLayer(HETEROGENEOUS_CRS2, "heterogeneous_crs2.zip", null, getCatalog());
+        testData.addRasterLayer(
+                HETEROGENEOUS_NODATA,
+                "hetero_nodata.zip",
+                null,
+                null,
+                DownloadProcessTest.class,
+                getCatalog());
+        testData.addRasterLayer(SHORT, "short.zip", null, getCatalog());
+        testData.addRasterLayer(FLOAT, "float.zip", null, getCatalog());
+        testData.addRasterLayer(TIMESERIES, "timeseries.zip", null, getCatalog());
     }
 
     @Override
@@ -310,14 +353,8 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testGetFeaturesAsShapefile() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
-        final WPSResourceManager resourceManager = getResourceManager();
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
 
         FeatureTypeInfo ti = getCatalog().getFeatureTypeByName(getLayerId(MockData.POLYGONS));
 
@@ -341,6 +378,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                             null, // targetSizeY
                             null, // bandSelectIndices
                             null, // Writing params
+                            null,
+                            null,
                             new NullProgressListener() // progressListener
                             );
 
@@ -382,14 +421,10 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testFilteredClippedFeatures() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
-        final WPSResourceManager resourceManager = getResourceManager();
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        WPSResourceManager resourceManager = getResourceManager();
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
         // ROI object
         Polygon roi =
                 (Polygon)
@@ -420,6 +455,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                             null, // targetSizeY
                             null, // bandSelectIndices
                             null, // Writing params
+                            null,
+                            null,
                             new NullProgressListener() // progressListener
                             );
 
@@ -492,14 +529,8 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testGetFeaturesAsGML() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
-        final WPSResourceManager resourceManager = getResourceManager();
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
 
         FeatureTypeInfo ti = getCatalog().getFeatureTypeByName(getLayerId(MockData.POLYGONS));
         SimpleFeatureCollection rawSource =
@@ -521,6 +552,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -543,6 +576,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -557,14 +592,8 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testGetFeaturesAsGeoJSON() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
-        final WPSResourceManager resourceManager = getResourceManager();
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
 
         FeatureTypeInfo ti = getCatalog().getFeatureTypeByName(getLayerId(MockData.POLYGONS));
         SimpleFeatureCollection rawSource =
@@ -585,6 +614,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -623,14 +654,10 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testDownloadRaster() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
+
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
 
         // test ROI
         double firstXRoi = -127.57473954542964;
@@ -649,10 +676,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         Polygon roiResampled =
                 (Polygon)
                         JTS.transform(
-                                roi,
-                                CRS.findMathTransform(
-                                        CRS.decode("EPSG:4326", true),
-                                        CRS.decode("EPSG:900913", true)));
+                                roi, CRS.findMathTransform(WGS84, CRS.decode("EPSG:900913", true)));
         // Download the coverage as tiff (Not reprojected)
         RawData raster =
                 downloadProcess.execute(
@@ -661,7 +685,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         roi, // roi
                         true, // cropToGeometry
                         null, // interpolation
@@ -669,6 +693,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -678,13 +704,13 @@ public class DownloadProcessTest extends WPSTestSupport {
                 AutoDisposableGridCoverage2D gc = reader.read()) {
 
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
 
             // Take a pixel within the ROI
             byte[] result =
@@ -715,7 +741,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         roi, // roi
                         false, // cropToGeometry
                         null, // interpolation
@@ -723,6 +749,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -732,13 +760,13 @@ public class DownloadProcessTest extends WPSTestSupport {
                 AutoDisposableGridCoverage2D gc = reader.read()) {
 
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.611129008700004, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
 
             // Take a pixel within the ROI
             byte[] result =
@@ -777,6 +805,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -790,19 +820,19 @@ public class DownloadProcessTest extends WPSTestSupport {
             Assert.assertEquals(
                     -1.457024062347863E7,
                     gcResampled.getEnvelope().getLowerCorner().getOrdinate(0),
-                    1E-6);
+                    DELTA);
             Assert.assertEquals(
                     6209706.404894806,
                     gcResampled.getEnvelope().getLowerCorner().getOrdinate(1),
-                    1E-6);
+                    DELTA);
             Assert.assertEquals(
                     -1.379838980949677E7,
                     gcResampled.getEnvelope().getUpperCorner().getOrdinate(0),
-                    1E-6);
+                    DELTA);
             Assert.assertEquals(
                     7187128.139081598,
                     gcResampled.getEnvelope().getUpperCorner().getOrdinate(1),
-                    1E-6);
+                    DELTA);
         }
     }
 
@@ -827,14 +857,10 @@ public class DownloadProcessTest extends WPSTestSupport {
     }
 
     private void testWriteParameters(boolean writeNodata) throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
+
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
 
         // test ROI
         double firstXRoi = -127.57473954542964;
@@ -876,7 +902,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         roi, // roi
                         true, // cropToGeometry
                         null, // interpolation
@@ -884,6 +910,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         parameters, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -959,14 +987,10 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testDownloadRasterSelectedBands() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
+
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
 
         ///////////////////////////////////////
         //      test full coverage           //
@@ -980,7 +1004,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         null, // roi
                         false, // cropToGeometry
                         null, // interpolation
@@ -988,6 +1012,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         new int[] {0, 2}, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1016,14 +1042,10 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testDownloadRasterSelectedBandsScaledWithROI() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
+
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
 
         ///////////////////////////////////////
         //      test full coverage           //
@@ -1056,7 +1078,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         roi, // roi
                         false, // cropToGeometry
                         null, // interpolation
@@ -1064,6 +1086,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         40, // targetSizeY
                         new int[] {1}, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1081,13 +1105,13 @@ public class DownloadProcessTest extends WPSTestSupport {
 
             // check envelope
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.5552612829, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.5552612829, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -124.05382943906582, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -124.05382943906582, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.00577111704634, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.00577111704634, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
         }
     }
 
@@ -1098,15 +1122,10 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testDownloadScaledRaster() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
-        // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
 
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
         ///////////////////////////////////////
         //      test full coverage           //
         ///////////////////////////////////////
@@ -1119,7 +1138,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         null, // roi
                         false, // cropToGeometry
                         null, // interpolation
@@ -1127,6 +1146,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         80, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1142,11 +1163,13 @@ public class DownloadProcessTest extends WPSTestSupport {
 
             // check envelope
             Assert.assertEquals(
-                    -130.8866985, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
-            Assert.assertEquals(48.5552613, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    -130.8866985, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    -123.8830077, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
-            Assert.assertEquals(54.1420339, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    48.5552613, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
+            Assert.assertEquals(
+                    -123.8830077, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
+            Assert.assertEquals(
+                    54.1420339, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
         }
 
         ///////////////////////////////////////
@@ -1161,7 +1184,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         null, // roi
                         false, // cropToGeometry
                         null, // interpolation
@@ -1170,6 +1193,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         // and aspect ratio of the original image
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1205,7 +1230,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         roi, // roi
                         true, // cropToGeometry
                         null, // interpolation
@@ -1213,6 +1238,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         80, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1229,14 +1256,441 @@ public class DownloadProcessTest extends WPSTestSupport {
 
             // check envelope
             Assert.assertEquals(
-                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), 1E-6);
+                    -130.88669845369998, gc.getEnvelope().getLowerCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    48.623544058877776, gc.getEnvelope().getLowerCorner().getOrdinate(1), 1E-6);
+                    48.623544058877776, gc.getEnvelope().getLowerCorner().getOrdinate(1), DELTA);
             Assert.assertEquals(
-                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), 1E-6);
+                    -123.95304462109999, gc.getEnvelope().getUpperCorner().getOrdinate(0), DELTA);
             Assert.assertEquals(
-                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), 1E-6);
+                    54.0861661371, gc.getEnvelope().getUpperCorner().getOrdinate(1), DELTA);
         }
+    }
+
+    /**
+     * Test download of raster data. The output is scaled to fit exactly the provided size. Check
+     * that Datatype won't be modified
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    public void testDownloadScaledRasterPreservingDatatype() throws Exception {
+        final WPSResourceManager resourceManager = getResourceManager();
+
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
+        // Download the coverage as tiff
+        RawData rasterZip =
+                downloadProcess.execute(
+                        getLayerId(SHORT), // layerName
+                        null, // filter
+                        "image/tiff", // outputFormat
+                        "image/tiff",
+                        null, // targetCRS
+                        WGS84, // roiCRS
+                        null, // roi
+                        false, // cropToGeometry
+                        null, // interpolation
+                        80, // targetSizeX
+                        80, // targetSizeY
+                        null, // bandSelectIndices
+                        null, // Writing params
+                        false,
+                        false,
+                        new NullProgressListener() // progressListener
+                        );
+
+        // Final checks on the result. This test only focus on checking that the
+        // datatype get preserved
+        try (AutoCloseableResource resource =
+                        new AutoCloseableResource(resourceManager, rasterZip);
+                AutoDisposableGeoTiffReader reader =
+                        new AutoDisposableGeoTiffReader(resource.getFile());
+                AutoDisposableGridCoverage2D gc = reader.read()) {
+
+            // check coverage size
+            Rectangle2D originalGridRange = (GridEnvelope2D) reader.getOriginalGridRange();
+            Assert.assertEquals(80, Math.round(originalGridRange.getWidth()));
+            Assert.assertEquals(80, Math.round(originalGridRange.getHeight()));
+
+            // This JUNIT test only focus on checking that the datatype get preserved
+            Assert.assertEquals(
+                    DataBuffer.TYPE_SHORT, gc.getRenderedImage().getSampleModel().getDataType());
+        }
+
+        rasterZip =
+                downloadProcess.execute(
+                        getLayerId(FLOAT), // layerName
+                        null, // filter
+                        "image/tiff", // outputFormat
+                        "image/tiff",
+                        null, // targetCRS
+                        WGS84, // roiCRS
+                        null, // roi
+                        false, // cropToGeometry
+                        null, // interpolation
+                        80, // targetSizeX
+                        80, // targetSizeY
+                        null, // bandSelectIndices
+                        null, // Writing params
+                        false,
+                        false,
+                        new NullProgressListener() // progressListener
+                        );
+
+        Assert.assertNotNull(rasterZip);
+        try (AutoCloseableResource resource =
+                        new AutoCloseableResource(resourceManager, rasterZip);
+                AutoDisposableGeoTiffReader reader =
+                        new AutoDisposableGeoTiffReader(resource.getFile());
+                AutoDisposableGridCoverage2D gc = reader.read()) {
+
+            // This JUNIT test only focus on checking that the datatype get preserved
+            Assert.assertEquals(
+                    DataBuffer.TYPE_FLOAT, gc.getRenderedImage().getSampleModel().getDataType());
+        }
+    }
+
+    /**
+     * Test download of raster data. The source is an ImageMosaic with Heterogeneous CRS. Sending a
+     * request with a TargetCRS matching one of the underlying CRS of that mosaic should result in
+     * no reprojection on granules with that CRS as native.
+     */
+    @Test
+    public void testDownloadGranuleHeterogeneousCRSMinimizeReprojection() throws Exception {
+        // This test uses an Heterogeneous ImageMosaic made by 3 granules on
+        // 3 different UTM zones (32631, 32632, 32633), being exposed as a 4326 Mosaic
+        final WPSResourceManager resourceManager = getResourceManager();
+
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
+        // Getting one of the original files being used by this test: green.tif
+        // a UTM 32632 granule with a green fill and a couple of white lines
+        // [1 horizontal, 1 vertical crossing the first one and 2 oblique tying the vertexes]
+        // having a pattern like this (let's call it the bow-tie :D ):
+        //   /|
+        //  / |
+        // ---+---
+        //    | /
+        //    |/
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        String roiWkt =
+                "POLYGON((180000 600000, 820000 600000, 820000 1200000, 180000 1200000, 180000 600000))";
+        Polygon bboxRoi = (Polygon) new WKTReader2().read(roiWkt);
+
+        Parameters parameters = new Parameters();
+        List<Parameter> parametersList = parameters.getParameters();
+        parametersList.add(new Parameter("writenodata", "false"));
+        RawData rasterZip =
+                downloadProcess.execute(
+                        getLayerId(HETEROGENEOUS_CRS), // layerName
+                        null, // filter
+                        "image/tiff", // outputFormat
+                        "image/tiff",
+                        targetCRS, // targetCRS
+                        targetCRS,
+                        bboxRoi, // roi
+                        false, // cropToGeometry
+                        null, // interpolation
+                        200, // targetSizeX
+                        200, // targetSizeY
+                        null, // bandSelectIndices
+                        parameters, // Writing params
+                        true,
+                        false,
+                        new NullProgressListener() // progressListener
+                        );
+
+        try (AutoCloseableResource resource =
+                        new AutoCloseableResource(resourceManager, rasterZip);
+                AutoDisposableGeoTiffReader reader =
+                        new AutoDisposableGeoTiffReader(resource.getFile());
+                AutoDisposableGridCoverage2D gc = reader.read()) {
+
+            assertTrue(hasPerfectStraightHorizontalLine(gc.getRenderedImage()));
+        }
+    }
+
+    /**
+     * Test download of raster data. The source is an ImageMosaic with Heterogeneous CRS. Sending a
+     * request with a TargetCRS matching one of the underlying CRS, and asking for the best
+     * available resolution from matching CRS will result in minimal processing
+     */
+    @Test
+    public void testDownloadGranuleHeterogeneousCRSBestResolution() throws Exception {
+        // This test uses an Heterogeneous ImageMosaic made by 3 granules on
+        // 3 different UTM zones (32631, 32632, 32633), being exposed as a 4326 Mosaic
+
+        final WPSResourceManager resourceManager = getResourceManager();
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
+        // Getting one of the original files being used by this test: green.tif
+        // a UTM 32632 granule with a green fill and a couple of white lines
+        // [1 horizontal, 1 vertical crossing the first one and 2 oblique tying the vertexes]
+        // having a pattern like this (let's call it the bow-tie :D ):
+        //   /|
+        //  / |
+        // ---+---
+        //    | /
+        //    |/
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        RenderedImage referenceImage;
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        try (AutoDisposableGeoTiffReader referenceReader = new AutoDisposableGeoTiffReader(file);
+                AutoDisposableGridCoverage2D referenceGc = referenceReader.read()) {
+            referenceImage = referenceGc.getRenderedImage();
+            // Setting filter to get the granule with resolution
+            final PropertyName property = FF.property("location");
+            Filter filter = (Filter) FF.like(property, "green.tif");
+
+            String roiWkt =
+                    "POLYGON((160000 600000, 840000 600000, 840000 1200000, 160000 1200000,"
+                            + " 160000 600000))";
+            Polygon bboxRoi = (Polygon) new WKTReader2().read(roiWkt);
+
+            Parameters parameters = new Parameters();
+            List<Parameter> parametersList = parameters.getParameters();
+            parametersList.add(new Parameter("writenodata", "false"));
+            RawData raster =
+                    downloadProcess.execute(
+                            getLayerId(HETEROGENEOUS_CRS), // layerName
+                            filter, // filter
+                            "image/tiff", // outputFormat
+                            "image/tiff",
+                            targetCRS, // targetCRS
+                            targetCRS,
+                            bboxRoi, // roi
+                            false, // cropToGeometry
+                            null, // interpolation
+                            null, // targetSizeX
+                            null, // targetSizeY
+                            null, // bandSelectIndices
+                            parameters, // Writing params
+                            true,
+                            true,
+                            new NullProgressListener() // progressListener
+                            );
+
+            try (AutoCloseableResource resource =
+                            new AutoCloseableResource(resourceManager, raster);
+                    AutoDisposableGeoTiffReader reader =
+                            new AutoDisposableGeoTiffReader(resource.getFile());
+                    AutoDisposableGridCoverage2D gc = reader.read()) {
+
+                // Compare the downloaded raster with the original tiff.
+                // If reprojection to common CRS would have been involved,
+                // the above tie-bow pattern would have been distorted, making
+                // this comparison fail
+                ImageAssert.assertEquals(referenceImage, gc.getRenderedImage(), 5);
+            }
+        }
+    }
+
+    /**
+     * Test download of raster data. The source is an ImageMosaic with Heterogeneous CRS. Sending a
+     * request with a TargetCRS matching one of the underlying CRS of that mosaic but not involving
+     * any granule in that CRS will use default approach involving a reprojection.
+     */
+    @Test
+    public void testDownloadGranuleHeterogeneousCRSOnDifferentNativeCRS() throws Exception {
+        // This test uses an Heterogeneous ImageMosaic made by 3 granules on
+        // 3 different UTM zones (32631, 32632, 32633), being exposed as a 4326 Mosaic
+        final WPSResourceManager resourceManager = getResourceManager();
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+        RenderedImage referenceImage = null;
+        // Note we are asking targetCRS = 32632 but the available granule will be in 32633
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        CoordinateReferenceSystem roiCRS = CRS.decode("EPSG:32633", true);
+
+        // The original sample image has a straight
+        // white stripe in the middle of a blue fill.
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/blue.tif");
+        try (AutoDisposableGeoTiffReader referenceReader = new AutoDisposableGeoTiffReader(file);
+                AutoDisposableGridCoverage2D referenceGc = referenceReader.read()) {
+
+            // Setting filter to get the granule
+            final PropertyName property = FF.property("location");
+            Filter filter = (Filter) FF.like(property, "blue.tif");
+
+            String roiWkt =
+                    "POLYGON((180000 600000, 820000 600000, 820000 1200000, 180000 1200000,"
+                            + " 180000 600000))";
+            Polygon bboxRoi = (Polygon) new WKTReader2().read(roiWkt);
+
+            Parameters parameters = new Parameters();
+            List<Parameter> parametersList = parameters.getParameters();
+            parametersList.add(new Parameter("writenodata", "false"));
+            RawData raster =
+                    downloadProcess.execute(
+                            getLayerId(HETEROGENEOUS_CRS), // layerName
+                            filter, // filter
+                            "image/tiff", // outputFormat
+                            "image/tiff",
+                            targetCRS, // targetCRS
+                            roiCRS,
+                            bboxRoi, // roi
+                            false, // cropToGeometry
+                            null, // interpolation
+                            null, // targetSizeX
+                            null, // targetSizeY
+                            null, // bandSelectIndices
+                            parameters, // Writing params
+                            true,
+                            true,
+                            new NullProgressListener() // progressListener
+                            );
+
+            try (AutoCloseableResource resource =
+                            new AutoCloseableResource(resourceManager, raster);
+                    AutoDisposableGeoTiffReader reader =
+                            new AutoDisposableGeoTiffReader(resource.getFile());
+                    AutoDisposableGridCoverage2D gc = reader.read()) {
+
+                AffineTransform gridToWorld = (AffineTransform) gc.getGridGeometry().getGridToCRS();
+                double scaleX = XAffineTransform.getScaleX0(gridToWorld);
+                double scaleY = XAffineTransform.getScaleY0(gridToWorld);
+                // Once the file has been downloaded we can't retrieve the processing chain
+                // Let's just check if the resolution isn't the native one
+                assertNotEquals(1000, scaleX, 10);
+                assertNotEquals(1000, scaleY, 10);
+
+                referenceImage = referenceGc.getRenderedImage();
+                assertTrue(hasPerfectStraightHorizontalLine(referenceImage));
+
+                // Let's extract a stripe from the center of the downloaded image
+                // A reprojection will spot a not perfectly straight line
+                RenderedImage ri = gc.getRenderedImage();
+                assertFalse(hasPerfectStraightHorizontalLine(ri));
+            }
+        }
+    }
+
+    /**
+     * Test download of raster data. The source is an ImageMosaic with Heterogeneous CRS. Sending a
+     * request with a TargetCRS matching one of the underlying CRS of that mosaic should result in
+     * no reprojection on granules with that CRS as native, having matching resolution and matching
+     * alignment (when the 2 flags minimizeReprojections and bestResolutionOnMatchingCRS are set).
+     */
+    @Test
+    public void testDownloadGranuleHeterogeneousCRSMixedCRS() throws Exception {
+        // This test uses an Heterogeneous ImageMosaic made by 2 granules on
+        // 2 different EPSG, 31255 and 31256
+        final WPSResourceManager resourceManager = getResourceManager();
+
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+
+        // Requesting an area containing a granule in native CRS and a granule in a different CRS
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:31256", true);
+
+        // Finally, get the original granule in that target CRS
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs2/31256.tif");
+
+        try (AutoDisposableGeoTiffReader referenceReader = new AutoDisposableGeoTiffReader(file);
+                AutoDisposableGridCoverage2D referenceGc = referenceReader.read()) {
+            String roiWkt =
+                    "POLYGON ((-102583.25 262175.25, -102332.25 262175.25, -102332.25 "
+                            + " 262042.25, -102583.25 262042.25, -102583.25 262175.25))";
+            Polygon bboxRoi = (Polygon) new WKTReader2().read(roiWkt);
+
+            Parameters parameters = new Parameters();
+            List<Parameter> parametersList = parameters.getParameters();
+            parametersList.add(new Parameter("writenodata", "false"));
+            RawData raster =
+                    downloadProcess.execute(
+                            getLayerId(HETEROGENEOUS_CRS2), // layerName
+                            null, // filter
+                            "image/tiff", // outputFormat
+                            "image/tiff",
+                            targetCRS, // targetCRS
+                            targetCRS,
+                            bboxRoi, // roi
+                            false, // cropToGeometry
+                            null, // interpolation
+                            null, // targetSizeX
+                            null, // targetSizeY
+                            null, // bandSelectIndices
+                            parameters, // Writing params
+                            true,
+                            true,
+                            new NullProgressListener() // progressListener
+                            );
+
+            try (AutoCloseableResource resource =
+                            new AutoCloseableResource(resourceManager, raster);
+                    AutoDisposableGeoTiffReader reader =
+                            new AutoDisposableGeoTiffReader(resource.getFile());
+                    AutoDisposableGridCoverage2D gc = reader.read()) {
+
+                GridGeometry2D gc2d = gc.getGridGeometry();
+                AffineTransform transform = (AffineTransform) gc2d.getGridToCRS();
+                GridGeometry2D referenceGc2d = referenceGc.getGridGeometry();
+                AffineTransform referenceTransform = (AffineTransform) referenceGc2d.getGridToCRS();
+
+                // Check that even when requesting an area overlapping 2 different CRS we are
+                // getting the native resolution
+                double resX = XAffineTransform.getScaleX0(referenceTransform);
+                double resY = XAffineTransform.getScaleY0(referenceTransform);
+                assertEquals(resX, XAffineTransform.getScaleX0(transform), DELTA);
+                assertEquals(resY, XAffineTransform.getScaleY0(transform), DELTA);
+
+                // Check proper alignment
+                double[] referenceLowerCorner =
+                        referenceGc.getEnvelope2D().getLowerCorner().getCoordinate();
+                double[] lowerCorner = gc.getEnvelope2D().getLowerCorner().getCoordinate();
+                double xPixels = Math.abs(referenceLowerCorner[0] - lowerCorner[0]) / resX;
+                double yPixels = Math.abs(referenceLowerCorner[1] - lowerCorner[1]) / resY;
+                assertTrue(Math.abs(xPixels - Math.round(xPixels)) < DELTA);
+                assertTrue(Math.abs(yPixels - Math.round(yPixels)) < DELTA);
+            }
+        }
+    }
+
+    /**
+     * heuristic method do determine if an image has a perfect straight horizontal line in the
+     * middle.
+     */
+    private boolean hasPerfectStraightHorizontalLine(RenderedImage ri) {
+        // The sample image is a pure color (Green or Blue) with a
+        // straight white stripe in the middle.
+        // Let's get the pixels from the Red band which will be only
+        // 0 or 255.
+        // If the number of zeros and 255 have mod zero
+        // it's straight.
+        //
+        //
+        // ++++++++++++++++++++++++++++++++++++
+        // ************************************
+        // ************************************
+        //
+        // A case like this will not:
+        //
+        // +++++++++++++++++*******************
+        // ++++++++*******************+++++++++
+        // *************************+++++++++++
+
+        final int stripeLength = ri.getWidth();
+        final int minY = ri.getHeight() / 2;
+        final int height = 3;
+        Raster raster = ri.getData(new Rectangle(0, minY, stripeLength, height));
+        int i = 0;
+        int minValueCount = 0;
+        int maxValueCount = 0;
+        int val = 0;
+        for (int k = minY; k < minY + height; k++) {
+            for (; i < stripeLength; i++) {
+                val = raster.getSample(i, k, 0);
+                if (val == 0) {
+                    minValueCount++;
+                } else {
+                    maxValueCount++;
+                }
+            }
+        }
+        return minValueCount % maxValueCount == 0;
     }
 
     /**
@@ -1246,16 +1700,12 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testZipGeoTiffPPIO() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
+
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
         ZipArchivePPIO ppio =
                 new ZipArchivePPIO(DownloadServiceConfiguration.DEFAULT_COMPRESSION_LEVEL);
-        final WPSResourceManager resourceManager = getResourceManager();
-        // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+
         // ROI as a BBOX
         Envelope env =
                 new Envelope(-125.074006936869, -123.88300771369998, 48.5552612829, 49.03872);
@@ -1277,6 +1727,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1338,7 +1790,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     "image/tiff", // outputFormat
                     "image/tiff", //
                     null, // targetCRS
-                    CRS.decode("EPSG:4326", true), // roiCRS
+                    WGS84, // roiCRS
                     roi, // roi
                     true, // cropToGeometry
                     null, // interpolation
@@ -1346,6 +1798,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     null, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     new NullProgressListener() // progressListener
                     );
 
@@ -1398,7 +1852,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     "image/tiff", // outputFormat
                     "image/tiff",
                     null, // targetCRS
-                    CRS.decode("EPSG:4326", true), // roiCRS
+                    WGS84, // roiCRS
                     roi, // roi
                     true, // cropToGeometry
                     null, // interpolation
@@ -1406,6 +1860,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     null, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     new NullProgressListener() // progressListener
                     );
 
@@ -1451,7 +1907,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         "image/tiff", // outputFormat
                         "image/tiff",
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         null, // roi
                         false, // cropToGeometry
                         null, // interpolation
@@ -1459,6 +1915,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1477,7 +1935,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     "image/tiff", // outputFormat
                     "image/tiff",
                     null, // targetCRS
-                    CRS.decode("EPSG:4326", true), // roiCRS
+                    WGS84, // roiCRS
                     null, // roi
                     false, // cropToGeometry
                     null, // interpolation
@@ -1485,6 +1943,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     targetSizeY, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     new NullProgressListener() // progressListener
                     );
 
@@ -1525,7 +1985,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                             "image/tiff", // outputFormat
                             "image/tiff",
                             null, // targetCRS
-                            CRS.decode("EPSG:4326", true), // roiCRS
+                            WGS84, // roiCRS
                             null, // roi
                             false, // cropToGeometry
                             null, // interpolation
@@ -1533,6 +1993,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                             targetSizeY, // targetSizeY
                             bandIndices, // bandSelectIndices
                             null, // Writing params
+                            false,
+                            false,
                             new NullProgressListener() // progressListener
                             );
 
@@ -1587,7 +2049,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     "image/tiff", // outputFormat
                     "image/tiff",
                     null, // targetCRS
-                    CRS.decode("EPSG:4326", true), // roiCRS
+                    WGS84, // roiCRS
                     roi, // roi
                     false, // cropToGeometry
                     null, // interpolation
@@ -1595,6 +2057,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     60000, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     new NullProgressListener() // progressListener
                     );
 
@@ -1684,6 +2148,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     null, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     new NullProgressListener() // progressListener
                     );
 
@@ -1734,7 +2200,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                     "image/tiff", // outputFormat
                     "image/tiff",
                     null, // targetCRS
-                    CRS.decode("EPSG:4326", true), // roiCRS
+                    WGS84, // roiCRS
                     roi, // roi
                     true, // cropToGeometry
                     null, // interpolation
@@ -1742,6 +2208,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     null, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     listener // progressListener
                     );
 
@@ -1802,6 +2270,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                     null, // targetSizeY
                     null, // bandSelectIndices
                     null, // Writing params
+                    false,
+                    false,
                     listener // progressListener
                     );
 
@@ -1835,13 +2305,14 @@ public class DownloadProcessTest extends WPSTestSupport {
                 new DownloadEstimatorProcess(
                         new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
+
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
 
         final DefaultProgressListener progressListener = new DefaultProgressListener();
         // Download the features. It should throw an exception.
 
+        // Download the features. It should throw an exception.
         downloadProcess.execute(
                 getLayerId(MockData.POLYGONS), // layerName
                 null, // filter
@@ -1856,6 +2327,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                 null, // targetSizeY
                 null, // bandSelectIndices
                 null, // Writing params
+                false,
+                false,
                 progressListener // progressListener
                 );
     }
@@ -1869,13 +2342,9 @@ public class DownloadProcessTest extends WPSTestSupport {
      */
     @Test
     public void testDownloadGranuleHeterogeneousResolution() throws Exception {
-
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
 
         // Setting filter to get the granule with resolution
         final PropertyName property = FF.property("resolution");
@@ -1884,7 +2353,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         testExpectedResolution(
                 downloadProcess,
                 filter,
-                CRS.decode("EPSG:4326", true),
+                WGS84,
                 ROI2,
                 resourceManager,
                 17550.94845318,
@@ -1938,6 +2407,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         128, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1978,6 +2449,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         null, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -1995,8 +2468,8 @@ public class DownloadProcessTest extends WPSTestSupport {
             double resX = transform2D.getScaleX();
             double resY = transform2D.getScaleY();
 
-            Assert.assertEquals(expectedX, resX, 1E-6);
-            Assert.assertEquals(expectedY, resY, 1E-6);
+            Assert.assertEquals(expectedX, resX, DELTA);
+            Assert.assertEquals(expectedY, resY, DELTA);
         }
     }
 
@@ -2021,14 +2494,9 @@ public class DownloadProcessTest extends WPSTestSupport {
     }
 
     private void testDownloadByOutputFormat(String outputFormat) throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(), getGeoServer());
         final WPSResourceManager resourceManager = getResourceManager();
         // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
 
         Polygon roi =
                 (Polygon)
@@ -2047,7 +2515,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                         outputFormat, // outputFormat
                         outputFormat,
                         null, // targetCRS
-                        CRS.decode("EPSG:4326", true), // roiCRS
+                        WGS84, // roiCRS
                         roi, // roi
                         true, // cropToGeometry
                         null, // interpolation
@@ -2055,6 +2523,8 @@ public class DownloadProcessTest extends WPSTestSupport {
                         requestedSizeY, // targetSizeY
                         null, // bandSelectIndices
                         null, // Writing params
+                        false,
+                        false,
                         new NullProgressListener() // progressListener
                         );
 
@@ -2307,5 +2777,303 @@ public class DownloadProcessTest extends WPSTestSupport {
                 }
             }
         }
+    }
+
+    private DownloadProcess createDefaultTestingDownloadProcess() {
+        return createDefaultTestingDownloadProcess(getResourceManager());
+    }
+
+    private DownloadProcess createDefaultTestingDownloadProcess(
+            WPSResourceManager resourceManager) {
+        GeoServer geoserver = getGeoServer();
+        DownloadEstimatorProcess limits =
+                new DownloadEstimatorProcess(new StaticDownloadServiceConfiguration(), geoserver);
+        return new DownloadProcess(geoserver, limits, resourceManager);
+    }
+
+    @Test
+    public void testDirectRasterDownloadSimpleSource() throws Exception {
+        // simple download, no extra parameters
+        RawData raster =
+                executeRasterDownload(getLayerId(MockData.WORLD), "image/tiff", null, null, null);
+
+        CoverageStoreInfo store =
+                getCatalog().getCoverageStoreByName(MockData.WORLD.getLocalPart());
+        File input = URLs.urlToFile(new URL(store.getURL()));
+        try (FileInputStream is = new FileInputStream(input);
+                InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    @Test
+    public void testDirectRasterDownloadMosaic() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        Filter filter = FF.like(FF.property("location"), "green.tif");
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(HETEROGENEOUS_CRS), "image/tiff", filter, targetCRS, null);
+
+        // got a single file from the source, it's exactly the same
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    @Test
+    public void testDirectDownloadCompression() throws Exception {
+        checkDownloadCompression("Deflate", true);
+    }
+
+    @Test
+    public void testDirectDownloadAutoCompression() throws Exception {
+        checkDownloadCompression("Auto", true);
+    }
+
+    @Test
+    public void testDirectDownloadDifferentCompression() throws Exception {
+        checkDownloadCompression("JPEG", false);
+    }
+
+    private void checkDownloadCompression(String compression, boolean contentEquals)
+            throws FactoryException, IOException {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        Filter filter = FF.like(FF.property("location"), "green.tif");
+
+        Parameters writeParams = new Parameters();
+        writeParams.getParameters().add(new Parameter("compression", compression));
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(HETEROGENEOUS_CRS),
+                        "image/tiff",
+                        filter,
+                        targetCRS,
+                        writeParams);
+
+        // got a single file from the source, it's exactly the same
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertEquals(contentEquals, org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    @Test
+    public void testDirectDownloadTiling() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        Filter filter = FF.like(FF.property("location"), "green.tif");
+
+        // tiling matches source
+        Parameters writeParams = new Parameters();
+        writeParams.getParameters().add(new Parameter(TILING, "true"));
+        writeParams.getParameters().add(new Parameter(TILEWIDTH, "256"));
+        writeParams.getParameters().add(new Parameter(TILEHEIGHT, "256"));
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(HETEROGENEOUS_CRS),
+                        "image/tiff",
+                        filter,
+                        targetCRS,
+                        writeParams);
+
+        // got a single file from the source, it's exactly the same
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    @Test
+    public void testDirectDownloadTilingMismatch() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        Filter filter = FF.like(FF.property("location"), "green.tif");
+
+        // tiling does not match the source
+        Parameters writeParams = new Parameters();
+        writeParams.getParameters().add(new Parameter(TILING, "true"));
+        writeParams.getParameters().add(new Parameter(TILEWIDTH, "512"));
+        writeParams.getParameters().add(new Parameter(TILEHEIGHT, "512"));
+        writeParams.getParameters().add(new Parameter(COMPRESSION, "Auto"));
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(HETEROGENEOUS_CRS),
+                        "image/tiff",
+                        filter,
+                        targetCRS,
+                        writeParams);
+
+        // got a single file from the source, but the tiling is different
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertFalse(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+
+        // check it has been compressed Deflate with "auto" compression on
+        File rasterFile = ((ResourceRawData) raster).getResource().file();
+        assertEquals("Deflate", RasterDirectDownloader.getCompression(rasterFile));
+    }
+
+    @Test
+    public void testDirectDownloadLargeROI() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        Filter filter = FF.like(FF.property("location"), "green.tif");
+
+        // get bounds larger than the file
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        ReferencedEnvelope bounds = getGeoTiffBounds(file);
+        bounds.expandBy(bounds.getWidth() * 0.1, bounds.getHeight() * 0.1);
+        Polygon roi = JTS.toGeometry(bounds);
+
+        final WPSResourceManager resourceManager = getResourceManager();
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+        RawData raster =
+                downloadProcess.execute(
+                        getLayerId(HETEROGENEOUS_CRS), // layerName
+                        filter, // filter
+                        "image/tiff", // outputFormat
+                        "image/tiff",
+                        targetCRS, // targetCRS
+                        targetCRS,
+                        roi, // roi
+                        false, // cropToGeometry
+                        null, // interpolation
+                        null, // targetSizeX
+                        null, // targetSizeY
+                        null, // bandSelectIndices
+                        null, // Writing params
+                        true,
+                        true,
+                        new NullProgressListener() // progressListener
+                        );
+
+        // got a single file from the source, it's exactly the same
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    @Test
+    public void testDirectDownloadCroppingROI() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32632", true);
+        Filter filter = FF.like(FF.property("location"), "green.tif");
+
+        // get bounds smaller than the file
+        final File file = new File(this.getTestData().getDataDirectoryRoot(), "hcrs/green.tif");
+        ReferencedEnvelope bounds = getGeoTiffBounds(file);
+        bounds.expandBy(-bounds.getWidth() * 0.1, -bounds.getHeight() * 0.1);
+        Polygon roi = JTS.toGeometry(bounds);
+
+        final WPSResourceManager resourceManager = getResourceManager();
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+        RawData raster =
+                downloadProcess.execute(
+                        getLayerId(HETEROGENEOUS_CRS), // layerName
+                        filter, // filter
+                        "image/tiff", // outputFormat
+                        "image/tiff",
+                        targetCRS, // targetCRS
+                        targetCRS,
+                        roi, // roi
+                        false, // cropToGeometry
+                        null, // interpolation
+                        null, // targetSizeX
+                        null, // targetSizeY
+                        null, // bandSelectIndices
+                        null, // Writing params
+                        true,
+                        true,
+                        new NullProgressListener() // progressListener
+                        );
+
+        // got a single file from the source, but it's different due to ROI
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertFalse(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    /** This image mosaic has NODATA in the source files */
+    @Test
+    public void testDirectDownloadHeteroNoData() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:32634", true);
+        Filter filter = FF.like(FF.property("location"), "20170421T100031027Z_T34VCJ.tif");
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(HETEROGENEOUS_NODATA), "image/tiff", filter, targetCRS, null);
+
+        // got a single file from the source, it's exactly the same
+        final File file =
+                new File(
+                        this.getTestData().getDataDirectoryRoot(),
+                        "hcrs_nodata/20170421T100031027Z_T34VCJ.tif");
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    /** This image mosaic has NODATA (-30000) in the source files and has uniform structure */
+    @Test
+    public void testDirectDownloadTimeseriesNoData() throws Exception {
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326", true);
+        Filter filter = FF.equals(FF.property("time"), FF.literal("2016-01-01"));
+
+        RawData raster =
+                executeRasterDownload(
+                        getLayerId(TIMESERIES), "image/tiff", filter, targetCRS, null);
+
+        // got a single file from the source, it's exactly the same
+        final File file =
+                new File(this.getTestData().getDataDirectoryRoot(), "timeseries/sst_20160101.tiff");
+        try (FileInputStream is = new FileInputStream(file);
+                InputStream os = raster.getInputStream()) {
+            assertTrue(org.apache.commons.io.IOUtils.contentEquals(is, os));
+        }
+    }
+
+    private ReferencedEnvelope getGeoTiffBounds(File file) throws DataSourceException {
+        GeoTiffReader reader = new GeoTiffReader(file);
+        ReferencedEnvelope bounds = new ReferencedEnvelope(reader.getOriginalEnvelope());
+        reader.dispose();
+        return bounds;
+    }
+
+    /** Convenience method to start a raster download, with a shorter list of parameters */
+    private RawData executeRasterDownload(
+            String layerId,
+            String format,
+            Filter filter,
+            CoordinateReferenceSystem targetCRS,
+            Parameters writeParams) {
+        final WPSResourceManager resourceManager = getResourceManager();
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess(resourceManager);
+        return downloadProcess.execute(
+                layerId, // layerName
+                filter, // filter
+                format, // outputFormat
+                format,
+                targetCRS, // targetCRS
+                targetCRS,
+                null, // roi
+                false, // cropToGeometry
+                null, // interpolation
+                null, // targetSizeX
+                null, // targetSizeY
+                null, // bandSelectIndices
+                writeParams, // Writing params
+                true,
+                true,
+                new NullProgressListener() // progressListener
+                );
     }
 }

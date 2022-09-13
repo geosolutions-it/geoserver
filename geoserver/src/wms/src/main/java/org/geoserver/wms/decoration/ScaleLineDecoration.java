@@ -5,7 +5,11 @@
  */
 package org.geoserver.wms.decoration;
 
+import static org.geoserver.wms.decoration.MapDecorationLayout.getOption;
 import static org.geoserver.wms.decoration.ScaleLineDecoration.MeasurementSystem.*;
+import static org.geoserver.wms.decoration.ScaleLineDecoration.MeasurementSystem.BOTH;
+import static org.geoserver.wms.decoration.ScaleLineDecoration.MeasurementSystem.IMPERIAL;
+import static org.geoserver.wms.decoration.ScaleLineDecoration.MeasurementSystem.METRIC;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -21,6 +25,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.wms.WMSMapContent;
+import org.opengis.filter.expression.Expression;
 
 public class ScaleLineDecoration implements MapDecoration {
     /** A logger for this class. */
@@ -74,10 +79,11 @@ public class ScaleLineDecoration implements MapDecoration {
         }
     }
 
-    public void loadOptions(Map<String, String> options) {
+    @Override
+    public void loadOptions(Map<String, Expression> options) {
         if (options.get("fontsize") != null) {
             try {
-                this.fontSize = Float.parseFloat(options.get("fontsize"));
+                this.fontSize = getOption(options, "fontsize", Float.class);
             } catch (Exception e) {
                 this.LOGGER.log(Level.WARNING, "'fontsize' must be a float.", e);
             }
@@ -85,22 +91,22 @@ public class ScaleLineDecoration implements MapDecoration {
 
         if (options.get("dpi") != null) {
             try {
-                this.dpi = Float.parseFloat(options.get("dpi"));
+                this.dpi = getOption(options, "dpi", Float.class);
             } catch (Exception e) {
                 this.LOGGER.log(Level.WARNING, "'dpi' must be a float.", e);
             }
         }
 
-        Color tmp = MapDecorationLayout.parseColor(options.get("bgcolor"));
+        Color tmp = MapDecorationLayout.parseColor(getOption(options, "bgcolor"));
         if (tmp != null) bgcolor = tmp;
 
-        tmp = MapDecorationLayout.parseColor(options.get("fgcolor"));
+        tmp = MapDecorationLayout.parseColor(getOption(options, "fgcolor"));
         if (tmp != null) fgcolor = tmp;
 
         // Creates a rectangle only if is defined, if not is "transparent" like Google Maps
         if (options.get("transparent") != null) {
             try {
-                this.transparent = Boolean.parseBoolean(options.get("transparent"));
+                this.transparent = getOption(options, "transparent", Boolean.class);
             } catch (Exception e) {
                 this.LOGGER.log(Level.WARNING, "'transparent' must be a boolean.", e);
             }
@@ -108,9 +114,8 @@ public class ScaleLineDecoration implements MapDecoration {
 
         if (options.get("measurement-system") != null) {
             try {
-                LOGGER.log(Level.INFO, options.get("measurement-system"));
                 this.measurementSystem =
-                        MeasurementSystem.mapToEnum(options.get("measurement-system"));
+                        MeasurementSystem.mapToEnum(getOption(options, "measurement-system"));
             } catch (Exception e) {
                 this.LOGGER.log(
                         Level.WARNING,

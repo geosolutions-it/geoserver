@@ -20,13 +20,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.lang3.StringUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.wms.WMSMapContent;
+import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.filter.text.cql2.CQLException;
+import org.geotools.filter.text.ecql.ECQL;
+import org.geotools.util.logging.Logging;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.input.SAXBuilder;
+import org.opengis.filter.FilterFactory2;
+import org.opengis.filter.expression.Expression;
 
 /**
  * The MapDecorationLayout class describes a set of overlays to be used to enhance a WMS response.
@@ -36,8 +45,13 @@ import org.jdom2.input.SAXBuilder;
  * @author David Winslow <dwinslow@opengeo.org>
  */
 public class MapDecorationLayout {
-    private static Logger LOGGER =
-            org.geotools.util.logging.Logging.getLogger("org.geoserver.wms.responses");
+
+    /** A filter factory, using the default hints */
+    public static final FilterFactory2 FF = CommonFactoryFinder.getFilterFactory2();
+
+    private static final Pattern EXPRESSION = Pattern.compile("^\\s*\\$\\{(.*)\\}\\s*$");
+
+    private static Logger LOGGER = Logging.getLogger(MapDecorationLayout.class);
 
     /**
      * The Block class annotates a MapDecoration object with positioning and sizing information, and
@@ -278,26 +292,38 @@ public class MapDecorationLayout {
     private static MapDecorationLayout fromDocument(MapDecorationLayout dl, Document confFile)
             throws Exception {
         for (Element e : (List<Element>) confFile.getRootElement().getChildren("decoration")) {
-            Map<String, String> m = new HashMap<String, String>();
+            Map<String, Expression> m = new HashMap<>();
+            String decorationType = e.getAttributeValue("type");
             for (Element option : (List<Element>) e.getChildren("option")) {
+                String name = option.getAttributeValue("name");
                 String value = option.getAttributeValue("value");
                 if (value == null) {
                     // pick from body, useful if the content is large
                     value = option.getValue();
                 }
-                m.put(option.getAttributeValue("name"), value);
+
+                if (value != null) {
+                    Expression expression;
+                    if (isTextMessage(name, decorationType)) {
+                        expression = FF.literal(value);
+                    } else {
+                        expression = parseExpression(value);
+                    }
+
+                    m.put(name, expression);
+                }
             }
 
-            MapDecoration decoration = getDecoration(e.getAttributeValue("type"));
+            MapDecoration decoration = getDecoration(decorationType);
             if (decoration == null) {
                 LOGGER.log(
                         Level.WARNING,
-                        "Unknown decoration type: " + e.getAttributeValue("type") + " requested.");
+                        "Unknown decoration type: " + decorationType + " requested.");
                 continue;
             }
             decoration.loadOptions(m);
 
-            Block.Position pos = Block.Position.fromString(e.getAttributeValue("affinity"));
+            Block.Position pos = Block.Position.fromString(evaluateAttribute(e, "affinity"));
 
             if (pos == null) {
                 LOGGER.log(
@@ -308,9 +334,9 @@ public class MapDecorationLayout {
 
             Dimension size = null;
 
-            String theSize = e.getAttributeValue("size");
+            String theSize = evaluateAttribute(e, "size");
             try {
-                if (theSize != null && !theSize.equalsIgnoreCase("auto")) {
+                if (!StringUtils.isEmpty(theSize) && !theSize.equalsIgnoreCase("auto")) {
                     String[] sizeArr = theSize.split(",");
 
                     size = new Dimension(Integer.valueOf(sizeArr[0]), Integer.valueOf(sizeArr[1]));
@@ -320,7 +346,7 @@ public class MapDecorationLayout {
             }
 
             Point offset = null;
-            String theOffset = e.getAttributeValue("offset");
+            String theOffset = evaluateAttribute(e, "offset");
             try {
                 if (theOffset != null) {
                     String[] offsetArr = theOffset.split(",");
@@ -338,6 +364,36 @@ public class MapDecorationLayout {
         }
 
         return dl;
+    }
+
+    private static String evaluateAttribute(Element e, String name) throws CQLException {
+        String attribute = e.getAttributeValue(name);
+        if (attribute == null) return null;
+        return parseExpression(attribute).evaluate(null, String.class);
+    }
+
+    /**
+     * Checks if the provided value can be a <code>${...}</code> expression and parses it
+     * accordingly
+     */
+    private static Expression parseExpression(String value) throws CQLException {
+        Expression expression;
+        Matcher matcher = EXPRESSION.matcher(value);
+        if (matcher.matches()) {
+            expression = ECQL.toExpression(matcher.group(1));
+        } else {
+            expression = FF.literal(value);
+        }
+        return expression;
+    }
+
+    /**
+     * The message option of the text decoration is already handled as a FreeMarker template, we
+     * don't want to allow verbatim expansion of a HTTP provided content into a freemarker template,
+     * as it could be another bit of Freemarker, potentially active and dangerous.
+     */
+    private static boolean isTextMessage(String name, String decorationType) {
+        return "message".equals(name) && "text".equals(decorationType);
     }
 
     /**
@@ -442,5 +498,34 @@ public class MapDecorationLayout {
                 throw new RuntimeException(
                         "Couldn't decode color value: " + origInput + " (" + input + ")");
         }
+    }
+
+    /**
+     * Retrieves an option from the map, evaluating the expression as a String. Null safe, may
+     * return null.
+     */
+    static String getOption(Map<String, Expression> options, String key) {
+        return getOption(options, key, String.class);
+    }
+
+    /**
+     * Retrieves an option from the map, evaluating the expression as the desired target type. Null
+     * safe, may return null.
+     */
+    static <T> T getOption(Map<String, Expression> options, String key, Class<T> target) {
+        if (options == null) return null;
+        Expression expression = options.get(key);
+        return evaluate(expression, target);
+    }
+
+    /** Evaluates the expression with the given target class. Null safe. */
+    static <T> T evaluate(Expression expression, Class<T> target) {
+        if (expression == null) return null;
+        T result = (T) expression.evaluate(null, target);
+        // did the conversion fail? throw an exception with some context as to what happened
+        if (result == null && expression != null)
+            throw new IllegalArgumentException(
+                    "Could not convert " + expression + " to " + target.getSimpleName());
+        return result;
     }
 }

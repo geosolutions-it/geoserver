@@ -43,8 +43,10 @@ public class JDBCImportStoreLoader implements DisposableBean {
         this.dataDir = dd;
         try {
             Properties params = getParameters();
-
             store = (JDBCDataStore) DataStoreFinder.getDataStore(params);
+            if (store == null)
+                throw new RuntimeException(
+                        "Failed to create a JDBC store with parameters: " + params);
         } catch (IOException e) {
             LOGGER.info(
                     "can't find or create JDBC import store configuration file: "

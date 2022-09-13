@@ -5,12 +5,19 @@
  */
 package org.geoserver.wms.map;
 
+import static org.geoserver.wms.decoration.MapDecorationLayout.FF;
+
 import it.geosolutions.jaiext.lookup.LookupTable;
 import it.geosolutions.jaiext.lookup.LookupTableFactory;
 import it.geosolutions.jaiext.range.Range;
 import it.geosolutions.jaiext.vectorbin.ROIGeometry;
 import it.geosolutions.rendered.viewer.RenderedImageBrowser;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Transparency;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.image.BufferedImage;
@@ -777,9 +784,11 @@ public class RenderedImageMapOutputFormat extends AbstractMapOutputFormat {
     public static MapDecorationLayout.Block getWatermark(WMSInfo wms) {
         WatermarkInfo watermark = (wms == null ? null : wms.getWatermark());
         if (watermark != null && watermark.isEnabled()) {
-            Map<String, String> options = new HashMap<String, String>();
-            options.put("url", watermark.getURL());
-            options.put("opacity", Float.toString((255f - watermark.getTransparency()) / 2.55f));
+            Map<String, Expression> options = new HashMap<>();
+            options.put("url", FF.literal(watermark.getURL()));
+            options.put(
+                    "opacity",
+                    FF.literal(Float.toString((255f - watermark.getTransparency()) / 2.55f)));
 
             MapDecoration d = new WatermarkDecoration();
             try {

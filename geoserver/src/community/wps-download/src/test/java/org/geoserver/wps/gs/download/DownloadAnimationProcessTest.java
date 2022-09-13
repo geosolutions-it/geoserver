@@ -32,6 +32,7 @@ import org.geoserver.platform.resource.Resource;
 import org.geotools.image.test.ImageAssert;
 import org.hamcrest.CoreMatchers;
 import org.jcodec.api.FrameGrab;
+import org.jcodec.api.JCodecException;
 import org.jcodec.common.Demuxer;
 import org.jcodec.common.DemuxerTrack;
 import org.jcodec.common.DemuxerTrackMeta;
@@ -313,7 +314,66 @@ public class DownloadAnimationProcessTest extends BaseDownloadImageProcessTest {
         assertEquals("video/mp4", response.getContentType());
 
         // JCodec API works off files only...
-        File testFile = new File("target/animateTimestamped.mp4");
+        checkAnimation(response, 4, 8, "animateBlueMarbleTimestampedFrame1.png");
+    }
+
+    @Test
+    public void testDynamicDecorationDefault() throws Exception {
+        String xml =
+                IOUtils.toString(
+                        getClass().getResourceAsStream("animateDynamicDecoration.xml"), UTF_8);
+
+        // as is, should be the same as testAnimateDecoration
+        MockHttpServletResponse response = postAsServletResponse("wps", xml);
+        assertEquals("video/mp4", response.getContentType());
+        checkAnimation(response, 2, 2, "animateDecorateFirstFrame.png");
+    }
+
+    @Test
+    public void testDynamicDecorationLargeLogo() throws Exception {
+        String xmlTemplate =
+                IOUtils.toString(
+                        getClass().getResourceAsStream("animateDynamicDecoration.xml"), UTF_8);
+
+        // change the logo size and run again
+        String xml = xmlTemplate.replace("${env}", "size:64,64");
+        MockHttpServletResponse response = postAsServletResponse("wps", xml);
+        assertEquals("video/mp4", response.getContentType());
+        checkAnimation(response, 2, 2, "animateDecorateLargeLogo.png");
+    }
+
+    @Test
+    public void testDynamicDecorationOsgeoLogo() throws Exception {
+        String xmlTemplate =
+                IOUtils.toString(
+                        getClass().getResourceAsStream("animateDynamicDecoration.xml"), UTF_8);
+
+        // change the logo and its size
+        String xml = xmlTemplate.replace("${env}", "size:64,64;logo:osgeo.png");
+        MockHttpServletResponse response = postAsServletResponse("wps", xml);
+        assertEquals("video/mp4", response.getContentType());
+        checkAnimation(response, 2, 2, "animateDecorateOsgeoLogo.png");
+    }
+
+    @Test
+    public void testDynamicDecorationLayer() throws Exception {
+        String xmlTemplate =
+                IOUtils.toString(
+                        getClass().getResourceAsStream("animateLayerDynamicDecoration.xml"), UTF_8);
+
+        // change the logo and its size
+        String xml = xmlTemplate.replace("${env}", "size:64,64;logo:osgeo.png");
+        MockHttpServletResponse response = postAsServletResponse("wps", xml);
+        assertEquals("video/mp4", response.getContentType());
+        checkAnimation(response, 2, 2, "animateDecorateOsgeoLogo.png");
+    }
+
+    private void checkAnimation(
+            MockHttpServletResponse response, int totalFrames, int totalDuration, String firstFrame)
+            throws IOException, JCodecException {
+        // JCodec API works off files only...
+        File testFile = new File("target/test.mp4");
+        testFile.delete();
         FileUtils.writeByteArrayToFile(testFile, response.getContentAsByteArray());
 
         // check frames and duration
@@ -321,14 +381,13 @@ public class DownloadAnimationProcessTest extends BaseDownloadImageProcessTest {
         Demuxer d = JCodecUtil.createDemuxer(f, testFile);
         DemuxerTrack vt = d.getVideoTracks().get(0);
         DemuxerTrackMeta dtm = vt.getMeta();
-        assertEquals(4, dtm.getTotalFrames());
-        assertEquals(8, dtm.getTotalDuration(), 0d);
+        assertEquals(totalFrames, dtm.getTotalFrames());
+        assertEquals(totalDuration, dtm.getTotalDuration(), 0d);
 
         // grab first frame for test
         FrameGrab grabber = FrameGrab.createFrameGrab(NIOUtils.readableChannel(testFile));
         BufferedImage frame1 = AWTUtil.toBufferedImage(grabber.getNativeFrame());
-        ImageAssert.assertEquals(
-                new File(SAMPLES + "animateBlueMarbleTimestampedFrame1.png"), frame1, 100);
+        ImageAssert.assertEquals(new File(SAMPLES + firstFrame), frame1, 100);
     }
 
     BufferedImage grabImageFromZip(File file, String entryName) throws IOException {

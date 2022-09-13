@@ -5,7 +5,15 @@
  */
 package org.geoserver.wms.decoration;
 
+import static org.geoserver.wms.decoration.MapDecorationLayout.getOption;
+
 import java.awt.*;
+import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Composite;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -24,6 +32,7 @@ import org.geoserver.platform.resource.Resources;
 import org.geoserver.wms.WMSMapContent;
 import org.geotools.util.SoftValueHashMap;
 import org.geotools.util.URLs;
+import org.opengis.filter.expression.Expression;
 
 public class WatermarkDecoration implements MapDecoration {
     /** A logger for this class. */
@@ -39,12 +48,13 @@ public class WatermarkDecoration implements MapDecoration {
     private static final Map<URL, LogoCacheEntry> logoCache =
             new SoftValueHashMap<URL, LogoCacheEntry>();
 
-    public void loadOptions(Map<String, String> options) {
-        this.imageURL = options.get("url");
+    @Override
+    public void loadOptions(Map<String, Expression> options) {
+        this.imageURL = getOption(options, "url");
 
         if (options.containsKey("opacity")) {
             try {
-                opacity = Float.valueOf(options.get("opacity")) / 100f;
+                opacity = getOption(options, "opacity", Float.class) / 100f;
                 opacity = Math.max(Math.min(opacity, 1f), 0f);
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Invalid opacity value: " + options.get("opacity"), e);
