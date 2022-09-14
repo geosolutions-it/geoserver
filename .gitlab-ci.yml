@@ -53,9 +53,10 @@ tests:
 
 package:
   script:
-    - ls -al geoserver/src/web/app/target/
     - cd docker
     # - wget --no-check-certificate -O ./resources/geoserver/geoserver.war https://${FTP_USER}:${FTP_PASSWORD}@demo.geo-solutions.it/share/eumetsat/wars/geoserver_latest.war
+    - mv geoserver/src/web/app/target/geoserver.war ./resources/geoserver/geoserver.war
+    - ls -al resources/geoserver/
     # - wget --no-check-certificate -O ./resources/fonts/osm-fonts.tar.xz https://${FTP_USER}:${FTP_PASSWORD}@demo.geo-solutions.it/share/eumetsat/fonts/osm-fonts.tar.xz
     # - mkdir -p /tmp/geoserver-mount
     # - apk update ; apk add nfs-utils
