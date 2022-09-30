@@ -46,6 +46,7 @@ import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterValueGroup;
 import org.opengis.referencing.datum.PixelInCell;
 import org.opengis.referencing.operation.MathTransform;
+import org.vfny.geoserver.util.WCSUtils;
 
 /**
  * Utility class performing operations related to http requests.
@@ -141,6 +142,7 @@ public class RequestUtils {
      * @throws IOException
      */
     public static GridCoverage2D readBestCoverage(
+            CoverageInfo cinfo,
             final GridCoverage2DReader reader,
             final Object params,
             final GridGeometry2D readGG,
@@ -156,8 +158,7 @@ public class RequestUtils {
         //
         ////
         try {
-            final ReferencedEnvelope coverageEnvelope =
-                    new ReferencedEnvelope(reader.getOriginalEnvelope());
+            final ReferencedEnvelope coverageEnvelope = WCSUtils.fitEnvelope(cinfo, reader);
             if (!coverageEnvelope.intersects(
                     (BoundingBox) ReferencedEnvelope.reference(readGG.getEnvelope()))) {
                 return null;
