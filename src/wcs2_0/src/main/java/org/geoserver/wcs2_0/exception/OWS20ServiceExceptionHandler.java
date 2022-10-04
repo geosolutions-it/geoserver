@@ -83,7 +83,7 @@ public class OWS20ServiceExceptionHandler extends ServiceExceptionHandler {
         Level level = Level.WARNING;
 
         if ((errorCode != null && errorCode.toUpperCase().startsWith("INVALID"))
-            || (errorCode == null
+                || (errorCode == null
                         && message != null
                         && message.toUpperCase().startsWith("INVALID"))) {
             // Log Exceptions dealing with "Invalid" to INFO
