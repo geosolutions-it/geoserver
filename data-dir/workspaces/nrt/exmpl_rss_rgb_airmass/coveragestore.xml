@@ -1,0 +1,11 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl-278011c2:17dc7e78f65:-7fdb</id>
+  <name>exmpl_rss_rgb_airmass</name>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-278011c2:17dc7e78f65:-7fdf</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:///var/geoserver/data/LIC_NRT/exmpl_rss_rgb_airmass</url>
+</coverageStore>

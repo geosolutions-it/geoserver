@@ -1,0 +1,15 @@
+<style>
+  <id>StyleInfoImpl-1e89fa0a:1607375c877:-7f9f</id>
+  <name>sst_composition3</name>
+  <format>sld</format>
+  <languageVersion>
+    <version>1.0.0</version>
+  </languageVersion>
+  <filename>sst_composition3.sld</filename>
+  <legend>
+    <width>640</width>
+    <height>80</height>
+    <format>image/png</format>
+    <onlineResource>sentinel3a_slstr_sst-640x80.png</onlineResource>
+  </legend>
+</style>

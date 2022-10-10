@@ -1,0 +1,193 @@
+<coverage>
+  <id>CoverageInfoImpl--5b601b66:1707bad653c:-490b</id>
+  <name>daily_sentinel3ab_slstr_l2p_sst_fullres</name>
+  <nativeName>daily_sentinel3ab_slstr_l2p_sst_fullres</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff6</id>
+  </namespace>
+  <title>SLSTR Level 2 SST Daily Accumulated - Sentinel-3</title>
+  <description>Generated from ImageMosaic</description>
+  <abstract>Sea Surface Temperature (SST) is the kinetic temperature of a water body at a defined depth. Although SLSTR measures an infrared radiometric temperature, it is provided as a kinetic temperature by considering the emissivity of the water body as part of the SST retrieval process. It is important to note that the SLSTR instruments return SST measurements for the ocean &apos;skin&apos;. Due to the limited penetration of thermal infra-red radiation through the water column, this corresponds to the temperature in the top few tens of micrometres. At night, the skin temperature is typically a few tenths of a degree cooler than the temperature measured by in situ systems; in the day, the skin can be considerably higher if strong diurnal warming is present. For more details please see “What is SST?” on the GHRSST web pages. The SST measurement is obtained by means of a highly accurate calibration of the three infra-red channels at 3.74, 10.85 and 12 µm (S7-S8-S9). Corrections for water vapour atmospheric absorption are performed using a triple window at night, and a split window during the day as the 3.7 µm channel is not used due to solar contamination. Each on-ground pixel is viewed twice, via nadir and oblique views with different atmospheric path lengths, allowing for correction for aerosol effects. Consequently, there are four possible retrieved SSTs, referred to as N2 (nadir-only 11 µm and 12 µm), N3 (nadir-only 3.7 µm, 11 µm and 12 µm), D2 (dual-view 11 µm and 12 µm) and D3 (dual-view 3.7 µm, 11 µm and 12 µm). A fifth retrieval algorithm, N3R is similar to N3, but uses the property of “aerosol robustness”, which is applicable in areas of high atmospheric aerosol content, e.g. near volcanoes. The product is derived from SLSTR L2 NRT data. Following derivation was applied to select the SST pixels to be plotted from WST file: - if the observation is in the nadir-only / single-view part of swath (i.e. &quot;sst_algorithm_types&quot; is N2, N3, N3R) then SST = sea_surface_temperature - If the observation is in the dual-view part of swath ((i.e. &quot;sst_algorithm_types&quot; is D2 or D3) then SST = sea_surface_temperature - dual_nadir_sst_difference. Besides, the following flags were used to select which pixels to represent and display: (quality_level &gt;=3) and (l2p_flags.land == 0) and (l2p_flags.lake == 0) The image is an incrementally accumulated product of all the orbits over an entire day from both Sentinel-3A and -3B. The SLSTR instrument and ground processing system are required to produce SST retrievals routinely from the corresponding brightness temperatures with an absolute accuracy of better than 0.3 K, globally, both for a single sample and when averaged over areas of 0.5° longitude by 0.5° latitude, under certain cloud-free conditions (i.e. &gt;20% cloud-free samples within each area). The SLSTR instrument also has a temporal stability of 0.1 K/decade.</abstract>
+  <keywords>
+    <string>copernicus_daily_sentinel3ab_slstr_l2p_sst_fullres</string>
+    <string>WCS</string>
+    <string>ImageMosaic</string>
+  </keywords>
+  <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
+  DATUM[&quot;World Geodetic System 1984&quot;, 
+    SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+  PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+  UNIT[&quot;degree&quot;, 0.017453292519943295], 
+  AXIS[&quot;Geodetic longitude&quot;, EAST], 
+  AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.010009765625</maxx>
+    <miny>-85.2300033569336</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.010009765625</maxx>
+    <miny>-85.2300033569336</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="cacheAgeMax">604800</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>true</enabled>
+        <presentation>DISCRETE_INTERVAL</presentation>
+        <resolution>6060000</resolution>
+        <units>ISO8601</units>
+        <defaultValue>
+          <strategy>MAXIMUM</strategy>
+        </defaultValue>
+        <nearestMatchEnabled>true</nearestMatchEnabled>
+        <acceptableInterval>PT101M/PT0H</acceptableInterval>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">true</entry>
+    <entry key="NetCDFOutput.Key">
+      <netcdfLayerSettingsContainer>
+        <compressionLevel>0</compressionLevel>
+        <shuffle>true</shuffle>
+        <copyAttributes>false</copyAttributes>
+        <copyGlobalAttributes>false</copyGlobalAttributes>
+        <dataPacking>NONE</dataPacking>
+      </netcdfLayerSettingsContainer>
+    </entry>
+    <entry key="dirName">daily_sentinel3ab_slstr_l2p_sst_fullres_copernicus_daily_sentinel3ab_slstr_l2p_sst_fullres</entry>
+  </metadata>
+  <store class="coverageStore">
+    <id>CoverageStoreInfoImpl--5b601b66:1707bad653c:-4994</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <nativeFormat>ImageMosaic</nativeFormat>
+  <grid dimension="2">
+    <range>
+      <low>0 0</low>
+      <high>36001 17523</high>
+    </range>
+    <transform>
+      <scaleX>0.010000000000000005</scaleX>
+      <scaleY>-0.010000000000000005</scaleY>
+      <shearX>0.0</shearX>
+      <shearY>0.0</shearY>
+      <translateX>-179.995</translateX>
+      <translateY>89.995</translateY>
+    </transform>
+    <crs>EPSG:4326</crs>
+  </grid>
+  <supportedFormats>
+    <string>GEOTIFF</string>
+    <string>GIF</string>
+    <string>PNG</string>
+    <string>JPEG</string>
+    <string>TIFF</string>
+  </supportedFormats>
+  <interpolationMethods>
+    <string>nearest neighbor</string>
+    <string>bilinear</string>
+    <string>bicubic</string>
+  </interpolationMethods>
+  <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
+  <dimensions>
+    <coverageDimension>
+      <name>GRAY_INDEX</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <dimensionType>
+        <name>REAL_32BITS</name>
+      </dimensionType>
+    </coverageDimension>
+  </dimensions>
+  <requestSRS>
+    <string>EPSG:4326</string>
+  </requestSRS>
+  <responseSRS>
+    <string>EPSG:4326</string>
+  </responseSRS>
+  <parameters>
+    <entry>
+      <string>BackgroundValues</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>OVERVIEW_POLICY</string>
+      <string>QUALITY</string>
+    </entry>
+    <entry>
+      <string>MergeBehavior</string>
+      <string>FLAT</string>
+    </entry>
+    <entry>
+      <string>AllowMultithreading</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>MaxAllowedTiles</string>
+      <int>-1</int>
+    </entry>
+    <entry>
+      <string>ExcessGranuleRemoval</string>
+      <string>NONE</string>
+    </entry>
+    <entry>
+      <string>OutputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>USE_JAI_IMAGEREAD</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Bands</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>RescalePixels</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Filter</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>InputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>SUGGESTED_TILE_SIZE</string>
+      <string>512,512</string>
+    </entry>
+    <entry>
+      <string>Accurate resolution computation</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>SORTING</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>FootprintBehavior</string>
+      <string>None</string>
+    </entry>
+  </parameters>
+  <nativeCoverageName>copernicus_daily_sentinel3ab_slstr_l2p_sst_fullres</nativeCoverageName>
+</coverage>

@@ -1,0 +1,6 @@
+<layout>
+  <decoration type="image" affinity="top,center">
+    <option name="url" value="${env('legend_bar', 'bg_fbfbfb_10kx120.png')}"/>
+  </decoration>
+</layout>
+

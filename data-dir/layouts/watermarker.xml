@@ -1,0 +1,5 @@
+<layout>
+  <decoration type="image" affinity="top,left" offset="6,6" size="42,32">
+    <option name="url" value="eumetsat.png"/>
+  </decoration>
+</layout>

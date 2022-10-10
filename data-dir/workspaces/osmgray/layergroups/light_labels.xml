@@ -1,0 +1,50 @@
+<layerGroup>
+  <id>LayerGroupInfoImpl-2cd79042:17068aa424b:-1262</id>
+  <name>light_labels</name>
+  <mode>SINGLE</mode>
+  <queryDisabled>true</queryDisabled>
+  <title>Dark gray map labels overlay</title>
+  <workspace>
+    <id>WorkspaceInfoImpl-2cd79042:1706804ed1c:4de6</id>
+  </workspace>
+  <publishables>
+    <published type="layer">
+      <id>LayerInfoImpl-2cd79042:170683942b2:-4d94</id>
+    </published>
+    <published type="layer">
+      <id>LayerInfoImpl-2cd79042:170683942b2:-4d92</id>
+    </published>
+    <published type="layer">
+      <id>LayerInfoImpl-2cd79042:17068906753:-7928</id>
+    </published>
+    <published type="layer">
+      <id>LayerInfoImpl-2cd79042:17068751bf1:-2c9c</id>
+    </published>
+  </publishables>
+  <styles>
+    <style>
+      <id>StyleInfoImpl-2cd79042:17068a5d8d3:1127</id>
+    </style>
+    <style>
+      <id>StyleInfoImpl-2cd79042:17068a5d8d3:7138</id>
+    </style>
+    <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:67e4</id>
+    </style>
+    <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:67e3</id>
+    </style>
+  </styles>
+  <bounds>
+    <minx>-2.0037508342789244E7</minx>
+    <maxx>2.0037508342789244E7</maxx>
+    <miny>-2.00489661040146E7</miny>
+    <maxy>2.0048966104014594E7</maxy>
+    <crs class="projected">EPSG:3857</crs>
+  </bounds>
+  <attribution>
+    <title>OSM Simple Light | Rendering &lt;a href=&quot;https://www.geo-solutions.it/&quot;&gt;GeoSolutions&lt;/a&gt; | Data © &lt;a href=&quot;http://www.openstreetmap.org/&quot;&gt;OpenStreetMap&lt;/a&gt; contributors, &lt;a href=&quot;http://www.openstreetmap.org/copyright&quot;&gt;ODbL&lt;/a&gt;</title>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layerGroup>

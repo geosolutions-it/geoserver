@@ -1,0 +1,15 @@
+<layer>
+  <name>wideareacoverage_rgb_natural</name>
+  <id>LayerInfoImpl--5bbb6890:17706be23bf:-7f5b</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5bbb6890:17706be23bf:-7f5c</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

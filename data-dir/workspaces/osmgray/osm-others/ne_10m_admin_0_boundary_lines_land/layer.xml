@@ -1,0 +1,21 @@
+<layer>
+  <name>ne_10m_admin_0_boundary_lines_land</name>
+  <id>LayerInfoImpl-2cd79042:17068751bf1:36d</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2cd79042:1706804ed1c:671e</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:67e5</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-2cd79042:17068751bf1:36c</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2020-02-21 16:21:08.313 UTC</dateCreated>
+</layer>

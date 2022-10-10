@@ -1,0 +1,15 @@
+<layer>
+  <name>sentinel3b_orbital_tracks</name>
+  <id>LayerInfoImpl-5014580a:1785f16c77f:-797e</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-5014580a:1785f16c77f:-7ffb</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-5014580a:1785f16c77f:-797f</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

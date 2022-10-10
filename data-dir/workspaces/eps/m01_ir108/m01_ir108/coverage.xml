@@ -1,0 +1,196 @@
+<coverage>
+  <id>CoverageInfoImpl--5b601b66:1707bad653c:-4edd</id>
+  <name>m01_ir108</name>
+  <nativeName>m01_ir108</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff4</id>
+  </namespace>
+  <title>AVHRR IR10.8 6 orbits accumulated - Metop B</title>
+  <description>Generated from ImageMosaic</description>
+  <abstract>This is an image of Advanced Very High Resolution Radiometer (AVHRR) channel IR 10.8 Level 1b Brightness Temperatures, accumulated over the last 6 orbits. The indicated time represents the end of the last orbit (when the satellite crosses the equator in the ascending node). The IR10.8 channel is an atmospheric window channel (where the absorption of the gas molecules is low), and it helps in distinguishing thick clouds by to their cloud top temperatures.  The accumulated images are displayed mapping the same temperature range for day and night, i.e. 220 K-310 K, in order to have quite homogeneous images during the entire 24 hours and also to have a good contrast in the polar regions. The Advanced Very High Resolution Radiometer (AVHRR) is a multipurpose imaging instrument used for global monitoring of cloud cover, sea surface temperature, ice, snow and vegetation cover characteristics. It operates at 6 different channels simultaneously at a spatial resolution of about 1 Km near-nadir. AVHRR has many applications in oceanography, meteorology and terrestrial sciences: - Multi-Channel SST (MCSST) is the main geophysical parameter of use in AVHRR oceanographic applications. - Another oceanographic application of AVHRR data is in the study of sea ice. Properly filtered for clouds over ice, AVHRR imagery can be used to compute sea ice concentration, type and ice edge location. It can also be used to compute ice motion. - Multi-channel imagery from the AVHRR has also proven to be useful in snow cover mapping. The frequent coverage of the AVHRR is the prime advantage in being able to distinguish clouds from snow cover with their similar albedo signature. Combined with topographic relief information, snow cover from AVHRR can be converted to snow-water equivalent to give an estimate of the amount of water reserve represented by the winter snow pack. - Day and night cloud mapping is the main application of AVHRR data in meteorology, especially at high latitudes where data from geostationary satellites are severely affected by Earth curvature. AVHRR&apos;s frequent day/night synoptic coverage and high horizontal resolution are features that make the system unique for the study of land surface.</abstract>
+  <keywords>
+    <string>eps_m01_ir108</string>
+    <string>WCS</string>
+    <string>ImageMosaic</string>
+  </keywords>
+  <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
+  DATUM[&quot;World Geodetic System 1984&quot;, 
+    SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+  PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+  UNIT[&quot;degree&quot;, 0.017453292519943295], 
+  AXIS[&quot;Geodetic longitude&quot;, EAST], 
+  AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="cacheAgeMax">604800</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>true</enabled>
+        <presentation>DISCRETE_INTERVAL</presentation>
+        <resolution>6000000</resolution>
+        <units>ISO8601</units>
+        <defaultValue>
+          <strategy>MAXIMUM</strategy>
+        </defaultValue>
+        <nearestMatchEnabled>true</nearestMatchEnabled>
+        <acceptableInterval>PT98M/PT0H</acceptableInterval>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">true</entry>
+    <entry key="NetCDFOutput.Key">
+      <netcdfLayerSettingsContainer>
+        <compressionLevel>0</compressionLevel>
+        <shuffle>true</shuffle>
+        <copyAttributes>false</copyAttributes>
+        <copyGlobalAttributes>false</copyGlobalAttributes>
+        <dataPacking>NONE</dataPacking>
+      </netcdfLayerSettingsContainer>
+    </entry>
+    <entry key="dirName">m01_ir108_eps_m01_ir108</entry>
+  </metadata>
+  <store class="coverageStore">
+    <id>CoverageStoreInfoImpl--5b601b66:1707bad653c:-4f66</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <nativeFormat>ImageMosaic</nativeFormat>
+  <grid dimension="2">
+    <range>
+      <low>0 0</low>
+      <high>12800 6400</high>
+    </range>
+    <transform>
+      <scaleX>0.028125</scaleX>
+      <scaleY>-0.028125</scaleY>
+      <shearX>0.0</shearX>
+      <shearY>0.0</shearY>
+      <translateX>-179.9859375</translateX>
+      <translateY>89.9859375</translateY>
+    </transform>
+    <crs>EPSG:4326</crs>
+  </grid>
+  <supportedFormats>
+    <string>GEOTIFF</string>
+    <string>GIF</string>
+    <string>PNG</string>
+    <string>JPEG</string>
+    <string>TIFF</string>
+  </supportedFormats>
+  <interpolationMethods>
+    <string>nearest neighbor</string>
+    <string>bilinear</string>
+    <string>bicubic</string>
+  </interpolationMethods>
+  <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
+  <dimensions>
+    <coverageDimension>
+      <name>GRAY_INDEX</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+  </dimensions>
+  <requestSRS>
+    <string>EPSG:4326</string>
+  </requestSRS>
+  <responseSRS>
+    <string>EPSG:4326</string>
+  </responseSRS>
+  <parameters>
+    <entry>
+      <string>BackgroundValues</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>OVERVIEW_POLICY</string>
+      <string>QUALITY</string>
+    </entry>
+    <entry>
+      <string>MergeBehavior</string>
+      <string>FLAT</string>
+    </entry>
+    <entry>
+      <string>AllowMultithreading</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>MaxAllowedTiles</string>
+      <int>-1</int>
+    </entry>
+    <entry>
+      <string>ExcessGranuleRemoval</string>
+      <string>NONE</string>
+    </entry>
+    <entry>
+      <string>OutputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>USE_JAI_IMAGEREAD</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Bands</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>RescalePixels</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Filter</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>InputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>SUGGESTED_TILE_SIZE</string>
+      <string>512,512</string>
+    </entry>
+    <entry>
+      <string>Accurate resolution computation</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>SORTING</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>FootprintBehavior</string>
+      <string>None</string>
+    </entry>
+  </parameters>
+  <nativeCoverageName>eps_m01_ir108</nativeCoverageName>
+</coverage>

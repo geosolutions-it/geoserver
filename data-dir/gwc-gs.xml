@@ -1,0 +1,68 @@
+<GeoServerGWCConfig>
+  <version>1.1.0</version>
+  <directWMSIntegrationEnabled>true</directWMSIntegrationEnabled>
+  <WMSCEnabled>true</WMSCEnabled>
+  <TMSEnabled>true</TMSEnabled>
+  <securityEnabled>true</securityEnabled>
+  <innerCachingEnabled>false</innerCachingEnabled>
+  <persistenceEnabled>true</persistenceEnabled>
+  <cacheProviderClass>class org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider</cacheProviderClass>
+  <cacheConfigurations>
+    <entry>
+      <string>class org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider</string>
+      <InnerCacheConfiguration>
+        <hardMemoryLimit>256</hardMemoryLimit>
+        <policy>NULL</policy>
+        <concurrencyLevel>4</concurrencyLevel>
+        <evictionTime>1200</evictionTime>
+      </InnerCacheConfiguration>
+    </entry>
+  </cacheConfigurations>
+  <cacheLayersByDefault>true</cacheLayersByDefault>
+  <cacheNonDefaultStyles>true</cacheNonDefaultStyles>
+  <metaTilingX>3</metaTilingX>
+  <metaTilingY>3</metaTilingY>
+  <gutter>0</gutter>
+  <defaultCachingGridSetIds>
+    <string>EPSG:70213</string>
+    <string>EPSG:4326 - 512</string>
+    <string>EPSG:70203</string>
+    <string>EPSG:70213 - 512</string>
+    <string>EPSG:70205</string>
+    <string>EPSG:70203 - 512</string>
+    <string>EPSG:70207</string>
+    <string>EPSG:70209</string>
+    <string>EPSG:70205 - 512</string>
+    <string>EPSG:70209 - 512</string>
+    <string>EPSG:3995 - 256</string>
+    <string>EPSG:70207 - 512</string>
+    <string>EPSG:3995 - 512</string>
+    <string>EPSG:3857 - 512</string>
+    <string>EPSG:70211 - 512</string>
+    <string>EPSG:70201 - 512</string>
+    <string>EPSG:4326</string>
+    <string>EPSG:70211</string>
+    <string>EPSG:70201</string>
+  </defaultCachingGridSetIds>
+  <defaultCoverageCacheFormats>
+    <string>image/png</string>
+    <string>image/vnd.jpeg-png</string>
+    <string>image/jpeg</string>
+    <string>image/png8</string>
+  </defaultCoverageCacheFormats>
+  <defaultVectorCacheFormats>
+    <string>image/png</string>
+    <string>image/vnd.jpeg-png</string>
+    <string>image/jpeg</string>
+    <string>image/png8</string>
+  </defaultVectorCacheFormats>
+  <defaultOtherCacheFormats>
+    <string>image/png</string>
+    <string>image/vnd.jpeg-png</string>
+    <string>image/jpeg</string>
+    <string>image/png8</string>
+  </defaultOtherCacheFormats>
+  <cacheWarningSkips>
+    <warning>FailedNearest</warning>
+  </cacheWarningSkips>
+</GeoServerGWCConfig>

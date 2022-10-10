@@ -1,0 +1,26 @@
+<authKeyAuthentication>
+  <id>e61a43b:161292e2aa0:-7ffd</id>
+  <name>eumetsat-authkey-authfilter</name>
+  <className>org.geoserver.security.GeoServerAuthenticationKeyFilter</className>
+  <authKeyMapperName>webServiceMapper</authKeyMapperName>
+  <authKeyParamName>access_token</authKeyParamName>
+  <userGroupServiceName>wso2-userInfo-UserGroupService</userGroupServiceName>
+  <mapperParameters>
+    <entry>
+      <string>webServiceUrl</string>
+      <string>https://api.store.cgi-dev.de/userInfo/0.0.2/user?access_token={key}</string>
+    </entry>
+    <entry>
+      <string>searchUser</string>
+      <string>^.*?&quot;username&quot;\s*:\s*&quot;([^&quot;]+)&quot;.*$</string>
+    </entry>
+    <entry>
+      <string>readTimeout</string>
+      <string>10</string>
+    </entry>
+    <entry>
+      <string>connectTimeout</string>
+      <string>5</string>
+    </entry>
+  </mapperParameters>
+</authKeyAuthentication>

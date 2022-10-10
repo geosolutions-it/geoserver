@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><Indexer>
+  <coverages>
+    <coverage>
+      <schema name="sses_standard_deviation">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sses_standard_deviation</origName>
+      <name>sses_standard_deviation</name>
+    </coverage>
+    <coverage>
+      <schema name="pixels_per_bin">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>pixels_per_bin</origName>
+      <name>pixels_per_bin</name>
+    </coverage>
+    <coverage>
+      <schema name="quality_level">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>quality_level</origName>
+      <name>quality_level</name>
+    </coverage>
+    <coverage>
+      <schema name="sea_surface_temperature">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sea_surface_temperature</origName>
+      <name>sea_surface_temperature</name>
+    </coverage>
+    <coverage>
+      <schema name="sea_ice_fraction_dtime_from_sst">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sea_ice_fraction_dtime_from_sst</origName>
+      <name>sea_ice_fraction_dtime_from_sst</name>
+    </coverage>
+    <coverage>
+      <schema name="wind_speed">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>wind_speed</origName>
+      <name>wind_speed</name>
+    </coverage>
+    <coverage>
+      <schema name="sses_bias">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sses_bias</origName>
+      <name>sses_bias</name>
+    </coverage>
+    <coverage>
+      <schema name="sea_ice_fraction">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sea_ice_fraction</origName>
+      <name>sea_ice_fraction</name>
+    </coverage>
+    <coverage>
+      <schema name="sst_dtime">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sst_dtime</origName>
+      <name>sst_dtime</name>
+    </coverage>
+    <coverage>
+      <schema name="wind_speed_dtime_from_sst">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>wind_speed_dtime_from_sst</origName>
+      <name>wind_speed_dtime_from_sst</name>
+    </coverage>
+  </coverages>
+</Indexer>
+

@@ -1,0 +1,20 @@
+<layer>
+  <name>daily_sentinel3ab_olci_l2_chl_fullres</name>
+  <id>LayerInfoImpl--5b601b66:170a0b576f0:-6e0c</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--5b601b66:1707bad653c:-52a3</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl--5b601b66:1707bad653c:-4d7b</id>
+    </style>
+  </styles>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:170a0b576f0:-6e0d</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

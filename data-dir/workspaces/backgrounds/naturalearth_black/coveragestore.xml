@@ -1,0 +1,11 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl-2ec8a11a:1702e3a3dfd:-8000</id>
+  <name>naturalearth_black</name>
+  <type>GeoTIFF</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--26de0f0e:16002807cd8:-7ffe</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:///var/geoserver/data/background/GRAY_HR_SR_OB_DR.optimized.tif</url>
+</coverageStore>

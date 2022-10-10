@@ -1,0 +1,21 @@
+<layer>
+  <name>ne_10m_admin_0_countries_points</name>
+  <id>LayerInfoImpl-2cd79042:17068906753:-7928</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2cd79042:1706804ed1c:67e4</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:67f4</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-2cd79042:17068906753:-7929</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2020-02-21 16:24:32.85 UTC</dateCreated>
+</layer>

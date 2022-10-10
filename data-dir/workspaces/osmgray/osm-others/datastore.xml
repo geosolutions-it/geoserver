@@ -1,0 +1,18 @@
+<dataStore>
+  <id>DataStoreInfoImpl-2cd79042:1706804ed1c:671c</id>
+  <name>osm-others</name>
+  <type>GeoPackage</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-2cd79042:1706804ed1c:4de6</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="Batch insert size">1</entry>
+    <entry key="database">file:///var/geoserver/data/osmgray/osm-others.gpkg</entry>
+    <entry key="fetch size">1000</entry>
+    <entry key="Expose primary keys">false</entry>
+    <entry key="dbtype">geopkg</entry>
+    <entry key="namespace">http://www.geoserver.org/osm/gray</entry>
+  </connectionParameters>
+  <__default>false</__default>
+</dataStore>

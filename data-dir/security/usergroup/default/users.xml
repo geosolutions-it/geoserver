@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><userRegistry xmlns="http://www.geoserver.org/security/users" version="1.0">
+<users>
+<user enabled="true" name="admin" password="crypt1:hRAGfJbupUG8sR+FkCFTb57rhwvXaavJ">
+<property name="UUID">cc1509f2-5419-4e6e-8df2-dbc364e2455f</property>
+</user>
+<user enabled="true" name="aparma" password="crypt1:JGsMZ00HMrcKHlL6jBI0eM7evHaHzyFs"/>
+<user enabled="true" name="ask" password="crypt1:iapXs1CZNSILEi4oj30WPw/sC0FPZMHQ">
+<property name="UUID">5a038f41-4c05-44fe-aaa6-3dbedd40fc4f</property>
+</user>
+<user enabled="true" name="egallo" password="crypt1:GQFreKdMvxfTCRQe86b/SA=="/>
+<user enabled="true" name="fabrizio" password="crypt1:UVrUCehpjoPf/jF4YXYXM6SyRuUyGne/"/>
+<user enabled="true" name="prasath" password="crypt1:/uuNUaCVjxhh86dufbJHmDVALV6X+NmJ"/>
+</users>
+<groups/>
+</userRegistry>

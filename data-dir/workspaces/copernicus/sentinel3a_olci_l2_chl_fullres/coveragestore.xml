@@ -1,0 +1,11 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl--5b601b66:170a0b576f0:-714b</id>
+  <name>sentinel3a_olci_l2_chl_fullres</name>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff7</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:data/LIC_FREE/copernicus_sentinel3a_olci_l2_chl_fullres</url>
+</coverageStore>

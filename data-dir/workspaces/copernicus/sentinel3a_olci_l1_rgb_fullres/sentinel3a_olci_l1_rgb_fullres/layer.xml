@@ -1,0 +1,15 @@
+<layer>
+  <name>sentinel3a_olci_l1_rgb_fullres</name>
+  <id>LayerInfoImpl--5b601b66:1707bad653c:-6a2a</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:1707bad653c:-6a2b</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

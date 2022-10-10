@@ -1,0 +1,20 @@
+<layer>
+  <name>osisaf_avhrr_l3_sst</name>
+  <id>LayerInfoImpl--486032e7:170a6230328:-7cb9</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--486032e7:170a6230328:-7cb8</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl--5b699307:170ea47c378:-8000</id>
+    </style>
+  </styles>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--486032e7:170a6230328:-7cba</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

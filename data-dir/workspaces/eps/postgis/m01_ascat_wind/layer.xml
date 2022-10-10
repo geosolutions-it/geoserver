@@ -1,0 +1,23 @@
+<layer>
+  <name>m01_ascat_wind</name>
+  <id>LayerInfoImpl--486032e7:170a6230328:-7f10</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-1e49fc7e:161e75f469f:-7ffe</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-1e89fa0a:1607375c877:-7ff8</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--486032e7:170a6230328:-7f11</id>
+  </resource>
+  <metadata>
+    <entry key="buffer">48</entry>
+  </metadata>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

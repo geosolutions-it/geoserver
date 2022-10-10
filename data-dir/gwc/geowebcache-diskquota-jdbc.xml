@@ -1,0 +1,4 @@
+<gwcJdbcConfiguration>
+  <dialect>PostgreSQL</dialect>
+  <JNDISource>java:comp/env/jdbc/gwc_quota</JNDISource>
+</gwcJdbcConfiguration>

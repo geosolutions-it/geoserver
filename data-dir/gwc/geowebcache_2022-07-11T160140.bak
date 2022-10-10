@@ -1,0 +1,1062 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gwcConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://geowebcache.org/schema/1.15.0 http://geowebcache.org/schema/1.15.0/geowebcache.xsd" xmlns="http://geowebcache.org/schema/1.15.0">
+  <version>1.15.0</version>
+  <backendTimeout>120</backendTimeout>
+  <blobStores/>
+  <gridSets>
+    <gridSet>
+      <name>EPSG:4326 - 512</name>
+      <description>EPSG:4326 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>4326</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-90.0</double>
+          <double>180.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>0.3515625</double>
+        <double>0.17578125</double>
+        <double>0.087890625</double>
+        <double>0.0439453125</double>
+        <double>0.02197265625</double>
+        <double>0.010986328125</double>
+        <double>0.0054931640625</double>
+        <double>0.00274658203125</double>
+        <double>0.001373291015625</double>
+        <double>6.866455078125E-4</double>
+        <double>3.433227539062E-4</double>
+        <double>1.716613769531E-4</double>
+        <double>8.58306884766E-5</double>
+        <double>4.29153442383E-5</double>
+        <double>2.14576721191E-5</double>
+        <double>1.07288360596E-5</double>
+      </resolutions>
+      <metersPerUnit>111319.49079327358</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:4326 - 512:0</string>
+        <string>EPSG:4326 - 512:1</string>
+        <string>EPSG:4326 - 512:2</string>
+        <string>EPSG:4326 - 512:3</string>
+        <string>EPSG:4326 - 512:4</string>
+        <string>EPSG:4326 - 512:5</string>
+        <string>EPSG:4326 - 512:6</string>
+        <string>EPSG:4326 - 512:7</string>
+        <string>EPSG:4326 - 512:8</string>
+        <string>EPSG:4326 - 512:9</string>
+        <string>EPSG:4326 - 512:10</string>
+        <string>EPSG:4326 - 512:11</string>
+        <string>EPSG:4326 - 512:12</string>
+        <string>EPSG:4326 - 512:13</string>
+        <string>EPSG:4326 - 512:14</string>
+        <string>EPSG:4326 - 512:15</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>true</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:3857 - 512</name>
+      <description>EPSG:3857 Gridset with 512x512 pixel tiles</description>
+      <srs>
+        <number>3857</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>-2.003750834E7</double>
+          <double>-2.003750834E7</double>
+          <double>2.003750834E7</double>
+          <double>2.003750834E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>78271.516953125</double>
+        <double>39135.7584765625</double>
+        <double>19567.87923828125</double>
+        <double>9783.939619140625</double>
+        <double>4891.9698095703125</double>
+        <double>2445.9849047851562</double>
+        <double>1222.9924523925781</double>
+        <double>611.4962261962891</double>
+        <double>305.74811309814453</double>
+        <double>152.87405654907226</double>
+        <double>76.43702827453613</double>
+        <double>38.218514137268066</double>
+        <double>19.109257068634033</double>
+        <double>9.554628534317017</double>
+        <double>4.777314267158508</double>
+        <double>2.388657133579254</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:3857 - 512:0</string>
+        <string>EPSG:3857 - 512:1</string>
+        <string>EPSG:3857 - 512:2</string>
+        <string>EPSG:3857 - 512:3</string>
+        <string>EPSG:3857 - 512:4</string>
+        <string>EPSG:3857 - 512:5</string>
+        <string>EPSG:3857 - 512:6</string>
+        <string>EPSG:3857 - 512:7</string>
+        <string>EPSG:3857 - 512:8</string>
+        <string>EPSG:3857 - 512:9</string>
+        <string>EPSG:3857 - 512:10</string>
+        <string>EPSG:3857 - 512:11</string>
+        <string>EPSG:3857 - 512:12</string>
+        <string>EPSG:3857 - 512:13</string>
+        <string>EPSG:3857 - 512:14</string>
+        <string>EPSG:3857 - 512:15</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:3995 - 512</name>
+      <description>Custom EPSG:3995 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>3995</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>22600.0</double>
+        <double>11300.0</double>
+        <double>5650.0</double>
+        <double>2825.0</double>
+        <double>1412.5</double>
+        <double>706.25</double>
+        <double>353.125</double>
+        <double>176.5625</double>
+        <double>88.28125</double>
+        <double>44.140625</double>
+        <double>22.0703125</double>
+        <double>11.03515625</double>
+        <double>5.517578125</double>
+        <double>2.7587890625</double>
+        <double>1.37939453125</double>
+        <double>0.689697265625</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:3995 - 256:0</string>
+        <string>EPSG:3995 - 256:1</string>
+        <string>EPSG:3995 - 256:2</string>
+        <string>EPSG:3995 - 256:3</string>
+        <string>EPSG:3995 - 256:4</string>
+        <string>EPSG:3995 - 256:5</string>
+        <string>EPSG:3995 - 256:6</string>
+        <string>EPSG:3995 - 256:7</string>
+        <string>EPSG:3995 - 256:8</string>
+        <string>EPSG:3995 - 256:9</string>
+        <string>EPSG:3995 - 256:10</string>
+        <string>EPSG:3995 - 256:11</string>
+        <string>EPSG:3995 - 256:12</string>
+        <string>EPSG:3995 - 256:13</string>
+        <string>EPSG:3995 - 256:14</string>
+        <string>EPSG:3995 - 256:15</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:3995 - 256</name>
+      <srs>
+        <number>3995</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>22600.0</double>
+        <double>11300.0</double>
+        <double>5650.0</double>
+        <double>2825.0</double>
+        <double>1412.5</double>
+        <double>706.25</double>
+        <double>353.125</double>
+        <double>176.5625</double>
+        <double>88.28125</double>
+        <double>44.140625</double>
+        <double>22.0703125</double>
+        <double>11.03515625</double>
+        <double>5.517578125</double>
+        <double>2.7587890625</double>
+        <double>1.37939453125</double>
+        <double>0.689697265625</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:3995 - 256:0</string>
+        <string>EPSG:3995 - 256:1</string>
+        <string>EPSG:3995 - 256:2</string>
+        <string>EPSG:3995 - 256:3</string>
+        <string>EPSG:3995 - 256:4</string>
+        <string>EPSG:3995 - 256:5</string>
+        <string>EPSG:3995 - 256:6</string>
+        <string>EPSG:3995 - 256:7</string>
+        <string>EPSG:3995 - 256:8</string>
+        <string>EPSG:3995 - 256:9</string>
+        <string>EPSG:3995 - 256:10</string>
+        <string>EPSG:3995 - 256:11</string>
+        <string>EPSG:3995 - 256:12</string>
+        <string>EPSG:3995 - 256:13</string>
+        <string>EPSG:3995 - 256:14</string>
+        <string>EPSG:3995 - 256:15</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70201 - 512</name>
+      <description>Equi7Grid AF EPSG:70201 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70201</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>9600000.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>23437.5</double>
+        <double>11718.75</double>
+        <double>5859.375</double>
+        <double>2929.6875</double>
+        <double>1464.84375</double>
+        <double>732.421875</double>
+        <double>366.2109375</double>
+        <double>183.10546875</double>
+        <double>91.552734375</double>
+        <double>45.7763671875</double>
+        <double>22.88818359375</double>
+        <double>11.444091796875</double>
+        <double>5.7220458984375</double>
+        <double>2.86102294921875</double>
+        <double>1.430511474609375</double>
+        <double>0.7152557373046875</double>
+        <double>0.3576278686523438</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70201 - 512:0</string>
+        <string>EPSG:70201 - 512:1</string>
+        <string>EPSG:70201 - 512:2</string>
+        <string>EPSG:70201 - 512:3</string>
+        <string>EPSG:70201 - 512:4</string>
+        <string>EPSG:70201 - 512:5</string>
+        <string>EPSG:70201 - 512:6</string>
+        <string>EPSG:70201 - 512:7</string>
+        <string>EPSG:70201 - 512:8</string>
+        <string>EPSG:70201 - 512:9</string>
+        <string>EPSG:70201 - 512:10</string>
+        <string>EPSG:70201 - 512:11</string>
+        <string>EPSG:70201 - 512:12</string>
+        <string>EPSG:70201 - 512:13</string>
+        <string>EPSG:70201 - 512:14</string>
+        <string>EPSG:70201 - 512:15</string>
+        <string>EPSG:70201 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70201</name>
+      <description>Equi7Grid AF EPSG:70201 Gridset with 256x256 pixels tiles</description>
+      <srs>
+        <number>70201</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>9600000.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>46875.0</double>
+        <double>23437.5</double>
+        <double>11718.75</double>
+        <double>5859.375</double>
+        <double>2929.6875</double>
+        <double>1464.84375</double>
+        <double>732.421875</double>
+        <double>366.2109375</double>
+        <double>183.10546875</double>
+        <double>91.552734375</double>
+        <double>45.7763671875</double>
+        <double>22.88818359375</double>
+        <double>11.444091796875</double>
+        <double>5.7220458984375</double>
+        <double>2.86102294921875</double>
+        <double>1.430511474609375</double>
+        <double>0.7152557373046875</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70201:0</string>
+        <string>EPSG:70201:1</string>
+        <string>EPSG:70201:2</string>
+        <string>EPSG:70201:3</string>
+        <string>EPSG:70201:4</string>
+        <string>EPSG:70201:5</string>
+        <string>EPSG:70201:6</string>
+        <string>EPSG:70201:7</string>
+        <string>EPSG:70201:8</string>
+        <string>EPSG:70201:9</string>
+        <string>EPSG:70201:10</string>
+        <string>EPSG:70201:11</string>
+        <string>EPSG:70201:12</string>
+        <string>EPSG:70201:13</string>
+        <string>EPSG:70201:14</string>
+        <string>EPSG:70201:15</string>
+        <string>EPSG:70201:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70203 - 512</name>
+      <description>Equi7Grid AN EPSG:70203 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70203</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.02E7</double>
+          <double>9000000.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>19921.875</double>
+        <double>9960.9375</double>
+        <double>4980.46875</double>
+        <double>2490.234375</double>
+        <double>1245.1171875</double>
+        <double>622.55859375</double>
+        <double>311.279296875</double>
+        <double>155.6396484375</double>
+        <double>77.81982421875</double>
+        <double>38.909912109375</double>
+        <double>19.4549560546875</double>
+        <double>9.72747802734375</double>
+        <double>4.863739013671875</double>
+        <double>2.4318695068359375</double>
+        <double>1.2159347534179688</double>
+        <double>0.6079673767089844</double>
+        <double>0.3039836883544922</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70203 - 512:0</string>
+        <string>EPSG:70203 - 512:1</string>
+        <string>EPSG:70203 - 512:2</string>
+        <string>EPSG:70203 - 512:3</string>
+        <string>EPSG:70203 - 512:4</string>
+        <string>EPSG:70203 - 512:5</string>
+        <string>EPSG:70203 - 512:6</string>
+        <string>EPSG:70203 - 512:7</string>
+        <string>EPSG:70203 - 512:8</string>
+        <string>EPSG:70203 - 512:9</string>
+        <string>EPSG:70203 - 512:10</string>
+        <string>EPSG:70203 - 512:11</string>
+        <string>EPSG:70203 - 512:12</string>
+        <string>EPSG:70203 - 512:13</string>
+        <string>EPSG:70203 - 512:14</string>
+        <string>EPSG:70203 - 512:15</string>
+        <string>EPSG:70203 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70205 - 512</name>
+      <description>Equi7Grid AS EPSG:70205 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70205</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>23437.5</double>
+        <double>11718.75</double>
+        <double>5859.375</double>
+        <double>2929.6875</double>
+        <double>1464.84375</double>
+        <double>732.421875</double>
+        <double>366.2109375</double>
+        <double>183.10546875</double>
+        <double>91.552734375</double>
+        <double>45.7763671875</double>
+        <double>22.88818359375</double>
+        <double>11.444091796875</double>
+        <double>5.7220458984375</double>
+        <double>2.86102294921875</double>
+        <double>1.430511474609375</double>
+        <double>0.7152557373046875</double>
+        <double>0.3576278686523438</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70205 - 512:0</string>
+        <string>EPSG:70205 - 512:1</string>
+        <string>EPSG:70205 - 512:2</string>
+        <string>EPSG:70205 - 512:3</string>
+        <string>EPSG:70205 - 512:4</string>
+        <string>EPSG:70205 - 512:5</string>
+        <string>EPSG:70205 - 512:6</string>
+        <string>EPSG:70205 - 512:7</string>
+        <string>EPSG:70205 - 512:8</string>
+        <string>EPSG:70205 - 512:9</string>
+        <string>EPSG:70205 - 512:10</string>
+        <string>EPSG:70205 - 512:11</string>
+        <string>EPSG:70205 - 512:12</string>
+        <string>EPSG:70205 - 512:13</string>
+        <string>EPSG:70205 - 512:14</string>
+        <string>EPSG:70205 - 512:15</string>
+        <string>EPSG:70205 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70207 - 512</name>
+      <description>Equi7Grid EU EPSG:70207 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70207</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>8400000.0</double>
+          <double>6000000.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>16406.25</double>
+        <double>8203.125</double>
+        <double>4101.5625</double>
+        <double>2050.78125</double>
+        <double>1025.390625</double>
+        <double>512.6953125</double>
+        <double>256.34765625</double>
+        <double>128.173828125</double>
+        <double>64.0869140625</double>
+        <double>32.04345703125</double>
+        <double>16.021728515625</double>
+        <double>8.0108642578125</double>
+        <double>4.00543212890625</double>
+        <double>2.002716064453125</double>
+        <double>1.0013580322265625</double>
+        <double>0.5006790161132812</double>
+        <double>0.2503395080566406</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70207 - 512:0</string>
+        <string>EPSG:70207 - 512:1</string>
+        <string>EPSG:70207 - 512:2</string>
+        <string>EPSG:70207 - 512:3</string>
+        <string>EPSG:70207 - 512:4</string>
+        <string>EPSG:70207 - 512:5</string>
+        <string>EPSG:70207 - 512:6</string>
+        <string>EPSG:70207 - 512:7</string>
+        <string>EPSG:70207 - 512:8</string>
+        <string>EPSG:70207 - 512:9</string>
+        <string>EPSG:70207 - 512:10</string>
+        <string>EPSG:70207 - 512:11</string>
+        <string>EPSG:70207 - 512:12</string>
+        <string>EPSG:70207 - 512:13</string>
+        <string>EPSG:70207 - 512:14</string>
+        <string>EPSG:70207 - 512:15</string>
+        <string>EPSG:70207 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70209 - 512</name>
+      <description>Equi7Grid NA EPSG:70209 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70209</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.38E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>26953.125</double>
+        <double>13476.5625</double>
+        <double>6738.28125</double>
+        <double>3369.140625</double>
+        <double>1684.5703125</double>
+        <double>842.28515625</double>
+        <double>421.142578125</double>
+        <double>210.5712890625</double>
+        <double>105.28564453125</double>
+        <double>52.642822265625</double>
+        <double>26.3214111328125</double>
+        <double>13.16070556640625</double>
+        <double>6.580352783203125</double>
+        <double>3.2901763916015625</double>
+        <double>1.6450881958007812</double>
+        <double>0.8225440979003906</double>
+        <double>0.4112720489501953</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70209 - 512:0</string>
+        <string>EPSG:70209 - 512:1</string>
+        <string>EPSG:70209 - 512:2</string>
+        <string>EPSG:70209 - 512:3</string>
+        <string>EPSG:70209 - 512:4</string>
+        <string>EPSG:70209 - 512:5</string>
+        <string>EPSG:70209 - 512:6</string>
+        <string>EPSG:70209 - 512:7</string>
+        <string>EPSG:70209 - 512:8</string>
+        <string>EPSG:70209 - 512:9</string>
+        <string>EPSG:70209 - 512:10</string>
+        <string>EPSG:70209 - 512:11</string>
+        <string>EPSG:70209 - 512:12</string>
+        <string>EPSG:70209 - 512:13</string>
+        <string>EPSG:70209 - 512:14</string>
+        <string>EPSG:70209 - 512:15</string>
+        <string>EPSG:70209 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70213 - 512</name>
+      <description>Equi7Grid SA EPSG:70211 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70213</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.08E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>23437.5</double>
+        <double>11718.75</double>
+        <double>5859.375</double>
+        <double>2929.6875</double>
+        <double>1464.84375</double>
+        <double>732.421875</double>
+        <double>366.2109375</double>
+        <double>183.10546875</double>
+        <double>91.552734375</double>
+        <double>45.7763671875</double>
+        <double>22.88818359375</double>
+        <double>11.444091796875</double>
+        <double>5.7220458984375</double>
+        <double>2.86102294921875</double>
+        <double>1.430511474609375</double>
+        <double>0.7152557373046875</double>
+        <double>0.3576278686523438</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70213 - 512:0</string>
+        <string>EPSG:70213 - 512:1</string>
+        <string>EPSG:70213 - 512:2</string>
+        <string>EPSG:70213 - 512:3</string>
+        <string>EPSG:70213 - 512:4</string>
+        <string>EPSG:70213 - 512:5</string>
+        <string>EPSG:70213 - 512:6</string>
+        <string>EPSG:70213 - 512:7</string>
+        <string>EPSG:70213 - 512:8</string>
+        <string>EPSG:70213 - 512:9</string>
+        <string>EPSG:70213 - 512:10</string>
+        <string>EPSG:70213 - 512:11</string>
+        <string>EPSG:70213 - 512:12</string>
+        <string>EPSG:70213 - 512:13</string>
+        <string>EPSG:70213 - 512:14</string>
+        <string>EPSG:70213 - 512:15</string>
+        <string>EPSG:70213 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70213</name>
+      <description>Equi7Grid SA EPSG:70213 Gridset</description>
+      <srs>
+        <number>70213</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.08E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>46875.0</double>
+        <double>23437.5</double>
+        <double>11718.75</double>
+        <double>5859.375</double>
+        <double>2929.6875</double>
+        <double>1464.84375</double>
+        <double>732.421875</double>
+        <double>366.2109375</double>
+        <double>183.10546875</double>
+        <double>91.552734375</double>
+        <double>45.7763671875</double>
+        <double>22.88818359375</double>
+        <double>11.444091796875</double>
+        <double>5.7220458984375</double>
+        <double>2.86102294921875</double>
+        <double>1.430511474609375</double>
+        <double>0.7152557373046875</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70213:0</string>
+        <string>EPSG:70213:1</string>
+        <string>EPSG:70213:2</string>
+        <string>EPSG:70213:3</string>
+        <string>EPSG:70213:4</string>
+        <string>EPSG:70213:5</string>
+        <string>EPSG:70213:6</string>
+        <string>EPSG:70213:7</string>
+        <string>EPSG:70213:8</string>
+        <string>EPSG:70213:9</string>
+        <string>EPSG:70213:10</string>
+        <string>EPSG:70213:11</string>
+        <string>EPSG:70213:12</string>
+        <string>EPSG:70213:13</string>
+        <string>EPSG:70213:14</string>
+        <string>EPSG:70213:15</string>
+        <string>EPSG:70213:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70203</name>
+      <description>Equi7Grid AN EPSG:70203 Gridset with 256x256 pixels tiles</description>
+      <srs>
+        <number>70203</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.02E7</double>
+          <double>9000000.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>39843.75</double>
+        <double>19921.875</double>
+        <double>9960.9375</double>
+        <double>4980.46875</double>
+        <double>2490.234375</double>
+        <double>1245.1171875</double>
+        <double>622.55859375</double>
+        <double>311.279296875</double>
+        <double>155.6396484375</double>
+        <double>77.81982421875</double>
+        <double>38.909912109375</double>
+        <double>19.4549560546875</double>
+        <double>9.72747802734375</double>
+        <double>4.863739013671875</double>
+        <double>2.4318695068359375</double>
+        <double>1.2159347534179688</double>
+        <double>0.6079673767089844</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70203:0</string>
+        <string>EPSG:70203:1</string>
+        <string>EPSG:70203:2</string>
+        <string>EPSG:70203:3</string>
+        <string>EPSG:70203:4</string>
+        <string>EPSG:70203:5</string>
+        <string>EPSG:70203:6</string>
+        <string>EPSG:70203:7</string>
+        <string>EPSG:70203:8</string>
+        <string>EPSG:70203:9</string>
+        <string>EPSG:70203:10</string>
+        <string>EPSG:70203:11</string>
+        <string>EPSG:70203:12</string>
+        <string>EPSG:70203:13</string>
+        <string>EPSG:70203:14</string>
+        <string>EPSG:70203:15</string>
+        <string>EPSG:70203:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70205</name>
+      <description>Equi7Grid AS EPSG:70205 Gridset with 256x256 pixels tiles</description>
+      <srs>
+        <number>70205</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>46875.0</double>
+        <double>23437.5</double>
+        <double>11718.75</double>
+        <double>5859.375</double>
+        <double>2929.6875</double>
+        <double>1464.84375</double>
+        <double>732.421875</double>
+        <double>366.2109375</double>
+        <double>183.10546875</double>
+        <double>91.552734375</double>
+        <double>45.7763671875</double>
+        <double>22.88818359375</double>
+        <double>11.444091796875</double>
+        <double>5.7220458984375</double>
+        <double>2.86102294921875</double>
+        <double>1.430511474609375</double>
+        <double>0.7152557373046875</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70205:0</string>
+        <string>EPSG:70205:1</string>
+        <string>EPSG:70205:2</string>
+        <string>EPSG:70205:3</string>
+        <string>EPSG:70205:4</string>
+        <string>EPSG:70205:5</string>
+        <string>EPSG:70205:6</string>
+        <string>EPSG:70205:7</string>
+        <string>EPSG:70205:8</string>
+        <string>EPSG:70205:9</string>
+        <string>EPSG:70205:10</string>
+        <string>EPSG:70205:11</string>
+        <string>EPSG:70205:12</string>
+        <string>EPSG:70205:13</string>
+        <string>EPSG:70205:14</string>
+        <string>EPSG:70205:15</string>
+        <string>EPSG:70205:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70207</name>
+      <description>Equi7Grid EU EPSG:70207 Gridset with 256x256 pixels tiles</description>
+      <srs>
+        <number>70207</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>8400000.0</double>
+          <double>6000000.0</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>32812.5</double>
+        <double>16406.25</double>
+        <double>8203.125</double>
+        <double>4101.5625</double>
+        <double>2050.78125</double>
+        <double>1025.390625</double>
+        <double>512.6953125</double>
+        <double>256.34765625</double>
+        <double>128.173828125</double>
+        <double>64.0869140625</double>
+        <double>32.04345703125</double>
+        <double>16.021728515625</double>
+        <double>8.0108642578125</double>
+        <double>4.00543212890625</double>
+        <double>2.002716064453125</double>
+        <double>1.0013580322265625</double>
+        <double>0.5006790161132812</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70207:0</string>
+        <string>EPSG:70207:1</string>
+        <string>EPSG:70207:2</string>
+        <string>EPSG:70207:3</string>
+        <string>EPSG:70207:4</string>
+        <string>EPSG:70207:5</string>
+        <string>EPSG:70207:6</string>
+        <string>EPSG:70207:7</string>
+        <string>EPSG:70207:8</string>
+        <string>EPSG:70207:9</string>
+        <string>EPSG:70207:10</string>
+        <string>EPSG:70207:11</string>
+        <string>EPSG:70207:12</string>
+        <string>EPSG:70207:13</string>
+        <string>EPSG:70207:14</string>
+        <string>EPSG:70207:15</string>
+        <string>EPSG:70207:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70209</name>
+      <description>Equi7Grid NA EPSG:70209 Gridset with 256x256 pixels tiles</description>
+      <srs>
+        <number>70209</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.38E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>53906.25</double>
+        <double>26953.125</double>
+        <double>13476.5625</double>
+        <double>6738.28125</double>
+        <double>3369.140625</double>
+        <double>1684.5703125</double>
+        <double>842.28515625</double>
+        <double>421.142578125</double>
+        <double>210.5712890625</double>
+        <double>105.28564453125</double>
+        <double>52.642822265625</double>
+        <double>26.3214111328125</double>
+        <double>13.16070556640625</double>
+        <double>6.580352783203125</double>
+        <double>3.2901763916015625</double>
+        <double>1.6450881958007812</double>
+        <double>0.8225440979003906</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70209:0</string>
+        <string>EPSG:70209:1</string>
+        <string>EPSG:70209:2</string>
+        <string>EPSG:70209:3</string>
+        <string>EPSG:70209:4</string>
+        <string>EPSG:70209:5</string>
+        <string>EPSG:70209:6</string>
+        <string>EPSG:70209:7</string>
+        <string>EPSG:70209:8</string>
+        <string>EPSG:70209:9</string>
+        <string>EPSG:70209:10</string>
+        <string>EPSG:70209:11</string>
+        <string>EPSG:70209:12</string>
+        <string>EPSG:70209:13</string>
+        <string>EPSG:70209:14</string>
+        <string>EPSG:70209:15</string>
+        <string>EPSG:70209:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70211</name>
+      <description>Equi7Grid OC EPSG:70211 Gridset with 256x256 pixels tiles</description>
+      <srs>
+        <number>70211</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.92E7</double>
+          <double>1.26E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>49218.75</double>
+        <double>24609.375</double>
+        <double>12304.6875</double>
+        <double>6152.34375</double>
+        <double>3076.171875</double>
+        <double>1538.0859375</double>
+        <double>769.04296875</double>
+        <double>384.521484375</double>
+        <double>192.2607421875</double>
+        <double>96.13037109375</double>
+        <double>48.065185546875</double>
+        <double>24.0325927734375</double>
+        <double>12.01629638671875</double>
+        <double>6.008148193359375</double>
+        <double>3.0040740966796875</double>
+        <double>1.5020370483398438</double>
+        <double>0.7510185241699219</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70211:0</string>
+        <string>EPSG:70211:1</string>
+        <string>EPSG:70211:2</string>
+        <string>EPSG:70211:3</string>
+        <string>EPSG:70211:4</string>
+        <string>EPSG:70211:5</string>
+        <string>EPSG:70211:6</string>
+        <string>EPSG:70211:7</string>
+        <string>EPSG:70211:8</string>
+        <string>EPSG:70211:9</string>
+        <string>EPSG:70211:10</string>
+        <string>EPSG:70211:11</string>
+        <string>EPSG:70211:12</string>
+        <string>EPSG:70211:13</string>
+        <string>EPSG:70211:14</string>
+        <string>EPSG:70211:15</string>
+        <string>EPSG:70211:16</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:70211 - 512</name>
+      <description>Equi7Grid OC EPSG:70211 Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>70211</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.92E7</double>
+          <double>1.26E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>24609.375</double>
+        <double>12304.6875</double>
+        <double>6152.34375</double>
+        <double>3076.171875</double>
+        <double>1538.0859375</double>
+        <double>769.04296875</double>
+        <double>384.521484375</double>
+        <double>192.2607421875</double>
+        <double>96.13037109375</double>
+        <double>48.065185546875</double>
+        <double>24.0325927734375</double>
+        <double>12.01629638671875</double>
+        <double>6.008148193359375</double>
+        <double>3.0040740966796875</double>
+        <double>1.5020370483398438</double>
+        <double>0.7510185241699219</double>
+        <double>0.3755092620849609</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:70211 - 512:0</string>
+        <string>EPSG:70211 - 512:1</string>
+        <string>EPSG:70211 - 512:2</string>
+        <string>EPSG:70211 - 512:3</string>
+        <string>EPSG:70211 - 512:4</string>
+        <string>EPSG:70211 - 512:5</string>
+        <string>EPSG:70211 - 512:6</string>
+        <string>EPSG:70211 - 512:7</string>
+        <string>EPSG:70211 - 512:8</string>
+        <string>EPSG:70211 - 512:9</string>
+        <string>EPSG:70211 - 512:10</string>
+        <string>EPSG:70211 - 512:11</string>
+        <string>EPSG:70211 - 512:12</string>
+        <string>EPSG:70211 - 512:13</string>
+        <string>EPSG:70211 - 512:14</string>
+        <string>EPSG:70211 - 512:15</string>
+        <string>EPSG:70211 - 512:16</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+  </gridSets>
+  <layers/>
+</gwcConfiguration>

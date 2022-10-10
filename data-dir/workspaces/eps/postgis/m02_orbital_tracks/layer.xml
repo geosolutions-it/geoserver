@@ -1,0 +1,15 @@
+<layer>
+  <name>m02_orbital_tracks</name>
+  <id>LayerInfoImpl--55c82408:1785aad2570:-7e7f</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-7d535a96:176f7b6d7fe:-8000</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--55c82408:1785aad2570:-7e80</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

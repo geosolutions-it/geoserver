@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<layout>
+   <decoration type="image" affinity="top,center">
+      <option name="url" value="bg_fbfbfb_10kx120.png" />
+   </decoration>
+   <decoration type="image" affinity="bottom,center">
+      <option name="url" value="white_bar_10kx25.png" />
+   </decoration>
+   <decoration type="text" affinity="bottom,right" offset="6,6" size="auto">
+     <option name="message">
+<![CDATA[<#setting datetime_format="yyyy-MM-dd'T'HH:mm:ss.SSSX">
+<#setting locale="en_US">
+<#if time??>
+${time?datetime?string["yyyy-MM-dd HH:mm:ss"]} UTC
+</#if>]]>
+     </option>
+     <option name="font-family" value="SansSerif" />
+     <option name="font-size" value="16" />
+     <option name="halo-radius" value="2" />
+   </decoration>
+   <decoration type="image" affinity="bottom,left">
+      <option name="url" value="logo25.png" />
+   </decoration>
+</layout>

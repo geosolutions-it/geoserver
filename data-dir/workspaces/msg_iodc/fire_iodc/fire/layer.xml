@@ -1,0 +1,15 @@
+<layer>
+  <name>fire</name>
+  <id>LayerInfoImpl--5b601b66:1707bad653c:-5f66</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--486032e7:170a6230328:-7efc</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:1707bad653c:-5f67</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

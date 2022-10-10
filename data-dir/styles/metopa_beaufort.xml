@@ -1,0 +1,15 @@
+<style>
+  <id>StyleInfoImpl-1e49fc7e:161e75f469f:-7ffe</id>
+  <name>metopa_beaufort</name>
+  <format>sld</format>
+  <languageVersion>
+    <version>1.0.0</version>
+  </languageVersion>
+  <filename>metopa_beaufort.sld</filename>
+  <legend>
+    <width>640</width>
+    <height>80</height>
+    <format>image/png</format>
+    <onlineResource>eps_ascat_wind_beaufort-640x80.png</onlineResource>
+  </legend>
+</style>

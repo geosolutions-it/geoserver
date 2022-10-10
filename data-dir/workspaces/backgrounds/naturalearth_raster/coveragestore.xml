@@ -1,0 +1,11 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl-377ded27:15f1d9ef338:-7fe8</id>
+  <name>naturalearth_raster</name>
+  <type>GeoTIFF</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--26de0f0e:16002807cd8:-7ffe</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:///var/geoserver/data/eumetsat/naturalearth/coverages/NE2_LR_LC_SR_W_tiled_y.tif</url>
+</coverageStore>
