@@ -1,0 +1,75 @@
+<wms>
+  <id>WMSInfoImpl--17bdfdda:15efeb33d13:-7ffd</id>
+  <enabled>true</enabled>
+  <name>WMS</name>
+  <title>EUMETSAT</title>
+  <abstrct>EUMETSAT visualizations offering via WMS</abstrct>
+  <versions>
+    <org.geotools.util.Version>
+      <version>1.1.1</version>
+    </org.geotools.util.Version>
+    <org.geotools.util.Version>
+      <version>1.3.0</version>
+    </org.geotools.util.Version>
+  </versions>
+  <citeCompliant>false</citeCompliant>
+  <schemaBaseURL>http://schemas.opengis.net</schemaBaseURL>
+  <verbose>false</verbose>
+  <metadata>
+    <entry key="disableDatelineWrappingHeuristic">false</entry>
+    <entry key="kmlSuperoverlayMode">auto</entry>
+    <entry key="kmlReflectorMode">refresh</entry>
+    <entry key="loopContinuously">false</entry>
+    <entry key="svgAntiAlias">false</entry>
+    <entry key="kmlPlacemark">false</entry>
+    <entry key="rootLayerInCapabilities">true</entry>
+    <entry key="kmlKmscore">40</entry>
+    <entry key="mapWrapping">true</entry>
+    <entry key="pngCompression">25</entry>
+    <entry key="jpegCompression">25</entry>
+    <entry key="advancedProjectionDensification">true</entry>
+    <entry key="advancedProjectionHandling">true</entry>
+    <entry key="NcWMSInfo">
+      <ncwms>
+        <timeSeriesPoolSize>4</timeSeriesPoolSize>
+        <maxTimeSeriesValues>400</maxTimeSeriesValues>
+      </ncwms>
+    </entry>
+    <entry key="maxAllowedFrames">2147483647</entry>
+    <entry key="kmlAttr">true</entry>
+    <entry key="disposalMethod">none</entry>
+    <entry key="scalehintMapunitsPixel">false</entry>
+    <entry key="framesDelay">1000</entry>
+  </metadata>
+  <srs>
+    <string>4326</string>
+    <string>3857</string>
+    <string>3995</string>
+    <string>70201</string>
+    <string>70203</string>
+    <string>70205</string>
+    <string>70207</string>
+    <string>70209</string>
+    <string>70211</string>
+    <string>70213</string>
+  </srs>
+  <watermark>
+    <enabled>false</enabled>
+    <position>BOT_RIGHT</position>
+    <transparency>100</transparency>
+  </watermark>
+  <interpolation>Nearest</interpolation>
+  <getFeatureInfoMimeTypeCheckingEnabled>false</getFeatureInfoMimeTypeCheckingEnabled>
+  <getMapMimeTypeCheckingEnabled>false</getMapMimeTypeCheckingEnabled>
+  <dynamicStylingDisabled>false</dynamicStylingDisabled>
+  <featuresReprojectionDisabled>false</featuresReprojectionDisabled>
+  <maxBuffer>30</maxBuffer>
+  <maxRequestMemory>65535</maxRequestMemory>
+  <maxRenderingTime>30</maxRenderingTime>
+  <maxRenderingErrors>100</maxRenderingErrors>
+  <cacheConfiguration>
+    <enabled>false</enabled>
+    <maxEntries>1000</maxEntries>
+    <maxEntrySize>51200</maxEntrySize>
+  </cacheConfiguration>
+</wms>

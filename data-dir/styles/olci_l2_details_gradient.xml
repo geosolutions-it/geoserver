@@ -1,0 +1,15 @@
+<style>
+  <id>StyleInfoImpl--5b601b66:1707bad653c:-52a3</id>
+  <name>olci_l2_details_gradient</name>
+  <format>sld</format>
+  <languageVersion>
+    <version>1.0.0</version>
+  </languageVersion>
+  <filename>olci_l2_details_gradient.sld</filename>
+  <legend>
+    <width>640</width>
+    <height>80</height>
+    <format>image/png</format>
+    <onlineResource>sentinel3a_olci_ch-640x80-II.png</onlineResource>
+  </legend>
+</style>

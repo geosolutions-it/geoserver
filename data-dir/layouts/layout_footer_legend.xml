@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<layout>
+   <decoration type="image" affinity="top,center">
+     <option name="url" value="${env('legend_bar', 'bg_fbfbfb_10kx120.png')}"/>
+   </decoration>
+
+   <decoration type="image" affinity="bottom,center">
+     <option name="url" value="${env('bar', 'white_bar_10kx30.png')}"/>
+   </decoration>
+
+   <decoration type="text" affinity="bottom,right" offset="${env('text_offset', '6,6')}" size="auto">
+     <option name="message">
+<![CDATA[<#setting datetime_format="yyyy-MM-dd'T'HH:mm:ss.SSSX">
+<#setting locale="en_US">
+<#if time??>
+${time?datetime?string["yyyy-MM-dd HH:mm:ss"]} UTC
+</#if>]]>
+     </option>
+     <option name="font-family" value="SansSerif" />
+     <option name="font-size" value="${env('text_font-size', '16')}" />
+     <option name="halo-radius" value="2" />
+   </decoration>
+
+   <decoration type="image" affinity="bottom,left" offset="${env('logo_offset1', '6,6')}">
+      <option name="url" value="${env('logo1', 'logo_25.png')}"/>
+    </decoration>
+    <decoration type="image" affinity="bottom,left" offset="${env('logo_offset2', '6,6')}">
+      <option name="url" value="${env('logo2', 'idontexist.png')}"/>
+    </decoration>
+    <decoration type="image" affinity="bottom,left" offset="${env('logo_offset3', '6,6')}">
+      <option name="url" value="${env('logo3', 'idontexist.png')}"/>
+    </decoration>
+    <decoration type="image" affinity="bottom,left" offset="${env('logo_offset4', '6,6')}">
+      <option name="url" value="${env('logo4', 'idontexist.png')}"/>
+    </decoration>
+
+  <decoration type="legend" affinity="top,left" offset="${env('legend_offset', '6,6')}" size="auto" />
+</layout>

@@ -1,0 +1,15 @@
+<layer>
+  <name>sentinel3a_olci_l2_chl_fullres_histogram</name>
+  <id>LayerInfoImpl--7eb09968:1712fcb8dd0:-7fff</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--7eb09968:1712fcb8dd0:-8000</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

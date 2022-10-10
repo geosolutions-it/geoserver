@@ -1,0 +1,93 @@
+{
+    "EO:EUM:DAT:MSG:AIRMASS": {
+        "wmsConfig": {
+            "layer": "MSG15_HRSEVIRI_RGB_AIRMASS_GEOTIFF",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "free"
+    },
+    "EO:EUM:DAT:MSG:NCL": {
+        "wmsConfig": {
+            "layer": "MSG15_HRSEVIRI_RGB_NATCOLOR_GEOTIFF",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "free"
+    },
+    "EO:EUM:DAT:MSG:MPE-JPG": {
+        "wmsConfig": {
+            "layer": "MSG15_HRSEVIRI_RGB_MPE_GEOTIFF",
+            "format": "image/png"
+        },
+        "licence": "free"
+    },
+    "EO:EUM:DAT:MSG:HRSEVIRI": {
+        "wmsConfig": {
+            "layer": "MSG15_HRSEVIRI_IR_39_GEOTIFF",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "licensed"
+    },
+    "EO:EUM:DAT:MSG:MSG15-RSS": {
+      "wmsConfig": {
+            "layer": "MSG15_RSS_HRSEVIRI_IR_39_GEOTIFF",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "licensed"
+    },
+    "EO:EUM:DAT:MSG:RSS-MPE-GRIB": {
+      "wmsConfig": {
+          "layer": "MSG15_RSS_HRSEVIRI_RGB_NATCOLOR_GEOTIFF",
+          "format": "image/vnd.jpeg-png"
+      },
+      "licence": "licensed"
+    },
+    "EO:EUM:DAT:MSG:RSS-MPE-JPG": {
+      "wmsConfig": {
+          "layer": "MSG15_RSS_HRSEVIRI_RGB_AIRMASS_GEOTIFF",
+          "format": "image/vnd.jpeg-png"
+      },
+      "licence": "licensed"
+    },
+    "EO:EUM:DAT:METOP:EARS-ASCAT": {
+        "wmsConfig": {
+            "layer": "metopa_ascat",
+            "pickable": true
+        },
+        "wfsConfig": {
+          "typeName": "metopa_ascat"
+        },
+        "licence": "restricted"
+    },
+    "EO:EUM:DAT:SENTINEL-3:SL_2_WST___NRT": {
+        "wmsConfig": {
+            "layer": "sst_orbits_composition",
+            "pickable": true
+        },
+        "wcsConfig": {
+          "coverage": "sst_orbits_composition"
+        },
+        "licence": "restricted"
+    },
+    "EO:EUM:DAT:MSG:EVIEW": {
+        "wmsConfig": {
+            "layer": "msg_eview",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "free"
+    },
+    "EO:EUM:DAT:MSG:MICROPHYSICS": {
+        "wmsConfig": {
+            "layer": "msg_microphysics",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "free"
+    },
+    "EO:EUM:DAT:MSG:RSS-MICROPHYSICS": {
+        "wmsConfig": {
+            "layer": "msg_rss_microphysics",
+            "format": "image/vnd.jpeg-png"
+        },
+        "licence": "free"
+    }
+}
+

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><roleRegistry xmlns="http://www.geoserver.org/security/roles" version="1.0">
+<roleList>
+<role id="ADMIN"/>
+<role id="GROUP_ADMIN"/>
+<role id="ROLE_HASLICENSE"/>
+<role id="ROLE_HASNRTLICENSE"/>
+<role id="ROLE_REGISTERED"/>
+</roleList>
+<userList>
+<userRoles username="Gnafu">
+<roleRef roleID="ADMIN"/>
+</userRoles>
+<userRoles username="admin">
+<roleRef roleID="ADMIN"/>
+</userRoles>
+<userRoles username="aparma">
+<roleRef roleID="ROLE_HASLICENSE"/>
+<roleRef roleID="ROLE_HASNRTLICENSE"/>
+<roleRef roleID="ROLE_REGISTERED"/>
+</userRoles>
+<userRoles username="ask">
+<roleRef roleID="ADMIN"/>
+</userRoles>
+<userRoles username="egallo">
+<roleRef roleID="ADMIN"/>
+</userRoles>
+<userRoles username="fabrizio">
+<roleRef roleID="ADMIN"/>
+</userRoles>
+<userRoles username="licence1_user"/>
+<userRoles username="licence2_user"/>
+<userRoles username="prasath">
+<roleRef roleID="ADMIN"/>
+</userRoles>
+<userRoles username="simple_user"/>
+</userList>
+<groupList>
+<groupRoles groupname="GROUP_HASLICENSE1"/>
+<groupRoles groupname="GROUP_HASLICENSE2"/>
+<groupRoles groupname="GROUP_REGISTERED"/>
+<groupRoles groupname="GROUP_REGISTERED_LICENSED"/>
+</groupList>
+</roleRegistry>

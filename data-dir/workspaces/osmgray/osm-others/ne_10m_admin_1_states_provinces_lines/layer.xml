@@ -1,0 +1,21 @@
+<layer>
+  <name>ne_10m_admin_1_states_provinces_lines</name>
+  <id>LayerInfoImpl-2cd79042:17068751bf1:33a</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2cd79042:1706804ed1c:671f</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:671f</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-2cd79042:17068751bf1:339</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2020-02-21 16:19:09.47 UTC</dateCreated>
+</layer>

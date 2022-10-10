@@ -1,0 +1,15 @@
+<layer>
+  <name>exmpl_rss_rgb_tropicalairmass</name>
+  <id>LayerInfoImpl-278011c2:17dc7e78f65:-7fd0</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl-278011c2:17dc7e78f65:-7fd1</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

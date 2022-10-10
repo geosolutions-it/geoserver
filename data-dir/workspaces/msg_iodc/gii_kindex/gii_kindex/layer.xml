@@ -1,0 +1,15 @@
+<layer>
+  <name>gii_kindex</name>
+  <id>LayerInfoImpl-7d174501:17863857205:-7d27</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-7d174501:17863857205:-7b10</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl-7d174501:17863857205:-7d28</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

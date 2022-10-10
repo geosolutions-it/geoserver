@@ -1,0 +1,16 @@
+<dataStore>
+  <id>DataStoreInfoImpl-2cd79042:1706804ed1c:67fb</id>
+  <name>pregeneralized-osm-others</name>
+  <type>Generalizing data store</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-2cd79042:1706804ed1c:4de6</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="RepositoryClassName">org.geoserver.data.gen.DSFinderRepository</entry>
+    <entry key="GeneralizationInfosProviderParam">workspaces/osmgray/pregeneralized-others.xml</entry>
+    <entry key="GeneralizationInfosProviderClassName">org.geoserver.data.gen.info.GeneralizationInfosProviderImpl</entry>
+    <entry key="namespace">http://www.geoserver.org/osm/gray</entry>
+  </connectionParameters>
+  <__default>false</__default>
+</dataStore>

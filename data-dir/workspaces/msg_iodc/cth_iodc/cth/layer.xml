@@ -1,0 +1,15 @@
+<layer>
+  <name>cth</name>
+  <id>LayerInfoImpl--5b601b66:1707bad653c:-6303</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--486032e7:170a6230328:-7efd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:1707bad653c:-6304</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

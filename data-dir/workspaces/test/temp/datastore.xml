@@ -1,0 +1,22 @@
+<dataStore>
+  <id>DataStoreInfoImpl--a0b8b0:171175264b0:-7ffe</id>
+  <name>temp</name>
+  <type>Directory of spatial files (shapefiles)</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--a0b8b0:171175264b0:-8000</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="charset">ISO-8859-1</entry>
+    <entry key="filetype">shapefile</entry>
+    <entry key="create spatial index">true</entry>
+    <entry key="memory mapped buffer">false</entry>
+    <entry key="timezone">Etc/UTC</entry>
+    <entry key="enable spatial index">true</entry>
+    <entry key="namespace">https://test.cgi-dev.de/test</entry>
+    <entry key="cache and reuse memory maps">true</entry>
+    <entry key="url">file:///var/geoserver/data/temp</entry>
+    <entry key="fstype">shape</entry>
+  </connectionParameters>
+  <__default>false</__default>
+</dataStore>

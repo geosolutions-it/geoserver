@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><Indexer>
+  <domains>
+    <domain name="time">
+      <attributes><attribute>time</attribute></attributes>
+    </domain>
+  </domains>
+  <coverages>
+    <coverage>
+      <name>sses_standard_deviation</name>
+      <schema name="sses_standard_deviation" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>pixels_per_bin</name>
+      <schema name="pixels_per_bin" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>quality_level</name>
+      <schema name="quality_level" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>sea_surface_temperature</name>
+      <schema name="sea_surface_temperature" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>sea_ice_fraction_dtime_from_sst</name>
+      <schema name="sea_ice_fraction_dtime_from_sst" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>wind_speed</name>
+      <schema name="wind_speed" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>sses_bias</name>
+      <schema name="sses_bias" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>sea_ice_fraction</name>
+      <schema name="sea_ice_fraction" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>sst_dtime</name>
+      <schema name="sst_dtime" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+    <coverage>
+      <name>wind_speed_dtime_from_sst</name>
+      <schema name="wind_speed_dtime_from_sst" >
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <domains>
+        <domain ref="time" />
+      </domains>
+    </coverage>
+  </coverages>
+  <parameters>
+    <parameter name="AuxiliaryFile" value="_auxiliary.xml" />
+    <parameter name="AuxiliaryDatastoreFile" value="netcdf_datastore.properties" />
+    <parameter name="AbsolutePath" value="true" />
+	<parameter name="IndexingDirectories" value="/var/geoserver/data/LIC_FREE/copernicus_sentinel3b_slstr_l3u_sst_fulres"/>
+  </parameters>
+</Indexer>
+

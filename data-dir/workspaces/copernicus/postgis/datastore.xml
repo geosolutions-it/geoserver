@@ -1,0 +1,24 @@
+<dataStore>
+  <id>DataStoreInfoImpl-5014580a:1785f16c77f:-7986</id>
+  <name>postgis</name>
+  <type>PostGIS (JNDI)</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff7</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="schema">public</entry>
+    <entry key="Estimated extends">true</entry>
+    <entry key="fetch size">3000</entry>
+    <entry key="encode functions">true</entry>
+    <entry key="Expose primary keys">false</entry>
+    <entry key="Support on the fly geometry simplification">true</entry>
+    <entry key="Batch insert size">200</entry>
+    <entry key="preparedStatements">true</entry>
+    <entry key="jndiReferenceName">java:comp/env/jdbc/eumetsat</entry>
+    <entry key="dbtype">postgis</entry>
+    <entry key="namespace">http://www.eumetsat.int/copernicus</entry>
+    <entry key="Loose bbox">true</entry>
+  </connectionParameters>
+  <__default>false</__default>
+</dataStore>

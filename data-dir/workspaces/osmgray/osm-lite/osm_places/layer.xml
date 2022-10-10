@@ -1,0 +1,21 @@
+<layer>
+  <name>osm_places</name>
+  <id>LayerInfoImpl-2cd79042:17068751bf1:-2c9c</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2cd79042:1706804ed1c:67e3</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:67e3</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-2cd79042:17068751bf1:-2c9d</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2020-02-21 16:11:54.518 UTC</dateCreated>
+</layer>

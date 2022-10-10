@@ -1,0 +1,15 @@
+<layer>
+  <name>ne_gray</name>
+  <id>LayerInfoImpl-2ec8a11a:1702e3a3dfd:-7ffe</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl-2ec8a11a:1702e3a3dfd:-7fff</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

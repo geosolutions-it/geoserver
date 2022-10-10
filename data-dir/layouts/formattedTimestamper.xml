@@ -1,0 +1,13 @@
+<layout>
+  <decoration type="text" affinity="top,right" moffset="6,6" size="auto">
+    <option name="message"><![CDATA[
+<#setting datetime_format="yyyy-MM-dd'T'HH:mm:ss.SSSX">
+<#setting locale="en_US">
+<#if time??>
+${time}
+</#if>]]></option>
+    <option name="font-family" value="SansSerif"/>
+    <option name="font-size" value="12"/>
+    <option name="halo-radius" value="2"/>
+  </decoration>
+</layout>

@@ -1,0 +1,15 @@
+<style>
+  <id>StyleInfoImpl--5b699307:170ea47c378:-8000</id>
+  <name>sst_medspiration_single_band</name>
+  <format>sld</format>
+  <languageVersion>
+    <version>1.0.0</version>
+  </languageVersion>
+  <filename>sst_medspiration_single_band.sld</filename>
+  <legend>
+    <width>640</width>
+    <height>80</height>
+    <format>image/png</format>
+    <onlineResource>sentinel3a_slstr_sst-640x80.png</onlineResource>
+  </legend>
+</style>

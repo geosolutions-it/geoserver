@@ -1,0 +1,15 @@
+<layer>
+  <name>m02_ascat_wind_histogram</name>
+  <id>LayerInfoImpl--486032e7:170a6230328:-7f02</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-7464baef:15ea9351664:-7ffc</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--486032e7:170a6230328:-7f03</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

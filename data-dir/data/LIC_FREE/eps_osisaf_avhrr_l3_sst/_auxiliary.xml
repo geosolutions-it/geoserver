@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><Indexer>
+  <coverages>
+    <coverage>
+      <schema name="sses_standard_deviation">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sses_standard_deviation</origName>
+      <name>sses_standard_deviation</name>
+    </coverage>
+    <coverage>
+      <schema name="sea_surface_temperature">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sea_surface_temperature</origName>
+      <name>sea_surface_temperature</name>
+    </coverage>
+    <coverage>
+      <schema name="sses_bias">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sses_bias</origName>
+      <name>sses_bias</name>
+    </coverage>
+    <coverage>
+      <schema name="sst_dtime">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sst_dtime</origName>
+      <name>sst_dtime</name>
+    </coverage>
+    <coverage>
+      <schema name="l2p_flags">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>l2p_flags</origName>
+      <name>l2p_flags</name>
+    </coverage>
+    <coverage>
+      <schema name="sources_of_adi">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sources_of_adi</origName>
+      <name>sources_of_adi</name>
+    </coverage>
+    <coverage>
+      <schema name="adi_dtime_from_sst">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>adi_dtime_from_sst</origName>
+      <name>adi_dtime_from_sst</name>
+    </coverage>
+    <coverage>
+      <schema name="aerosol_dynamic_indicator">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>aerosol_dynamic_indicator</origName>
+      <name>aerosol_dynamic_indicator</name>
+    </coverage>
+    <coverage>
+      <schema name="solar_zenith_angle">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>solar_zenith_angle</origName>
+      <name>solar_zenith_angle</name>
+    </coverage>
+    <coverage>
+      <schema name="quality_level">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>quality_level</origName>
+      <name>quality_level</name>
+    </coverage>
+    <coverage>
+      <schema name="satellite_zenith_angle">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>satellite_zenith_angle</origName>
+      <name>satellite_zenith_angle</name>
+    </coverage>
+    <coverage>
+      <schema name="dt_analysis">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>dt_analysis</origName>
+      <name>dt_analysis</name>
+    </coverage>
+    <coverage>
+      <schema name="wind_speed">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>wind_speed</origName>
+      <name>wind_speed</name>
+    </coverage>
+    <coverage>
+      <schema name="sea_ice_fraction">
+        <attributes>the_geom:Polygon,imageindex:Integer,location:String,time:java.util.Date</attributes>
+      </schema>
+      <origName>sea_ice_fraction</origName>
+      <name>sea_ice_fraction</name>
+    </coverage>
+  </coverages>
+</Indexer>
+

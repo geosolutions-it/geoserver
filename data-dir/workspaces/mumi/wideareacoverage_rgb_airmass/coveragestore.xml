@@ -1,0 +1,11 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl-7d174501:17863857205:-7f96</id>
+  <name>wideareacoverage_rgb_airmass</name>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--453fcc61:1760a405bda:-7ffe</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:data/LIC_FREE/mumi_wideareacoverage_rgb_airmass</url>
+</coverageStore>

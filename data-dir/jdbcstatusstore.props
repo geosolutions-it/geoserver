@@ -1,0 +1,8 @@
+user=eumetsat
+port=5432
+password=295Eumetsat12592!
+passwd=295Eumetsat12592!
+host=geosolutions-wms-pg96-cluster
+database=wps
+driver=org.postgresql.Driver
+dbtype=postgis

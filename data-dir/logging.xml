@@ -1,0 +1,5 @@
+<logging>
+  <level>PRODUCTION_STDOUT_LOGGING.properties</level>
+  <location>/tmp/geoserver.log</location>
+  <stdOutLogging>true</stdOutLogging>
+</logging>

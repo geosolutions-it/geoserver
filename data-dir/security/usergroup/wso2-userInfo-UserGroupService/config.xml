@@ -1,0 +1,9 @@
+<org.geoserver.security.WebServiceBodyResponseUserGroupServiceConfig>
+  <id>-61da3fa9:171099d4c13:-8000</id>
+  <name>wso2-userInfo-UserGroupService</name>
+  <className>org.geoserver.security.WebServiceBodyResponseUserGroupService</className>
+  <passwordEncoderName>pbePasswordEncoder</passwordEncoderName>
+  <passwordPolicyName>default</passwordPolicyName>
+  <searchRoles>^.*?&quot;roles&quot;\s*:\s*&quot;([^&quot;]+)&quot;.*$</searchRoles>
+  <roleServiceName>default</roleServiceName>
+</org.geoserver.security.WebServiceBodyResponseUserGroupServiceConfig>

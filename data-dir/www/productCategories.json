@@ -1,0 +1,76 @@
+[
+    {
+        "id": "theme.par.Mission",
+        "name": "Mission",
+        "virtual": "true",
+        "thumb": "https://www.eumetsat.int/website/wcm/idc/idcplg?IdcService=GET_FILE&dDocName=METOP_NOAA_ORBITS&RevisionSelectionMethod=LatestReleased&Rendition=Web",
+        "subcategories": [
+            {
+                "id": "sat.MSG",
+                "name": "Meteosat Second Generation",
+                "thumb": "http://www.esa.int/var/esa/storage/images/esa_multimedia/images/2001/10/meteosat_second_generation_artistic_view/9188703-5-eng-GB/Meteosat_Second_Generation_artistic_view_node_full_image_2.jpg"
+            },
+            {
+                "id": "sat.Metop",
+                "name": "Metop",
+                "thumb": "https://www.nasa.gov/sites/default/files/metopa.jpg",
+                "subcategories": [
+                    {
+                        "id": "sat.Metop.ASCAT",
+                        "name": "ASCAT",
+                        "thumb": "https://www.eumetsat.int/website/wcm/idc/idcplg?IdcService=GET_FILE&dDocName=IMG_JPG_ASCAT_BIG&RevisionSelectionMethod=LatestReleased&Rendition=Web"
+                    }
+                ]
+            },
+            {
+                "id": "sat.Sentinel",
+                "name": "Sentinel",
+                "virtual": true,
+                "thumb": "http://www.un-spider.org/sites/default/files/styles/image_500px/public/140513_greece.jpg?itok=X8nauGmG",
+                "subcategories": [
+                    {
+                        "id": "sat.Sentinel-3",
+                        "name": "Sentinel-3",
+                        "thumb": "http://spaceflight101.com/copernicus/wp-content/uploads/sites/35/2016/02/Workhorse_mission_for_Copernicus.jpg"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "theme.par.Atmosphere",
+        "name": "Atmosphere",
+        "thumb": "https://worldview.earthdata.nasa.gov/images/wv.layers/categories/atmosphere.jpg",
+        "subcategories": [
+            {
+                "id": "theme.par.Cloud",
+                "name": "Cloud",
+                "thumb": "https://media.istockphoto.com/photos/cumulus-puffy-clouds-picture-id491656170?k=6&m=491656170&s=612x612&w=0&h=DEwWdLDBuWSWA3oK0_RsO-M5_ywVgW0Uy2KAzBLQIvk="
+            },
+            {
+                "id": "theme.par.Observation",
+                "name": "Observation",
+                "thumb": "http://img.huffingtonpost.com/asset/scalefit_630_noupscale/574436be130000d60538293f.jpeg"
+            },
+            {
+                "id": "theme.par.Precipitation",
+                "name": "Precipitation",
+                "thumb": "https://fthmb.tqn.com/_1m5gMKF3L--PwFSTV6YiPxG4Rg=/768x0/filters:no_upscale()/splashing-water-drops-on-road-568531079-58b73f485f9b5880804b4896.jpg"
+            }
+        ]
+    },
+    {
+        "id": "theme.par.Ocean",
+        "name": "Ocean",
+        "thumb": "https://worldview.earthdata.nasa.gov/images/wv.layers/categories/oceans.jpg",
+        "subcategories": [
+            {
+                "id": "theme.par.Ocean_Surface_Wind",
+                "name": "Ocean Surface Wind",
+                "thumb": "https://worldview.earthdata.nasa.gov/images/wv.layers/categories/oceans.jpg"
+            }
+
+        ]
+    }
+]
+

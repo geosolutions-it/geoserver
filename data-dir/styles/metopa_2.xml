@@ -1,0 +1,15 @@
+<style>
+  <id>StyleInfoImpl-1e89fa0a:1607375c877:-7ff8</id>
+  <name>metopa_2</name>
+  <format>sld</format>
+  <languageVersion>
+    <version>1.0.0</version>
+  </languageVersion>
+  <filename>metopa_2.sld</filename>
+  <legend>
+    <width>640</width>
+    <height>80</height>
+    <format>image/png</format>
+    <onlineResource>eps_ascat_wind_eumetsat-640x80.png</onlineResource>
+  </legend>
+</style>

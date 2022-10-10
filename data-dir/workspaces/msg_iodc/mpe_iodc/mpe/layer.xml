@@ -1,0 +1,15 @@
+<layer>
+  <name>mpe</name>
+  <id>LayerInfoImpl--5b601b66:1707bad653c:-5d3e</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--486032e7:170a6230328:-7efa</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:1707bad653c:-5d3f</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

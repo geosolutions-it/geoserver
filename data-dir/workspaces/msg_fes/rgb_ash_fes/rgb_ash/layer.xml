@@ -1,0 +1,15 @@
+<layer>
+  <name>rgb_ash</name>
+  <id>LayerInfoImpl--5b601b66:1707bad653c:-70c6</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:1707bad653c:-70c7</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

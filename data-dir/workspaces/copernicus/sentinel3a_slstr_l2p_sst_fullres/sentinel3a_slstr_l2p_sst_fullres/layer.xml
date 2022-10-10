@@ -1,0 +1,15 @@
+<layer>
+  <name>sentinel3a_slstr_l2p_sst_fullres</name>
+  <id>LayerInfoImpl--5b601b66:1707bad653c:-69b3</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--5b699307:170ea47c378:-8000</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5b601b66:1707bad653c:-69b4</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

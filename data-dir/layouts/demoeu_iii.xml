@@ -1,0 +1,32 @@
+<layout>
+  <decoration type="text" affinity="bottom,center">
+    <option name="message" value="IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"/>
+    <option name="font-color" value="#FFFFFF"/>
+    <option name="halo-radius" value="6"/>
+  </decoration>
+  <decoration type="text" affinity="bottom,left"  offset="-6,0">
+    <option name="message" value="IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"/>
+    <option name="font-color" value="#FFFFFF"/>
+    <option name="halo-radius" value="6"/>
+  </decoration>
+  <decoration type="text" affinity="bottom,right" offset="-6,0" >
+    <option name="message" value="IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"/>
+    <option name="font-color" value="#FFFFFF"/>
+    <option name="halo-radius" value="6"/>
+  </decoration>
+  <decoration type="text" affinity="bottom,right" offset="6,2" size="auto">
+   <option name="message"><![CDATA[
+<#setting locale="en_US">
+<#setting datetime_format="yyyy-MM-dd HH:mm:ss">
+This is a sample footer text © - 
+<#if time??>
+${time} UTC
+</#if>]]></option>
+    <option name="font-family" value="SansSerif"/>
+    <option name="font-size" value="16"/>
+    <option name="halo-radius" value="2"/>
+  </decoration>
+  <decoration type="image" affinity="bottom,left" size="90,20">
+    <option name="url" value="logo.jpg"/>
+  </decoration>
+</layout>

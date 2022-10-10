@@ -1,0 +1,18 @@
+<dataStore>
+  <id>DataStoreInfoImpl-2cd79042:1706804ed1c:67fa</id>
+  <name>pregeneralized-osm-lite</name>
+  <type>Generalizing data store</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-2cd79042:1706804ed1c:4de6</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="RepositoryClassName">org.geoserver.data.gen.DSFinderRepository</entry>
+    <entry key="GeneralizationInfosProviderParam">workspaces/osmgray/pregeneralized-osm-lite.xml</entry>
+    <entry key="GeneralizationInfosProviderClassName">org.geoserver.data.gen.info.GeneralizationInfosProviderImpl</entry>
+    <entry key="namespace">http://www.geoserver.org/osm/gray</entry>
+  </connectionParameters>
+  <__default>false</__default>
+  <dateCreated>2020-02-21 14:38:39.679 UTC</dateCreated>
+  <dateModified>2020-02-21 15:46:29.155 UTC</dateModified>
+</dataStore>
