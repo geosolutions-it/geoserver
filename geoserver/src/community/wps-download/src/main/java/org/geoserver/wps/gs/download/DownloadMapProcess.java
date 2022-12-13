@@ -87,6 +87,9 @@ import org.springframework.context.ApplicationContextAware;
 )
 public class DownloadMapProcess implements GeoServerProcess, ApplicationContextAware {
 
+    private static final boolean TRANSPARENT_DEFAULT_VALUE =
+            Boolean.valueOf(GeoServerExtensions.getProperty("DOWNLOAD_MAP_TRANSPARENT"));
+
     static final Logger LOGGER = Logging.getLogger(DownloadMapProcess.class);
 
     private final WMS wms;
@@ -179,6 +182,12 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                     Layer[] layers,
             @DescribeParameter(name = "format", min = 0, defaultValue = "image/png")
                     final String format,
+            @DescribeParameter(
+                        name = "transparent",
+                        min = 0,
+                        description = "Map background transparency"
+                    )
+                    Boolean transparent,
             ProgressListener progressListener)
             throws Exception {
         // if kmlOutput, reproject request to WGS84 (test is done indirectly to make the code work
@@ -193,6 +202,10 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         // avoid NPE on progress listener
         if (progressListener == null) {
             progressListener = new DefaultProgressListener();
+        }
+
+        if (transparent == null) {
+            transparent = TRANSPARENT_DEFAULT_VALUE;
         }
 
         try {
@@ -210,6 +223,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                             height,
                             headerHeight,
                             layers,
+                            transparent,
                             format,
                             progressListener,
                             new HashMap<>());
@@ -326,6 +340,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
             int height,
             Integer headerHeight,
             Layer[] layers,
+            boolean transparent,
             String format,
             ProgressListener progressListener,
             Map<String, WebMapServer> serverCache)
@@ -343,6 +358,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                     height,
                     headerHeight,
                     layers,
+                    transparent,
                     format,
                     progressListener,
                     serverCache);
@@ -361,6 +377,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
             int height,
             Integer headerHeight,
             Layer[] layers,
+            boolean transparent,
             String format,
             ProgressListener progressListener,
             Map<String, WebMapServer> serverCache)
@@ -414,6 +431,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         // loop over layers and accumulate
         int mapsImageHeight = height - headerHeightSize;
         template.put("height", String.valueOf(mapsImageHeight));
+        template.put("transparent", String.valueOf(transparent));
         RenderedImage result = null;
         progressListener.started();
         int i = 0;

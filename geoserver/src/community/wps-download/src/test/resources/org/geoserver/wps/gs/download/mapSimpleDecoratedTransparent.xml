@@ -6,33 +6,39 @@
              xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1"
              xmlns:xlink="http://www.w3.org/1999/xlink"
              xsi:schemaLocation="http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd">
-  <ows:Identifier>gs:DownloadAnimation</ows:Identifier>
+  <ows:Identifier>gs:DownloadMap</ows:Identifier>
   <wps:DataInputs>
     <wps:Input>
       <ows:Identifier>bbox</ows:Identifier>
       <wps:Data>
         <wps:BoundingBoxData crs="EPSG:4326">
-          <ows:LowerCorner>0.237 40.562</ows:LowerCorner>
-          <ows:UpperCorner>14.593 44.55</ows:UpperCorner>
+          <ows:LowerCorner>-2.4 1.4</ows:LowerCorner>
+          <ows:UpperCorner>0.4 4.2</ows:UpperCorner>
         </wps:BoundingBoxData>
       </wps:Data>
     </wps:Input>
     <wps:Input>
-      <ows:Identifier>time</ows:Identifier>
+      <ows:Identifier>decoration</ows:Identifier>
       <wps:Data>
-        <wps:LiteralData>2008-10-31T00:00:00.000Z,2008-11-01T00:00:00.000Z</wps:LiteralData>
+        <wps:LiteralData>watermarker</wps:LiteralData>
       </wps:Data>
     </wps:Input>
     <wps:Input>
       <ows:Identifier>width</ows:Identifier>
       <wps:Data>
-        <wps:LiteralData>540</wps:LiteralData>
+        <wps:LiteralData>256</wps:LiteralData>
       </wps:Data>
     </wps:Input>
     <wps:Input>
       <ows:Identifier>height</ows:Identifier>
       <wps:Data>
-        <wps:LiteralData>270</wps:LiteralData>
+        <wps:LiteralData>256</wps:LiteralData>
+      </wps:Data>
+    </wps:Input>
+    <wps:Input>
+      <ows:Identifier>transparent</ows:Identifier>
+      <wps:Data>
+        <wps:LiteralData>true</wps:LiteralData>
       </wps:Data>
     </wps:Input>
     <wps:Input>
@@ -40,27 +46,14 @@
       <wps:Data>
         <wps:ComplexData xmlns:dwn="http://geoserver.org/wps/download">
           <dwn:Layer>
-            <dwn:Name>giantPolygon</dwn:Name>
+            <dwn:Name>cite:BasicPolygons</dwn:Name>
           </dwn:Layer>
         </wps:ComplexData>
       </wps:Data>
     </wps:Input>
-    <wps:Input>
-      <ows:Identifier>layer</ows:Identifier>
-      <wps:Data>
-        <wps:ComplexData xmlns:dwn="http://geoserver.org/wps/download">
-          <dwn:Layer>
-            <dwn:Name>watertemp</dwn:Name>
-            <dwn:DecorationName>dynawatermarker</dwn:DecorationName>
-            <dwn:Parameter key="env">${env}</dwn:Parameter>
-          </dwn:Layer>
-        </wps:ComplexData>
-      </wps:Data>
-    </wps:Input>
-    <!-- No output specification, relying on defaults -->
   </wps:DataInputs>
   <wps:ResponseForm>
-    <wps:RawDataOutput mimeType="image/jpeg">
+    <wps:RawDataOutput mimeType="image/png">
       <ows:Identifier>result</ows:Identifier>
     </wps:RawDataOutput>
   </wps:ResponseForm>
