@@ -1,0 +1,15 @@
+<layer>
+  <name>h60b</name>
+  <id>LayerInfoImpl-10898ce1:1848af40a1c:-7f3c</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-10898ce1:1848af40a1c:-7f3b</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl-10898ce1:1848af40a1c:-7f3d</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

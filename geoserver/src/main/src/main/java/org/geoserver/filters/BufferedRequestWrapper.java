@@ -5,6 +5,7 @@
  */
 package org.geoserver.filters;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -20,11 +21,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import org.geotools.util.Converters;
 
+/** Used to wrap HttpServletRequest to apply {@link BufferedInputStream} on content access. */
 public class BufferedRequestWrapper extends HttpServletRequestWrapper {
     protected HttpServletRequest myWrappedRequest;
 
@@ -34,7 +37,8 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
     protected ServletInputStream myStream = null;
     protected BufferedReader myReader = null;
     protected Map myParameterMap;
-    protected Logger logger = org.geotools.util.logging.Logging.getLogger("org.geoserver.filters");
+    private static final Logger LOGGER =
+            org.geotools.util.logging.Logging.getLogger(BufferedRequestWrapper.class);
 
     public BufferedRequestWrapper(HttpServletRequest req, String charset, byte[] buff) {
         super(req);
@@ -43,12 +47,23 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
         this.charset = charset;
     }
 
+    public BufferedRequestWrapper(
+            HttpServletRequest req, String charset, BufferedInputStream bufferedInputStream)
+            throws IOException {
+        super(req);
+        this.myWrappedRequest = req;
+        this.myReader = new BufferedReader(new InputStreamReader(bufferedInputStream, charset));
+        this.charset = charset;
+        this.myStream = new BufferedRequestStream(bufferedInputStream);
+    }
+
+    @Override
     public ServletInputStream getInputStream() throws IOException {
         if (myStream == null) {
             if (myReader == null) {
                 myStream = new BufferedRequestStream(myBuffer);
-            } else {
-                throw new IOException("Requesting a stream after a reader is already in use!!");
+            } else if (!myReader.ready()) {
+                throw new IOException("Reader is not ready!!");
             }
         }
 
@@ -131,7 +146,11 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
         // parse the body
         String[] pairs;
         try {
-            pairs = new String(myBuffer, charset).split("\\&");
+            if (myBuffer != null) {
+                pairs = new String(myBuffer, charset).split("\\&");
+            } else {
+                pairs = myReader.lines().collect(Collectors.joining()).split("\\&");
+            }
         } catch (UnsupportedEncodingException e) {
             // should not happen
             throw new RuntimeException(e);
@@ -164,7 +183,7 @@ public class BufferedRequestWrapper extends HttpServletRequestWrapper {
             ((List) myParameterMap.get(key)).add(value);
 
         } catch (UnsupportedEncodingException e) {
-            logger.severe("Failed to decode form values in LoggingFilter");
+            LOGGER.severe("Failed to decode form values in LoggingFilter");
             // we have the encoding hard-coded for now so no exceptions should be thrown...
         }
     }

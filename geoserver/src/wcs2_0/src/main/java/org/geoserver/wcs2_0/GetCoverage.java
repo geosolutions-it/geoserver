@@ -278,8 +278,7 @@ public class GetCoverage {
                 final String coverageName =
                         nativeName != null ? nativeName : reader.getGridCoverageNames()[0];
                 final GranuleStackImpl stack =
-                        new GranuleStackImpl(
-                                coverageName, reader.getCoordinateReferenceSystem(), dimensions);
+                        new GranuleStackImpl(coverageName, cinfo.getCRS(), dimensions);
                 // Geoserver max memory limit definition
                 long outputLimit = wcs.getMaxOutputMemory() * 1024;
                 long inputLimit = wcs.getMaxInputMemory() * 1024;
@@ -438,7 +437,7 @@ public class GetCoverage {
         for (int i = 0; i < coverages.size(); i++) {
             List<GridCoverage2D> subsetted =
                     handleSubsettingExtension(
-                            coverages.get(i), gridCoverageRequest.getSpatialSubset(), hints);
+                            coverages.get(i), gridCoverageRequest.getSpatialSubset());
             temp.addAll(subsetted);
         }
         coverages = temp;
@@ -827,7 +826,7 @@ public class GetCoverage {
         //
         // Extract CRS values for relative extension
         //
-        final CoordinateReferenceSystem subsettingCRS = extractSubsettingCRS(reader, extensions);
+        final CoordinateReferenceSystem subsettingCRS = extractSubsettingCRS(ci, extensions);
         final CoordinateReferenceSystem outputCRS =
                 extractOutputCRS(reader, extensions, subsettingCRS);
 
@@ -843,9 +842,9 @@ public class GetCoverage {
         //
         // notice that for the moment we support only homogeneous interpolation on the 2D axis
         final Map<String, InterpolationPolicy> axesInterpolations =
-                extractInterpolation(reader, extensions);
+                extractInterpolation(ci, extensions);
         final Interpolation spatialInterpolation =
-                extractSpatialInterpolation(axesInterpolations, reader.getOriginalEnvelope());
+                extractSpatialInterpolation(axesInterpolations, ci.getNativeBoundingBox());
         final OverviewPolicy overviewPolicy = extractOverviewPolicy(extensions);
         // TODO time interpolation
         assert spatialInterpolation != null;
@@ -1027,29 +1026,29 @@ public class GetCoverage {
         Utilities.ensureNonNull("interpolation", spatialInterpolation);
 
         //
-        // check if we need to reproject the subset envelope back to coverageCRS
+        // check if we need to reproject the subset envelope back to the reader CRS
         //
         // this does not mean we need to reproject the coverage at the end
         // as the outputCrs can be different from the subsetCrs
         //
         // get source crs
-        final CoordinateReferenceSystem coverageCRS = reader.getCoordinateReferenceSystem();
+        final CoordinateReferenceSystem readerCRS = reader.getCoordinateReferenceSystem();
         WCSEnvelope subset = request.getSpatialSubset();
         List<GridCoverage2D> result = new ArrayList<GridCoverage2D>();
         List<GeneralEnvelope> readEnvelopes = new ArrayList<GeneralEnvelope>();
         if (subset.isCrossingDateline()) {
             GeneralEnvelope[] envelopes = subset.getNormalizedEnvelopes();
-            addEnvelopes(envelopes[0], readEnvelopes, coverageCRS);
-            addEnvelopes(envelopes[1], readEnvelopes, coverageCRS);
+            addEnvelopes(envelopes[0], readEnvelopes, readerCRS);
+            addEnvelopes(envelopes[1], readEnvelopes, readerCRS);
         } else {
-            addEnvelopes(subset, readEnvelopes, coverageCRS);
+            addEnvelopes(subset, readEnvelopes, readerCRS);
         }
 
         List<GridCoverage2D> readCoverages = new ArrayList<>();
         for (GeneralEnvelope readEnvelope : readEnvelopes) {
             // according to spec we need to return pixel in the intersection between
             // the requested area and the declared bounds, readers might return less
-            GeneralEnvelope padEnvelope = computePadEnvelope(readEnvelope, reader);
+            GeneralEnvelope padEnvelope = computePadEnvelope(readEnvelope, reader, cinfo);
 
             // check if a previous read already covered this envelope, readers
             // can return more than we asked
@@ -1071,7 +1070,7 @@ public class GetCoverage {
                                 hints,
                                 incrementalInputSize,
                                 spatialInterpolation,
-                                coverageCRS,
+                                readerCRS,
                                 readEnvelope,
                                 requestedEnvelope,
                                 scaling,
@@ -1108,7 +1107,7 @@ public class GetCoverage {
      * reader own native envelope (which is also the envelope we are declaring in output)
      */
     private GeneralEnvelope computePadEnvelope(
-            GeneralEnvelope readEnvelope, GridCoverage2DReader reader) {
+            GeneralEnvelope readEnvelope, GridCoverage2DReader reader, CoverageInfo cinfo) {
         CoordinateReferenceSystem sourceCRS = reader.getCoordinateReferenceSystem();
         CoordinateReferenceSystem subsettingCRS = readEnvelope.getCoordinateReferenceSystem();
         try {
@@ -1122,8 +1121,10 @@ public class GetCoverage {
                     subsettingCRS.toWKT(),
                     e);
         }
+        // used to intersect with the reader's native envelope, but readers such as mosaic
+        // might jus have a guess at the actual envelope (due to usage of bbox estimation in
+        // the index data store).
         GeneralEnvelope padEnvelope = new GeneralEnvelope(readEnvelope);
-        padEnvelope.intersect(reader.getOriginalEnvelope());
 
         return padEnvelope;
     }
@@ -1180,7 +1181,9 @@ public class GetCoverage {
             sameCRS =
                     equalsMetadata
                             ? true
-                            : CRS.findMathTransform(outputCRS, coverageCRS, true).isIdentity();
+                            : CRS.findMathTransform(
+                                            outputCRS, reader.getCoordinateReferenceSystem(), true)
+                                    .isIdentity();
         } catch (FactoryException e1) {
             final IOException ioe = new IOException();
             ioe.initCause(e1);
@@ -1269,7 +1272,6 @@ public class GetCoverage {
             }
         }
 
-        GridCoverage2D coverage = null;
         //
         // kk, now build a good GG to read the smallest available area for the following operations
         //
@@ -1279,6 +1281,7 @@ public class GetCoverage {
             // let's create a subsetting GG2D (Taking overviews and requested scaling into account)
             MathTransform transform =
                     getMathTransform(
+                            cinfo,
                             reader,
                             requestedEnvelope != null ? requestedEnvelope : subset,
                             request,
@@ -1332,8 +1335,11 @@ public class GetCoverage {
         if (request.getOverviewPolicy() != null) {
             readHints.add(new Hints(Hints.OVERVIEW_POLICY, request.getOverviewPolicy()));
         }
-        coverage =
+        if (readGG.getGridRange().getSpan(0) <= 0 || readGG.getGridRange().getSpan(1) <= 0)
+            return null;
+        GridCoverage2D coverage =
                 RequestUtils.readBestCoverage(
+                        cinfo,
                         reader,
                         readParameters,
                         readGG,
@@ -1354,7 +1360,7 @@ public class GetCoverage {
             // see what scaling factors the reader actually applied
             if (scaling != null) {
                 MathTransform cmt = coverage.getGridGeometry().getGridToCRS();
-                MathTransform rmt = reader.getOriginalGridToWorld(PixelInCell.CELL_CENTER);
+                MathTransform rmt = WCSUtils.fitGridGeometry(cinfo, reader).getGridToCRS2D();
                 if (!(cmt instanceof AffineTransform2D) || !(rmt instanceof AffineTransform2D)) {
                     LOGGER.log(
                             Level.FINE,
@@ -1375,6 +1381,7 @@ public class GetCoverage {
     }
 
     MathTransform getMathTransform(
+            CoverageInfo ci,
             GridCoverage2DReader reader,
             Envelope subset,
             GridCoverageRequest request,
@@ -1527,14 +1534,12 @@ public class GetCoverage {
      *
      * <p>In case it is not provided the subsettingCRS falls back on the nativeCRS.
      *
-     * @param reader the {@link GridCoverage2DReader} to be used
      * @param extensions the {@link Map} of extension for this request.
      * @return the subsettingCRS as a {@link CoordinateReferenceSystem}
      */
     private CoordinateReferenceSystem extractSubsettingCRS(
-            GridCoverage2DReader reader, Map<String, ExtensionItemType> extensions) {
-        Utilities.ensureNonNull("reader", reader);
-        return extractCRSInternal(extensions, reader.getCoordinateReferenceSystem(), false);
+            CoverageInfo ci, Map<String, ExtensionItemType> extensions) {
+        return extractCRSInternal(extensions, ci.getCRS(), false);
     }
 
     /**
@@ -1612,11 +1617,10 @@ public class GetCoverage {
      * @param extensions
      */
     private Map<String, InterpolationPolicy> extractInterpolation(
-            GridCoverage2DReader reader, Map<String, ExtensionItemType> extensions) {
+            CoverageInfo ci, Map<String, ExtensionItemType> extensions) {
         // preparation
-        final Map<String, InterpolationPolicy> returnValue =
-                new HashMap<String, InterpolationPolicy>();
-        final Envelope envelope = reader.getOriginalEnvelope();
+        final Map<String, InterpolationPolicy> returnValue = new HashMap<>();
+        final Envelope envelope = ci.getNativeBoundingBox();
         final List<String> axesNames = envelopeDimensionsMapper.getAxesNames(envelope, true);
         for (String axisName : axesNames) {
             returnValue.put(
@@ -1864,18 +1868,16 @@ public class GetCoverage {
      * @return a cropped version of the source {@link GridCoverage}
      */
     private List<GridCoverage2D> handleSubsettingExtension(
-            GridCoverage2D coverage, WCSEnvelope subset, Hints hints) {
+            GridCoverage2D coverage, WCSEnvelope subset) {
 
         List<GridCoverage2D> result = new ArrayList<GridCoverage2D>();
         if (subset != null) {
             if (subset.isCrossingDateline()) {
-                Envelope2D coverageEnvelope = coverage.getEnvelope2D();
                 GeneralEnvelope[] normalizedEnvelopes = subset.getNormalizedEnvelopes();
-                for (int i = 0; i < normalizedEnvelopes.length; i++) {
-                    GeneralEnvelope ge = normalizedEnvelopes[i];
-                    if (ge.intersects(coverageEnvelope, false)) {
+                for (GeneralEnvelope ge : normalizedEnvelopes) {
+                    if (!emptyIntersection(coverage, ge)) {
                         GridCoverage2D cropped = cropOnEnvelope(coverage, ge);
-                        result.add(cropped);
+                        if (cropped != null) result.add(cropped);
                     }
                 }
             } else {
@@ -1884,6 +1886,24 @@ public class GetCoverage {
             }
         }
         return result;
+    }
+
+    /**
+     * Checks if the intersection between the coverage envelope and cropEnvelope is not empty, and
+     * would read at least a pixel along both axis
+     */
+    private boolean emptyIntersection(GridCoverage2D coverage, GeneralEnvelope cropEnvelope) {
+        Envelope2D coverageEnvelope = coverage.getEnvelope2D();
+        if (!cropEnvelope.intersects(coverageEnvelope, false)) return true;
+        // check at least one pixel along both axis
+        ReferencedEnvelope intersection =
+                new ReferencedEnvelope(coverageEnvelope)
+                        .intersection(ReferencedEnvelope.reference(cropEnvelope));
+        GridGeometry2D gg = coverage.getGridGeometry();
+        double resx = gg.getEnvelope2D().getSpan(0) / gg.getGridRange().getSpan(0);
+        double resy = gg.getEnvelope2D().getSpan(1) / gg.getGridRange().getSpan(1);
+        // given tolerances, more than half a pixel should result in a full pixel being returned
+        return intersection.getSpan(0) <= resx / 2 || intersection.getSpan(1) <= resy / 2;
     }
 
     private GridCoverage2D cropOnEnvelope(GridCoverage2D coverage, Envelope cropEnvelope) {

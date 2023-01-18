@@ -23,6 +23,7 @@ RUN apt-get -y update \
  && rm -rf /tmp/resources \
  && rm -rf /var/lib/apt/lists/*
 
+
 WORKDIR $CATALINA_HOME
 
 # Set ErrorReportValve to hide Tomcat version and exceptions

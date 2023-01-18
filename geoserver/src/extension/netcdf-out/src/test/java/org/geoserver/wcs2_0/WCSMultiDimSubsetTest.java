@@ -21,6 +21,7 @@ import org.geoserver.wcs2_0.response.GranuleStack;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.gce.imagemosaic.ImageMosaicFormat;
 import org.geotools.geometry.Envelope2D;
+import org.geotools.referencing.CRS;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.opengis.coverage.grid.GridCoverageReader;
@@ -108,9 +109,10 @@ public class WCSMultiDimSubsetTest extends WCSNetCDFBaseTest {
             targetCoverage =
                     applicationContext.getBean(WCSResponseInterceptor.class).getLastResult();
 
-            assertEquals(
-                    (Object) sourceCoverage.getCoordinateReferenceSystem(),
-                    (Object) targetCoverage.getCoordinateReferenceSystem());
+            assertTrue(
+                    CRS.equalsIgnoreMetadata(
+                            sourceCoverage.getCoordinateReferenceSystem(),
+                            targetCoverage.getCoordinateReferenceSystem()));
 
             assertTrue(targetCoverage instanceof GranuleStack);
             GridCoverage2D firstResult = ((GranuleStack) targetCoverage).getGranules().get(0);
