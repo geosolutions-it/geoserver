@@ -1,0 +1,66 @@
+<GeoServerTileLayer>
+  <id>LayerInfoImpl-10898ce1:1848af40a1c:-7f3c</id>
+  <enabled>true</enabled>
+  <inMemoryCached>true</inMemoryCached>
+  <name>msg_fes:h60b</name>
+  <mimeFormats>
+    <string>image/png8</string>
+    <string>image/png</string>
+    <string>image/vnd.jpeg-png</string>
+    <string>image/jpeg</string>
+  </mimeFormats>
+  <gridSubsets>
+    <gridSubset>
+      <gridSetName>EPSG:3995 - 256</gridSetName>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3995 - 512</gridSetName>
+      <zoomStart>0</zoomStart>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:900913</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:4326</gridSetName>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:4326 - 512</gridSetName>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3857 - 512</gridSetName>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+  </gridSubsets>
+  <metaWidthHeight>
+    <int>1</int>
+    <int>1</int>
+  </metaWidthHeight>
+  <expireCache>0</expireCache>
+  <expireClients>604800</expireClients>
+  <parameterFilters>
+    <regexParameterFilter>
+      <key>TIME</key>
+      <defaultValue>NONE</defaultValue>
+      <normalize>
+        <locale></locale>
+      </normalize>
+      <regex>^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$</regex>
+    </regexParameterFilter>
+    <styleParameterFilter>
+      <key>STYLES</key>
+      <defaultValue></defaultValue>
+      <availableStyles class="sorted-set"/>
+      <defaultStyle>msg_h60b_h63</defaultStyle>
+    </styleParameterFilter>
+  </parameterFilters>
+  <gutter>0</gutter>
+  <cacheWarningSkips>
+    <warning>FailedNearest</warning>
+  </cacheWarningSkips>
+</GeoServerTileLayer>

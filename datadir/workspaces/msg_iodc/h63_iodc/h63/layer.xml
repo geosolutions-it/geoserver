@@ -1,0 +1,15 @@
+<layer>
+  <name>h63</name>
+  <id>LayerInfoImpl--3acf86d4:184becead5b:-7fff</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-10898ce1:1848af40a1c:-7f3b</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--3acf86d4:184becead5b:-8000</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

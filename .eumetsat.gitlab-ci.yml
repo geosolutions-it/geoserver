@@ -54,10 +54,11 @@ package:
   image: docker:stable
   script:
     - mv geoserver/src/web/app/target/geoserver.war docker/resources/geoserver/geoserver.war
-    - cp -v -r data-dir/* docker/resources/geoserver-datadir/
+    - cp -v -r datadir/* docker/resources/geoserver-datadir/
     - apk add wget
     - wget -O docker/resources/fonts/osm-fonts.tar.xz https://www.dropbox.com/s/ges2v64on30katy/osm-fonts.tar.xz
     - chmod +x docker/resources/geoserver-datadir/importer/scripts/*.sh
+    - chmod +x docker/catalina-wrapper.sh
     - cd docker
     - docker build --no-cache
       --build-arg "BASE_IMAGE_NAME=${BASE_IMAGE_NAME}"

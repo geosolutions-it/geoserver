@@ -46,6 +46,7 @@ import org.geotools.xml.transform.Translator;
 import org.opengis.coverage.SampleDimension;
 import org.opengis.coverage.SampleDimensionType;
 import org.opengis.coverage.grid.GridEnvelope;
+import org.opengis.geometry.Envelope;
 import org.opengis.metadata.spatial.PixelOrientation;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -646,7 +647,7 @@ class GMLTransformer extends TransformerBase {
          * @throws IOException
          */
         public void handleBoundedBy(
-                final GeneralEnvelope envelope,
+                final Envelope envelope,
                 boolean axisSwap,
                 String srsName,
                 String axisLabels,

@@ -362,7 +362,7 @@ public class WCSDefaultValuesHelper {
                                 elevationDimension.getEndAttribute());
 
         // setting envelope filter
-        Filter envelopeFilter = setEnevelopeFilter(envelopeSubset, reader);
+        Filter envelopeFilter = setEnvelopeFilter(envelopeSubset, reader);
 
         // Setting dimensional filters
         Filter additionalDimensionsFilter =
@@ -397,8 +397,8 @@ public class WCSDefaultValuesHelper {
      * @param reader
      * @throws IOException
      */
-    private Filter setEnevelopeFilter(
-            Envelope envelopeSubset, StructuredGridCoverage2DReader reader) throws IOException {
+    private Filter setEnvelopeFilter(Envelope envelopeSubset, StructuredGridCoverage2DReader reader)
+            throws IOException {
         Filter envelopeFilter = null;
         if (envelopeSubset != null) {
             Polygon polygon = JTS.toGeometry(new ReferencedEnvelope(envelopeSubset));
