@@ -1,8 +1,8 @@
 include:
   - project: 'pathfinders/wms/cicd-pipeline'
-    ref: main
+    ref: testEnv
     file: '/maven.gitlab-ci.yml'
-
+#test
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
   # `showDateTime` will show the passed time in milliseconds. You need to specify `--batch-mode` to make this work.
@@ -36,6 +36,7 @@ variables:
 
 build: 
   script:
+    - export
     - cd geoserver/src
     - mvn $MAVEN_CLI_OPTS $MAVEN_ACTIVE_PROFILES -am clean install
     - cd web/app
