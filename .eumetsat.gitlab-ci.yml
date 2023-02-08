@@ -1,6 +1,6 @@
 include:
   - project: 'pathfinders/wms/cicd-pipeline'
-    ref: testEnv
+    ref: main
     file: '/maven.gitlab-ci.yml'
 #test
 variables:
