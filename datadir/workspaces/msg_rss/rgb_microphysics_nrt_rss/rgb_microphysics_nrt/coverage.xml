@@ -224,5 +224,5 @@
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>MSG_HR_RSS_RGB_Day_Microphysics</nativeCoverageName>
+  <nativeCoverageName>msg_rss_rgb_microphysics</nativeCoverageName>
 </coverage>
