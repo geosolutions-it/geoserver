@@ -22,6 +22,7 @@ import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
+import org.geoserver.gwc.layer.TileLayerCatalog;
 import org.geoserver.platform.ContextLoadedEvent;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -108,7 +109,9 @@ public class Backup extends JobExecutionListenerSupport
     private Authentication auth;
 
     /** catalog */
-    Catalog catalog;
+    private final Catalog catalog;
+
+    private final TileLayerCatalog tileLayerCatalog;
 
     GeoServer geoServer;
 
@@ -143,12 +146,12 @@ public class Backup extends JobExecutionListenerSupport
 
     public Backup(Catalog catalog, GeoServerResourceLoader rl) {
         this.catalog = catalog;
-        this.geoServer = GeoServerExtensions.bean(GeoServer.class);
-
         this.resourceLoader = rl;
         this.geoServerDataDirectory = new GeoServerDataDirectory(rl);
-
         this.xpf = GeoServerExtensions.bean(XStreamPersisterFactory.class);
+        this.geoServer = GeoServerExtensions.bean(GeoServer.class);
+        this.tileLayerCatalog =
+                (TileLayerCatalog) GeoServerExtensions.bean("GeoSeverTileLayerCatalog");
     }
 
     /** @return the context */
@@ -236,6 +239,10 @@ public class Backup extends JobExecutionListenerSupport
 
     public Catalog getCatalog() {
         return catalog;
+    }
+
+    public TileLayerCatalog getTileLayerCatalog() {
+        return tileLayerCatalog;
     }
 
     public GeoServer getGeoServer() {
