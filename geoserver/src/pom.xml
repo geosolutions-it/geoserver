@@ -2173,7 +2173,7 @@
 
  <properties>
   <gs.version>2.16-EOWS-p6</gs.version>
-  <gt.version>22-EOWS-p1</gt.version>
+  <gt.version>22-EOWS-p2</gt.version>
   <gwc.version>1.16-EOWS-p1</gwc.version>
   <jts.version>1.16.1-EOWS-158-1</jts.version>
   <spring.version>5.1.1.RELEASE</spring.version>
