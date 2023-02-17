@@ -8,14 +8,14 @@
   <parent>
     <groupId>org.geoserver.community</groupId>
     <artifactId>gs-oseo</artifactId>
-    <version>2.16-EOWS-p6</version>
+    <version>2.16-EOWS-p7</version>
   </parent>
 
   <groupId>org.geoserver.community</groupId>
   <artifactId>gs-web-oseo</artifactId>
   <name>OpenSearch for EO web UI</name>
   <packaging>jar</packaging>
-  <version>2.16-EOWS-p6</version>
+  <version>2.16-EOWS-p7</version>
 
   <dependencies>
     <dependency>
