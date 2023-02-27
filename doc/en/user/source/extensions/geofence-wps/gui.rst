@@ -1,7 +1,7 @@
 .. geofence_wps_gui:
 
 GeoFence WPS rules setup
-===========================
+========================
 
 This plugin will not change the GUI in any way.
 Anyway, you can now use the `subfield` field to select the process you want to authorize by its (case insensitive) identifier.
