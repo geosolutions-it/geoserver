@@ -169,14 +169,14 @@
             <id>process-resources</id>
             <phase>process-resources</phase>
             <configuration>
-              <tasks>
+              <target>
                 <replace dir="${project.build.outputDirectory}" encoding="ISO-8859-1">
                   <include name="*.properties"/> 
                   <replacefilter token="@project.version@" value="${project.version}"/>
                   <replacefilter token="@build.revision@" value="${build.commit.id}"/>
                   <replacefilter token="@build.timestamp@" value="${build.timestamp}"/>
                 </replace>
-              </tasks>
+              </target>
             </configuration>
             <goals>
               <goal>run</goal>
