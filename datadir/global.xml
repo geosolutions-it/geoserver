@@ -182,11 +182,7 @@
     <entry key="logHeadersEnabled">false</entry>
     <entry key="logBodiesEnabled">false</entry>
   </metadata>
-<<<<<<< HEAD
   <updateSequence>5103</updateSequence>
-=======
-  <updateSequence>5102</updateSequence>
->>>>>>> f8aefbad (BDVSWP3-8 add draft RDT layer to GeoServer)
   <featureTypeCacheSize>1000</featureTypeCacheSize>
   <globalServices>true</globalServices>
   <useHeadersProxyURL>true</useHeadersProxyURL>
