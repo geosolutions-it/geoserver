@@ -19,6 +19,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.importer.job.ProgressMonitor;
+import org.geoserver.importer.transform.ImportTransform;
 import org.geoserver.importer.transform.TransformChain;
 import org.geotools.data.DataUtilities;
 import org.geotools.feature.SchemaException;
@@ -177,6 +178,11 @@ public class ImportTask implements Serializable {
 
     public TransformChain getTransform() {
         return transform;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void addTransform(ImportTransform tx) {
+        this.transform.add(tx);
     }
 
     public void setTransform(TransformChain transform) {
