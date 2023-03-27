@@ -1,0 +1,12 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl-522c3fce:1872331cd06:-8000</id>
+  <name>osi_430_a_nh</name>
+  <description>The sea-ice concentration Interim Climate Data Record covering the northern hemisphere.</description>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--453fcc61:1760a405bda:-7ffe</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:data/LIC_FREE/mumi_osi_430_a_nh</url>
+</coverageStore>
