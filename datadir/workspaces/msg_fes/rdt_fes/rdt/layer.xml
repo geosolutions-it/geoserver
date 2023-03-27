@@ -1,0 +1,15 @@
+<layer>
+  <name>rdt</name>
+  <id>LayerInfoImpl-76416ecc:186e95bf7ca:-7ff6</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-76416ecc:186e95bf7ca:-7ffc</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-76416ecc:186e95bf7ca:-7ff7</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

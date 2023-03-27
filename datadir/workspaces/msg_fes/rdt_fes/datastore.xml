@@ -1,0 +1,24 @@
+<dataStore>
+  <id>DataStoreInfoImpl-76416ecc:186e95bf7ca:-8000</id>
+  <name>rdt_fes</name>
+  <type>PostGIS (JNDI)</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff3</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="schema">public</entry>
+    <entry key="Estimated extends">true</entry>
+    <entry key="fetch size">3000</entry>
+    <entry key="encode functions">true</entry>
+    <entry key="Expose primary keys">false</entry>
+    <entry key="Support on the fly geometry simplification">true</entry>
+    <entry key="Batch insert size">200</entry>
+    <entry key="preparedStatements">false</entry>
+    <entry key="jndiReferenceName">java:comp/env/jdbc/eumetsat</entry>
+    <entry key="dbtype">postgis</entry>
+    <entry key="namespace">http://www.eumetsat.int/msg_fes</entry>
+    <entry key="Loose bbox">true</entry>
+  </connectionParameters>
+  <__default>false</__default>
+</dataStore>
