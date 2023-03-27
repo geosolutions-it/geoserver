@@ -1,0 +1,232 @@
+<coverage>
+  <id>CoverageInfoImpl-522c3fce:1872331cd06:-7ffb</id>
+  <name>mumi_osi_430_a_nh</name>
+  <nativeName>mumi_osi_430_a_nh</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--453fcc61:1760a405bda:-7ffd</id>
+  </namespace>
+  <title>mumi_osi_430_a_nh</title>
+  <description>Generated from ImageMosaic</description>
+  <abstract>The sea-ice concentration Interim Climate Data Record covering the northern hemisphere. L3/L4 daily files, and monthly average files, and monthly sea-ice extent/area indicator.</abstract>
+  <keywords>
+    <string>mumi_osi_430_a_nh</string>
+    <string>WCS</string>
+    <string>ImageMosaic</string>
+  </keywords>
+  <nativeCRS class="projected">PROJCS[&quot;WGS 84 / Arctic Polar Stereographic&quot;, 
+  GEOGCS[&quot;WGS 84&quot;, 
+    DATUM[&quot;World Geodetic System 1984&quot;, 
+      SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+      AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+    PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+    UNIT[&quot;degree&quot;, 0.017453292519943295], 
+    AXIS[&quot;Geodetic longitude&quot;, EAST], 
+    AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]], 
+  PROJECTION[&quot;Polar Stereographic (variant B)&quot;, AUTHORITY[&quot;EPSG&quot;,&quot;9829&quot;]], 
+  PARAMETER[&quot;central_meridian&quot;, 0.0], 
+  PARAMETER[&quot;Standard_Parallel_1&quot;, 71.0], 
+  PARAMETER[&quot;false_easting&quot;, 0.0], 
+  PARAMETER[&quot;false_northing&quot;, 0.0], 
+  UNIT[&quot;m&quot;, 1.0], 
+  AXIS[&quot;Easting&quot;, &quot;South along 90 deg East&quot;], 
+  AXIS[&quot;Northing&quot;, &quot;South along 180 deg&quot;], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;3995&quot;]]</nativeCRS>
+  <srs>EPSG:3995</srs>
+  <nativeBoundingBox>
+    <minx>-6551599.5</minx>
+    <maxx>6548401.0</maxx>
+    <miny>-6548401.0</miny>
+    <maxy>6551599.5</maxy>
+    <crs class="projected">EPSG:3995</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>16.424707353290504</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <advertised>false</advertised>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="cacheAgeMax">604800</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>true</enabled>
+        <presentation>DISCRETE_INTERVAL</presentation>
+        <resolution>0</resolution>
+        <units>ISO8601</units>
+        <defaultValue>
+          <strategy>MAXIMUM</strategy>
+        </defaultValue>
+        <nearestMatchEnabled>true</nearestMatchEnabled>
+        <acceptableInterval>PT24H/PT0H</acceptableInterval>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">true</entry>
+    <entry key="NetCDFOutput.Key">
+      <netcdfLayerSettingsContainer>
+        <compressionLevel>0</compressionLevel>
+        <shuffle>true</shuffle>
+        <copyAttributes>false</copyAttributes>
+        <copyGlobalAttributes>false</copyGlobalAttributes>
+        <dataPacking>NONE</dataPacking>
+        <metadata>
+          <map>
+            <entry>
+              <string>ghrsst</string>
+              <boolean>false</boolean>
+            </entry>
+            <entry>
+              <string>ghrsst.productString</string>
+              <null/>
+            </entry>
+            <entry>
+              <string>ghrsst.rdac</string>
+              <null/>
+            </entry>
+            <entry>
+              <string>ghrsst.sstType</string>
+              <null/>
+            </entry>
+            <entry>
+              <string>ghrsst.processingLevel</string>
+              <null/>
+            </entry>
+          </map>
+        </metadata>
+        <layerUOM>W.m-2.Sr-1</layerUOM>
+      </netcdfLayerSettingsContainer>
+    </entry>
+    <entry key="dirName">osi_430_a_nh_mumi_osi_430_a_nh</entry>
+  </metadata>
+  <store class="coverageStore">
+    <id>CoverageStoreInfoImpl-522c3fce:1872331cd06:-8000</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <nativeFormat>ImageMosaic</nativeFormat>
+  <grid dimension="2">
+    <range>
+      <low>0 0</low>
+      <high>524 524</high>
+    </range>
+    <transform>
+      <scaleX>25000.0</scaleX>
+      <scaleY>-25000.0</scaleY>
+      <shearX>0.0</shearX>
+      <shearY>0.0</shearY>
+      <translateX>-6539099.5</translateX>
+      <translateY>6539099.5</translateY>
+    </transform>
+    <crs>EPSG:3995</crs>
+  </grid>
+  <supportedFormats>
+    <string>GIF</string>
+    <string>PNG</string>
+    <string>JPEG</string>
+    <string>TIFF</string>
+    <string>GEOTIFF</string>
+  </supportedFormats>
+  <interpolationMethods>
+    <string>nearest neighbor</string>
+    <string>bilinear</string>
+    <string>bicubic</string>
+  </interpolationMethods>
+  <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
+  <dimensions>
+    <coverageDimension>
+      <name>GRAY_INDEX</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>255.0</double>
+      </nullValues>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+  </dimensions>
+  <requestSRS>
+    <string>EPSG:3995</string>
+  </requestSRS>
+  <responseSRS>
+    <string>EPSG:3995</string>
+  </responseSRS>
+  <parameters>
+    <entry>
+      <string>BackgroundValues</string>
+      <string>100</string>
+    </entry>
+    <entry>
+      <string>OVERVIEW_POLICY</string>
+      <string>QUALITY</string>
+    </entry>
+    <entry>
+      <string>MergeBehavior</string>
+      <string>FLAT</string>
+    </entry>
+    <entry>
+      <string>AllowMultithreading</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>MaxAllowedTiles</string>
+      <int>-1</int>
+    </entry>
+    <entry>
+      <string>ExcessGranuleRemoval</string>
+      <string>NONE</string>
+    </entry>
+    <entry>
+      <string>OutputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>USE_JAI_IMAGEREAD</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Bands</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>RescalePixels</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Filter</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>InputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>SUGGESTED_TILE_SIZE</string>
+      <string>512,512</string>
+    </entry>
+    <entry>
+      <string>Accurate resolution computation</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>SORTING</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>FootprintBehavior</string>
+      <string>None</string>
+    </entry>
+  </parameters>
+  <nativeCoverageName>mumi_osi_430_a_nh</nativeCoverageName>
+</coverage>
