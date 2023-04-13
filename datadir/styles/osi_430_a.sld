@@ -109,7 +109,9 @@
               <ColorMapEntry color="#F5F5F3" quantity="97" />
               <ColorMapEntry color="#F8F7F6" quantity="98" />
               <ColorMapEntry color="#FCFBFA" quantity="99" />
-              <ColorMapEntry color="#FFFFFF" quantity="100" opacity="0" />
+              <ColorMapEntry color="#FFFFFF" quantity="100"/>
+              <ColorMapEntry color="#FFFFFF" quantity="101" opacity="0" />
+              <ColorMapEntry color="#FFFFFF" quantity="255" opacity="0" />
         </ColorMap>
       </RasterSymbolizer>
         </Rule>
@@ -117,3 +119,4 @@
     </UserStyle>
   </NamedLayer>
 </StyledLayerDescriptor>
+
