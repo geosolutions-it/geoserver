@@ -1,13 +1,13 @@
 <coverage>
   <id>CoverageInfoImpl-522c3fce:1872331cd06:-7ffb</id>
-  <name>mumi_osi_430_a_nh</name>
+  <name>osi_430_a_nh</name>
   <nativeName>mumi_osi_430_a_nh</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--453fcc61:1760a405bda:-7ffd</id>
   </namespace>
-  <title>mumi_osi_430_a_nh</title>
+  <title>Global Sea Ice Concentration Interim Climate Data Record Release 3 - DMSP</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>The sea-ice concentration Interim Climate Data Record covering the northern hemisphere. L3/L4 daily files, and monthly average files, and monthly sea-ice extent/area indicator.</abstract>
+  <abstract>This product is an operational extension of the Sea Ice Concentration Climate Data Record OSI-450-a, with a nominal latency of 16 days, starting in 2021. OSI-430-a uses passive microwave data (PMW) from the SSMIS sensors, and the same algorithms as OSI-450-a. The product includes error-bars for each grid cell (uncertainties). This product has two types of files; the nominal ICDR files with latency of 16 days, and so-called fast-track ICDR files with latency of 2 days.</abstract>
   <keywords>
     <string>mumi_osi_430_a_nh</string>
     <string>WCS</string>
@@ -49,7 +49,7 @@
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
   <enabled>true</enabled>
-  <advertised>false</advertised>
+  <advertised>true</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>
