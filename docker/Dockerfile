@@ -16,8 +16,10 @@ ENV jpeg_turbo_version 1.5.3
 # Install JPEG Turbo 
 # Cleanup 
 
-# outdated repos https://serverfault.com/questions/1074688/security-debian-org-does-not-have-a-release-file-on-with-debian-docker-images
-RUN sed -i 's/stable\/updates/stable-security\/updates/' /etc/apt/sources.list
+# outdated repos https://stackoverflow.com/questions/76094428/debian-stretch-repositories-404-not-found
+RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list
+RUN sed -i 's|security.debian.org|archive.debian.org/|g' /etc/apt/sources.list
+RUN sed -i '/stretch-updates/d' /etc/apt/sources.list
 
 RUN apt-get -y update \
  && apt-get install -y vim zip unzip net-tools telnet procps postgresql-client-9.6 gdal-bin \
