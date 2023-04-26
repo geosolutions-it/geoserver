@@ -1,0 +1,15 @@
+<layer>
+  <name>osi_sic_cdr_v3_nh</name>
+  <id>LayerInfoImpl-38ee2db0:187bd1b5cc9:-7ffa</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-38ee2db0:187bd1b5cc9:-7ff9</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl-38ee2db0:187bd1b5cc9:-7ffb</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

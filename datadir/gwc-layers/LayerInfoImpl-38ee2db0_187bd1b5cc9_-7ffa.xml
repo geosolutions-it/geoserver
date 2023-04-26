@@ -1,8 +1,8 @@
 <GeoServerTileLayer>
-  <id>LayerInfoImpl-76416ecc:186e95bf7ca:-7ff6</id>
+  <id>LayerInfoImpl-38ee2db0:187bd1b5cc9:-7ffa</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>msg_fes:Rapidly Developing Thunderstorms - MSG - 0 degree</name>
+  <name>mumi:osi_sic_cdr_v3_nh</name>
   <mimeFormats>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
@@ -73,13 +73,21 @@
     <int>3</int>
   </metaWidthHeight>
   <expireCache>0</expireCache>
-  <expireClients>0</expireClients>
+  <expireClients>604800</expireClients>
   <parameterFilters>
+    <regexParameterFilter>
+      <key>TIME</key>
+      <defaultValue>NONE</defaultValue>
+      <normalize>
+        <locale></locale>
+      </normalize>
+      <regex>^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$</regex>
+    </regexParameterFilter>
     <styleParameterFilter>
       <key>STYLES</key>
       <defaultValue></defaultValue>
       <availableStyles class="sorted-set"/>
-      <defaultStyle>msg_fes:rdt_red</defaultStyle>
+      <defaultStyle>osi_sic_cdr_v3</defaultStyle>
     </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>
