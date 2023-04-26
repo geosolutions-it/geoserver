@@ -17,7 +17,7 @@ ENV jpeg_turbo_version 1.5.3
 # Cleanup 
 
 # outdated repos https://serverfault.com/questions/1074688/security-debian-org-does-not-have-a-release-file-on-with-debian-docker-images
-sed -i 's/stable\/updates/stable-security\/updates/' /etc/apt/sources.list
+RUN sed -i 's/stable\/updates/stable-security\/updates/' /etc/apt/sources.list
 
 RUN apt-get -y update \
  && apt-get install -y vim zip unzip net-tools telnet procps postgresql-client-9.6 gdal-bin \
