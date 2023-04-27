@@ -5,7 +5,8 @@
   <namespace>
     <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff2</id>
   </namespace>
-  <title>msg_fes_rdt</title>
+  <title>Rapidly Developing Thunderstorms - MSG - 0 degree</title>
+  <abstract>Rapidly Developing Thunderstorms - Convection Warning product is a geostationary meteorological product for nowcasting applications. It is produced with the NWC-SAF Geo 2018 software package.</abstract>
   <keywords>
     <string>features</string>
     <string>msg_fes_rdt</string>

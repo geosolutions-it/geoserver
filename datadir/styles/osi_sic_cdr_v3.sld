@@ -9,12 +9,12 @@
           <RasterSymbolizer>
             <Opacity>1.0</Opacity>
             <ColorMap type="ramp">
-              <ColorMapEntry color="#04629A" quantity="0" />
-              <ColorMapEntry color="#04629A" quantity="1" />
-              <ColorMapEntry color="#04629A" quantity="2" />
-              <ColorMapEntry color="#04629A" quantity="3" />
-              <ColorMapEntry color="#04629A" quantity="4" />
-              <ColorMapEntry color="#04629A" quantity="5" />
+              <ColorMapEntry color="#04629A" quantity="0" opacity="0" />
+              <ColorMapEntry color="#04629A" quantity="1" opacity="0" />
+              <ColorMapEntry color="#04629A" quantity="2" opacity="0" />
+              <ColorMapEntry color="#04629A" quantity="3" opacity="0" />
+              <ColorMapEntry color="#04629A" quantity="4" opacity="0" />
+              <ColorMapEntry color="#04629A" quantity="5" opacity="0" />
               <ColorMapEntry color="#070707" quantity="6" />
               <ColorMapEntry color="#0A0A0A" quantity="7" />
               <ColorMapEntry color="#0D0D0D" quantity="8" />
