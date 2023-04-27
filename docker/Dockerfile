@@ -15,6 +15,12 @@ ENV jpeg_turbo_version 1.5.3
 # Install GDAL
 # Install JPEG Turbo 
 # Cleanup 
+
+# outdated repos https://stackoverflow.com/questions/76094428/debian-stretch-repositories-404-not-found
+RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list
+RUN sed -i 's|security.debian.org|archive.debian.org/|g' /etc/apt/sources.list
+RUN sed -i '/stretch-updates/d' /etc/apt/sources.list
+
 RUN apt-get -y update \
  && apt-get install -y vim zip unzip net-tools telnet procps postgresql-client-9.6 gdal-bin \
  && wget --no-check-certificate https://downloads.sourceforge.net/project/libjpeg-turbo/${jpeg_turbo_version}/libjpeg-turbo-official_${jpeg_turbo_version}_amd64.deb \
