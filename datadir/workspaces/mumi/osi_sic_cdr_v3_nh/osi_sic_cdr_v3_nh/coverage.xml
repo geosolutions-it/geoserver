@@ -1,15 +1,15 @@
 <coverage>
-  <id>CoverageInfoImpl-522c3fce:1872331cd06:-7ffb</id>
-  <name>osi_430_a_nh</name>
-  <nativeName>mumi_osi_430_a_nh</nativeName>
+  <id>CoverageInfoImpl-38ee2db0:187bd1b5cc9:-7ffb</id>
+  <name>osi_sic_cdr_v3_nh</name>
+  <nativeName>osi_sic_cdr_v3_nh</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--453fcc61:1760a405bda:-7ffd</id>
   </namespace>
-  <title>Global Sea Ice Concentration Interim Climate Data Record Release 3 - DMSP</title>
+  <title>Global Sea Ice Concentration Climate Data Record Release 3 - Northern Hemisphere - DMSP</title>
   <description>Generated from ImageMosaic</description>
   <abstract>This product is an operational extension of the Sea Ice Concentration Climate Data Record OSI-450-a, with a nominal latency of 16 days, starting in 2021. OSI-430-a uses passive microwave data (PMW) from the SSMIS sensors, and the same algorithms as OSI-450-a. The product includes error-bars for each grid cell (uncertainties). This product has two types of files; the nominal ICDR files with latency of 16 days, and so-called fast-track ICDR files with latency of 2 days.</abstract>
   <keywords>
-    <string>mumi_osi_430_a_nh</string>
+    <string>mumi_osi_sic_cdr_v3_nh</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
@@ -49,7 +49,7 @@
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
   <enabled>true</enabled>
-  <advertised>true</advertised>
+  <advertised>false</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>
@@ -61,7 +61,7 @@
       <dimensionInfo>
         <enabled>true</enabled>
         <presentation>DISCRETE_INTERVAL</presentation>
-        <resolution>0</resolution>
+        <resolution>86400000</resolution>
         <units>ISO8601</units>
         <defaultValue>
           <strategy>MAXIMUM</strategy>
@@ -78,37 +78,12 @@
         <copyAttributes>false</copyAttributes>
         <copyGlobalAttributes>false</copyGlobalAttributes>
         <dataPacking>NONE</dataPacking>
-        <metadata>
-          <map>
-            <entry>
-              <string>ghrsst</string>
-              <boolean>false</boolean>
-            </entry>
-            <entry>
-              <string>ghrsst.productString</string>
-              <null/>
-            </entry>
-            <entry>
-              <string>ghrsst.rdac</string>
-              <null/>
-            </entry>
-            <entry>
-              <string>ghrsst.sstType</string>
-              <null/>
-            </entry>
-            <entry>
-              <string>ghrsst.processingLevel</string>
-              <null/>
-            </entry>
-          </map>
-        </metadata>
-        <layerUOM>W.m-2.Sr-1</layerUOM>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">osi_430_a_nh_mumi_osi_430_a_nh</entry>
+    <entry key="dirName">osi_sic_cdr_v3_nh_mumi_osi_sic_cdr_v3_nh</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl-522c3fce:1872331cd06:-8000</id>
+    <id>CoverageStoreInfoImpl-38ee2db0:187bd1b5cc9:-8000</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
   <nativeFormat>ImageMosaic</nativeFormat>
@@ -228,5 +203,5 @@
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mumi_osi_430_a_nh</nativeCoverageName>
+  <nativeCoverageName>mumi_osi_sic_cdr_v3_nh</nativeCoverageName>
 </coverage>
