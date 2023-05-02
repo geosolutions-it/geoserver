@@ -2,7 +2,7 @@
   <id>LayerInfoImpl-76416ecc:186e95bf7ca:-7ff6</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>msg_fes:Rapidly Developing Thunderstorms - MSG - 0 degree</name>
+  <name>msg_fes:rdt</name>
   <mimeFormats>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
@@ -12,60 +12,212 @@
   <gridSubsets>
     <gridSubset>
       <gridSetName>EPSG:3857 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.0018754171394622E7</double>
+          <double>-2.003750834E7</double>
+          <double>1.0018754171394622E7</double>
+          <double>2.003750834E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70207</gridSetName>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:70213</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>8400000.0</double>
+          <double>7440113.317808328</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70209</gridSetName>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:70209 - 512</gridSetName>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:70203 - 512</gridSetName>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:70203</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.38E7</double>
+          <double>1.38E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70213 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>3941157.9129343475</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70209 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.38E7</double>
+          <double>1.38E7</double>
+        </coords>
+      </extent>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70203</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>3402016.50625</double>
+          <double>1.02E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70203 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>3402016.50625</double>
+          <double>1.02E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3995 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>2.20136E7</double>
+          <double>0.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70211 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>2.52E7</double>
+          <double>1.26E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70211</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>2.52E7</double>
+          <double>1.26E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70201 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70205 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70205</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70207 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>8400000.0</double>
+          <double>7440113.317808328</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:4326</gridSetName>
+      <extent>
+        <coords>
+          <double>-90.0</double>
+          <double>-90.0</double>
+          <double>90.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:4326 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-90.0</double>
+          <double>-90.0</double>
+          <double>90.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3995 - 256</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.6228E7</double>
+          <double>0.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70201</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70213</gridSetName>
+      <extent>
+        <coords>
+          <double>3941157.9129343475</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
   </gridSubsets>
   <metaWidthHeight>
@@ -81,6 +233,14 @@
       <availableStyles class="sorted-set"/>
       <defaultStyle>msg_fes:rdt_red</defaultStyle>
     </styleParameterFilter>
+    <regexParameterFilter>
+      <key>TIME</key>
+      <defaultValue>NONE</defaultValue>
+      <normalize>
+        <locale></locale>
+      </normalize>
+      <regex>^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$</regex>
+    </regexParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>
   <cacheWarningSkips>
