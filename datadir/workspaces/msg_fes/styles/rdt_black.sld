@@ -12,37 +12,74 @@
         <Rule>
           <PolygonSymbolizer>
             <Stroke>
-              <CssParameter name="stroke">#FFFFFF</CssParameter>
+              <CssParameter name="stroke">#000000</CssParameter>
               <CssParameter name="stroke-width">2</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
-          <!-- PointSymbolizer>
-            <Graphic>
-
-              <Mark>
-                <WellKnownName>line</WellKnownName>
-                <Stroke>
-                  <CssParameter name="stroke">#ff0000</CssParameter>
-                  <CssParameter name="stroke-width">2</CssParameter>
-                </Stroke>
-              </Mark>
-              <Size>
-                <ogc:PropertyName>MvtSpeed</ogc:PropertyName>
-              </Size>
-              <Rotation>
-                <ogc:Sub>
-                  <ogc:Literal>90</ogc:Literal>
-                  <ogc:PropertyName>MvtDirecti</ogc:PropertyName>
-                </ogc:Sub>
-              </Rotation>
-              <AnchorPoint>
-                <AnchorPointX>0</AnchorPointX>
-                <AnchorPointY>0</AnchorPointY>
-              </AnchorPoint>
-            </Graphic>
-          </PointSymbolizer -->
         </Rule>
-
+        <Rule>
+          <MaxScaleDenominator>30000000</MaxScaleDenominator>
+          <ogc:Filter>
+            <ogc:PropertyIsGreaterThan>
+              <ogc:Mul>
+                <ogc:Div>
+                  <ogc:Function name="area">
+                    <ogc:PropertyName>the_geom</ogc:PropertyName>
+                  </ogc:Function>
+                  <ogc:Function name="env">
+                    <ogc:Literal>wms_scale_denominator</ogc:Literal>
+                  </ogc:Function>
+                </ogc:Div>
+                <ogc:Literal>80000000</ogc:Literal>
+              </ogc:Mul>
+              <ogc:Literal>1</ogc:Literal>
+            </ogc:PropertyIsGreaterThan>
+          </ogc:Filter>
+          <TextSymbolizer>
+            <Geometry>
+              <ogc:Function name="centroid">
+                <ogc:PropertyName>the_geom</ogc:PropertyName>
+              </ogc:Function>
+            </Geometry>  
+            <Label>
+              <ogc:Function name="round">
+                <ogc:PropertyName>BTmin</ogc:PropertyName>
+              </ogc:Function>
+              <!--ogc:Mul>
+                <ogc:Div>
+                  <ogc:Function name="area">
+                    <ogc:PropertyName>the_geom</ogc:PropertyName>
+                  </ogc:Function>
+                  <ogc:Function name="env">
+                    <ogc:Literal>wms_scale_denominator</ogc:Literal>
+                  </ogc:Function>
+                </ogc:Div>
+                <ogc:Literal>10000000</ogc:Literal>
+              </ogc:Mul-->
+            </Label>
+            <Font>
+              <CssParameter name="font-family">DejaVu Sans</CssParameter>
+              <CssParameter name="font-size">12</CssParameter>
+            </Font>
+            <LabelPlacement>
+              <PointPlacement>
+                <AnchorPoint>
+                  <AnchorPointX>0.5</AnchorPointX>
+                  <AnchorPointY>0.5</AnchorPointY>
+                </AnchorPoint>
+              </PointPlacement>
+            </LabelPlacement>
+            <Halo>
+              <Radius>2</Radius>
+              <Fill>
+                <CssParameter name="fill">#FFFFFF</CssParameter>
+              </Fill>
+            </Halo>
+            <Fill>
+              <CssParameter name="fill">#000000</CssParameter>
+            </Fill>
+          </TextSymbolizer>
+        </Rule>
       </FeatureTypeStyle>
     </UserStyle>
   </NamedLayer>
