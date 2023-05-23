@@ -230,7 +230,11 @@
     <styleParameterFilter>
       <key>STYLES</key>
       <defaultValue></defaultValue>
-      <availableStyles class="sorted-set"/>
+      <availableStyles class="sorted-set">
+        <string>msg_fes:rdt_black</string>
+        <string>msg_fes:rdt_red</string>
+        <string>msg_fes:rdt_white</string>
+      </availableStyles>
       <defaultStyle>msg_fes:rdt_red</defaultStyle>
     </styleParameterFilter>
     <regexParameterFilter>
