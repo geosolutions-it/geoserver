@@ -1,0 +1,12 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl--6acf4bb5:1888a571431:-7ffc</id>
+  <name>ir105_fdhsi</name>
+  <description>MTG FD Channel IR 10.5 FDHSI</description>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--6acf4bb5:1888a571431:-8000</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:data/LIC_FREE/mtg_fd_ir105_fdhsi</url>
+</coverageStore>
