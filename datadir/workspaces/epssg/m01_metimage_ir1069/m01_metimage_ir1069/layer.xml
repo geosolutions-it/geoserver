@@ -1,0 +1,15 @@
+<layer>
+  <name>m01_metimage_ir1069</name>
+  <id>LayerInfoImpl--6acf4bb5:1888a571431:-7fd6</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--6acf4bb5:1888a571431:-7fd3</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--6acf4bb5:1888a571431:-7fd7</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

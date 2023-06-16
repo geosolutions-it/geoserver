@@ -1,0 +1,15 @@
+<layer>
+  <name>vis06_fdhsi</name>
+  <id>LayerInfoImpl--6acf4bb5:1888a571431:-7fed</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--6acf4bb5:1888a571431:-7fee</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+</layer>

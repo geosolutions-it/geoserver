@@ -12,7 +12,7 @@
         <Rule>
           <PolygonSymbolizer>
             <Stroke>
-              <CssParameter name="stroke">#000000</CssParameter>
+              <CssParameter name="stroke">#FF0000</CssParameter>
               <CssParameter name="stroke-width">2</CssParameter>
             </Stroke>
           </PolygonSymbolizer>
@@ -42,9 +42,7 @@
               </ogc:Function>
             </Geometry>  
             <Label>
-              <ogc:Function name="round">
-                <ogc:PropertyName>BTmin</ogc:PropertyName>
-              </ogc:Function>
+              <ogc:PropertyName>BTmin</ogc:PropertyName>
               <!--ogc:Mul>
                 <ogc:Div>
                   <ogc:Function name="area">
@@ -76,7 +74,7 @@
               </Fill>
             </Halo>
             <Fill>
-              <CssParameter name="fill">#000000</CssParameter>
+              <CssParameter name="fill">#FF0000</CssParameter>
             </Fill>
           </TextSymbolizer>
         </Rule>
