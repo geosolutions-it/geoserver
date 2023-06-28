@@ -33,6 +33,7 @@ variables:
   INCLUDE_PLUGINS: "false"
   ADD_EXTRA_FONTS: "true"
   DOCKERFILE: "./Dockerfile"
+  BASE_IMAGE_REPO: "harbor.cgi-dev.de/cots/"
 
 
 build: 
@@ -62,6 +63,7 @@ package:
     - chmod +x docker/catalina-wrapper.sh
     - cd docker
     - docker build --no-cache
+      --build-arg "BASE_IMAGE_REPO=${BASE_IMAGE_REPO}"
       --build-arg "BASE_IMAGE_NAME=${BASE_IMAGE_NAME}"
       --build-arg "BASE_IMAGE_TAG=${BASE_IMAGE_TAG}"
       --build-arg "INCLUDE_DATA_DIR=${INCLUDE_DATA_DIR}"
