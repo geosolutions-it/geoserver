@@ -1,6 +1,6 @@
 ARG BASE_IMAGE_NAME=gs-base
 ARG BASE_IMAGE_TAG=7.0-jre8
-FROM ${REPO_URL}/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG}
+FROM ${BASE_IMAGE_REPO}/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG}
 LABEL maintainer=alessandro.parma@geo-solutions.it
 
 RUN  export DEBIAN_FRONTEND=noninteractive
