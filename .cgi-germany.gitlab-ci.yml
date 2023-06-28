@@ -33,7 +33,7 @@ variables:
   INCLUDE_PLUGINS: "false"
   ADD_EXTRA_FONTS: "true"
   DOCKERFILE: "./Dockerfile"
-  BASE_IMAGE_REPO: "harbor.cgi-dev.de/cots/"
+  BASE_IMAGE_REPO: "harbor.cgi-dev.de/cots"
 
 
 build: 
