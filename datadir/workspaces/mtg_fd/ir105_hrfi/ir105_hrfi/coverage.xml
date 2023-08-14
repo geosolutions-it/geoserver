@@ -1,15 +1,15 @@
 <coverage>
-  <id>CoverageInfoImpl--6acf4bb5:1888a571431:-7fc0</id>
-  <name>rgb_truecolour</name>
-  <nativeName>rgb_truecolour</nativeName>
+  <id>CoverageInfoImpl-1e3d726a:189f3949016:-7ffb</id>
+  <name>ir105_hrfi</name>
+  <nativeName>ir105_hrfi</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>True Colour RGB - MTG - 0 degree</title>
+  <title>FCI HRFI IR10.5 μm Image - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>True Colour Imagery gives an image that is approximately what human eyes see from Outer Space. True Colour Imagery cannot be made directly from FCI because it lacks a Green band. That is why a special processing step based on the NDVI values of the pixels is applied. The aim of this RGB type is to monitor aerosols; suspended particles and algae bloom in seawater; surface features, and provide true colour images.</abstract>
+  <abstract>Rectified (level 1c) Meteosat FCI full disk image data in high spatial resolution (1km). Level 1c image data corresponds to the geolocated and radiometrically pre-processed image data, ready for further processing, e.g. the extraction of meteorological products. Any spacecraft-specific effects have been removed, and in particular, linearisation and equalisation of the image radiometry have been performed for all FCI channels. The onboard blackbody data has been processed. Both radiometric and geometric quality control information is included.</abstract>
   <keywords>
-    <string>mtg_fd_rgb_truecolour</string>
+    <string>mtg_fd_ir105_hrfi</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
@@ -67,13 +67,12 @@
         <copyAttributes>false</copyAttributes>
         <copyGlobalAttributes>false</copyGlobalAttributes>
         <dataPacking>NONE</dataPacking>
-        <layerUOM>W.m-2.Sr-1</layerUOM>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">rgb_truecolour_mtg_fd_rgb_truecolour</entry>
+    <entry key="dirName">ir105_hrfi_mtg_fd_ir105_hrfi</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl--6acf4bb5:1888a571431:-7fc3</id>
+    <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-8000</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
   <nativeFormat>ImageMosaic</nativeFormat>
@@ -107,7 +106,7 @@
   <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
   <dimensions>
     <coverageDimension>
-      <name>RED_BAND</name>
+      <name>GRAY_INDEX</name>
       <description>GridSampleDimension[-Infinity,Infinity]</description>
       <range>
         <min>-inf</min>
@@ -116,43 +115,12 @@
       <nullValues>
         <double>0.0</double>
       </nullValues>
-      <unit>W.m-2.Sr-1</unit>
       <dimensionType>
         <name>UNSIGNED_8BITS</name>
       </dimensionType>
     </coverageDimension>
     <coverageDimension>
-      <name>GREEN_BAND</name>
-      <description>GridSampleDimension[-Infinity,Infinity]</description>
-      <range>
-        <min>-inf</min>
-        <max>inf</max>
-      </range>
-      <nullValues>
-        <double>0.0</double>
-      </nullValues>
-      <unit>W.m-2.Sr-1</unit>
-      <dimensionType>
-        <name>UNSIGNED_8BITS</name>
-      </dimensionType>
-    </coverageDimension>
-    <coverageDimension>
-      <name>BLUE_BAND</name>
-      <description>GridSampleDimension[-Infinity,Infinity]</description>
-      <range>
-        <min>-inf</min>
-        <max>inf</max>
-      </range>
-      <nullValues>
-        <double>0.0</double>
-      </nullValues>
-      <unit>W.m-2.Sr-1</unit>
-      <dimensionType>
-        <name>UNSIGNED_8BITS</name>
-      </dimensionType>
-    </coverageDimension>
-    <coverageDimension>
-      <name>ALPHA_BAND</name>
+      <name>Band2</name>
       <description>GridSampleDimension[-Infinity,Infinity]</description>
       <range>
         <min>-inf</min>
@@ -238,5 +206,5 @@
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mtg_fd_rgb_truecolour</nativeCoverageName>
+  <nativeCoverageName>mtg_fd_ir105_hrfi</nativeCoverageName>
 </coverage>

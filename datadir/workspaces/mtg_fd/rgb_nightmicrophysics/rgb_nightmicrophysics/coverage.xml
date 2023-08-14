@@ -5,7 +5,7 @@
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>MTG FD RGB Night Microphysics</title>
+  <title>(DISABLED) MTG FD RGB Night Microphysics</title>
   <description>Generated from ImageMosaic</description>
   <abstract>MTG FD RGB Night Microphysics</abstract>
   <keywords>
@@ -38,7 +38,7 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
   <advertised>false</advertised>
   <metadata>
     <entry key="elevation">
