@@ -1,15 +1,15 @@
 <coverage>
-  <id>CoverageInfoImpl--6acf4bb5:1888a571431:-7fc0</id>
-  <name>rgb_truecolour</name>
-  <nativeName>rgb_truecolour</nativeName>
+  <id>CoverageInfoImpl-1e3d726a:189f3949016:-7fec</id>
+  <name>rgb_cloudphase</name>
+  <nativeName>rgb_cloudphase</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>True Colour RGB - MTG - 0 degree</title>
+  <title>Cloud Phase RGB - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>True Colour Imagery gives an image that is approximately what human eyes see from Outer Space. True Colour Imagery cannot be made directly from FCI because it lacks a Green band. That is why a special processing step based on the NDVI values of the pixels is applied. The aim of this RGB type is to monitor aerosols; suspended particles and algae bloom in seawater; surface features, and provide true colour images.</abstract>
+  <abstract>The Cloud Phase RGB is used for the separation of water from ice clouds and for gathering information on the microphysical properties of cloud-tops. It is used during the daytime due to the FCI channels used in the RGB but the combination of VIS0.6 and NIR2.2 high spatial channels allows the creation of the image in 0.5km resolution.</abstract>
   <keywords>
-    <string>mtg_fd_rgb_truecolour</string>
+    <string>mtg_fd_rgb_cloudphase</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
@@ -67,13 +67,12 @@
         <copyAttributes>false</copyAttributes>
         <copyGlobalAttributes>false</copyGlobalAttributes>
         <dataPacking>NONE</dataPacking>
-        <layerUOM>W.m-2.Sr-1</layerUOM>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">rgb_truecolour_mtg_fd_rgb_truecolour</entry>
+    <entry key="dirName">rgb_cloudphase_mtg_fd_rgb_cloudphase</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl--6acf4bb5:1888a571431:-7fc3</id>
+    <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-7fef</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
   <nativeFormat>ImageMosaic</nativeFormat>
@@ -238,5 +237,5 @@
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mtg_fd_rgb_truecolour</nativeCoverageName>
+  <nativeCoverageName>mtg_fd_rgb_cloudphase</nativeCoverageName>
 </coverage>

@@ -5,7 +5,7 @@
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>MTG FD Channel VIS 0.6 FDHSI</title>
+  <title>(DISABLED) MTG FD Channel VIS 0.6 FDHSI</title>
   <description>Generated from ImageMosaic</description>
   <abstract>MTG FD Channel VIS 0.6 FDHSI</abstract>
   <keywords>
@@ -38,12 +38,15 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
   <advertised>false</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>
         <enabled>false</enabled>
+        <units>EPSG:5030</units>
+        <unitSymbol>m</unitSymbol>
+        <defaultValue/>
       </dimensionInfo>
     </entry>
     <entry key="cacheAgeMax">604800</entry>

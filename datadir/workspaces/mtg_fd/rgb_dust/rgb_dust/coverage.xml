@@ -1,15 +1,15 @@
 <coverage>
-  <id>CoverageInfoImpl--6acf4bb5:1888a571431:-7fc0</id>
-  <name>rgb_truecolour</name>
-  <nativeName>rgb_truecolour</nativeName>
+  <id>CoverageInfoImpl-1e3d726a:189f3949016:-7ff1</id>
+  <name>rgb_dust</name>
+  <nativeName>rgb_dust</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>True Colour RGB - MTG - 0 degree</title>
+  <title>Dust RGB - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>True Colour Imagery gives an image that is approximately what human eyes see from Outer Space. True Colour Imagery cannot be made directly from FCI because it lacks a Green band. That is why a special processing step based on the NDVI values of the pixels is applied. The aim of this RGB type is to monitor aerosols; suspended particles and algae bloom in seawater; surface features, and provide true colour images.</abstract>
+  <abstract>The Dust product is an RGB (Red, Green, Blue) composite based on infrared channels. It is designed to monitor the evolution of dust storms during both day and night. However equally useful for the discrimination of cloud types (e.g. cloud phase or thin Cirrus detection) and detection of low-level moisture. Being based solely on IR channels this product has the same utility both during day and night.</abstract>
   <keywords>
-    <string>mtg_fd_rgb_truecolour</string>
+    <string>mtg_fd_rgb_dust</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
@@ -67,28 +67,27 @@
         <copyAttributes>false</copyAttributes>
         <copyGlobalAttributes>false</copyGlobalAttributes>
         <dataPacking>NONE</dataPacking>
-        <layerUOM>W.m-2.Sr-1</layerUOM>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">rgb_truecolour_mtg_fd_rgb_truecolour</entry>
+    <entry key="dirName">rgb_dust_mtg_fd_rgb_dust</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl--6acf4bb5:1888a571431:-7fc3</id>
+    <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-7ff4</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
   <nativeFormat>ImageMosaic</nativeFormat>
   <grid dimension="2">
     <range>
       <low>0 0</low>
-      <high>14000 14000</high>
+      <high>7000 7000</high>
     </range>
     <transform>
-      <scaleX>0.01</scaleX>
-      <scaleY>-0.01</scaleY>
+      <scaleX>0.02</scaleX>
+      <scaleY>-0.02</scaleY>
       <shearX>0.0</shearX>
       <shearY>0.0</shearY>
-      <translateX>-69.995</translateX>
-      <translateY>69.995</translateY>
+      <translateX>-69.99</translateX>
+      <translateY>69.99</translateY>
     </transform>
     <crs>EPSG:4326</crs>
   </grid>
@@ -238,5 +237,5 @@
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mtg_fd_rgb_truecolour</nativeCoverageName>
+  <nativeCoverageName>mtg_fd_rgb_dust</nativeCoverageName>
 </coverage>

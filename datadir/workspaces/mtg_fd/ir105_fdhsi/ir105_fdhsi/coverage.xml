@@ -5,7 +5,7 @@
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>MTG FD Channel IR 10.5 FDHSI</title>
+  <title>(DISABLED) MTG FD Channel IR 10.5 FDHSI</title>
   <description>Generated from ImageMosaic</description>
   <abstract>MTG FD Channel IR 10.5 FDHSI</abstract>
   <keywords>
@@ -38,7 +38,7 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
   <advertised>false</advertised>
   <metadata>
     <entry key="elevation">

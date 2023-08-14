@@ -32,7 +32,7 @@ variables:
   INCLUDE_PLUGINS: "false"
   ADD_EXTRA_FONTS: "true"
   DOCKERFILE: "./Dockerfile"
-  BASE_IMAGE_REPO: "harbor.eumetsat.int/cso-ivv/wms"
+  BASE_IMAGE_REPO: "harbor.eumetsat.int/ext-cots"
 
 
 build: 
