@@ -29,17 +29,24 @@
     </fieldset>
   </li>
   <li>
-      <fieldset>
-        <legend>
-          <span><wicket:message key="otherSRS">otherSRS</wicket:message></span>
-          <a href="#" wicket:id="otherSRSHelp" class="help-link"></a>
-        </legend>
-        <ul>
-          <li>
-            <textarea class="input textarea" rows="10" cols="30" wicket:id="srs"></textarea>
-          </li>
-        </ul>
-      </fieldset>
+    <fieldset>
+      <legend>
+        <span><wicket:message key="otherSRS">otherSRS</wicket:message></span>
+        <a href="#" wicket:id="otherSRSHelp" class="help-link"></a>
+      </legend>
+      <ul>
+        <li>
+          <textarea class="input textarea" rows="10" cols="30" wicket:id="srs"></textarea>
+        </li>
+      </ul>
+    </fieldset>
+  </li>
+  <li>
+    <fieldset>
+      <legend><span><wicket:message key="csv.title">CSV</wicket:message></span></legend>
+      <label for="csvDateFormat"><wicket:message key="csvDateFormat">Date Format</wicket:message></label>
+      <input class="field text" wicket:id="csvDateFormat" type="text"></input>
+    </fieldset>
   </li>
   <li>
     <fieldset>
@@ -113,7 +120,7 @@
           <li>
             <input id="featureMember" wicket:id="featureMember" type="radio"></input>
             <label for="featureMember"><wicket:message key="featureMember">Multiple "featureMember" elements</wicket:message></label>
-          </li>         
+          </li>
         </ul>
       </div>
     </fieldset>
