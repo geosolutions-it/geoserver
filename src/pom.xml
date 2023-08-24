@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.geoserver</groupId>
   <artifactId>geoserver</artifactId>
-  <version>2.22.4</version>
+  <version>C105.2.22.4.01</version>
   <packaging>pom</packaging>
   <name>GeoServer</name>
   <inceptionYear>2006</inceptionYear>
@@ -88,7 +88,7 @@
   </distributionManagement>
 
   <properties>
-    <gs.version>2.22.4</gs.version>
+    <gs.version>C105.2.22.4.01</gs.version>
     <gt.version>28.4</gt.version>
     <gwc.version>1.22.2</gwc.version>
     <jts.version>1.19.0</jts.version>
@@ -1181,7 +1181,6 @@
         <groupId>net.sf.json-lib</groupId>
         <artifactId>json-lib</artifactId>
         <version>2.4.2-geoserver</version>
-        <!-- fork: https://github.com/geosolutions-it/Json-lib -->
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
