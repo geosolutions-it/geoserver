@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import net.opengis.wfs.GetFeatureType;
 import net.opengis.wfs.WfsFactory;
 import org.geoserver.catalog.NamespaceInfo;
@@ -448,7 +449,8 @@ public class CSVOutputFormatTest extends WFSTestSupport {
         builder.add("d", Double.class);
         builder.setName("funnyLabels");
         SimpleFeatureType type = builder.buildFeatureType();
-
+        Locale currentLocale = Locale.getDefault();
+        Locale.setDefault(new Locale("en", "US"));
         Date d = new Date(1483228800000L);
         GeometryFactory gf = new GeometryFactory();
         SimpleFeature f =
@@ -475,7 +477,6 @@ public class CSVOutputFormatTest extends WFSTestSupport {
         FeatureCollectionResponse fct =
                 FeatureCollectionResponse.adapt(WfsFactory.eINSTANCE.createFeatureCollectionType());
         fct.getFeature().add(fs.getFeatures());
-
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         CSVOutputFormat format = setCSVDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
         format.write(fct, bos, op);
@@ -495,6 +496,7 @@ public class CSVOutputFormatTest extends WFSTestSupport {
         CSVOutputFormat format3 = setCSVDateFormat("EEE, d MMM yyyy HH:mm:ss Z");
         format3.write(fct, bos3, op);
         assertDates("Sun, 1 Jan 2017 00:00:00 +0000", bos3);
+        Locale.setDefault(currentLocale);
     }
 
     private CSVOutputFormat setCSVDateFormat(String csvDateFormat) {
