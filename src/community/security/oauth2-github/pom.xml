@@ -12,7 +12,7 @@
   <parent>
     <groupId>org.geoserver.community</groupId>
     <artifactId>gs-security</artifactId>
-    <version>C105.2.22.4.01</version>
+    <version>C105.2.22.4.02</version>
   </parent>
 
   <groupId>org.geoserver.community</groupId>
