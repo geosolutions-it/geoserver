@@ -1,8 +1,8 @@
 <GeoServerTileLayer>
-  <id>LayerInfoImpl-38ee2db0:187bd1b5cc9:-7ffa</id>
+  <id>LayerInfoImpl-1e3d726a:189f3949016:-7ff0</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>mumi:osi_sic_cdr_v3_nh</name>
+  <name>mtg_fd:rgb_dust</name>
   <mimeFormats>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
@@ -73,14 +73,8 @@
     <int>3</int>
   </metaWidthHeight>
   <expireCache>0</expireCache>
-  <expireClients>604800</expireClients>
+  <expireClients>0</expireClients>
   <parameterFilters>
-    <styleParameterFilter>
-      <key>STYLES</key>
-      <defaultValue></defaultValue>
-      <availableStyles class="sorted-set"/>
-      <defaultStyle>osi_sic_cdr_v3</defaultStyle>
-    </styleParameterFilter>
     <regexParameterFilter>
       <key>TIME</key>
       <defaultValue>NONE</defaultValue>
@@ -89,6 +83,12 @@
       </normalize>
       <regex>^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$</regex>
     </regexParameterFilter>
+    <styleParameterFilter>
+      <key>STYLES</key>
+      <defaultValue></defaultValue>
+      <availableStyles class="sorted-set"/>
+      <defaultStyle>raster</defaultStyle>
+    </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>
   <cacheWarningSkips>

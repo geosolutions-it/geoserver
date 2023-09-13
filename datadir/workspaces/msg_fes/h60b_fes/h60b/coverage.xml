@@ -50,7 +50,7 @@
       <dimensionInfo>
         <enabled>true</enabled>
         <presentation>DISCRETE_INTERVAL</presentation>
-        <resolution>0</resolution>
+        <resolution>900000</resolution>
         <units>ISO8601</units>
         <defaultValue>
           <strategy>MAXIMUM</strategy>

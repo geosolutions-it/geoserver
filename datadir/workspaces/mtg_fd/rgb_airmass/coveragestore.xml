@@ -1,7 +1,7 @@
 <coverageStore>
   <id>CoverageStoreInfoImpl--6acf4bb5:1888a571431:-7fe5</id>
   <name>rgb_airmass</name>
-  <description>MTG FD RGB Airmass</description>
+  <description>MTG 0DEG RGB Airmass</description>
   <type>ImageMosaic</type>
   <enabled>true</enabled>
   <workspace>

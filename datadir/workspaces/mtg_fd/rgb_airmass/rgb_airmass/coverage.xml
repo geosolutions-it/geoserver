@@ -5,7 +5,7 @@
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>MTG FD RGB Airmass</title>
+  <title>(DISABLED) MTG FD RGB Airmass</title>
   <description>Generated from ImageMosaic</description>
   <abstract>MTG FD RGB Airmass</abstract>
   <keywords>
@@ -38,7 +38,7 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
   <advertised>false</advertised>
   <metadata>
     <entry key="elevation">

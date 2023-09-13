@@ -1,12 +1,12 @@
 <coverageStore>
-  <id>CoverageStoreInfoImpl--6acf4bb5:1888a571431:-7fc3</id>
-  <name>rgb_truecolour</name>
-  <description>MTG 0DEG RGB True Colour</description>
+  <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-7fef</id>
+  <name>rgb_cloudphase</name>
+  <description>MTG 0DEG RGB Cloud Phase</description>
   <type>ImageMosaic</type>
   <enabled>true</enabled>
   <workspace>
     <id>WorkspaceInfoImpl--6acf4bb5:1888a571431:-8000</id>
   </workspace>
   <__default>false</__default>
-  <url>file:data/LIC_FREE/mtg_fd_rgb_truecolour</url>
+  <url>file:data/LIC_FREE/mtg_fd_rgb_cloudphase</url>
 </coverageStore>
