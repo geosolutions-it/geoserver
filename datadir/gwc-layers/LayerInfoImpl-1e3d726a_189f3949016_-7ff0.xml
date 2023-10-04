@@ -1,0 +1,97 @@
+<GeoServerTileLayer>
+  <id>LayerInfoImpl-1e3d726a:189f3949016:-7ff0</id>
+  <enabled>true</enabled>
+  <inMemoryCached>true</inMemoryCached>
+  <name>mtg_fd:rgb_dust</name>
+  <mimeFormats>
+    <string>image/png</string>
+    <string>image/vnd.jpeg-png</string>
+    <string>image/jpeg</string>
+    <string>image/png8</string>
+  </mimeFormats>
+  <gridSubsets>
+    <gridSubset>
+      <gridSetName>EPSG:3857 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70207</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70213</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70209</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70209 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70203 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70203</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70213 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3995 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70211 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70211</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70201 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70205 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70205</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70207 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:4326</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:4326 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3995 - 256</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:70201</gridSetName>
+    </gridSubset>
+  </gridSubsets>
+  <metaWidthHeight>
+    <int>3</int>
+    <int>3</int>
+  </metaWidthHeight>
+  <expireCache>0</expireCache>
+  <expireClients>0</expireClients>
+  <parameterFilters>
+    <regexParameterFilter>
+      <key>TIME</key>
+      <defaultValue>NONE</defaultValue>
+      <normalize>
+        <locale></locale>
+      </normalize>
+      <regex>^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$</regex>
+    </regexParameterFilter>
+    <styleParameterFilter>
+      <key>STYLES</key>
+      <defaultValue></defaultValue>
+      <availableStyles class="sorted-set"/>
+      <defaultStyle>raster</defaultStyle>
+    </styleParameterFilter>
+  </parameterFilters>
+  <gutter>0</gutter>
+  <cacheWarningSkips>
+    <warning>FailedNearest</warning>
+  </cacheWarningSkips>
+</GeoServerTileLayer>

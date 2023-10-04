@@ -1,0 +1,12 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-7ff9</id>
+  <name>vis06_hrfi</name>
+  <description>MTG 0DEG Channel VIS 0.6 HRFI</description>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--6acf4bb5:1888a571431:-8000</id>
+  </workspace>
+  <__default>false</__default>
+  <url>file:data/LIC_FREE/mtg_fd_vis06_hrfi</url>
+</coverageStore>

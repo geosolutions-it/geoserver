@@ -5,9 +5,17 @@
   <namespace>
     <id>NamespaceInfoImpl--453fcc61:1760a405bda:-7ffd</id>
   </namespace>
-  <title>Global Sea Ice Concentration Climate Data Record Release 3 - Northern Hemisphere - DMSP</title>
+  <title>OSI SAF Blended Global Sea Ice Concentration Climate and Interim Climate Data Records for Northern Hemisphere - DMSP</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>This product is an operational extension of the Sea Ice Concentration Climate Data Record OSI-450-a, with a nominal latency of 16 days, starting in 2021. OSI-430-a uses passive microwave data (PMW) from the SSMIS sensors, and the same algorithms as OSI-450-a. The product includes error-bars for each grid cell (uncertainties). This product has two types of files; the nominal ICDR files with latency of 16 days, and so-called fast-track ICDR files with latency of 2 days.</abstract>
+  <abstract>This layer is the blended version of the Global Sea Ice Concentration Climate Data Record (OSI-450-a) and Global Sea Ice Concentration Interim Climate Data Record (OSI-430-a) for the Northern Hemisphere. &#xd;
+&#xd;
+OSI-450-a is the third major version of the OSI SAF Global Sea Ice Concentration Climate Data Record (SIC CDR v3.0). OSI-430-a is the corresponding Interim CDR, an operational extension with a latency of 16 days.&#xd;
+&#xd;
+OSI-450-a is a full reprocessing of sea ice concentration, with improved algorithms and an upgraded processing chain, covering the period 1978.10.01 to 2020.12.31. The sea ice concentration is computed from the SMMR (1978-1987), SSM/I (1987-2008), and SSMIS (2006-2020) instruments, as well as ECMWF ERA5.&#xd;
+&#xd;
+The basic principles and methodologies that were the backbone of the previous version (OSI-450) are also on board OSI-450-a (e.g. atmospheric correction of brightness temperature with NWP re-analysis data, dynamic tie-points, uncertainties, etc.) but they were partly revisited through dedicated R&amp;D in the OSISAF project and, notably, through the ESA CCI EXT Sea Ice projects, whose contribution is acknowledged.&#xd;
+&#xd;
+OSI-430-a extends OSI-450-a from 2021 onwards. It uses SSMIS data from NOAA CLASS, and preliminary daily updates of the ERA5 analysis from ECMWF (ERA5T). Otherwise, the same processing chain and algorithms are used for OSI-450-a and OSI-430-a, ensuring temporal consistency.</abstract>
   <keywords>
     <string>mumi_osi_sic_cdr_v3_nh</string>
     <string>WCS</string>
@@ -49,7 +57,7 @@
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
   <enabled>true</enabled>
-  <advertised>false</advertised>
+  <advertised>true</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>

@@ -75,6 +75,12 @@
   <expireCache>0</expireCache>
   <expireClients>604800</expireClients>
   <parameterFilters>
+    <styleParameterFilter>
+      <key>STYLES</key>
+      <defaultValue></defaultValue>
+      <availableStyles class="sorted-set"/>
+      <defaultStyle>osi_sic_cdr_v3</defaultStyle>
+    </styleParameterFilter>
     <regexParameterFilter>
       <key>TIME</key>
       <defaultValue>NONE</defaultValue>
@@ -83,12 +89,6 @@
       </normalize>
       <regex>^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$</regex>
     </regexParameterFilter>
-    <styleParameterFilter>
-      <key>STYLES</key>
-      <defaultValue></defaultValue>
-      <availableStyles class="sorted-set"/>
-      <defaultStyle>osi_sic_cdr_v3</defaultStyle>
-    </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>
   <cacheWarningSkips>
