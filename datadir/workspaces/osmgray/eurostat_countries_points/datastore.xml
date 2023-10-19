@@ -7,7 +7,7 @@
     <id>WorkspaceInfoImpl-2cd79042:1706804ed1c:4de6</id>
   </workspace>
   <connectionParameters>
-    <entry key="charset">ISO-8859-1</entry>
+    <entry key="charset">UTF-8</entry>
     <entry key="filetype">shapefile</entry>
     <entry key="create spatial index">true</entry>
     <entry key="memory mapped buffer">false</entry>
