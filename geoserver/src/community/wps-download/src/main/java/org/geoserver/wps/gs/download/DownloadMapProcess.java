@@ -44,6 +44,7 @@ import org.geoserver.platform.Service;
 import org.geoserver.util.HTTPWarningAppender;
 import org.geoserver.wms.GetMap;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.RasterCleaner;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.map.AbstractMapOutputFormat;
@@ -95,11 +96,13 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
     private final WMS wms;
     private final GetMapKvpRequestReader getMapReader;
     private final HTTPWarningAppender warningAppender;
+    private final RasterCleaner rasterCleaner;
     private Service service;
     // defaulting to a stateless but reliable http client
     private Supplier<HTTPClient> httpClientSupplier = () -> new SimpleHttpClient();
 
-    public DownloadMapProcess(GeoServer geoServer, HTTPWarningAppender warningAppender) {
+    public DownloadMapProcess(
+            GeoServer geoServer, HTTPWarningAppender warningAppender, RasterCleaner rasterCleaner) {
         // TODO: make these configurable
         this.wms =
                 new WMS(geoServer) {
@@ -120,6 +123,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                 };
         this.getMapReader = new GetMapKvpRequestReader(wms);
         this.warningAppender = warningAppender;
+        this.rasterCleaner = rasterCleaner;
     }
 
     /** This process returns a potentially large map */
@@ -261,6 +265,11 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         } finally {
             // avoid accumulation of warnings in the executor thread that run this request
             warningAppender.finished(Dispatcher.REQUEST.get());
+            // clean up images, this process runs in a background thread, it won't get
+            // the callback invoked and the thread locals would accumulate images
+            rasterCleaner.finished(null);
+            // not wrong, and allows tests to check the raster cleaner has done its job
+            progressListener.progress(100);
         }
 
         // we got here, no supported format found
@@ -461,11 +470,8 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                 image = getImageFromWebMapServer(layer, template, bbox, serverCache);
             }
 
-            if (result == null) {
-                result = image;
-            } else {
-                result = mergeImage(result, image);
-            }
+            result = mergeImage(result, image, layer);
+
             // past the first layer switch transparency on to allow overlaying
             template.put("transparent", "true");
             // track progress and bail out if necessary
@@ -503,7 +509,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                 RenderedImageMapOutputFormat renderer = new RenderedImageMapOutputFormat(wms);
                 RenderedImageMap map = renderer.produceMap(content);
 
-                result = mergeImage(result, map.getImage());
+                result = mergeImage(result, map.getImage(), null);
             } finally {
                 content.dispose();
             }
@@ -525,7 +531,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                     image = map.getImage();
                     map.getMapContext().dispose();
                     if (result != null) {
-                        result = mergeImage(result, image);
+                        result = mergeImage(result, image, null);
                     }
                 }
             }
@@ -533,7 +539,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
             progressListener.progress(95f * (++i) / layers.length / 2);
         }
 
-        progressListener.progress(100);
+        progressListener.progress(90);
 
         return result;
     }
@@ -697,7 +703,19 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         return result;
     }
 
-    private RenderedImage mergeImage(RenderedImage result, RenderedImage image) {
+    private RenderedImage mergeImage(RenderedImage result, RenderedImage image, Layer layer) {
+        if (result == null && layer != null) {
+            // assume this is the first layer
+            // nothing to do if no opacity is requested
+            if (layer.getOpacity() == null) {
+                return image;
+            } else {
+                // if opacity is requested, create an empty image to merge with
+                result =
+                        new BufferedImage(
+                                image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            }
+        }
         // make sure we can paint on it
         if (!(result instanceof BufferedImage)) {
             result = PlanarImage.wrapRenderedImage(result).getAsBufferedImage();
@@ -706,12 +724,29 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         // this way at most two at any time are around, so uses less memory overall
         BufferedImage bi = (BufferedImage) result;
         Graphics2D graphics = (Graphics2D) bi.getGraphics();
+        if (layer != null && layer.getOpacity() != null) {
+            applyOpacity(image, layer, graphics);
+        }
         graphics.drawRenderedImage(image, AffineTransform.getScaleInstance(1, 1));
         graphics.dispose();
         return result;
     }
 
-    private GetMapRequest produceGetMapRequest(Layer layer, Map kvpTemplate) throws Exception {
+    private static void applyOpacity(RenderedImage image, Layer layer, Graphics2D graphics) {
+        if (layer.getOpacity() < 0 || layer.getOpacity() > 100) {
+            throw new WPSException(
+                    "Layer: "
+                            + layer.getName()
+                            + " has opacity set to an invalid value (only 0-100 allowed): "
+                            + layer.getOpacity());
+        }
+        graphics.setComposite(
+                java.awt.AlphaComposite.getInstance(
+                        java.awt.AlphaComposite.SRC_OVER, layer.getOpacity().floatValue() / 100));
+    }
+
+    private GetMapRequest produceGetMapRequest(Layer layer, Map<String, Object> kvpTemplate)
+            throws Exception {
         GetMapRequest request = getMapReader.createRequest();
 
         // prepare raw and parsed KVP maps to mimick a GetMap request
