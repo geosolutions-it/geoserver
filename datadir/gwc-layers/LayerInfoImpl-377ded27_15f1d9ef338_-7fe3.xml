@@ -2,7 +2,7 @@
   <id>LayerInfoImpl-377ded27:15f1d9ef338:-7fe3</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>backgrounds:ne_boundary_lines_land</name>
+  <name>backgrounds:ne_boundary_lines_land_old</name>
   <mimeFormats>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
@@ -11,20 +11,7 @@
   </mimeFormats>
   <gridSubsets>
     <gridSubset>
-      <gridSetName>EPSG:4326 - 512</gridSetName>
-      <extent>
-        <coords>
-          <double>-141.00554863899987</double>
-          <double>-55.120923766999944</double>
-          <double>140.97762699400005</double>
-          <double>70.07531036400012</double>
-        </coords>
-      </extent>
-      <zoomStart>0</zoomStart>
-      <zoomStop>10</zoomStop>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:3995 - 512</gridSetName>
+      <gridSetName>EPSG:3995 - 256</gridSetName>
       <extent>
         <coords>
           <double>-1.27E7</double>
@@ -72,13 +59,26 @@
       <zoomStop>10</zoomStop>
     </gridSubset>
     <gridSubset>
-      <gridSetName>EPSG:3995 - 256</gridSetName>
+      <gridSetName>EPSG:3995 - 512</gridSetName>
       <extent>
         <coords>
           <double>-1.27E7</double>
           <double>-1.27E7</double>
           <double>1.27E7</double>
           <double>1.27E7</double>
+        </coords>
+      </extent>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:4326 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-141.00554863899987</double>
+          <double>-55.120923766999944</double>
+          <double>140.97762699400005</double>
+          <double>70.07531036400012</double>
         </coords>
       </extent>
       <zoomStart>0</zoomStart>

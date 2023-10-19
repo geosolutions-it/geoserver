@@ -1,0 +1,22 @@
+<dataStore>
+  <id>DataStoreInfoImpl--713a8fca:18b46df8036:-7ff4</id>
+  <name>eurostat_countries_points</name>
+  <type>Directory of spatial files (shapefiles)</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-2cd79042:1706804ed1c:4de6</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="charset">ISO-8859-1</entry>
+    <entry key="filetype">shapefile</entry>
+    <entry key="create spatial index">true</entry>
+    <entry key="memory mapped buffer">false</entry>
+    <entry key="timezone">Etc/UTC</entry>
+    <entry key="enable spatial index">true</entry>
+    <entry key="namespace">http://www.geoserver.org/osm/gray</entry>
+    <entry key="cache and reuse memory maps">true</entry>
+    <entry key="url">file:///var/geoserver/data/eumetsat/eurostat/CNTR_LB_POP_2020_4326</entry>
+    <entry key="fstype">shape</entry>
+  </connectionParameters>
+  <__default>false</__default>
+</dataStore>

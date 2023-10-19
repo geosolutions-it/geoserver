@@ -1,20 +1,19 @@
 @mode 'Flat';
 
-/* added area to visualize small countries only on lower scale denominator (area in 4326 TODO: calculate in 3857) */
-[@sd < 100M][@sd > 250k][area > 0.1],
-[@sd < 5M][@sd > 250k][area <= 0.1] {
-  label: [strToUpperCase(NAME_LONG)];
-  label-anchor: 0.5 0.5;
-  label-group: true;
-  font-fill: #BBBBBB;
-  font-size: [interpolate(env('wms_scale_denominator', 100000000), 800000, 14, 100000000, 12)];
-  font-family: 'Noto Sans';
+[@sd < 100M][@sd > 250k] {
+  label: [strToUpperCase(NAME_ENGL)];
+  font-family: 'SansSerif';
+  font-size: [interpolate(env('wms_scale_denominator', 100000000), 250000, 14, 800000, 14, 100000000, 10)];
   font-weight: bold;
-  halo-color: black;
-  halo-radius: 1;
-  halo-opacity: 0.8;
+  label-anchor: 0.5 1.5;
+  halo-radius: [interpolate(env('wms_scale_denominator', 100000000), 800000, 1, 100000000, 0.75)];
+  halo-color: #000000;
+  halo-opacity: 0.9;
+  font-fill: #ffffff;
+  font-fill-opacity: 1;
+  label-group: true;
   -gt-label-padding: 7;
-  -gt-label-auto-wrap: 90;
-  label-priority: [POP_EST];
-  sort-by: area;
+  -gt-label-auto-wrap: 70;
+  label-priority: [POP];
+  sort-by: POP;
 }
