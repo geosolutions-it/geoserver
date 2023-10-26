@@ -1,13 +1,14 @@
 <featureType>
-  <id>FeatureTypeInfoImpl-377ded27:15f1d9ef338:-7fdc</id>
+  <id>FeatureTypeInfoImpl--713a8fca:18b46df8036:-7ffa</id>
   <name>ne_10m_coastline</name>
-  <nativeName>ne_10m_coastline</nativeName>
+  <nativeName>CNTR_BN_01M_2020_4326_COASTL</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--26de0f0e:16002807cd8:-7ffd</id>
   </namespace>
   <title>NaturalEarth Coastline</title>
   <keywords>
     <string>features</string>
+    <string>CNTR_BN_01M_2020_4326_COASTL</string>
     <string>ne_10m_coastline</string>
   </keywords>
   <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
@@ -21,27 +22,37 @@
   AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
   <srs>EPSG:4326</srs>
   <nativeBoundingBox>
-    <minx>-179.99999999999991</minx>
-    <maxx>180.0</maxx>
-    <miny>-85.22193775799991</miny>
-    <maxy>83.63410065300008</maxy>
+    <minx>-180.0</minx>
+    <maxx>179.999991</maxx>
+    <miny>-89.900001</miny>
+    <maxy>83.664978</maxy>
     <crs>EPSG:4326</crs>
   </nativeBoundingBox>
   <latLonBoundingBox>
-    <minx>-179.99999999999991</minx>
-    <maxx>180.0</maxx>
-    <miny>-85.22193775799991</miny>
-    <maxy>83.63410065300008</maxy>
+    <minx>-180.0</minx>
+    <maxx>179.999991</maxx>
+    <miny>-89.900001</miny>
+    <maxy>83.664978</maxy>
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>FORCE_DECLARED</projectionPolicy>
   <enabled>true</enabled>
   <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
     <entry key="cacheAgeMax">604800</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
     <entry key="cachingEnabled">true</entry>
   </metadata>
   <store class="dataStore">
-    <id>DataStoreInfoImpl-377ded27:15f1d9ef338:-7fe5</id>
+    <id>DataStoreInfoImpl--713a8fca:18b46df8036:-8000</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
   <maxFeatures>0</maxFeatures>

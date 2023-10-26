@@ -7,6 +7,9 @@
   </defaultStyle>
   <styles class="linked-hash-set">
     <style>
+      <id>StyleInfoImpl-2cd79042:1706804ed1c:67ed</id>
+    </style>
+    <style>
       <id>StyleInfoImpl-2cd79042:1706804ed1c:67e3</id>
     </style>
   </styles>
@@ -17,5 +20,4 @@
     <logoWidth>0</logoWidth>
     <logoHeight>0</logoHeight>
   </attribution>
-  <dateCreated>2020-02-21 16:11:54.518 UTC</dateCreated>
 </layer>
