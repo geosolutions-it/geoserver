@@ -217,7 +217,7 @@ To enhance the perception for areas which are on the night side of the Earth a d
     </entry>
     <entry>
       <string>SORTING</string>
-      <null/>
+      <string>fid D</string>
     </entry>
     <entry>
       <string>FootprintBehavior</string>
