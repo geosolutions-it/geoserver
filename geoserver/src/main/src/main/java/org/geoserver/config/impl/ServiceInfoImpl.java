@@ -8,6 +8,7 @@ package org.geoserver.config.impl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
@@ -15,6 +16,10 @@ import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ServiceInfo;
+import org.geoserver.util.InternationalStringUtils;
+import org.geotools.util.GrowableInternationalString;
+import org.geotools.util.Version;
+import org.opengis.util.InternationalString;
 
 public class ServiceInfoImpl implements ServiceInfo {
 
@@ -30,19 +35,23 @@ public class ServiceInfoImpl implements ServiceInfo {
 
     protected String title;
 
+    protected GrowableInternationalString internationalTitle;
+
     protected String maintainer;
 
     protected String abstrct;
+
+    protected GrowableInternationalString internationalAbstract;
 
     protected String accessConstraints;
 
     protected String fees;
 
-    protected List versions = new ArrayList();
+    protected List<Version> versions = new ArrayList<>();
 
-    protected List<KeywordInfo> keywords = new ArrayList();
+    protected List<KeywordInfo> keywords = new ArrayList<>();
 
-    protected List exceptionFormats = new ArrayList();
+    protected List<String> exceptionFormats = new ArrayList<>();
 
     protected MetadataLinkInfo metadataLink;
 
@@ -58,14 +67,36 @@ public class ServiceInfoImpl implements ServiceInfo {
 
     protected MetadataMap metadata = new MetadataMap();
 
-    protected Map clientProperties = new HashMap();
+    protected Map<Object, Object> clientProperties = new HashMap<>();
 
+    protected Locale defaultLocale;
+
+    @Override
     public String getId() {
         return id;
     }
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    /**
+     * Default implementation attempts to determine service type based on class naming convention.
+     * Subclasses are encouraged to override.
+     *
+     * @return service type based on class name, truncating ServiceInfo.
+     */
+    @Override
+    public String getType() {
+        String simpleName = getClass().getSimpleName();
+        int truncate = simpleName.indexOf("ServiceInfo");
+        if (truncate > 0) {
+            return simpleName.substring(0, truncate);
+        } else {
+            // this default, while incorrect, has the greatest chance of
+            // success across data directories
+            return getName() != null ? getName().toUpperCase() : null;
+        }
     }
 
     @Override
@@ -78,70 +109,107 @@ public class ServiceInfoImpl implements ServiceInfo {
         this.workspace = workspace;
     }
 
+    @Override
     public GeoServer getGeoServer() {
         return geoServer;
     }
 
+    @Override
     public void setGeoServer(GeoServer geoServer) {
         this.geoServer = geoServer;
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
     }
 
+    @Override
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public void setName(String name) {
         this.name = name;
     }
 
+    @Override
     public String getTitle() {
-        return title;
+        return InternationalStringUtils.getOrDefault(title, internationalTitle);
     }
 
+    @Override
     public void setTitle(String title) {
         this.title = title;
     }
 
+    @Override
+    public GrowableInternationalString getInternationalTitle() {
+        return this.internationalTitle;
+    }
+
+    @Override
+    public void setInternationalTitle(InternationalString internationalTitle) {
+        this.internationalTitle = InternationalStringUtils.growable(internationalTitle);
+    }
+
+    @Override
     public String getMaintainer() {
         return maintainer;
     }
 
+    @Override
     public void setMaintainer(String maintainer) {
         this.maintainer = maintainer;
     }
 
+    @Override
     public String getAbstract() {
-        return abstrct;
+        return InternationalStringUtils.getOrDefault(abstrct, internationalAbstract);
     }
 
+    @Override
     public void setAbstract(String abstrct) {
         this.abstrct = abstrct;
     }
 
+    @Override
+    public GrowableInternationalString getInternationalAbstract() {
+        return this.internationalAbstract;
+    }
+
+    @Override
+    public void setInternationalAbstract(InternationalString internationalAbstract) {
+        this.internationalAbstract = InternationalStringUtils.growable(internationalAbstract);
+    }
+
+    @Override
     public String getAccessConstraints() {
         return accessConstraints;
     }
 
+    @Override
     public void setAccessConstraints(String accessConstraints) {
         this.accessConstraints = accessConstraints;
     }
 
+    @Override
     public String getFees() {
         return fees;
     }
 
+    @Override
     public void setFees(String fees) {
         this.fees = fees;
     }
 
+    @Override
     public List<KeywordInfo> getKeywords() {
         return keywords;
     }
@@ -150,8 +218,9 @@ public class ServiceInfoImpl implements ServiceInfo {
         this.keywords = keywords;
     }
 
+    @Override
     public List<String> keywordValues() {
-        List<String> values = new ArrayList<String>();
+        List<String> values = new ArrayList<>();
         if (keywords != null) {
             for (KeywordInfo kw : keywords) {
                 values.add(kw.getValue());
@@ -160,46 +229,55 @@ public class ServiceInfoImpl implements ServiceInfo {
         return values;
     }
 
-    public List getVersions() {
+    @Override
+    public List<Version> getVersions() {
         return versions;
     }
 
-    public void setVersions(List versions) {
+    public void setVersions(List<Version> versions) {
         this.versions = versions;
     }
 
-    public List getExceptionFormats() {
+    @Override
+    public List<String> getExceptionFormats() {
         return exceptionFormats;
     }
 
-    public void setExceptionFormats(List exceptionFormats) {
+    public void setExceptionFormats(List<String> exceptionFormats) {
         this.exceptionFormats = exceptionFormats;
     }
 
+    @Override
     public MetadataLinkInfo getMetadataLink() {
         return metadataLink;
     }
 
+    @Override
     public void setMetadataLink(MetadataLinkInfo metadataLink) {
         this.metadataLink = metadataLink;
     }
 
+    @Override
     public boolean isCiteCompliant() {
         return citeCompliant;
     }
 
+    @Override
     public void setCiteCompliant(boolean citeCompliant) {
         this.citeCompliant = citeCompliant;
     }
 
+    @Override
     public String getOnlineResource() {
         return onlineResource;
     }
 
+    @Override
     public void setOnlineResource(String onlineResource) {
         this.onlineResource = onlineResource;
     }
 
+    @Override
     public MetadataMap getMetadata() {
         if (metadata == null) {
             metadata = new MetadataMap();
@@ -211,38 +289,56 @@ public class ServiceInfoImpl implements ServiceInfo {
         this.metadata = metadata;
     }
 
-    public Map getClientProperties() {
+    @Override
+    public Map<Object, Object> getClientProperties() {
         return clientProperties;
     }
 
-    public void setClientProperties(Map clientProperties) {
+    public void setClientProperties(Map<Object, Object> clientProperties) {
         this.clientProperties = clientProperties;
     }
 
+    @Override
     public String getOutputStrategy() {
         return outputStrategy;
     }
 
+    @Override
     public void setOutputStrategy(String outputStrategy) {
         this.outputStrategy = outputStrategy;
     }
 
+    @Override
     public String getSchemaBaseURL() {
         return schemaBaseURL;
     }
 
+    @Override
     public void setSchemaBaseURL(String schemaBaseURL) {
         this.schemaBaseURL = schemaBaseURL;
     }
 
+    @Override
     public boolean isVerbose() {
         return verbose;
     }
 
+    @Override
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
     }
 
+    @Override
+    public Locale getDefaultLocale() {
+        return defaultLocale;
+    }
+
+    @Override
+    public void setDefaultLocale(Locale defaultLocale) {
+        this.defaultLocale = defaultLocale;
+    }
+
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -266,6 +362,7 @@ public class ServiceInfoImpl implements ServiceInfo {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null) return false;
@@ -274,9 +371,9 @@ public class ServiceInfoImpl implements ServiceInfo {
         }
 
         final ServiceInfo other = (ServiceInfo) obj;
-        if (abstrct == null) {
+        if (getAbstract() == null) {
             if (other.getAbstract() != null) return false;
-        } else if (!abstrct.equals(other.getAbstract())) return false;
+        } else if (!getAbstract().equals(other.getAbstract())) return false;
         if (accessConstraints == null) {
             if (other.getAccessConstraints() != null) return false;
         } else if (!accessConstraints.equals(other.getAccessConstraints())) return false;
@@ -312,9 +409,9 @@ public class ServiceInfoImpl implements ServiceInfo {
         if (schemaBaseURL == null) {
             if (other.getSchemaBaseURL() != null) return false;
         } else if (!schemaBaseURL.equals(other.getSchemaBaseURL())) return false;
-        if (title == null) {
+        if (getTitle() == null) {
             if (other.getTitle() != null) return false;
-        } else if (!title.equals(other.getTitle())) return false;
+        } else if (!getTitle().equals(other.getTitle())) return false;
         if (verbose != other.isVerbose()) return false;
         if (versions == null) {
             if (other.getVersions() != null) return false;

@@ -6,9 +6,13 @@
 package org.geoserver.wfs.web;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import org.apache.wicket.markup.html.form.CheckBox;
 import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.web.GeoServerWicketTestSupport;
@@ -24,9 +28,13 @@ public class WFSAdminPageTest extends GeoServerWicketTestSupport {
         login();
         tester.startPage(WFSAdminPage.class);
         tester.assertModelValue("form:maxFeatures", wfs.getMaxFeatures());
+        tester.assertModelValue("form:csvDateFormat", wfs.getCsvDateFormat());
         tester.assertModelValue(
                 "form:maxNumberOfFeaturesForPreview", wfs.getMaxNumberOfFeaturesForPreview());
         tester.assertModelValue("form:keywords", wfs.getKeywords());
+        tester.assertModelValue(
+                "form:getFeatureOutputTypes:outputTypeCheckingEnabled",
+                wfs.isGetFeatureOutputTypeCheckingEnabled());
     }
 
     @Test
@@ -36,16 +44,72 @@ public class WFSAdminPageTest extends GeoServerWicketTestSupport {
         login();
         tester.startPage(WFSAdminPage.class);
         FormTester ft = tester.newFormTester("form");
-        ft.setValue("maxNumberOfFeaturesForPreview", (String) testValue1);
+        ft.setValue("maxNumberOfFeaturesForPreview", testValue1);
         ft.submit("submit");
         wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
         assertEquals("testValue1 = 100", 100, (int) wfs.getMaxNumberOfFeaturesForPreview());
         tester.startPage(WFSAdminPage.class);
         ft = tester.newFormTester("form");
-        ft.setValue("maxNumberOfFeaturesForPreview", (String) testValue2);
+        ft.setValue("maxNumberOfFeaturesForPreview", testValue2);
         ft.submit("submit");
         wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
         assertEquals("testValue2 = 0", 0, (int) wfs.getMaxNumberOfFeaturesForPreview());
+        // test allowGlobalQueries
+        tester.startPage(WFSAdminPage.class);
+        ft = tester.newFormTester("form");
+        ft.setValue("allowGlobalQueries", false);
+        ft.submit("submit");
+        wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
+        assertEquals("allowGlobalQueries = false", false, wfs.getAllowGlobalQueries());
+        // test includeWFSRequestDumpFile
+        tester.startPage(WFSAdminPage.class);
+        ft = tester.newFormTester("form");
+        ft.setValue("includeWFSRequestDumpFile", false);
+        ft.submit("submit");
+        wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
+        assertFalse("includeWFSRequestDumpFile= false", wfs.getIncludeWFSRequestDumpFile());
+        // test includeOutputTypes
+        tester.startPage(WFSAdminPage.class);
+        ft = tester.newFormTester("form");
+        ft.setValue("getFeatureOutputTypes:outputTypeCheckingEnabled", true);
+        ft.getForm()
+                .get("getFeatureOutputTypes:palette")
+                .setDefaultModelObject(Collections.singleton("KML"));
+        ft.submit("submit");
+        wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
+        assertTrue(
+                "getFeatureOutputTypeCheckingEnabled= true",
+                wfs.isGetFeatureOutputTypeCheckingEnabled());
+        assertEquals(
+                "getFeatureOutputTypes= KML",
+                Collections.singleton("KML"),
+                wfs.getGetFeatureOutputTypes());
+    }
+
+    @Test
+    public void testApply() throws Exception {
+        String testValue1 = "100";
+        WFSInfo wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
+        login();
+        tester.startPage(WFSAdminPage.class);
+        FormTester ft = tester.newFormTester("form");
+        ft.setValue("maxNumberOfFeaturesForPreview", testValue1);
+        ft.submit("apply");
+        // did not switch
+        tester.assertRenderedPage(WFSAdminPage.class);
+        // value was updated
+        wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
+        assertEquals("testValue1 = 100", 100, (int) wfs.getMaxNumberOfFeaturesForPreview());
+        // test Apply includeWFSRequestDumpFile
+        tester.startPage(WFSAdminPage.class);
+        ft = tester.newFormTester("form");
+        ft.setValue("includeWFSRequestDumpFile", true);
+        ft.submit("apply");
+        // did not switch
+        tester.assertRenderedPage(WFSAdminPage.class);
+        // value was updated
+        wfs = getGeoServerApplication().getGeoServer().getService(WFSInfo.class);
+        assertTrue("includeWFSRequestDumpFile = true", wfs.getIncludeWFSRequestDumpFile());
     }
 
     @Test
@@ -106,5 +170,97 @@ public class WFSAdminPageTest extends GeoServerWicketTestSupport {
         info = getGeoServer().getService(WFSInfo.class);
         gmlInfo = info.getGML().get(WFSInfo.Version.V_20);
         assertThat(gmlInfo.getMimeTypeToForce().isPresent(), is(false));
+    }
+
+    @Test
+    public void testInternationalContent() {
+        login();
+        // start WFS service administration page
+        tester.startPage(new WFSAdminPage());
+        FormTester form = tester.newFormTester("form");
+        // enable i18n for title
+        form.setValue(
+                "serviceTitleAndAbstract:titleAndAbstract:titleLabel:titleLabel_i18nCheckbox",
+                true);
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:titleLabel:titleLabel_i18nCheckbox",
+                "change");
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:addNew",
+                "click");
+
+        form.select(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:tablePanel:listContainer:items:1:itemProperties:0:component:border:border_body:select",
+                10);
+        form.setValue(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:tablePanel:listContainer:items:1:itemProperties:1:component:border:border_body:txt",
+                "an international title");
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:addNew",
+                "click");
+        form.select(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:tablePanel:listContainer:items:2:itemProperties:0:component:border:border_body:select",
+                20);
+        form.setValue(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:tablePanel:listContainer:items:2:itemProperties:1:component:border:border_body:txt",
+                "another international title");
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:internationalTitle:container:tablePanel:listContainer:items:2:itemProperties:2:component:remove",
+                "click");
+
+        // enable i18n for abstract
+        form.setValue(
+                "serviceTitleAndAbstract:titleAndAbstract:abstractLabel:abstractLabel_i18nCheckbox",
+                true);
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:abstractLabel:abstractLabel_i18nCheckbox",
+                "change");
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:addNew",
+                "click");
+        form.select(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:tablePanel:listContainer:items:1:itemProperties:0:component:border:border_body:select",
+                10);
+        form.setValue(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:tablePanel:listContainer:items:1:itemProperties:1:component:border:border_body:txt",
+                "an international title");
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:addNew",
+                "click");
+        form.select(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:tablePanel:listContainer:items:2:itemProperties:0:component:border:border_body:select",
+                20);
+        form.setValue(
+                "serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:tablePanel:listContainer:items:2:itemProperties:1:component:border:border_body:txt",
+                "another international title");
+        tester.executeAjaxEvent(
+                "form:serviceTitleAndAbstract:titleAndAbstract:internationalAbstract:container:tablePanel:listContainer:items:2:itemProperties:2:component:remove",
+                "click");
+        form = tester.newFormTester("form");
+        form.submit("submit");
+        tester.assertNoErrorMessage();
+    }
+
+    @Test
+    public void testDefaultLocale() {
+        login();
+        tester.startPage(WFSAdminPage.class);
+        FormTester ft = tester.newFormTester("form");
+        ft.select("defaultLocale", 11);
+        ft.submit("submit");
+        assertNotNull(getGeoServer().getService(WFSInfo.class).getDefaultLocale());
+    }
+
+    @Test
+    public void testDateFormat() {
+        login();
+        tester.startPage(WFSAdminPage.class);
+        FormTester ft = tester.newFormTester("form");
+        ft.setValue("csvDateFormat", "yyyy-MM-dd'T'HH:mm:ss'Z'");
+        ft.submit("submit");
+        assertNotNull(getGeoServer().getService(WFSInfo.class).getCsvDateFormat());
+        assertEquals(
+                getGeoServer().getService(WFSInfo.class).getCsvDateFormat(),
+                "yyyy-MM-dd'T'HH:mm:ss'Z'");
     }
 }

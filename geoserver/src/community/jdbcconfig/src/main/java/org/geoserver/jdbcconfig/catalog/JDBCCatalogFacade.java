@@ -39,6 +39,7 @@ import org.geoserver.catalog.impl.ClassMappings;
 import org.geoserver.catalog.impl.ModificationProxy;
 import org.geoserver.catalog.impl.ProxyUtils;
 import org.geoserver.catalog.util.CloseableIterator;
+import org.geoserver.config.ServiceInfo;
 import org.geoserver.jdbcconfig.internal.ConfigDatabase;
 import org.geoserver.ows.util.OwsUtils;
 import org.geotools.util.Utilities;
@@ -542,6 +543,9 @@ public class JDBCCatalogFacade implements CatalogFacade {
     @Override
     public void remove(WorkspaceInfo workspace) {
         db.remove(workspace);
+        for (ServiceInfo info : db.getServices(workspace)) {
+            db.remove(info);
+        }
     }
 
     /** @see org.geoserver.catalog.CatalogFacade#save(org.geoserver.catalog.WorkspaceInfo) */
@@ -646,7 +650,11 @@ public class JDBCCatalogFacade implements CatalogFacade {
     /** @see org.geoserver.catalog.CatalogFacade#getStyleByName(java.lang.String) */
     @Override
     public StyleInfo getStyleByName(String name) {
-        return getStyleByName(NO_WORKSPACE, name);
+        StyleInfo match = getStyleByName(NO_WORKSPACE, name);
+        if (match == null) {
+            match = getStyleByName(ANY_WORKSPACE, name);
+        }
+        return match;
     }
 
     /** @see org.geoserver.catalog.CatalogFacade#getStyles() */
@@ -895,7 +903,8 @@ public class JDBCCatalogFacade implements CatalogFacade {
     private <T extends CatalogInfo> T addInternal(T info) {
         Assert.notNull(info, "Info object cannot be null");
 
-        Class<T> clazz = ClassMappings.fromImpl(info.getClass()).getInterface();
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        Class<T> clazz = (Class) ClassMappings.fromImpl(info.getClass()).getInterface();
 
         setId(info, clazz);
 

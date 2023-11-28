@@ -125,7 +125,7 @@ public class RemoteProcessTest extends WPSTestSupport {
 
             factory.deregisterProcess(name);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "", e);
             fail(e.getLocalizedMessage());
         } finally {
             assertTrue(names.size() == 0);
@@ -375,6 +375,7 @@ public class RemoteProcessTest extends WPSTestSupport {
             GeoTools.addFactoryIteratorProvider(
                     new FactoryIteratorProvider() {
 
+                        @Override
                         public <T> Iterator<T> iterator(Class<T> category) {
                             if (ProcessFactory.class.isAssignableFrom(category)) {
                                 return (Iterator<T>) Collections.singletonList(factory).iterator();
@@ -386,10 +387,7 @@ public class RemoteProcessTest extends WPSTestSupport {
         }
     }
 
-    /**
-     * @param fname
-     * @throws IOException
-     */
+    /** */
     private static InputStream fullStream(File fname) throws IOException {
         FileInputStream fis = new FileInputStream(fname);
         DataInputStream dis = new DataInputStream(fis);

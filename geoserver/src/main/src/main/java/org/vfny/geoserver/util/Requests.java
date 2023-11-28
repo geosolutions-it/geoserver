@@ -119,7 +119,6 @@ public final class Requests {
      *
      * @param url The url to the sld file
      * @return The InputStream used to validate and parse the SLD xml.
-     * @throws IOException
      */
     public static InputStream getInputStream(URL url) throws IOException {
         // Open the connection
@@ -167,8 +166,9 @@ public final class Requests {
      *
      * <p>Useful for parsing out the FORMAT_OPTIONS and LEGEND_OPTIONS parameters
      */
-    public static Map parseOptionParameter(String rawOptionString) throws IllegalArgumentException {
-        HashMap map = new HashMap();
+    public static Map<String, Object> parseOptionParameter(String rawOptionString)
+            throws IllegalArgumentException {
+        Map<String, Object> map = new HashMap<>();
         if (rawOptionString == null) {
             return map;
         }
@@ -187,7 +187,7 @@ public final class Requests {
             String key = curKVP.substring(0, cloc);
             String values = curKVP.substring(cloc + 1, curKVP.length());
             if (values.indexOf(",") != -1) {
-                List valueList = new ArrayList();
+                List<String> valueList = new ArrayList<>();
                 StringTokenizer commaSplitter = new StringTokenizer(values, ",");
                 while (commaSplitter.hasMoreElements()) valueList.add(commaSplitter.nextToken());
 

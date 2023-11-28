@@ -4,6 +4,8 @@
  */
 package org.geoserver.security.filter;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.File;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -38,14 +40,14 @@ public class GeoServerBasicAuthenticationFilterTest {
         buff.append(authenticationFilter.getName());
         MessageDigest digest = MessageDigest.getInstance("MD5");
         String digestString =
-                new String(Hex.encode(digest.digest(buff.toString().getBytes("utf-8"))));
+                new String(Hex.encode(digest.digest(buff.toString().getBytes(UTF_8))));
         expected = USERNAME + digestString;
     }
 
     @Test
     public void testMultiThreadGetCacheKey() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(NTHREADS);
-        List<Future<Boolean>> list = new ArrayList<Future<Boolean>>();
+        List<Future<Boolean>> list = new ArrayList<>();
         for (int i = 0; i < 600; i++) {
             Callable<Boolean> worker = new AuthenticationCallable(authenticationFilter);
             Future<Boolean> submit = executor.submit(worker);
@@ -76,6 +78,7 @@ public class GeoServerBasicAuthenticationFilterTest {
         return authenticationFilter;
     }
 
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     private MockHttpServletRequest createRequest() {
         MockHttpServletRequest request =
                 new GeoServerAbstractTestSupport.GeoServerMockHttpServletRequest();

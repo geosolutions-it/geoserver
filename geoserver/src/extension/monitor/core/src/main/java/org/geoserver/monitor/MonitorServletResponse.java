@@ -6,8 +6,8 @@
 package org.geoserver.monitor;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 
@@ -49,6 +49,7 @@ public class MonitorServletResponse extends HttpServletResponseWrapper {
         super.setStatus(sc, sm);
     }
 
+    @Override
     public int getStatus() {
         return status;
     }
@@ -56,9 +57,9 @@ public class MonitorServletResponse extends HttpServletResponseWrapper {
     static class MonitorOutputStream extends ServletOutputStream {
 
         long nbytes;
-        OutputStream delegate;
+        ServletOutputStream delegate;
 
-        public MonitorOutputStream(OutputStream delegate) {
+        public MonitorOutputStream(ServletOutputStream delegate) {
             this.delegate = delegate;
         }
 
@@ -73,13 +74,13 @@ public class MonitorServletResponse extends HttpServletResponseWrapper {
         }
 
         @Override
-        public void write(byte b[]) throws IOException {
+        public void write(byte[] b) throws IOException {
             delegate.write(b);
             nbytes += b.length;
         }
 
         @Override
-        public void write(byte b[], int off, int len) throws IOException {
+        public void write(byte[] b, int off, int len) throws IOException {
             delegate.write(b, off, len);
             nbytes += len;
         }
@@ -92,6 +93,16 @@ public class MonitorServletResponse extends HttpServletResponseWrapper {
         @Override
         public void close() throws IOException {
             delegate.close();
+        }
+
+        @Override
+        public boolean isReady() {
+            return delegate.isReady();
+        }
+
+        @Override
+        public void setWriteListener(WriteListener writeListener) {
+            delegate.setWriteListener(writeListener);
         }
     }
 }

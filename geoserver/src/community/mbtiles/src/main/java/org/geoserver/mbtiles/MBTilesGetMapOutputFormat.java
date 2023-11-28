@@ -26,6 +26,7 @@ import org.geotools.mbtiles.MBTilesTile;
 import org.geotools.referencing.CRS;
 import org.geowebcache.grid.GridSubset;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.util.ProgressListener;
 
 /**
  * WMS GetMap Output Format for mbtiles
@@ -164,14 +165,10 @@ public class MBTilesGetMapOutputFormat extends AbstractTilesGetMapOutputFormat {
         return "EPSG:900913";
     }
 
-    /**
-     * Add tiles to an existing MBtile file
-     *
-     * @param mbtiles
-     * @param map
-     * @throws IOException
-     */
-    public void addTiles(MBTilesFile mbtiles, GetMapRequest req, String name) throws IOException {
-        addTiles(new MbTilesFileWrapper(mbtiles), req, name);
+    /** Add tiles to an existing MBtile file */
+    public void addTiles(
+            MBTilesFile mbtiles, GetMapRequest req, String name, ProgressListener listener)
+            throws IOException {
+        addTiles(new MbTilesFileWrapper(mbtiles), req, name, listener);
     }
 }

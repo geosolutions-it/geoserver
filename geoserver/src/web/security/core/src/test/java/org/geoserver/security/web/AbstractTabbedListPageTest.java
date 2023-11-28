@@ -23,6 +23,7 @@ public abstract class AbstractTabbedListPageTest<T> extends AbstractSecurityWick
 
     public static final String FIRST_COLUM_PATH = "itemProperties:0:component:link";
 
+    @Override
     @Before
     public void setUp() throws Exception {
         login();
@@ -85,8 +86,7 @@ public abstract class AbstractTabbedListPageTest<T> extends AbstractSecurityWick
         MarkupContainer listView =
                 (MarkupContainer) tester.getLastRenderedPage().get(getItemsPath());
 
-        @SuppressWarnings("unchecked")
-        Iterator<Component> it = (Iterator<Component>) listView.iterator();
+        Iterator<Component> it = listView.iterator();
 
         while (it.hasNext()) {
             MarkupContainer m = (MarkupContainer) it.next();

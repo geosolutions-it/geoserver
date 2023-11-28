@@ -47,11 +47,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @ControllerAdvice
 @RequestMapping(
-    path = {
-        RestBaseController.ROOT_PATH + "/layers",
-        RestBaseController.ROOT_PATH + "/workspaces/{workspaceName}/layers"
-    }
-)
+        path = {
+            RestBaseController.ROOT_PATH + "/layers",
+            RestBaseController.ROOT_PATH + "/workspaces/{workspaceName}/layers"
+        })
 public class LayerController extends AbstractCatalogController {
     private static final Logger LOGGER = Logging.getLogger(LayerController.class);
 
@@ -66,12 +65,11 @@ public class LayerController extends AbstractCatalogController {
      * @return All layers
      */
     @GetMapping(
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<LayerInfo> layersGet(@PathVariable(required = false) String workspaceName) {
 
         List<LayerInfo> layers;
@@ -90,17 +88,15 @@ public class LayerController extends AbstractCatalogController {
     /**
      * A single layer as JSON, XML or HTML.
      *
-     * @param layerName
      * @return A single layer
      */
     @GetMapping(
-        path = "/{layerName}",
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            path = "/{layerName}",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<LayerInfo> layerGet(
             @PathVariable String layerName, @PathVariable(required = false) String workspaceName) {
 
@@ -170,6 +166,7 @@ public class LayerController extends AbstractCatalogController {
         LOGGER.info("PUT layer " + layerName);
     }
 
+    @Override
     public boolean supports(
             MethodParameter methodParameter,
             Type targetType,
@@ -180,6 +177,7 @@ public class LayerController extends AbstractCatalogController {
     //
     // Configuration and Settings
     //
+    @Override
     public void configurePersister(XStreamPersister persister, XStreamMessageConverter converter) {
         persister.setCallback(
                 new XStreamPersister.Callback() {
@@ -190,7 +188,6 @@ public class LayerController extends AbstractCatalogController {
 
                     @Override
                     protected CatalogInfo getCatalogObject() {
-                        @SuppressWarnings("unchecked")
                         Map<String, String> uriTemplateVars = getURITemplateVariables();
                         String layerName = uriTemplateVars.get("layerName");
                         if (layerName == null) {

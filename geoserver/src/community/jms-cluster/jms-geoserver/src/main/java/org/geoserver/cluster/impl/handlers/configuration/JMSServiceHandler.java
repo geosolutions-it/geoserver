@@ -23,6 +23,7 @@ public class JMSServiceHandler extends JMSConfigurationHandler<JMSServiceModifyE
 
     private final ToggleSwitch producer;
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public JMSServiceHandler(GeoServer geo, XStream xstream, Class clazz, ToggleSwitch producer) {
         super(xstream, clazz);
         this.geoServer = geo;
@@ -85,9 +86,6 @@ public class JMSServiceHandler extends JMSConfigurationHandler<JMSServiceModifyE
      * @param geoServer local GeoServer instance
      * @param ev the incoming event
      * @return the localized and updated ServiceInfo to save
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
-     * @throws NoSuchMethodException
      */
     private static ServiceInfo localizeService(
             final GeoServer geoServer, final JMSServiceModifyEvent ev)
@@ -108,9 +106,6 @@ public class JMSServiceHandler extends JMSConfigurationHandler<JMSServiceModifyE
     /**
      * get local object searching by name if name is changed (remotely), search is performed using
      * the old one
-     *
-     * @param geoServer
-     * @param ev
      */
     public static ServiceInfo getLocalService(
             final GeoServer geoServer, final JMSServiceModifyEvent ev) {

@@ -5,7 +5,7 @@
  */
 package org.geoserver.web.wicket.browser;
 
-import java.awt.*;
+import java.awt.AWTError;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
@@ -83,7 +83,7 @@ public class GeoServerFileChooser extends Panel {
         File dataDirectory = fileRootsFinder.getDataDirectory();
 
         // find under which root the selection should be placed
-        File selection = (File) file.getObject();
+        File selection = file.getObject();
 
         // first check if the file is a relative reference into the data dir
         if (selection != null) {
@@ -112,27 +112,27 @@ public class GeoServerFileChooser extends Panel {
             // and switch back to the data directory
             if (selectionRoot == null) {
                 selectionRoot = dataDirectory;
-                file = new Model<File>(selectionRoot);
+                file = new Model<>(selectionRoot);
             } else {
                 if (!selection.isDirectory()) {
-                    file = new Model<File>(selection.getParentFile());
+                    file = new Model<>(selection.getParentFile());
                 } else {
-                    file = new Model<File>(selection);
+                    file = new Model<>(selection);
                 }
             }
         } else {
             selectionRoot = dataDirectory;
-            file = new Model<File>(selectionRoot);
+            file = new Model<>(selectionRoot);
         }
         this.file = file;
         setDefaultModel(file);
 
         // the root chooser
         final DropDownChoice<File> choice =
-                new DropDownChoice<File>(
+                new DropDownChoice<>(
                         "roots",
-                        new Model<File>(selectionRoot),
-                        new Model<ArrayList<File>>(roots),
+                        new Model<>(selectionRoot),
+                        new Model<>(roots),
                         new FileRootsRenderer(this));
         choice.add(
                 new AjaxFormComponentUpdatingBehavior("change") {
@@ -151,7 +151,7 @@ public class GeoServerFileChooser extends Panel {
 
         // the breadcrumbs
         breadcrumbs =
-                new FileBreadcrumbs("breadcrumbs", new Model<File>(selectionRoot), file) {
+                new FileBreadcrumbs("breadcrumbs", new Model<>(selectionRoot), file) {
 
                     private static final long serialVersionUID = -6995769189316700797L;
 
@@ -194,14 +194,11 @@ public class GeoServerFileChooser extends Panel {
     /**
      * Action undertaken as a directory is clicked. Default behavior is to drill down into the
      * directory.
-     *
-     * @param file
-     * @param target
      */
     protected void directoryClicked(File file, AjaxRequestTarget target) {
         // explicitly change the root model, inform the other components the model has changed
         this.file.setObject(file);
-        fileTable.getProvider().setDirectory(new Model<File>(file));
+        fileTable.getProvider().setDirectory(new Model<>(file));
         breadcrumbs.setSelection(file);
 
         target.add(fileTable);
@@ -223,8 +220,6 @@ public class GeoServerFileChooser extends Panel {
     /**
      * Set the file table fixed height. Set it to null if you don't want fixed height with overflow,
      * and to a valid CSS measure if you want it instead. Default value is "25em"
-     *
-     * @param height
      */
     public void setFileTableHeight(String height) {
         fileTable.setTableHeight(height);
@@ -233,7 +228,6 @@ public class GeoServerFileChooser extends Panel {
     //    /**
     //     * If the file is in the data directory builds a data dir relative path, otherwise
     //     * returns an absolute path
-    //     * @param file
     //     *
     //     */
     //    public String getRelativePath(File file) {
@@ -266,6 +260,7 @@ public class GeoServerFileChooser extends Panel {
             this.component = component;
         }
 
+        @Override
         public Object getDisplayValue(File f) {
 
             if (f == USER_HOME) {
@@ -298,6 +293,7 @@ public class GeoServerFileChooser extends Panel {
             return f.getName();
         }
 
+        @Override
         public String getIdValue(File f, int count) {
             return "" + count;
         }

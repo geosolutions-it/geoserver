@@ -5,10 +5,10 @@
 
 package org.geoserver.platform;
 
-import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Optional;
 
+/** Report system environment details to server status page. */
 public class SystemEnvironmentStatus implements ModuleStatus {
 
     @Override
@@ -18,17 +18,17 @@ public class SystemEnvironmentStatus implements ModuleStatus {
 
     @Override
     public Optional<String> getComponent() {
-        return Optional.ofNullable("system-environment");
+        return Optional.ofNullable(System.getProperty("os.name"));
     }
 
     @Override
     public String getName() {
-        return "system-environment";
+        return "System Environment";
     }
 
     @Override
     public Optional<String> getVersion() {
-        return Optional.ofNullable(null);
+        return Optional.ofNullable(System.getProperty("os.version"));
     }
 
     @Override
@@ -44,9 +44,7 @@ public class SystemEnvironmentStatus implements ModuleStatus {
     @Override
     public Optional<String> getMessage() {
         StringBuffer result = new StringBuffer();
-        for (Iterator<Entry<String, String>> it = System.getenv().entrySet().iterator();
-                it.hasNext(); ) {
-            Entry<String, String> entry = it.next();
+        for (Entry<String, String> entry : System.getenv().entrySet()) {
             result.append(entry.getKey().toString() + "=" + entry.getValue().toString() + "\n");
         }
         return Optional.ofNullable(result.toString());

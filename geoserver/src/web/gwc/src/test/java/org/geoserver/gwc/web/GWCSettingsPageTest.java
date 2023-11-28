@@ -82,6 +82,35 @@ public class GWCSettingsPageTest extends GeoServerWicketTestSupport {
     }
 
     @Test
+    public void testEditRequireTiledParameter() {
+        GWC gwc = GWC.get();
+        boolean enabled = gwc.getConfig().isRequireTiledParameter();
+        testEditCheckboxOption(
+                "form:gwcServicesPanel:requireTiledParameter",
+                "gwcServicesPanel:requireTiledParameter",
+                enabled);
+        assertEquals(!enabled, gwc.getConfig().isRequireTiledParameter());
+    }
+
+    @Test
+    public void testRequireTiledParameterDefaultsTrue() {
+        GWC gwc = GWC.get();
+        boolean enabled = gwc.getConfig().isRequireTiledParameter();
+        assertTrue(enabled);
+        GWCSettingsPage page = new GWCSettingsPage();
+
+        tester.startPage(page);
+        // print(page, true, true);
+        tester.assertRenderedPage(GWCSettingsPage.class);
+
+        assertNotNull(
+                "form:gwcServicesPanel:requireTiledParameter",
+                tester.getComponentFromLastRenderedPage(
+                        "form:gwcServicesPanel:requireTiledParameter"));
+        tester.assertModelValue("form:gwcServicesPanel:requireTiledParameter", true);
+    }
+
+    @Test
     public void testEditEnableWMSC() {
         GWC gwc = GWC.get();
         boolean enabled = gwc.getConfig().isWMSCEnabled();
@@ -301,8 +330,8 @@ public class GWCSettingsPageTest extends GeoServerWicketTestSupport {
         String item = availableItems.getChoices().get(0);
         // Ensure the item is not null
         assertNotNull(item);
-        // Ensure the item is GlobalCRS84Pixel
-        assertTrue(item.equalsIgnoreCase("GlobalCRS84Pixel"));
+        // Ensure the item is CanadianNAD83_LCC
+        assertEquals("CanadianNAD83_LCC", item);
 
         // Selection of the form tests
         FormTester form = tester.newFormTester("form", false);
@@ -454,6 +483,8 @@ public class GWCSettingsPageTest extends GeoServerWicketTestSupport {
         FormTester form = tester.newFormTester("form");
         form.setValue("cachingOptionsPanel:container:configs:blobstores:innerCachingEnabled", true);
         form.submit("submit");
+        tester.assertRenderedPage(GeoServerHomePage.class);
+
         tester.startPage(new GWCSettingsPage());
 
         // check that the cache provider is guava
@@ -473,14 +504,32 @@ public class GWCSettingsPageTest extends GeoServerWicketTestSupport {
                         tester.getComponentFromLastRenderedPage(
                                 "form:cachingOptionsPanel:container:configs:blobstores:container:cacheConfContainer:policy");
         List evictionPolicies = evictionPoliciesDropDown.getChoices();
-        assertTrue(evictionPolicies.size() == 3);
+        assertEquals(3, evictionPolicies.size());
         assertTrue(evictionPolicies.contains(CacheConfiguration.EvictionPolicy.NULL));
         assertTrue(
                 evictionPolicies.contains(CacheConfiguration.EvictionPolicy.EXPIRE_AFTER_ACCESS));
         assertTrue(evictionPolicies.contains(CacheConfiguration.EvictionPolicy.EXPIRE_AFTER_WRITE));
     }
 
-    @SuppressWarnings("unchecked")
+    @Test
+    public void testApply() {
+        // creating a start the gwc configuration page
+        GWCSettingsPage page = new GWCSettingsPage();
+        tester.startPage(page);
+
+        // enabling the cache
+        FormTester form = tester.newFormTester("form");
+        form.setValue("cachingOptionsPanel:container:configs:blobstores:innerCachingEnabled", true);
+        form.submit("apply");
+
+        // check it did not go back to home
+        tester.assertRenderedPage(GWCSettingsPage.class);
+
+        GWC gwc = GWC.get();
+        GWCConfig config = gwc.getConfig();
+        assertTrue(config.isInnerCachingEnabled());
+    }
+
     @Test
     public void testMemoryCachePanelOpen() throws IOException {
         // enable in memory caching

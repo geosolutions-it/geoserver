@@ -47,7 +47,6 @@ public class EncodingInfo {
      * in <code>getEncodingName</code>. BOM is considered missing if object is constructed this way.
      *
      * @param encoding Name of the autodetected encoding scheme.
-     * @param isBigEndian
      *     <p>Detected byte order of the data. <code>true</code> if order is big-endian, <code>false
      *     </code> if little-endian, and <code>null</code> if byte order is not relevant for this
      *     encoding scheme.
@@ -64,7 +63,6 @@ public class EncodingInfo {
      * explicitly.
      *
      * @param encoding Name of the autodetected encoding scheme.
-     * @param isBigEndian
      *     <p>Detected byte order of the data. <code>true</code> if order is big-endian, <code>false
      *     </code> if little-endian, and <code>null</code> if byte order is not relevant for this
      *     encoding scheme.
@@ -111,6 +109,7 @@ public class EncodingInfo {
     }
 
     /** Returns current state of this instance in human-readable form. */
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer();
         sb.append((null == fEncoding) ? "[NULL]" : fEncoding);

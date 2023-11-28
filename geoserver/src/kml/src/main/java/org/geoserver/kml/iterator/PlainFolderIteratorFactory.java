@@ -43,13 +43,14 @@ public class PlainFolderIteratorFactory extends AbstractFolderIteratorFactory {
 
     public class PlainFolderGenerator extends AbstractFolderGenerator {
 
+        @Override
         protected void encodeFolderContents(Layer layer, Folder folder) {
             // now encode the contents (dynamic bit, it may use the Iterator construct)
             if (layer instanceof FeatureLayer) {
                 // do we use a KML placemark dump, or a ground overlay?
                 if (useVectorOutput(context)) {
                     List<Feature> features =
-                            new IteratorList<Feature>(
+                            new IteratorList<>(
                                     new FeatureIteratorFactory(context, (FeatureLayer) layer));
                     context.addFeatures(folder, features);
                 } else {
@@ -69,9 +70,6 @@ public class PlainFolderIteratorFactory extends AbstractFolderIteratorFactory {
          * Adds the feature centroids to the output features, without actually adding the full
          * geometry (used when doing raster overlays of vector data with a desire to retain the
          * popups)
-         *
-         * @param layer
-         * @param folder
          */
         private void addFeatureCentroids(Layer layer, Folder folder) {
             SimpleFeatureCollection centroids =
@@ -81,16 +79,11 @@ public class PlainFolderIteratorFactory extends AbstractFolderIteratorFactory {
             FeatureLayer centroidsLayer =
                     new FeatureLayer(centroids, layer.getStyle(), layer.getTitle());
             List<Feature> features =
-                    new IteratorList<Feature>(new FeatureIteratorFactory(context, centroidsLayer));
+                    new IteratorList<>(new FeatureIteratorFactory(context, centroidsLayer));
             context.addFeatures(folder, features);
         }
 
-        /**
-         * Encodes the ground overlay for the specified layer
-         *
-         * @param folder
-         * @param layer
-         */
+        /** Encodes the ground overlay for the specified layer */
         private void addGroundOverlay(Folder folder, Layer layer) {
             int mapLayerOrder = context.getMapContent().layers().indexOf(layer);
 

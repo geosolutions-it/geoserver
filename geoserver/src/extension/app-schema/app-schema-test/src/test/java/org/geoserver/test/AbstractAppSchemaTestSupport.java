@@ -7,9 +7,9 @@
 package org.geoserver.test;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -270,7 +270,7 @@ public abstract class AbstractAppSchemaTestSupport extends GeoServerSystemTestSu
     private XpathEngine getXpathEngine() {
         if (xpathEngine == null) {
             xpathEngine = XMLUnit.newXpathEngine();
-            Map<String, String> namespaces = new HashMap<String, String>();
+            Map<String, String> namespaces = new HashMap<>();
             namespaces.putAll(WFS_NAMESPACES);
             namespaces.putAll(getTestData().getNamespaces());
             xpathEngine.setNamespaceContext(new SimpleNamespaceContext(namespaces));
@@ -495,38 +495,10 @@ public abstract class AbstractAppSchemaTestSupport extends GeoServerSystemTestSu
      * @param image the imgage to check it is not "blank"
      * @param bgColor the background color for which differing pixels are looked for
      */
+    @Override
     protected void assertNotBlank(String testName, BufferedImage image, Color bgColor) {
-        int pixelsDiffer = countNonBlankPixels(testName, image, bgColor);
+        int pixelsDiffer = super.countNonBlankPixels(testName, image, bgColor);
         assertTrue(testName + " image is completely blank", 0 < pixelsDiffer);
-    }
-
-    /**
-     * For WMS tests.
-     *
-     * <p>Counts the number of non black pixels
-     *
-     * @param testName
-     * @param image
-     * @param bgColor
-     */
-    protected int countNonBlankPixels(String testName, BufferedImage image, Color bgColor) {
-        int pixelsDiffer = 0;
-
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                if (image.getRGB(x, y) != bgColor.getRGB()) {
-                    ++pixelsDiffer;
-                }
-            }
-        }
-
-        LOGGER.fine(
-                testName
-                        + ": pixel count="
-                        + (image.getWidth() * image.getHeight())
-                        + " non bg pixels: "
-                        + pixelsDiffer);
-        return pixelsDiffer;
     }
 
     /**

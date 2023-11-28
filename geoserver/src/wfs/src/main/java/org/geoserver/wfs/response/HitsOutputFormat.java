@@ -20,7 +20,6 @@ import org.geoserver.platform.ServiceException;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
 import org.geoserver.wfs.xml.GML3OutputFormat;
-import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Encoder;
@@ -41,20 +40,28 @@ public class HitsOutputFormat extends WFSResponse {
         this.configuration = configuration;
     }
 
-    /** @return "text/xml"; */
+    /**
+     * for WFS 1.1.1 - returns "text/xml; subtype=gml/3.1.1" - as required by WFS 1.1.0 Spec
+     * otherwise "text/xml"
+     */
+    @Override
     public String getMimeType(Object value, Operation operation) throws ServiceException {
+        if (operation.getService().getVersion().toString().equals("1.1.0")) {
+            return "text/xml; subtype=gml/3.1.1";
+        }
         return "text/xml";
     }
 
     /** Checks that the resultType is of type "hits". */
+    @Override
     public boolean canHandle(Operation operation) {
         GetFeatureType request =
-                (GetFeatureType)
-                        OwsUtils.parameter(operation.getParameters(), GetFeatureType.class);
+                OwsUtils.parameter(operation.getParameters(), GetFeatureType.class);
 
         return (request != null) && (request.getResultType() == ResultTypeType.HITS_LITERAL);
     }
 
+    @Override
     public void write(Object value, OutputStream output, Operation operation)
             throws IOException, ServiceException {
         WFSInfo wfs = getInfo();
@@ -86,16 +93,10 @@ public class HitsOutputFormat extends WFSResponse {
     private BigInteger countFeature(FeatureCollectionResponse fct) {
         BigInteger count = BigInteger.valueOf(0);
         for (int fcIndex = 0; fcIndex < fct.getFeature().size(); fcIndex++) {
-            FeatureIterator i = null;
-            try {
-                for (i = (((FeatureCollection) fct.getFeature().get(fcIndex)).features());
-                        i.hasNext();
-                        i.next()) {
+            try (FeatureIterator i = (fct.getFeature().get(fcIndex).features())) {
+                while (i.hasNext()) {
                     count = count.add(BigInteger.ONE);
-                }
-            } finally {
-                if (i != null) {
-                    i.close();
+                    i.next();
                 }
             }
         }

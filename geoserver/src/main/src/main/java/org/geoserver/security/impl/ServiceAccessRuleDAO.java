@@ -5,7 +5,7 @@
  */
 package org.geoserver.security.impl;
 
-import static org.geoserver.security.impl.DataAccessRule.*;
+import static org.geoserver.security.impl.DataAccessRule.ANY;
 
 import java.io.IOException;
 import java.util.Map;
@@ -13,6 +13,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.logging.Logger;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.config.GeoServerDataDirectory;
@@ -45,31 +46,20 @@ public class ServiceAccessRuleDAO extends AbstractAccessRuleDAO<ServiceAccessRul
         this.rawCatalog = rawCatalog;
     }
 
-    /**
-     * Builds a new dao
-     *
-     * @param rawCatalog
-     */
+    /** Builds a new dao */
     public ServiceAccessRuleDAO() throws IOException {
         super(GeoServerExtensions.bean(GeoServerDataDirectory.class), SERVICES);
     }
 
-    /**
-     * Builds a new dao with a custom security dir. Used mostly for testing purposes
-     *
-     * @param rawCatalog
-     */
-    ServiceAccessRuleDAO(Catalog rawCatalog, Resource securityDir) {
+    /** Builds a new dao with a custom security dir. Used mostly for testing purposes */
+    ServiceAccessRuleDAO(Resource securityDir) {
         super(securityDir, SERVICES);
     }
 
-    /**
-     * Parses the rules contained in the property file
-     *
-     * @param props
-     */
+    /** Parses the rules contained in the property file */
+    @Override
     protected void loadRules(Properties props) {
-        TreeSet<ServiceAccessRule> result = new TreeSet<ServiceAccessRule>();
+        SortedSet<ServiceAccessRule> result = new ConcurrentSkipListSet<>();
         for (Map.Entry<Object, Object> entry : props.entrySet()) {
             String ruleKey = (String) entry.getKey();
             String ruleValue = (String) entry.getValue();
@@ -88,7 +78,7 @@ public class ServiceAccessRuleDAO extends AbstractAccessRuleDAO<ServiceAccessRul
         }
 
         // make sure to add the "all access alloed" rule if the set if empty
-        if (result.size() == 0) {
+        if (result.isEmpty()) {
             result.add(new ServiceAccessRule(new ServiceAccessRule()));
         }
 
@@ -133,6 +123,7 @@ public class ServiceAccessRuleDAO extends AbstractAccessRuleDAO<ServiceAccessRul
     }
 
     /** Turns the rules list into a property bag */
+    @Override
     protected Properties toProperties() {
         Properties props = new Properties();
         for (ServiceAccessRule rule : rules) {
@@ -141,23 +132,15 @@ public class ServiceAccessRuleDAO extends AbstractAccessRuleDAO<ServiceAccessRul
         return props;
     }
 
-    /**
-     * Parses workspace.layer.mode into an array of strings
-     *
-     * @param path
-     */
+    /** Parses workspace.layer.mode into an array of strings */
     private String[] parseElements(String path) {
         // regexp: ignore extra spaces, split on dot
         return path.split("\\s*\\.\\s*");
     }
 
-    /**
-     * Returns a sorted set of rules associated to the role
-     *
-     * @param role
-     */
+    /** Returns a sorted set of rules associated to the role */
     public SortedSet<ServiceAccessRule> getRulesAssociatedWithRole(String role) {
-        SortedSet<ServiceAccessRule> result = new TreeSet<ServiceAccessRule>();
+        SortedSet<ServiceAccessRule> result = new TreeSet<>();
         for (ServiceAccessRule rule : getRules())
             if (rule.getRoles().contains(role)) result.add(rule);
         return result;

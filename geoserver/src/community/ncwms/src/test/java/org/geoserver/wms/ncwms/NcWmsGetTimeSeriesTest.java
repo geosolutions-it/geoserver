@@ -5,6 +5,7 @@
 package org.geoserver.wms.ncwms;
 
 import static org.geoserver.catalog.DimensionPresentation.LIST;
+import static org.geoserver.catalog.ResourceInfo.CUSTOM_DIMENSION_PREFIX;
 import static org.geoserver.catalog.ResourceInfo.ELEVATION;
 import static org.geoserver.catalog.ResourceInfo.TIME;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,9 +44,6 @@ public class NcWmsGetTimeSeriesTest extends WMSDimensionsTestSupport {
     static final String BASE_URL_3857 =
             "wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetTimeSeries&FORMAT=image%2Fjpeg&QUERY_LAYERS=watertemp&STYLES&LAYERS=watertemp&FEATURE_COUNT=50&X=50&Y=50&SRS=EPSG%3A3857&WIDTH=101&HEIGHT=101&BBOX=1007839.2841354463%2C5039196.420677232%2C1254607.205826792%2C5285964.342368577";
 
-    static final String BASE_URL_4326_TIME_SERIES =
-            "wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetTimeSeries&FORMAT=image%2Fjpeg&LAYERS=timeseries&QUERY_LAYERS=timeseries&STYLES&&FEATURE_COUNT=50&X=50&Y=50&SRS=EPSG%3A4326&WIDTH=101&HEIGHT=101&BBOX=3.724365234375%2C40.81420898437501%2C5.943603515625%2C43.03344726562501";
-
     static final String TIME_RANGE_COMPLETE =
             "&TIME=2008-10-31T00:00:00.000Z/2008-11-01T00:00:00.000Z";
 
@@ -59,8 +57,6 @@ public class NcWmsGetTimeSeriesTest extends WMSDimensionsTestSupport {
 
     static final String TIME_RANGE_SLICE2 =
             "&TIME=2008-11-01T00:00:00.000Z/2008-11-01T00:00:00.000Z";
-
-    static final String TIME_RANGE1_TIME_SERIES = "&TIME=2014-01-01/2016-01-01";
 
     static final String BASE_URL_4326_TIMESERIES =
             "wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetTimeSeries&FORMAT=image%2Fjpeg&LAYERS=timeseries&QUERY_LAYERS=timeseries&STYLES&&FEATURE_COUNT=50&X=50&Y=50&SRS=EPSG%3A4326&WIDTH=101&HEIGHT=101&BBOX=3.724365234375%2C40.81420898437501%2C5.943603515625%2C43.03344726562501";
@@ -420,11 +416,39 @@ public class NcWmsGetTimeSeriesTest extends WMSDimensionsTestSupport {
                         "wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetTimeSeries&FORMAT=image%2Fjpeg&LAYERS"
                                 + "=watertemp&QUERY_LAYERS=watertemp&STYLES&&FEATURE_COUNT=50&X=50&Y=50"
                                 + "&SRS=EPSG%3A4326&WIDTH=101&HEIGHT=101&BBOX=3.724365234375%2C40"
-                                + ".81420898437501%2C5.943603515625%2C43.03344726562501&TIME=2005/2006/P1M");
+                                + ".81420898437501%2C5.943603515625%2C43.03344726562501&time=&TIME=2005/2006/P1M");
         assertThat(
                 checkLegacyException(dom, "InvalidParameterValue", "time"),
                 CoreMatchers.containsString(
                         "More than 3 times specified in the request, bailing out."));
+    }
+
+    @Test
+    public void testSourceWithTimeRanges() throws Exception {
+        // setup all the dimensions
+        setupRasterDimension(TIMERANGES, TIME, LIST, null, null, null);
+        setupRasterDimension(TIMERANGES, ELEVATION, LIST, null, UNITS, UNIT_SYMBOL);
+        setupRasterDimension(
+                TIMERANGES, CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", LIST, null, null, null);
+        // not setting up the date custom dimension as it just uses the same columns as time
+
+        // prepare URL
+        String layer = getLayerId(TIMERANGES);
+        String baseUrl =
+                "wms?LAYERS="
+                        + layer
+                        + "&STYLES=temperature&FORMAT=image%2Fpng&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetTimeSeries&SRS=EPSG:4326"
+                        + "&BBOX=-0.89131513678082,40.246933882167,15.721292974683,44.873229811941&WIDTH=200&HEIGHT=80&query_layers="
+                        + layer
+                        + "&x=68&y=72";
+        String url = baseUrl + "&TIME=2008-10-31T12:00:00.000Z/2008-11-06T12:00:00.000Z";
+
+        // run and check
+        String rawCsv = getAsString(url);
+        String[] lines = rawCsv.split("\\r?\\n");
+        Assert.assertEquals(5, lines.length);
+        assertCsvLine("date 2008-10-31", lines[3], "2008-10-31T00:00:00.000Z", 20.027, EPS);
+        assertCsvLine("date 2008-11-05", lines[4], "2008-11-05T00:00:00.000Z", 14.782, EPS);
     }
 
     @Test

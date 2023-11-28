@@ -105,9 +105,9 @@ public class GetCapabilitiesTest extends WPSTestSupport {
 
     @Test
     public void testBasicGetLanguage() throws Exception { // Standard Test A.4.2.3
-        Document d = getAsDOM("wps?service=wps&request=getcapabilities&language=en-US");
+        Document d = getAsDOM("wps?service=wps&request=getcapabilities&Language=en-US");
         // print(d);
-        basicCapabilitiesTest(d, null);
+        basicCapabilitiesTest(d, null, "Language=en-US");
     }
 
     @Test
@@ -138,6 +138,11 @@ public class GetCapabilitiesTest extends WPSTestSupport {
     }
 
     private void basicCapabilitiesTest(Document d, String workspace) throws Exception {
+        basicCapabilitiesTest(d, workspace, null);
+    }
+
+    private void basicCapabilitiesTest(Document d, String workspace, String language)
+            throws Exception {
         // print(d);
         checkValidationErrors(d);
 
@@ -156,7 +161,12 @@ public class GetCapabilitiesTest extends WPSTestSupport {
         if (workspace != null) {
             expectedOperationUrl = "http://localhost:8080/geoserver/" + workspace + "/wps";
         }
-        String[] operations = new String[] {"GetCapabilities", "DescribeProcess", "Execute"};
+
+        if (language != null) {
+            expectedOperationUrl = expectedOperationUrl + "?" + language;
+        }
+
+        String[] operations = {"GetCapabilities", "DescribeProcess", "Execute"};
         for (String operation : operations) {
             String getPath =
                     "//ows:Operation[@name='"

@@ -25,6 +25,7 @@ import org.geoserver.ows.ServiceStrategy;
  * @version $Revision: 1.23 $
  */
 public class FileStrategy implements ServiceStrategy {
+    @Override
     public String getId() {
         return "FILE";
     }
@@ -54,6 +55,7 @@ public class FileStrategy implements ServiceStrategy {
      * @return Outputstream for a temporary file
      * @throws IOException If temporary file could not be created.
      */
+    @Override
     public DispatcherOutputStream getDestination(HttpServletResponse response) throws IOException {
         // REVISIT: Should do more than sequence here
         // (In case we are running two GeoServers at once)
@@ -87,6 +89,7 @@ public class FileStrategy implements ServiceStrategy {
      * @throws IOException If temporay file or response is unavailable
      * @throws IllegalStateException if flush is called before getDestination
      */
+    @Override
     public void flush(HttpServletResponse response) throws IOException {
         if ((temp == null) || (response == null) || (safe == null) || !temp.exists()) {
             LOGGER.fine(
@@ -101,8 +104,6 @@ public class FileStrategy implements ServiceStrategy {
             throw new IllegalStateException("flush should only be called after getDestination");
         }
 
-        InputStream copy = null;
-
         try {
             safe.flush();
             safe.close();
@@ -110,41 +111,31 @@ public class FileStrategy implements ServiceStrategy {
 
             // service succeeded in producing a response!
             // copy result to the real output stream
-            copy = new BufferedInputStream(new FileInputStream(temp));
+            try (InputStream copy = new BufferedInputStream(new FileInputStream(temp))) {
 
-            OutputStream out = response.getOutputStream();
-            out = new BufferedOutputStream(out, 1024 * 1024);
+                @SuppressWarnings("PMD.CloseResource") // managed by servlet container
+                OutputStream out = response.getOutputStream();
+                out = new BufferedOutputStream(out, 1024 * 1024);
 
-            byte[] buffer = new byte[BUFF_SIZE];
-            int b;
+                byte[] buffer = new byte[BUFF_SIZE];
+                int b;
 
-            while ((b = copy.read(buffer, 0, BUFF_SIZE)) > 0) {
-                out.write(buffer, 0, b);
+                while ((b = copy.read(buffer, 0, BUFF_SIZE)) > 0) {
+                    out.write(buffer, 0, b);
+                }
+
+                // Speed Writer closes output Stream
+                // I would prefer to leave that up to doService...
+                out.flush();
             }
-
-            // Speed Writer closes output Stream
-            // I would prefer to leave that up to doService...
-            out.flush();
-
-            // out.close();
         } catch (IOException ioe) {
             throw ioe;
         } finally {
-            if (copy != null) {
-                try {
-                    copy.close();
-                } catch (Exception ex) {
-                }
-            }
-
-            copy = null;
-
             if ((temp != null) && temp.exists()) {
                 temp.delete();
             }
 
             temp = null;
-            response = null;
             safe = null;
         }
     }
@@ -154,6 +145,7 @@ public class FileStrategy implements ServiceStrategy {
      *
      * @see org.geoserver.ows.ServiceStrategy#abort()
      */
+    @Override
     public void abort() {
         if (safe != null) {
             try {
@@ -171,6 +163,7 @@ public class FileStrategy implements ServiceStrategy {
         temp = null;
     }
 
+    @Override
     public Object clone() throws CloneNotSupportedException {
         return new FileStrategy();
     }

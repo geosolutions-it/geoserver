@@ -11,3 +11,6 @@ OpenSearch for EO
    configuration
    database
    automation
+   STAC
+   templates
+   upgrading

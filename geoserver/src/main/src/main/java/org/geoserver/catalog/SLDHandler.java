@@ -5,6 +5,9 @@
  */
 package org.geoserver.catalog;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static javax.xml.stream.XMLStreamConstants.START_ELEMENT;
+
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,7 +21,12 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.TransformerException;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.ows.util.RequestUtils;
@@ -39,9 +47,6 @@ import org.geotools.xsd.Parser;
 import org.vfny.geoserver.util.SLDValidator;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
 
 /**
  * SLD style handler.
@@ -56,7 +61,7 @@ public class SLDHandler extends StyleHandler {
      * number of bytes to "look ahead" when pre parsing xml document. TODO: make this configurable,
      * and possibley link it to the same value used by the ows dispatcher.
      */
-    static int XML_LOOKAHEAD = 8192;
+    static int XML_LOOKAHEAD = 8500;
 
     public static final String FORMAT = "sld";
 
@@ -66,30 +71,30 @@ public class SLDHandler extends StyleHandler {
     public static final String MIMETYPE_10 = "application/vnd.ogc.sld+xml";
     public static final String MIMETYPE_11 = "application/vnd.ogc.se+xml";
 
-    static final Map<StyleType, String> TEMPLATES = new HashMap<StyleType, String>();
+    static final Map<StyleType, String> TEMPLATES = new HashMap<>();
 
     static {
         try {
             TEMPLATES.put(
                     StyleType.POINT,
                     IOUtils.toString(
-                            SLDHandler.class.getResourceAsStream("template_point.sld"), "UTF-8"));
+                            SLDHandler.class.getResourceAsStream("template_point.sld"), UTF_8));
             TEMPLATES.put(
                     StyleType.POLYGON,
                     IOUtils.toString(
-                            SLDHandler.class.getResourceAsStream("template_polygon.sld"), "UTF-8"));
+                            SLDHandler.class.getResourceAsStream("template_polygon.sld"), UTF_8));
             TEMPLATES.put(
                     StyleType.LINE,
                     IOUtils.toString(
-                            SLDHandler.class.getResourceAsStream("template_line.sld"), "UTF-8"));
+                            SLDHandler.class.getResourceAsStream("template_line.sld"), UTF_8));
             TEMPLATES.put(
                     StyleType.RASTER,
                     IOUtils.toString(
-                            SLDHandler.class.getResourceAsStream("template_raster.sld"), "UTF-8"));
+                            SLDHandler.class.getResourceAsStream("template_raster.sld"), UTF_8));
             TEMPLATES.put(
                     StyleType.GENERIC,
                     IOUtils.toString(
-                            SLDHandler.class.getResourceAsStream("template_generic.sld"), "UTF-8"));
+                            SLDHandler.class.getResourceAsStream("template_generic.sld"), UTF_8));
         } catch (IOException e) {
             throw new RuntimeException("Error loading up the style templates", e);
         }
@@ -148,7 +153,7 @@ public class SLDHandler extends StyleHandler {
             EntityResolver entityResolver)
             throws IOException {
         if (version == null) {
-            Object[] versionAndReader = getVersionAndReader(input);
+            Object[] versionAndReader = getVersionAndReader(input, true);
             version = (Version) versionAndReader[0];
             input = versionAndReader[1];
         }
@@ -160,10 +165,12 @@ public class SLDHandler extends StyleHandler {
         }
     }
 
+    @SuppressWarnings({"PMD.CloseResource", "PMD.UseTryWithResources"})
     StyledLayerDescriptor parse10(
             Object input, ResourceLocator resourceLocator, EntityResolver entityResolver)
             throws IOException {
 
+        // reader is conditionally initialized, actually gets closed
         Reader reader = null;
         try {
             // we need to close the reader if we grab one, but if it's a file it has
@@ -236,6 +243,7 @@ public class SLDHandler extends StyleHandler {
         if (locator != null) {
             sld =
                     new SLDConfiguration() {
+                        @Override
                         protected void configureContext(
                                 org.picocontainer.MutablePicoContainer container) {
                             container.registerComponentInstance(ResourceLocator.class, locator);
@@ -287,7 +295,7 @@ public class SLDHandler extends StyleHandler {
     public List<Exception> validate(Object input, Version version, EntityResolver entityResolver)
             throws IOException {
         if (version == null) {
-            Object[] versionAndReader = getVersionAndReader(input);
+            Object[] versionAndReader = getVersionAndReader(input, true);
             version = (Version) versionAndReader[0];
             input = versionAndReader[1];
         }
@@ -303,7 +311,9 @@ public class SLDHandler extends StyleHandler {
         try (Reader reader = toReader(input)) {
             final SLDValidator validator = new SLDValidator();
             validator.setEntityResolver(entityResolver);
-            return validator.validateSLD(new InputSource(reader));
+            return validator.validateSLD(new InputSource(reader)).stream()
+                    .map(e -> (Exception) e)
+                    .collect(Collectors.toList());
         }
     }
 
@@ -319,13 +329,14 @@ public class SLDHandler extends StyleHandler {
 
     @Override
     public Version version(Object input) throws IOException {
-        Object[] versionAndReader = getVersionAndReader(input);
+        Object[] versionAndReader = getVersionAndReader(input, false);
         return (Version) versionAndReader[0];
     }
 
     /** Helper method for finding which style handler/version to use from the actual content. */
-    Object[] getVersionAndReader(Object input) throws IOException {
+    Object[] getVersionAndReader(Object input, boolean needReader) throws IOException {
         // need to determine version of sld from actual content
+        @SuppressWarnings("PMD.CloseResource") // returned as part of the response
         BufferedReader reader = null;
 
         if (input instanceof InputStream) {
@@ -334,28 +345,41 @@ public class SLDHandler extends StyleHandler {
             reader = RequestUtils.getBufferedXMLReader(toReader(input), XML_LOOKAHEAD);
         }
 
-        String version;
+        String version = null;
+        XMLStreamReader parser;
         try {
             // create stream parser
-            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-            factory.setNamespaceAware(true);
-            factory.setValidating(false);
-
-            // parse root element
-            XmlPullParser parser = factory.newPullParser();
-            parser.setInput(reader);
-            parser.nextTag();
-
-            version = null;
-            for (int i = 0; i < parser.getAttributeCount(); i++) {
-                if ("version".equals(parser.getAttributeName(i))) {
-                    version = parser.getAttributeValue(i);
+            XMLInputFactory factory = XMLInputFactory.newFactory();
+            // disable DTDs
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+            // disable external entities
+            factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+            parser = factory.createXMLStreamReader(reader);
+        } catch (XMLStreamException e) {
+            throw new IOException("Error creating xml parser", e);
+        }
+        try {
+            // position at root element
+            while (parser.hasNext()) {
+                if (START_ELEMENT == parser.next()) {
+                    break;
                 }
             }
 
-            parser.setInput(null);
-        } catch (XmlPullParserException e) {
-            throw (IOException) new IOException("Error parsing content").initCause(e);
+            for (int i = 0; i < parser.getAttributeCount(); i++) {
+                if ("version".equals(parser.getAttributeLocalName(i))) {
+                    version = parser.getAttributeValue(i);
+                }
+            }
+        } catch (XMLStreamException e) {
+            throw new IOException("Error parsing content", e);
+        } finally {
+            // release parser resources, does not close input stream
+            try {
+                parser.close();
+            } catch (XMLStreamException e) {
+                LOGGER.log(Level.WARNING, "Non fatal error closing XML Stream Parser", e);
+            }
         }
 
         // reset input stream
@@ -366,7 +390,15 @@ public class SLDHandler extends StyleHandler {
             version = "1.0.0";
         }
 
-        return new Object[] {new Version(version), reader};
+        Object[] result;
+        if (needReader) {
+            result = new Object[] {new Version(version), reader};
+        } else {
+            reader.close();
+            result = new Object[] {new Version(version)};
+        }
+
+        return result;
     }
 
     @Override

@@ -36,8 +36,8 @@ public class Tile {
             WORLD_BOUNDS = new ReferencedEnvelope(new Envelope(180.0, -180.0, 90.0, -90.0), WGS84);
             MAX_TILE_WIDTH = WORLD_BOUNDS.getWidth() / 2.0;
 
-            // make sure, once and for all, that H2 is around
-            Class.forName("org.h2.Driver");
+            // make sure, once and for all, that HSQL is around
+            Class.forName("org.hsqldb.jdbcDriver");
         } catch (Exception e) {
             throw new RuntimeException("Could not initialize the class constants", e);
         }
@@ -51,13 +51,7 @@ public class Tile {
 
     protected ReferencedEnvelope envelope;
 
-    /**
-     * Creates a new tile with the given coordinates
-     *
-     * @param x
-     * @param y
-     * @param z
-     */
+    /** Creates a new tile with the given coordinates */
     public Tile(long x, long y, long z) {
         this.x = x;
         this.y = y;
@@ -76,9 +70,6 @@ public class Tile {
      * </ul>
      *
      * This code takes care of the first, whilst the second issue remains as a TODO
-     *
-     * @param x
-     * @param y
      */
     public boolean contains(double x, double y) {
         double minx = envelope.getMinX();

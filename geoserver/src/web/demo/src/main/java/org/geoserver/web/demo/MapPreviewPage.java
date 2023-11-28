@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
 import org.apache.wicket.behavior.AttributeAppender;
@@ -33,6 +34,7 @@ import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.markup.repeater.RepeatingView;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
+import org.apache.wicket.request.resource.DynamicImageResource;
 import org.geoserver.catalog.PublishedType;
 import org.geoserver.config.GeoServer;
 import org.geoserver.ows.util.ResponseUtils;
@@ -85,12 +87,12 @@ public class MapPreviewPage extends GeoServerBasePage {
                             return new Label(id, property.getModel(itemModel));
                         } else if (property == COMMON) {
                             Fragment f = new Fragment(id, "commonLinks", MapPreviewPage.this);
-                            ListView lv =
-                                    new ListView("commonFormat", commonFormatLinks(layer)) {
+                            ListView<ExternalLink> lv =
+                                    new ListView<ExternalLink>(
+                                            "commonFormat", commonFormatLinks(layer)) {
                                         @Override
-                                        public void populateItem(ListItem item) {
-                                            final ExternalLink link =
-                                                    (ExternalLink) item.getModelObject();
+                                        public void populateItem(ListItem<ExternalLink> item) {
+                                            final ExternalLink link = item.getModelObject();
                                             item.add(link);
                                         }
                                     };
@@ -154,13 +156,13 @@ public class MapPreviewPage extends GeoServerBasePage {
         if (formats != null) {
             return formats;
         }
-        formats = new ArrayList<String>();
+        formats = new ArrayList<>();
 
         final GeoServerApplication application = getGeoServerApplication();
-        final List<GetMapOutputFormat> outputFormats;
-        outputFormats = application.getBeansOfType(GetMapOutputFormat.class);
+        final List<GetMapOutputFormat> outputFormats =
+                application.getBeansOfType(GetMapOutputFormat.class);
         for (GetMapOutputFormat producer : outputFormats) {
-            Set<String> producerFormats = new HashSet<String>(producer.getOutputFormatNames());
+            Set<String> producerFormats = new HashSet<>(producer.getOutputFormatNames());
             producerFormats.add(producer.getMimeType());
             String knownFormat = producer.getMimeType();
             for (String formatName : producerFormats) {
@@ -172,14 +174,14 @@ public class MapPreviewPage extends GeoServerBasePage {
             }
             formats.add(knownFormat);
         }
-        formats = new ArrayList<String>(new HashSet<String>(formats));
+        formats = new ArrayList<>(new HashSet<>(formats));
         prepareFormatList(formats, new FormatComparator("format.wms."));
         this.availableWMSFormats = formats;
         return formats;
     }
 
     private List<String> getAvailableWFSFormats() {
-        List<String> formats = new ArrayList<String>();
+        List<String> formats = new ArrayList<>();
 
         final GeoServerApplication application = getGeoServerApplication();
         for (WFSGetFeatureOutputFormat producer :
@@ -221,7 +223,7 @@ public class MapPreviewPage extends GeoServerBasePage {
             Label format = new Label(i + "", label);
             format.add(
                     new AttributeModifier(
-                            "value", new Model<String>(ResponseUtils.urlEncode(wmsOutputFormat))));
+                            "value", new Model<>(ResponseUtils.urlEncode(wmsOutputFormat))));
             wmsFormats.add(format);
         }
         wmsFormatsGroup.add(wmsFormats);
@@ -243,8 +245,7 @@ public class MapPreviewPage extends GeoServerBasePage {
                 Label format = new Label(i + "", label);
                 format.add(
                         new AttributeModifier(
-                                "value",
-                                new Model<String>(ResponseUtils.urlEncode(wfsOutputFormat))));
+                                "value", new Model<>(ResponseUtils.urlEncode(wfsOutputFormat))));
                 wfsFormats.add(format);
             }
         }
@@ -268,17 +269,24 @@ public class MapPreviewPage extends GeoServerBasePage {
         menu.add(
                 new AttributeAppender(
                         "onchange",
-                        new Model<String>("window.open(" + choice + ");this.selectedIndex=0"),
+                        new Model<>("window.open(" + choice + ");this.selectedIndex=0"),
                         ";"));
         f.add(menu);
         return f;
     }
 
+    /**
+     * Translate format (if translation available).
+     *
+     * @param prefix protocol
+     * @param format output format
+     * @return format translation (defaults to format if unavailable)
+     */
     private String translateFormat(String prefix, String format) {
         try {
             return getLocalizer().getString(prefix + format, this);
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, e.getMessage());
+            LOGGER.log(Level.FINE, e.getMessage());
             return format;
         }
     }
@@ -296,10 +304,31 @@ public class MapPreviewPage extends GeoServerBasePage {
             this.prefix = prefix;
         }
 
+        @Override
         public int compare(String f1, String f2) {
             String t1 = translateFormat(prefix, f1);
             String t2 = translateFormat(prefix, f2);
             return t1.compareTo(t2);
+        }
+    }
+
+    private static class DelayedImageResource extends DynamicImageResource {
+        private final IModel<PreviewLayer> itemModel;
+
+        public DelayedImageResource(IModel<PreviewLayer> itemModel) {
+            super("image/png");
+            this.itemModel = itemModel;
+        }
+
+        @Override
+        protected byte[] getImageData(Attributes attributes) {
+            PreviewLayer layer = itemModel.getObject();
+            try {
+                return IOUtils.toByteArray(
+                        layer.getIcon().getResource().getResourceStream().getInputStream());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

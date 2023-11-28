@@ -59,7 +59,7 @@ public class PNGMapResponse extends RenderedImageMapResponse {
      * </ol>
      */
     private static MapProducerCapabilities CAPABILITIES =
-            new MapProducerCapabilities(true, false, true, true, null);
+            new MapProducerCapabilities(true, true, true);
 
     public PNGMapResponse(WMS wms) {
         super(OUTPUT_FORMATS, wms);
@@ -80,6 +80,7 @@ public class PNGMapResponse extends RenderedImageMapResponse {
      *
      * @see RasterMapOutputFormat#formatImageOutputStream(RenderedImage, OutputStream)
      */
+    @Override
     public void formatImageOutputStream(
             RenderedImage image, OutputStream outStream, WMSMapContent mapContent)
             throws ServiceException, IOException {

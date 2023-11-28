@@ -18,9 +18,15 @@ import net.opengis.wfs.TransactionResponseType;
 import net.opengis.wfs.TransactionType;
 import net.opengis.wfs.UpdateElementType;
 import net.opengis.wfs.WfsFactory;
-import net.opengis.wfs20.*;
+import net.opengis.wfs20.AbstractTransactionActionType;
+import net.opengis.wfs20.DeleteType;
+import net.opengis.wfs20.InsertType;
+import net.opengis.wfs20.ReplaceType;
+import net.opengis.wfs20.UpdateType;
+import net.opengis.wfs20.Wfs20Factory;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.util.FeatureMap.ValueListIterator;
 import org.geotools.data.Transaction;
 
 /**
@@ -87,6 +93,8 @@ public abstract class TransactionRequest extends RequestObject {
 
     public abstract Replace createReplace();
 
+    public abstract boolean remove(TransactionElement pElement);
+
     public static class WFS11 extends TransactionRequest {
         public WFS11(EObject adaptee) {
             super(adaptee);
@@ -114,7 +122,7 @@ public abstract class TransactionRequest extends RequestObject {
 
         @Override
         public List<TransactionElement> getElements() {
-            List<TransactionElement> list = new ArrayList();
+            List<TransactionElement> list = new ArrayList<>();
             for (Iterator it = ((TransactionType) adaptee).getGroup().valueListIterator();
                     it.hasNext(); ) {
                 EObject el = (EObject) it.next();
@@ -135,6 +143,7 @@ public abstract class TransactionRequest extends RequestObject {
         }
 
         @Override
+        @SuppressWarnings("unchecked") // EMF model without generics
         public void setElements(List<TransactionElement> elements) {
             TransactionType tx = (TransactionType) adaptee;
             tx.getInsert().clear();
@@ -143,11 +152,11 @@ public abstract class TransactionRequest extends RequestObject {
 
             for (TransactionElement element : elements) {
                 if (element instanceof Insert) {
-                    tx.getInsert().add(((Insert) element).getAdaptee());
+                    tx.getInsert().add(element.getAdaptee());
                 } else if (element instanceof Update) {
-                    tx.getUpdate().add(((Update) element).getAdaptee());
+                    tx.getUpdate().add(element.getAdaptee());
                 } else if (element instanceof Delete) {
-                    tx.getDelete().add(((Delete) element).getAdaptee());
+                    tx.getDelete().add(element.getAdaptee());
                 }
                 // no replace in wfs 1.1, cannot be there
             }
@@ -191,6 +200,7 @@ public abstract class TransactionRequest extends RequestObject {
                     "Replace not supported in WFS 1.1 transactions");
         }
 
+        @SuppressWarnings("unchecked") // EMF model without generics
         public static TransactionType unadapt(TransactionRequest request) {
             if (request instanceof WFS11) {
                 return (TransactionType) request.getAdaptee();
@@ -231,6 +241,23 @@ public abstract class TransactionRequest extends RequestObject {
         public Map getExtendedProperties() {
             return ((TransactionType) adaptee).getExtendedProperties();
         }
+
+        @Override
+        public boolean remove(TransactionElement pElement) {
+            if (pElement == null) {
+                return false;
+            }
+            for (ValueListIterator<Object> it =
+                            ((TransactionType) adaptee).getGroup().valueListIterator();
+                    it.hasNext(); ) {
+                EObject el = (EObject) it.next();
+                if (pElement.getAdaptee() == el) {
+                    it.remove();
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     public static class WFS20 extends TransactionRequest {
@@ -264,7 +291,7 @@ public abstract class TransactionRequest extends RequestObject {
 
         @Override
         public List<TransactionElement> getElements() {
-            List<TransactionElement> list = new ArrayList();
+            List<TransactionElement> list = new ArrayList<>();
             Iterator it =
                     ((net.opengis.wfs20.TransactionType) adaptee)
                             .getAbstractTransactionAction()
@@ -339,6 +366,25 @@ public abstract class TransactionRequest extends RequestObject {
         @Override
         public Map getExtendedProperties() {
             return ((net.opengis.wfs20.TransactionType) adaptee).getExtendedProperties();
+        }
+
+        @Override
+        public boolean remove(TransactionElement pElement) {
+            if (pElement == null) {
+                return false;
+            }
+            Iterator<AbstractTransactionActionType> it =
+                    ((net.opengis.wfs20.TransactionType) adaptee)
+                            .getAbstractTransactionAction()
+                            .iterator();
+            while (it.hasNext()) {
+                EObject el = (EObject) it.next();
+                if (pElement.getAdaptee() == el) {
+                    it.remove();
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

@@ -22,7 +22,6 @@ public interface DbSource extends Secured {
      * Get a data source for this database.
      *
      * @return the data source.
-     * @throws SQLException
      */
     DataSource getDataSource() throws SQLException;
 
@@ -30,7 +29,7 @@ public interface DbSource extends Secured {
      * Get a geoserver store encoder from this source.
      *
      * @param name name for the source
-     * @param extGs TODO
+     * @param extGs the external geoserver
      * @return the geoserver store encoder
      */
     GSAbstractStoreEncoder getStoreEncoder(String name, ExternalGS extGs);
@@ -43,24 +42,22 @@ public interface DbSource extends Secured {
     Map<String, Serializable> getParameters();
 
     /**
-     * schema
+     * Generate parameters for GeoServer datastore on remote geoserver
      *
-     * @return
+     * @param extGs the external geoserver
+     * @return the parameters for GeoServer datastore
      */
+    default Map<String, Serializable> getParameters(ExternalGS extGs) {
+        return getParameters();
+    }
+
+    /** schema */
     String getSchema();
 
-    /**
-     * @param encoder
-     * @param origParameters
-     * @return
-     */
+    /** */
     GSAbstractStoreEncoder postProcess(GSAbstractStoreEncoder encoder, DbTable table);
 
-    /**
-     * The dialect specific actions for taskmanager.
-     *
-     * @return
-     */
+    /** The dialect specific actions for taskmanager. */
     Dialect getDialect();
 
     /*

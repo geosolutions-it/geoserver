@@ -12,8 +12,8 @@ The full API is available at this URL:
 
 In general terms, one would:
 
-* Create a collection, along with description, thumbnail, metadata, OGC links
-* Then create a product, along with description, thumbnail, metadata, OGC links
+* Create a collection, along with thumbnail, OGC links
+* Then create a product, along with thumbnail, OGC links
 * Finally, and optionally, specify the granules composing the product (actually needed only
   if the OpenSearch subsystem is meant to be used for publishing OGC services layers too, 
   instead of being a simple search engine.
@@ -44,9 +44,6 @@ A collection.zip, sent as a PUT request to ``rest/collections`` would contain th
    * - description.html
      - Y
      - The HTML description for the collection
-   * - metadata.xml
-     - Y
-     - The metadata for the collection, in ISO format
    * - thumbnail.png, thumbnail.jpg or thumbnail.jpeg
      - Y
      - The collection thumbnail
@@ -74,9 +71,6 @@ A product.zip, sent as a POST request to ``rest/collections/<theCollection>/prod
    * - description.html
      - Y
      - The HTML description for the product
-   * - metadata.xml
-     - Y
-     - The metadata for the collection, in O&M format
    * - thumbnail.png, thumbnail.jpg or thumbnail.jpeg
      - Y
      - The collection thumbnail
@@ -95,40 +89,6 @@ It is also possible to send the zip file on the ``rest/collections/<theCollectio
 resource as a PUT request, it will update an existing product by replacing the parts contained
 in the file. Parts missing from the file will be kept unchanged, to remove them run an explicit
 DELETE request on their respective REST resources.
-
-Template variable expansion
----------------------------
-
-Some of the metadata/HTML description can embed simple templating variables that GeoServer will
-expand while generating output. Here is a description of the variable, and where they can be used
-
-.. list-table::
-   :widths: 20 40 40
-   :header-rows: 1
-           
-   * - Name
-     - Description
-     - Usage
-   * - ${BASE_URL}
-     - The server "base url", typically "protocol://host:port/geoserver", which can be 
-       used to save links that can easily migrate between different environments (e.g.
-       test vs production)
-     - OGC links, original package location download links (for products), HTML descriptions for products and collections
-   * - ${ISO_METADATA_LINK}
-     - The link to a collection ISO metadata (GeoServer will point at a URL returning the
-       metadata saved in the database)
-     - A collection HTML description
-   * - ${OM_METADATA_URL}
-     - The link to a product O&M metadata (GeoServer will point at a URL returning the
-       metadata saved in the database)
-     - A product HTML description
-   * - ${ATOM_URL}
-     - The link to a collection ATOM representation, as returned by OpenSearch
-     - A collection HTML description
-   * - ${QUICKLOOK_URL}
-     - A link to the product quicklook (GeoServer will point at a URL returning the quicklook 
-       saved in the database)
-     - A product sample image
 
 Usage of the API for search and integrated OGC service publishing
 -----------------------------------------------------------------
@@ -238,3 +198,26 @@ using the full name, in which case they will be all picked, or by using zero-bas
 The same syntax is meant to be used in the ``browseBands`` property. In case the source is not
 split band, the ``browseBands`` can still be used to select specific bands, using the layer
 name as the coverage name, e.g. "test123[0]" to select the first band of the coverage.
+
+COG Mosaic creation
+```````````````````
+It's also possible to configure a layer on top of a COG ImageMosaic, provided that the :ref:`cog_plugin` plugin has been installed in GeoServer.
+
+Additional fields for the layer configuration are:
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Attribute
+     - Description
+   * - cog
+     - Set it to true to specify the layer is made of COG datasets
+   * - cogUser
+     - (Optional) Credential to be set whenever basic HTTP authentication is needed to access the COG Datasets or an S3 Access KeyID is required
+   * - cogPassword
+     - (Optional) Password for the above user OR Secret Access Key for the above S3 KeyId.
+   * - cogRangeReader
+     - (Optional) Specify the desired RangeReader implementation. (default is HTTP based)
+
+See :ref:`cog_plugin_rangereader` from the COG plugin documentation, for the list of supported RangeReader implementations.

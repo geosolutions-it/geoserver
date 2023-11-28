@@ -4,7 +4,7 @@ TextSymbolizer
 ==============
 
 A **TextSymbolizer** styles features as **text labels**. 
-Text labels are positioned eoither at points or along linear paths
+Text labels are positioned either at points or along linear paths
 derived from the geometry being labelled.
 
 Labelling is a complex operation, and effective labelling
@@ -92,7 +92,7 @@ If this element is omitted, no label is rendered.
 Font
 ^^^^
 
-The ``<Font>`` element specifes the font to be used for the label.
+The ``<Font>`` element specifies the font to be used for the label.
 A set of ``<CssParameter>`` elements specify the details of the font.  
 
 The ``name`` **attribute** indicates what aspect of the font is described,

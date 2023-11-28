@@ -6,7 +6,9 @@
 package org.geoserver.wms.capabilities;
 
 import java.util.Map;
+import org.geoserver.data.InternationalContentHelper;
 import org.geoserver.ows.KvpRequestReader;
+import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.wms.GetCapabilitiesRequest;
 import org.geoserver.wms.WMS;
 import org.geotools.util.Version;
@@ -28,7 +30,7 @@ public class CapabilitiesKvpReader extends KvpRequestReader {
         this.wms = wms;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     @Override
     public GetCapabilitiesRequest read(Object req, Map kvp, Map rawKvp) throws Exception {
         GetCapabilitiesRequest request = (GetCapabilitiesRequest) super.read(req, kvp, rawKvp);
@@ -62,7 +64,10 @@ public class CapabilitiesKvpReader extends KvpRequestReader {
         if (rawKvp.containsKey("ROOTLAYER")) {
             request.setRootLayerEnabled(Boolean.valueOf((String) rawKvp.get("ROOTLAYER")));
         }
-
+        String[] acceptLanguages =
+                RequestUtils.getLanguageValue(
+                        rawKvp, InternationalContentHelper.ACCEPTLANGUAGES_PARAM);
+        if (acceptLanguages != null) request.setAcceptLanguages(acceptLanguages);
         return request;
     }
 }

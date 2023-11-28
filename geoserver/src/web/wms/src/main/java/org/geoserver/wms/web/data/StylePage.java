@@ -19,10 +19,12 @@ import org.geoserver.web.ComponentAuthorizer;
 import org.geoserver.web.GeoServerSecuredPage;
 import org.geoserver.web.data.SelectionRemovalLink;
 import org.geoserver.web.data.workspace.WorkspaceEditPage;
+import org.geoserver.web.wicket.DateTimeLabel;
 import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 import org.geoserver.web.wicket.GeoServerDialog;
 import org.geoserver.web.wicket.GeoServerTablePanel;
 import org.geoserver.web.wicket.SimpleBookmarkableLink;
+import org.geoserver.web.wicket.StyleFormatLabel;
 
 /** Page listing all the styles, allows to edit, add, remove styles */
 @SuppressWarnings("serial")
@@ -51,6 +53,22 @@ public class StylePage extends GeoServerSecuredPage {
                                 }
                                 if (property == StyleProvider.WORKSPACE) {
                                     return workspaceLink(id, itemModel);
+                                }
+                                if (property == StyleProvider.MODIFIED_TIMESTAMP) {
+                                    return new DateTimeLabel(
+                                            id,
+                                            StyleProvider.MODIFIED_TIMESTAMP.getModel(itemModel));
+                                }
+                                if (property == StyleProvider.CREATED_TIMESTAMP) {
+                                    return new DateTimeLabel(
+                                            id,
+                                            StyleProvider.CREATED_TIMESTAMP.getModel(itemModel));
+                                }
+                                if (property == StyleProvider.FORMAT) {
+                                    return new StyleFormatLabel(
+                                            id,
+                                            StyleProvider.FORMAT.getModel(itemModel),
+                                            StyleProvider.FORMAT_VERSION.getModel(itemModel));
                                 }
                                 return null;
                             }
@@ -115,7 +133,7 @@ public class StylePage extends GeoServerSecuredPage {
         String wsName = (String) wsNameModel.getObject();
         if (wsName != null) {
             return new SimpleBookmarkableLink(
-                    id, WorkspaceEditPage.class, new Model<String>(wsName), "name", wsName);
+                    id, WorkspaceEditPage.class, new Model<>(wsName), "name", wsName);
         } else {
             return new WebMarkupContainer(id);
         }

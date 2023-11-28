@@ -5,6 +5,7 @@
 package org.geoserver.opensearch.eo.store;
 
 import java.io.IOException;
+import java.util.List;
 import org.geotools.data.DataAccess;
 import org.geotools.data.FeatureSource;
 import org.geotools.data.simple.SimpleFeatureSource;
@@ -32,9 +33,6 @@ public interface OpenSearchAccess extends DataAccess<FeatureType, Feature> {
     /** Internal attribute stating he original package mime type */
     public static String ORIGINAL_PACKAGE_TYPE = "originalPackageType";
 
-    /** The optional property in collection and product containing the metadata (ISO or O&M) */
-    public static Name METADATA_PROPERTY_NAME = new NameImpl(EO_NAMESPACE, "metadata");
-
     /**
      * The optional property in collection and product containing the OGC links (it's a collection)
      */
@@ -42,6 +40,12 @@ public interface OpenSearchAccess extends DataAccess<FeatureType, Feature> {
 
     /** The optional property in product containing the quicklook */
     public static Name QUICKLOOK_PROPERTY_NAME = new NameImpl(EO_NAMESPACE, "quicklook");
+
+    /** The optional property in product containing the collection and most of its attributes */
+    public static Name COLLECTION_PROPERTY_NAME = new NameImpl(EO_NAMESPACE, "collection");
+
+    /** The collection identifier property */
+    public static Name EO_IDENTIFIER = new NameImpl(EO_NAMESPACE, "identifier");
 
     /**
      * Local part of the optional collection property containing the layers publishing information
@@ -63,6 +67,9 @@ public interface OpenSearchAccess extends DataAccess<FeatureType, Feature> {
      */
     public static String GRANULES = "granules";
 
+    /** Property used to enable/disable products and collections */
+    public static final String ENABLED = "enabled";
+
     /**
      * Just like in WCS 2.0, setting up a separator that's unlikely to be found in the wild, since
      * there is no option that's absolutely unique
@@ -70,12 +77,25 @@ public interface OpenSearchAccess extends DataAccess<FeatureType, Feature> {
     String BAND_LAYER_SEPARATOR = "__";
 
     /**
+     * Attribute prefix, to be used when encoding XML outputs or referencing attributes in feature
+     * templates.
+     */
+    String PREFIX = "prefix";
+
+    /**
      * Returns the feature source backing collections (dynamic, as the store has to respect the
      * namespace URI given by GeoServer)
-     *
-     * @throws IOException
      */
     FeatureSource<FeatureType, Feature> getCollectionSource() throws IOException;
+
+    /**
+     * Updates indexes on the given collection, based on a set of indexables. Compares with existing
+     * indexes and creates/removes them as needed.
+     */
+    void updateIndexes(String collection, List<Indexable> indexables) throws IOException;
+
+    /** Get List of Index Names for a Table */
+    List<String> getIndexNames(String tableName) throws IOException;
 
     /**
      * Returns the feature source backing products (dynamic, as the store has to respect the
@@ -83,14 +103,7 @@ public interface OpenSearchAccess extends DataAccess<FeatureType, Feature> {
      */
     FeatureSource<FeatureType, Feature> getProductSource() throws IOException;
 
-    /**
-     * Returns a feature source to access the granules of a particular product
-     *
-     * @param collectionId
-     * @param productId
-     * @return
-     * @throws IOException
-     */
+    /** Returns a feature source to access the granules of a particular product */
     SimpleFeatureSource getGranules(String collectionId, String productId) throws IOException;
 
     SimpleFeatureType getCollectionLayerSchema() throws IOException;

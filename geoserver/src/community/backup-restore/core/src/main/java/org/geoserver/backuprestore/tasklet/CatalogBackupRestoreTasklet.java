@@ -15,18 +15,7 @@ import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.backuprestore.utils.BackupUtils;
-import org.geoserver.catalog.CoverageInfo;
-import org.geoserver.catalog.CoverageStoreInfo;
-import org.geoserver.catalog.DataStoreInfo;
-import org.geoserver.catalog.FeatureTypeInfo;
-import org.geoserver.catalog.LayerGroupInfo;
-import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.NamespaceInfo;
-import org.geoserver.catalog.ResourceInfo;
-import org.geoserver.catalog.StoreInfo;
-import org.geoserver.catalog.StyleInfo;
-import org.geoserver.catalog.ValidationResult;
-import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.catalog.*;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.GeoServerInfo;
@@ -70,6 +59,8 @@ import org.springframework.util.Assert;
  */
 public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTasklet {
 
+    private static final String GWC_GEOSERVER_CONFIG_PERSISTER = "gwcGeoServervConfigPersister";
+
     // whether existing resources should be deleted
     private boolean purge = true;
 
@@ -93,7 +84,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
 
         this.skipGWC =
                 Boolean.parseBoolean(
-                        stepExecution.getJobParameters().getString(Backup.PARAM_SKIP_GWC, "true"));
+                        stepExecution.getJobParameters().getString(Backup.PARAM_SKIP_GWC, "false"));
 
         this.purge =
                 Boolean.parseBoolean(
@@ -127,16 +118,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         return RepeatStatus.FINISHED;
     }
 
-    /**
-     * Perform Backup
-     *
-     * @param jobExecution
-     * @param geoserver
-     * @param dd
-     * @param resourceStore
-     * @throws Exception
-     * @throws IOException
-     */
+    /** Perform Backup */
     private void doBackup(
             JobExecution jobExecution,
             final GeoServer geoserver,
@@ -220,50 +202,10 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
 
             if (!filterIsValid()) {
                 // Backup additional stuff only when performing a FULL backup
-
-                // Backup GeoServer Plugins
-                final GeoServerResourceLoader targetGeoServerResourceLoader =
-                        new GeoServerResourceLoader(targetBackupFolder.dir());
-                for (GeoServerPluginConfigurator pluginConfig :
-                        GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
-                    // On restore invoke 'pluginConfig.loadConfiguration(resourceLoader);' after
-                    // having
-                    // replaced the config files.
-                    pluginConfig.saveConfiguration(targetGeoServerResourceLoader);
-                }
-
-                for (GeoServerPropertyConfigurer props :
-                        GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
-                    // On restore invoke 'props.reload();' after having replaced the properties
-                    // files.
-                    Resource configFile = props.getConfigFile();
-
-                    if (configFile != null && Resources.exists(configFile)) {
-                        Resource targetDir =
-                                Files.asResource(
-                                        targetGeoServerResourceLoader.findOrCreateDirectory(
-                                                Paths.convert(
-                                                        dd.getResourceLoader().getBaseDirectory(),
-                                                        configFile.parent().dir())));
-
-                        Resources.copy(configFile.file(), targetDir);
-                    }
-                }
-
-                // Backup other configuration bits, like images, palettes, user projections and so
-                // on...
-                backupRestoreAdditionalResources(resourceStore, targetBackupFolder);
-
-                // Backup GWC Configuration bits
-                if (!skipGWC) {
-                    try {
-                        if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
-                            backupGWCSettings(targetBackupFolder);
-                        }
-                    } catch (NoSuchBeanDefinitionException e) {
-                        LOGGER.log(Level.WARNING, "Skipped GWC GeoServer Config Persister: ", e);
-                    }
-                }
+                backupFullAdditionals(dd, resourceStore, targetBackupFolder);
+            } else {
+                // backup selected GWC artifacts
+                backupFilteredGwc(dd, resourceStore, targetBackupFolder);
             }
         } catch (Exception e) {
             logValidationExceptions(
@@ -274,14 +216,115 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param jobExecution
-     * @param geoserver
-     * @param dd
-     * @throws Exception
-     * @throws IOException
-     * @throws UnexpectedJobExecutionException
-     */
+    private void backupFilteredGwc(
+            final GeoServerDataDirectory dd,
+            final ResourceStore resourceStore,
+            Resource targetBackupFolder)
+            throws IOException, Exception {
+        if (!skipGWC) {
+            try {
+                if (GeoServerExtensions.bean(GWC_GEOSERVER_CONFIG_PERSISTER) != null) {
+                    backupGWCLayers(targetBackupFolder);
+                }
+            } catch (NoSuchBeanDefinitionException e) {
+                LOGGER.log(Level.WARNING, "Skipped GWC GeoServer Config Persister: ", e);
+            }
+        }
+    }
+
+    private void backupGWCLayers(Resource targetBackupFolder) throws Exception {
+        GWCConfigPersister gwcGeoServerConfigPersister =
+                (GWCConfigPersister) GeoServerExtensions.bean(GWC_GEOSERVER_CONFIG_PERSISTER);
+
+        GWCConfigPersister testGWCCP =
+                new GWCConfigPersister(
+                        getxStreamPersisterFactory(),
+                        new GeoServerResourceLoader(targetBackupFolder.dir()));
+
+        // Test that everything went well
+        try {
+            testGWCCP.save(gwcGeoServerConfigPersister.getConfig());
+
+            GWCConfig gwcConfig = testGWCCP.getConfig();
+
+            Assert.notNull(gwcConfig, "gwcConfig is NULL");
+
+            // Store GWC Layers Configurations
+            final TileLayerCatalog gwcCatalog =
+                    (TileLayerCatalog) GeoServerExtensions.bean("GeoSeverTileLayerCatalog");
+
+            if (gwcCatalog != null) {
+                final XMLConfiguration gwcXmlPersisterFactory =
+                        (XMLConfiguration) GeoServerExtensions.bean("gwcXmlConfig");
+                final GeoServerResourceLoader resourceLoader =
+                        new GeoServerResourceLoader(targetBackupFolder.dir());
+
+                final DefaultTileLayerCatalog gwcBackupCatalog =
+                        new DefaultTileLayerCatalog(resourceLoader, gwcXmlPersisterFactory);
+                gwcBackupCatalog.initialize();
+
+                for (String layerName : gwcCatalog.getLayerNames()) {
+                    backupGwcLayer(gwcCatalog, gwcBackupCatalog, layerName);
+                }
+            }
+
+        } catch (Exception e) {
+            logValidationExceptions(null, e);
+        }
+    }
+
+    /** Backup additional stuff only when performing a FULL backup. */
+    private void backupFullAdditionals(
+            final GeoServerDataDirectory dd,
+            final ResourceStore resourceStore,
+            Resource targetBackupFolder)
+            throws IOException, Exception {
+        // Backup GeoServer Plugins
+        final GeoServerResourceLoader targetGeoServerResourceLoader =
+                new GeoServerResourceLoader(targetBackupFolder.dir());
+        for (GeoServerPluginConfigurator pluginConfig :
+                GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
+            // On restore invoke 'pluginConfig.loadConfiguration(resourceLoader);' after
+            // having
+            // replaced the config files.
+            pluginConfig.saveConfiguration(targetGeoServerResourceLoader);
+        }
+
+        for (GeoServerPropertyConfigurer props :
+                GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
+            // On restore invoke 'props.reload();' after having replaced the properties
+            // files.
+            Resource configFile = props.getConfigFile();
+
+            if (configFile != null && Resources.exists(configFile)) {
+                Resource targetDir =
+                        Files.asResource(
+                                targetGeoServerResourceLoader.findOrCreateDirectory(
+                                        Paths.convert(
+                                                dd.getResourceLoader().getBaseDirectory(),
+                                                configFile.parent().dir())));
+
+                Resources.copy(configFile.file(), targetDir);
+            }
+        }
+
+        // Backup other configuration bits, like images, palettes, user projections and so
+        // on...
+        backupRestoreAdditionalResources(resourceStore, targetBackupFolder);
+
+        // Backup GWC Configuration bits
+        if (!skipGWC) {
+            try {
+                if (GeoServerExtensions.bean(GWC_GEOSERVER_CONFIG_PERSISTER) != null) {
+                    backupGWCSettings(targetBackupFolder);
+                }
+            } catch (NoSuchBeanDefinitionException e) {
+                LOGGER.log(Level.WARNING, "Skipped GWC GeoServer Config Persister: ", e);
+            }
+        }
+    }
+
+    /** */
     @SuppressWarnings("unused")
     private void doRestore(
             JobExecution jobExecution, final GeoServer geoserver, final GeoServerDataDirectory dd)
@@ -391,17 +434,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param geoserver
-     * @param dd
-     * @param sourceRestoreFolder
-     * @param sourceWorkspacesFolder
-     * @param newGeoServerInfo
-     * @param newLoggingInfo
-     * @throws IOException
-     * @throws Exception
-     * @throws IllegalArgumentException
-     */
+    /** */
     private void hardRestore(
             final GeoServer geoserver,
             final GeoServerDataDirectory dd,
@@ -411,122 +444,133 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
             LoggingInfo newLoggingInfo)
             throws IOException, Exception, IllegalArgumentException {
 
-        if (!skipSettings && !filterIsValid()) {
-            // Restore GeoServer Global Info
-            Files.delete(dd.get("global.xml").file());
-            doWrite(newGeoServerInfo, dd.get(Paths.BASE), "global.xml");
-            geoserver.setGlobal(newGeoServerInfo);
+        final boolean purgeResources = purge;
+        final boolean filterIsValid = filterIsValid();
 
-            // Restore GeoServer Global Logging Settings
-            Files.delete(dd.get("logging.xml").file());
-            doWrite(newLoggingInfo, dd.get(Paths.BASE), "logging.xml");
-            geoserver.setLogging(newLoggingInfo);
-
-            restoreGlobalServices(sourceRestoreFolder, dd);
+        if (!skipSettings && !filterIsValid) {
+            restoreGlobals(geoserver, dd, sourceRestoreFolder, newGeoServerInfo, newLoggingInfo);
         }
 
         // Restore Workspaces
         // - Prepare folder
         Resource workspaces = dd.get("workspaces");
-        if (purge) {
-            if (!filterIsValid()) {
+        if (purgeResources) {
+            if (!filterIsValid) {
                 Files.delete(workspaces.dir());
             }
             workspaces = BackupUtils.dir(dd.get(Paths.BASE), "workspaces");
         }
-
         restoreWorkSpacesAndLayers(sourceRestoreFolder, workspaces);
 
         // - GeoServer Catalog Alignment
         // Align missing Resources (in case of filtering) from the original catalog
-        syncTo(geoserver.getCatalog());
+        if (!purgeResources) {
+            LOGGER.log(Level.INFO, "Sync catalogs in execution due to no purge flag activated.");
+            syncTo(geoserver.getCatalog());
+        }
 
         // Restore Styles
         // - Prepare folder
         Resource styles = dd.get("styles");
 
-        if (purge) {
-            if (!filterIsValid()) {
-                Files.delete(styles.dir());
-                styles = BackupUtils.dir(dd.get(Paths.BASE), "styles");
-                restoreGlobalStyles(sourceRestoreFolder, styles);
-            }
-        }
-
-        // Restore LayerGroups
-        // - Prepare folder
-        Resource layerGroups = dd.get("layergroups");
-        // - TODO: if purge
-        if (purge) {
-            if (!filterIsValid()) {
-                Files.delete(layerGroups.dir());
-                layerGroups = BackupUtils.dir(dd.get(Paths.BASE), "layergroups");
-                restoreGlobalLayerGroups(layerGroups);
-            }
+        if (purgeResources && !filterIsValid) {
+            Files.delete(styles.dir());
+            styles = BackupUtils.dir(dd.get(Paths.BASE), "styles");
+            restoreGlobalStyles(sourceRestoreFolder, styles);
         }
 
         // Restore Workspace Specific Settings and Services
-        if (purge && !filterIsValid()) {
-            restoreLocalWorkspaceSettingsAndServices(
-                    geoserver, sourceRestoreFolder, sourceWorkspacesFolder, dd);
-
-            // Restore GeoServer Plugins
-            final GeoServerResourceLoader sourceGeoServerResourceLoader =
-                    new GeoServerResourceLoader(sourceRestoreFolder.dir());
-            for (GeoServerPluginConfigurator pluginConfig :
-                    GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
-                // On restore invoke 'pluginConfig.loadConfiguration(resourceLoader);'. Replace
-                // 'properties' files first.
-                for (Resource configFile : pluginConfig.getFileLocations()) {
-                    replaceConfigFile(sourceGeoServerResourceLoader, configFile);
-                }
-
-                // - Invoke 'pluginConfig.loadConfiguration' from the GOSERVER_DATA_DIR
-                pluginConfig.loadConfiguration(dd.getResourceLoader());
-            }
-
-            for (GeoServerPropertyConfigurer props :
-                    GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
-                // On restore invoke 'props.reload();' after having replaced the properties files.
-                Resource configFile = props.getConfigFile();
-                replaceConfigFile(sourceGeoServerResourceLoader, configFile);
-
-                // - Invoke 'props.reload()' from the GOSERVER_DATA_DIR
-                props.reload();
-            }
-
-            // Restore other configuration bits, like images, palettes, user projections and so
-            // on...
-            backupRestoreAdditionalResources(sourceGeoServerResourceLoader, dd.get(Paths.BASE));
+        if (purgeResources) {
+            restoreWorkspaceSpecifics(geoserver, dd, sourceRestoreFolder, sourceWorkspacesFolder);
         }
 
         // Restore GWC Configuration bits
-        if (!skipGWC) {
-            try {
-                if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
-                    restoreGWCSettings(sourceRestoreFolder, dd.get(Paths.BASE));
-
-                    // Initialize GWC with the new settings
-                    GWCInitializer gwcInitializer = GeoServerExtensions.bean(GWCInitializer.class);
-                    if (gwcInitializer != null) {
-                        gwcInitializer.initialize(geoserver);
-                    }
-                }
-            } catch (NoSuchBeanDefinitionException e) {
-                LOGGER.log(Level.WARNING, "Skipped GWC GeoServer Config Persister: ", e);
-            }
+        if (purgeResources || !skipGWC) {
+            restoreGwc(geoserver, dd, sourceRestoreFolder);
         }
     }
 
-    /**
-     * @param geoserver
-     * @param td
-     * @param sourceRestoreFolder
-     * @param sourceWorkspacesFolder
-     * @param newGeoServerInfo
-     * @param newLoggingInfo
-     * @throws Exception
-     */
+    /** Restore Workspace Specific Settings and Services. */
+    private void restoreWorkspaceSpecifics(
+            final GeoServer geoserver,
+            final GeoServerDataDirectory dd,
+            Resource sourceRestoreFolder,
+            Resource sourceWorkspacesFolder)
+            throws Exception, IOException {
+        restoreLocalWorkspaceSettingsAndServices(
+                geoserver, sourceRestoreFolder, sourceWorkspacesFolder, dd);
+
+        // Restore GeoServer Plugins
+        final GeoServerResourceLoader sourceGeoServerResourceLoader =
+                new GeoServerResourceLoader(sourceRestoreFolder.dir());
+        for (GeoServerPluginConfigurator pluginConfig :
+                GeoServerExtensions.extensions(GeoServerPluginConfigurator.class)) {
+            // On restore invoke 'pluginConfig.loadConfiguration(resourceLoader);'. Replace
+            // 'properties' files first.
+            for (Resource configFile : pluginConfig.getFileLocations()) {
+                replaceConfigFile(sourceGeoServerResourceLoader, configFile);
+            }
+
+            // - Invoke 'pluginConfig.loadConfiguration' from the GOSERVER_DATA_DIR
+            pluginConfig.loadConfiguration(dd.getResourceLoader());
+        }
+
+        for (GeoServerPropertyConfigurer props :
+                GeoServerExtensions.extensions(GeoServerPropertyConfigurer.class)) {
+            // On restore invoke 'props.reload();' after having replaced the properties files.
+            Resource configFile = props.getConfigFile();
+            replaceConfigFile(sourceGeoServerResourceLoader, configFile);
+
+            // - Invoke 'props.reload()' from the GOSERVER_DATA_DIR
+            props.reload();
+        }
+
+        // Restore other configuration bits, like images, palettes, user projections and so
+        // on...
+        backupRestoreAdditionalResources(sourceGeoServerResourceLoader, dd.get(Paths.BASE));
+    }
+
+    private void restoreGlobals(
+            final GeoServer geoserver,
+            final GeoServerDataDirectory dd,
+            Resource sourceRestoreFolder,
+            GeoServerInfo newGeoServerInfo,
+            LoggingInfo newLoggingInfo)
+            throws Exception {
+        // Restore GeoServer Global Info
+        Files.delete(dd.get("global.xml").file());
+        doWrite(newGeoServerInfo, dd.get(Paths.BASE), "global.xml");
+        geoserver.setGlobal(newGeoServerInfo);
+
+        // Restore GeoServer Global Logging Settings
+        Files.delete(dd.get("logging.xml").file());
+        doWrite(newLoggingInfo, dd.get(Paths.BASE), "logging.xml");
+        geoserver.setLogging(newLoggingInfo);
+
+        restoreGlobalServices(sourceRestoreFolder, dd);
+    }
+
+    private void restoreGwc(
+            final GeoServer geoserver,
+            final GeoServerDataDirectory dd,
+            Resource sourceRestoreFolder)
+            throws Exception {
+        try {
+            if (GeoServerExtensions.bean(GWC_GEOSERVER_CONFIG_PERSISTER) != null) {
+                restoreGWCSettings(sourceRestoreFolder, dd.get(Paths.BASE));
+
+                // Initialize GWC with the new settings
+                GWCInitializer gwcInitializer = GeoServerExtensions.bean(GWCInitializer.class);
+                if (gwcInitializer != null) {
+                    gwcInitializer.initialize(geoserver);
+                }
+            }
+        } catch (NoSuchBeanDefinitionException e) {
+            LOGGER.log(Level.WARNING, "Skipped GWC GeoServer Config Persister: ", e);
+        }
+    }
+
+    /** */
     private void softRestore(
             final GeoServer geoserver,
             GeoServerDataDirectory td,
@@ -563,9 +607,6 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         BackupUtils.dir(td.get(Paths.BASE), "layergroups");
         Resource layerGroups = td.get("layergroups");
 
-        // Workspace Local LayerGroups
-        restoreGlobalLayerGroups(layerGroups);
-
         // Restore Workspace Specific Settings and Services
         restoreLocalWorkspaceSettingsAndServices(
                 geoserver, sourceRestoreFolder, sourceWorkspacesFolder, td);
@@ -579,7 +620,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
 
         // Restore GWC Configuration bits
         try {
-            if (GeoServerExtensions.bean("gwcGeoServervConfigPersister") != null) {
+            if (GeoServerExtensions.bean(GWC_GEOSERVER_CONFIG_PERSISTER) != null) {
                 restoreGWCSettings(sourceRestoreFolder, td.get(Paths.BASE));
             }
         } catch (NoSuchBeanDefinitionException e) {
@@ -590,11 +631,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         Files.delete(td.get(Paths.BASE).dir());
     }
 
-    /**
-     * @param resourceLoader
-     * @param configFile
-     * @throws IOException
-     */
+    /** */
     private void replaceConfigFile(
             final GeoServerResourceLoader resourceLoader, Resource configFile) throws IOException {
         // - Check of the resource exists on the restore folder
@@ -613,13 +650,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param geoserver
-     * @param sourceRestoreFolder
-     * @param sourceWorkspacesFolder
-     * @param dd
-     * @throws Exception
-     */
+    /** */
     private void restoreLocalWorkspaceSettingsAndServices(
             final GeoServer geoserver,
             Resource sourceRestoreFolder,
@@ -713,7 +744,11 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
                     if (localService != null) {
                         localService.setWorkspace(ws);
                         if (!isDryRun()) {
-                            geoserver.add(localService);
+                            if (geoserver.getServiceByName(
+                                            ws, serviceResource.name(), ServiceInfo.class)
+                                    == null) {
+                                geoserver.add(localService);
+                            }
                         }
                         doWrite(localService, dd.get(Paths.path("workspaces", ws.getName())), "");
                     }
@@ -739,38 +774,11 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
                         Resources.copy(styResource.file(), wsLocalStyleFolder);
                     }
                 }
-
-                // Restore Local LayerGroups
-                for (LayerGroupInfo lyg : getCatalog().getLayerGroupsByWorkspace(ws.getName())) {
-                    // Only Local LayerGroups here.
-                    lyg.setWorkspace(ws);
-                    Resource wsLocalLayerGroupsFolder =
-                            BackupUtils.dir(
-                                    dd.get(Paths.path("workspaces", ws.getName())), "layergroups");
-                    doWrite(lyg, wsLocalLayerGroupsFolder, lyg.getName() + ".xml");
-                }
             }
         }
     }
 
-    /**
-     * @param layerGroups
-     * @throws Exception
-     */
-    private void restoreGlobalLayerGroups(Resource layerGroups) throws Exception {
-        for (LayerGroupInfo lyg : getCatalog().getLayerGroups()) {
-            // Only Global LayerGroups here; local ones will be restored later on
-            if (lyg.getWorkspace() == null) {
-                doWrite(lyg, layerGroups, lyg.getName() + ".xml");
-            }
-        }
-    }
-
-    /**
-     * @param sourceRestoreFolder
-     * @param styles
-     * @throws Exception
-     */
+    /** */
     private void restoreGlobalStyles(Resource sourceRestoreFolder, Resource styles)
             throws Exception {
         for (StyleInfo sty : getCatalog().getStyles()) {
@@ -787,11 +795,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param sourceRestoreFolder
-     * @param td
-     * @throws Exception
-     */
+    /** */
     private void restoreGlobalServices(Resource sourceRestoreFolder, GeoServerDataDirectory td)
             throws Exception {
         for (Resource serviceResource : sourceRestoreFolder.get("services").list()) {
@@ -810,10 +814,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param workspaces
-     * @throws Exception
-     */
+    /** */
     private void restoreWorkSpacesAndLayers(Resource sourceRestoreFodler, Resource workspaces)
             throws Exception {
         // - Restore Default Workspace
@@ -958,7 +959,139 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
                         }
                     }
                 }
+
+                for (WMSStoreInfo wms :
+                        getCatalog().getStoresByWorkspace(ws.getName(), WMSStoreInfo.class)) {
+                    if (!filteredResource(wms, ws, true, StoreInfo.class)) {
+                        restoreWMSStoreInfo(sourceRestoreFodler, ws, wsFolder, wms);
+                    }
+                }
+
+                for (WMTSStoreInfo wmts :
+                        getCatalog().getStoresByWorkspace(ws.getName(), WMTSStoreInfo.class)) {
+                    if (!filteredResource(wmts, ws, true, StoreInfo.class)) {
+                        restoreWMTSStoreInfo(sourceRestoreFodler, ws, wsFolder, wmts);
+                    }
+                }
             }
+        }
+    }
+
+    private void restoreWMTSStoreInfo(
+            Resource sourceRestoreFodler, WorkspaceInfo ws, Resource wsFolder, WMTSStoreInfo wmts)
+            throws Exception {
+        // - Prepare Folder
+        Resource wmtsFolder = BackupUtils.dir(wsFolder, wmts.getName());
+
+        wmts.setWorkspace(ws);
+
+        doWrite(wmts, wmtsFolder, "wmtsstore.xml");
+        // Restore Resources
+        List<WMTSLayerInfo> wmtsLayers =
+                getCatalog().getResourcesByStore(wmts, WMTSLayerInfo.class);
+        for (WMTSLayerInfo wl : wmtsLayers) {
+            if (!filteredResource(wl, ws, true, ResourceInfo.class)) {
+                restoreWTMSLayer(sourceRestoreFodler, ws, wmts, wmtsFolder, wl);
+            }
+        }
+    }
+
+    private void restoreWMSStoreInfo(
+            Resource sourceRestoreFodler, WorkspaceInfo ws, Resource wsFolder, WMSStoreInfo wms)
+            throws Exception {
+        // - Prepare Folder
+        Resource wmsFolder = BackupUtils.dir(wsFolder, wms.getName());
+
+        wms.setWorkspace(ws);
+
+        doWrite(wms, wmsFolder, "wmsstore.xml");
+        // Restore Resources
+        List<WMSLayerInfo> wmsLayerInfoList =
+                getCatalog().getResourcesByStore(wms, WMSLayerInfo.class);
+        for (WMSLayerInfo wl : wmsLayerInfoList) {
+            if (!filteredResource(wl, ws, true, ResourceInfo.class)) {
+                restoreWMSLayer(sourceRestoreFodler, ws, wms, wmsFolder, wl);
+            }
+        }
+    }
+
+    private void restoreWTMSLayer(
+            Resource sourceRestoreFodler,
+            WorkspaceInfo ws,
+            WMTSStoreInfo wms,
+            Resource wmsFolder,
+            WMTSLayerInfo wl)
+            throws Exception {
+        // - Prepare Folder
+        Files.delete(wmsFolder.get(wl.getName()).dir());
+        Resource ftFolder = BackupUtils.dir(wmsFolder, wl.getName());
+
+        doWrite(wl, ftFolder, "wmtslayer.xml");
+
+        // Restore Layers
+        for (LayerInfo ly : getCatalog().getLayers(wl)) {
+            if (!filteredResource(ly, ws, true, LayerInfo.class)) {
+                String wmtsLayerInfoName = wl.getName();
+                restoreLayerResources(
+                        sourceRestoreFodler, ws, wms, ftFolder, ly, wmtsLayerInfoName);
+            }
+        }
+    }
+
+    private void restoreWMSLayer(
+            Resource sourceRestoreFodler,
+            WorkspaceInfo ws,
+            WMSStoreInfo wms,
+            Resource wmsFolder,
+            WMSLayerInfo wl)
+            throws Exception {
+        // - Prepare Folder
+        Files.delete(wmsFolder.get(wl.getName()).dir());
+        Resource ftFolder = BackupUtils.dir(wmsFolder, wl.getName());
+
+        doWrite(wl, ftFolder, "wmslayer.xml");
+
+        // Restore Layers
+        for (LayerInfo ly : getCatalog().getLayers(wl)) {
+            if (!filteredResource(ly, ws, true, LayerInfo.class)) {
+                String wmsLayerInfoName = wl.getName();
+                restoreLayerResources(sourceRestoreFodler, ws, wms, ftFolder, ly, wmsLayerInfoName);
+            }
+        }
+    }
+
+    private void restoreLayerResources(
+            Resource sourceRestoreFodler,
+            WorkspaceInfo ws,
+            HTTPStoreInfo httpStoreInfo,
+            Resource ftFolder,
+            LayerInfo ly,
+            String wmsLayerInfoName)
+            throws Exception {
+        doWrite(ly, ftFolder, "layer.xml");
+
+        Resource ftResource =
+                sourceRestoreFodler.get(
+                        Paths.path(
+                                "workspaces/" + ws.getName() + "/" + httpStoreInfo.getName(),
+                                wmsLayerInfoName));
+        List<Resource> resources =
+                Resources.list(
+                        ftResource,
+                        new Filter<Resource>() {
+                            @Override
+                            public boolean accept(Resource res) {
+                                if (res.getType() == Type.RESOURCE
+                                        && !res.name().endsWith(".xml")) {
+                                    return true;
+                                }
+                                return false;
+                            }
+                        },
+                        true);
+
+        for (Resource resource : resources) {
+            Resources.copy(resource.in(), ftFolder, resource.name());
         }
     }
 
@@ -966,13 +1099,10 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
     //
     // GWC Stuff
     // ////////////////////////////////////////////////////////////////////////////////////// //
-    /**
-     * @param targetBackupFolder
-     * @throws Exception
-     */
+    /** */
     private void backupGWCSettings(Resource targetBackupFolder) throws Exception {
         GWCConfigPersister gwcGeoServerConfigPersister =
-                (GWCConfigPersister) GeoServerExtensions.bean("gwcGeoServervConfigPersister");
+                (GWCConfigPersister) GeoServerExtensions.bean(GWC_GEOSERVER_CONFIG_PERSISTER);
 
         GWCConfigPersister testGWCCP =
                 new GWCConfigPersister(
@@ -1023,61 +1153,10 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
 
                 final DefaultTileLayerCatalog gwcBackupCatalog =
                         new DefaultTileLayerCatalog(resourceLoader, gwcXmlPersisterFactory);
+                gwcBackupCatalog.initialize();
 
                 for (String layerName : gwcCatalog.getLayerNames()) {
-                    GeoServerTileLayerInfo gwcLayerInfo = gwcCatalog.getLayerByName(layerName);
-
-                    // Persist the GWC Layer Info into the backup folder
-                    boolean persistResource = false;
-
-                    LayerInfo layerInfo = getCatalog().getLayerByName(layerName);
-
-                    if (layerInfo != null) {
-                        WorkspaceInfo ws =
-                                layerInfo.getResource() != null
-                                                && layerInfo.getResource().getStore() != null
-                                                && layerInfo.getResource().getStore().getWorkspace()
-                                                        != null
-                                        ? getCatalog()
-                                                .getWorkspaceByName(
-                                                        layerInfo
-                                                                .getResource()
-                                                                .getStore()
-                                                                .getWorkspace()
-                                                                .getName())
-                                        : null;
-
-                        if (!filteredResource(ws, true)) {
-                            persistResource = true;
-                        }
-                    } else {
-                        try {
-                            LayerGroupInfo layerGroupInfo =
-                                    getCatalog().getLayerGroupByName(layerName);
-                            if (layerGroupInfo != null) {
-                                WorkspaceInfo ws =
-                                        layerGroupInfo.getWorkspace() != null
-                                                ? getCatalog()
-                                                        .getWorkspaceByName(
-                                                                layerGroupInfo
-                                                                        .getWorkspace()
-                                                                        .getName())
-                                                : null;
-
-                                if (!filteredResource(ws, false)) {
-                                    persistResource = true;
-                                }
-                            }
-                        } catch (NullPointerException e) {
-                            if (getCurrentJobExecution() != null) {
-                                getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
-                            }
-                        }
-                    }
-
-                    if (persistResource) {
-                        gwcBackupCatalog.save(gwcLayerInfo);
-                    }
+                    backupGwcLayer(gwcCatalog, gwcBackupCatalog, layerName);
                 }
             }
 
@@ -1086,16 +1165,70 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
+    private void backupGwcLayer(
+            final TileLayerCatalog gwcCatalog,
+            final DefaultTileLayerCatalog gwcBackupCatalog,
+            String layerName) {
+        GeoServerTileLayerInfo gwcLayerInfo = gwcCatalog.getLayerByName(layerName);
+
+        // Persist the GWC Layer Info into the backup folder
+        boolean persistResource = false;
+
+        LayerInfo layerInfo = getCatalog().getLayerByName(layerName);
+
+        if (layerInfo != null) {
+            WorkspaceInfo ws = getLayerWorkspace(layerInfo);
+
+            if (!filteredResource(layerInfo, ws, true, LayerInfo.class)) {
+                persistResource = true;
+            }
+        } else {
+            try {
+                LayerGroupInfo layerGroupInfo = getCatalog().getLayerGroupByName(layerName);
+                if (layerGroupInfo != null) {
+                    WorkspaceInfo ws = getLayerGroupWorkspace(layerGroupInfo);
+
+                    if (!filteredResource(ws, false)) {
+                        persistResource = true;
+                    }
+                }
+            } catch (NullPointerException e) {
+                if (getCurrentJobExecution() != null) {
+                    getCurrentJobExecution().addWarningExceptions(Arrays.asList(e));
+                }
+            }
+        }
+
+        if (persistResource) {
+            gwcBackupCatalog.save(gwcLayerInfo);
+        }
+    }
+
+    private WorkspaceInfo getLayerGroupWorkspace(LayerGroupInfo layerGroupInfo) {
+        WorkspaceInfo ws =
+                layerGroupInfo.getWorkspace() != null
+                        ? getCatalog().getWorkspaceByName(layerGroupInfo.getWorkspace().getName())
+                        : null;
+        return ws;
+    }
+
+    private WorkspaceInfo getLayerWorkspace(LayerInfo layerInfo) {
+        WorkspaceInfo ws =
+                layerInfo.getResource() != null
+                                && layerInfo.getResource().getStore() != null
+                                && layerInfo.getResource().getStore().getWorkspace() != null
+                        ? getCatalog()
+                                .getWorkspaceByName(
+                                        layerInfo.getResource().getStore().getWorkspace().getName())
+                        : null;
+        return ws;
+    }
+
     /**
      * TODO: When Restoring
      *
      * <p>1. the securityManager should issue the listeners 2. the GWCInitializer should be
      * re-initialized
-     *
-     * @param sourceRestoreFolder
-     * @param baseDir
-     * @throws Exception
-     * @throws IOException
      */
     private void restoreGWCSettings(Resource sourceRestoreFolder, Resource baseDir)
             throws Exception {
@@ -1133,35 +1266,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
             // safe to save tons of single XML files.
             //       Nonetheless, given the default implementation of GWC Catalog does not have much
             // sense to refactor this code now.
-            final TileLayerCatalog gwcCatalog =
-                    (TileLayerCatalog) GeoServerExtensions.bean("GeoSeverTileLayerCatalog");
-            BiMap<String, String> layersByName = null;
-
-            if (gwcCatalog != null) {
-                if (isDryRun()) {
-                    BiMap<String, String> baseBiMap = HashBiMap.create();
-                    layersByName = Maps.synchronizedBiMap(baseBiMap);
-                }
-
-                final XMLConfiguration gwcXmlPersisterFactory =
-                        (XMLConfiguration) GeoServerExtensions.bean("gwcXmlConfig");
-                final GeoServerResourceLoader resourceLoader =
-                        new GeoServerResourceLoader(sourceRestoreFolder.dir());
-
-                final DefaultTileLayerCatalog gwcRestoreCatalog =
-                        new DefaultTileLayerCatalog(resourceLoader, gwcXmlPersisterFactory);
-
-                Resource gwcCatalogPersistenceLocation =
-                        targetGWCProviderRestoreDir
-                                .parent()
-                                .get(gwcCatalog.getPersistenceLocation());
-                Files.delete(gwcCatalogPersistenceLocation.dir());
-                if (!filterIsValid()) {
-                    restoreGWCTileLayersInfos(gwcCatalog, layersByName, gwcRestoreCatalog);
-                } else {
-                    restoreGWCTileLayersInfos(gwcCatalog, layersByName, gwcCatalog);
-                }
-            }
+            restoreGwcLayers(sourceRestoreFolder, targetGWCProviderRestoreDir);
 
         } catch (Exception e) {
             if (getCurrentJobExecution() != null) {
@@ -1170,11 +1275,38 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param gwcCatalog
-     * @param layersByName
-     * @param gwcRestoreCatalog
-     */
+    /** Restores GWC Layers Configurations. */
+    private void restoreGwcLayers(
+            Resource sourceRestoreFolder, Resource targetGWCProviderRestoreDir) throws IOException {
+        final TileLayerCatalog gwcCatalog =
+                (TileLayerCatalog) GeoServerExtensions.bean("GeoSeverTileLayerCatalog");
+        if (gwcCatalog == null) return;
+        BiMap<String, String> layersByName = null;
+
+        if (isDryRun()) {
+            BiMap<String, String> baseBiMap = HashBiMap.create();
+            layersByName = Maps.synchronizedBiMap(baseBiMap);
+        }
+
+        final XMLConfiguration gwcXmlPersisterFactory =
+                (XMLConfiguration) GeoServerExtensions.bean("gwcXmlConfig");
+        final GeoServerResourceLoader resourceLoader =
+                new GeoServerResourceLoader(sourceRestoreFolder.dir());
+
+        final DefaultTileLayerCatalog gwcRestoreCatalog =
+                new DefaultTileLayerCatalog(resourceLoader, gwcXmlPersisterFactory);
+        gwcRestoreCatalog.initialize();
+        // only delete gwc layers directory if its a full restore
+        if (!filterIsValid()) {
+            Resource gwcCatalogPersistenceLocation =
+                    targetGWCProviderRestoreDir.parent().get(gwcCatalog.getPersistenceLocation());
+            Files.delete(gwcCatalogPersistenceLocation.dir());
+        }
+        // restore tile layers
+        restoreGWCTileLayersInfos(gwcCatalog, layersByName, gwcRestoreCatalog);
+    }
+
+    /** */
     private void restoreGWCTileLayersInfos(
             final TileLayerCatalog gwcCatalog,
             BiMap<String, String> layersByName,
@@ -1185,18 +1317,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
             LayerInfo layerInfo = getCatalog().getLayerByName(layerName);
 
             if (layerInfo != null) {
-                WorkspaceInfo ws =
-                        layerInfo.getResource() != null
-                                        && layerInfo.getResource().getStore() != null
-                                        && layerInfo.getResource().getStore().getWorkspace() != null
-                                ? getCatalog()
-                                        .getWorkspaceByName(
-                                                layerInfo
-                                                        .getResource()
-                                                        .getStore()
-                                                        .getWorkspace()
-                                                        .getName())
-                                : null;
+                WorkspaceInfo ws = getLayerWorkspace(layerInfo);
 
                 restoreGWCTileLayerInfo(
                         gwcCatalog, layersByName, layerName, gwcLayerInfo, layerInfo.getId());
@@ -1204,12 +1325,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
                 LayerGroupInfo layerGroupInfo = getCatalog().getLayerGroupByName(layerName);
 
                 if (layerGroupInfo != null) {
-                    WorkspaceInfo ws =
-                            layerGroupInfo.getWorkspace() != null
-                                    ? getCatalog()
-                                            .getWorkspaceByName(
-                                                    layerGroupInfo.getWorkspace().getName())
-                                    : null;
+                    WorkspaceInfo ws = getLayerGroupWorkspace(layerGroupInfo);
 
                     restoreGWCTileLayerInfo(
                             gwcCatalog,
@@ -1222,14 +1338,7 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         }
     }
 
-    /**
-     * @param gwcCatalog
-     * @param layersByName
-     * @param layerName
-     * @param gwcLayerInfo
-     * @param layerInfo
-     * @throws IllegalArgumentException
-     */
+    /** */
     private void restoreGWCTileLayerInfo(
             final TileLayerCatalog gwcCatalog,
             BiMap<String, String> layersByName,
@@ -1243,8 +1352,9 @@ public class CatalogBackupRestoreTasklet extends AbstractCatalogBackupRestoreTas
         if (!isDryRun()) {
             // - Depersist the GWC Layer Info into the restore folder
             GeoServerTileLayerInfo oldValue = gwcCatalog.getLayerByName(layerName);
-            gwcCatalog.delete(oldValue.getId());
-
+            if (oldValue != null) {
+                gwcCatalog.delete(oldValue.getId());
+            }
             // - Update the ID
             gwcLayerInfo.setId(layerID);
             gwcCatalog.save(gwcLayerInfo);

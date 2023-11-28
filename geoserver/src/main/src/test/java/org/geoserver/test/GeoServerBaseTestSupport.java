@@ -10,6 +10,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.DefaultConfiguration;
 import org.geoserver.data.test.TestData;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.Service;
@@ -17,10 +20,13 @@ import org.geotools.feature.NameImpl;
 import org.geotools.util.Version;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ComparisonFailure;
+import org.junit.Rule;
 import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
 import org.opengis.feature.type.Name;
 
 /**
@@ -63,6 +69,10 @@ import org.opengis.feature.type.Name;
  * @author Justin Deoliveira, OpenGeo
  * @param <T>
  */
+@SuppressWarnings({
+    "PMD.JUnit4TestShouldUseBeforeAnnotation",
+    "PMD.JUnit4TestShouldUseAfterAnnotation"
+})
 public abstract class GeoServerBaseTestSupport<T extends TestData> {
 
     /** Common logger for test cases */
@@ -87,18 +97,15 @@ public abstract class GeoServerBaseTestSupport<T extends TestData> {
 
     @Rule
     public TestRule runSetup =
-            new TestRule() {
-                @Override
-                public Statement apply(Statement base, Description description) {
-                    if (description.getAnnotation(RunTestSetup.class) != null) {
-                        try {
-                            doTearDownClass();
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
+            (base, description) -> {
+                if (description.getAnnotation(RunTestSetup.class) != null) {
+                    try {
+                        doTearDownClass();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
-                    return base;
                 }
+                return base;
             };
 
     /** Checks for existence of a system property named "quietTests". */
@@ -127,16 +134,26 @@ public abstract class GeoServerBaseTestSupport<T extends TestData> {
     }
 
     @Before
+    @SuppressWarnings("unchecked")
     public final void doSetup() throws Exception {
         if (testData == null) {
             test = this;
             testData = createTestData();
-            testData.setUp();
+
+            Logger imageLogger = Logger.getLogger("org.geotools.image");
+            Level previousLevel = imageLogger.getLevel();
+            try {
+                imageLogger.setLevel(Level.WARNING);
+                testData.setUp();
+            } finally {
+                imageLogger.setLevel(previousLevel);
+            }
 
             setUp((T) testData);
         }
     }
 
+    @SuppressWarnings("unchecked")
     protected T getTestData() {
         return (T) testData;
     }
@@ -168,8 +185,8 @@ public abstract class GeoServerBaseTestSupport<T extends TestData> {
         }
     }
 
-    private TestSetupFrequency lookupTestSetupPolicy() {
-        Class clazz = getClass();
+    protected TestSetupFrequency lookupTestSetupPolicy() {
+        Class<?> clazz = getClass();
         while (clazz != null && !Object.class.equals(clazz)) {
             TestSetup testSetup = (TestSetup) clazz.getAnnotation(TestSetup.class);
             if (testSetup != null) {
@@ -181,14 +198,37 @@ public abstract class GeoServerBaseTestSupport<T extends TestData> {
     }
 
     @AfterClass
+    @SuppressWarnings("unchecked")
     public static final void doTearDownClass() throws Exception {
         if (testData != null) {
             try {
-                test.tearDown(testData);
-                testData.tearDown();
+                try {
+                    test.tearDown(testData);
+                } catch (Throwable t) {
+                    LOGGER.log(Logging.FATAL, "Failure to tear down test support: " + t, t);
+                    throw t;
+                }
+                // reset log4j2 to default, to drop any open files
+                LogManager.shutdown();
+                @SuppressWarnings({
+                    "resource",
+                    "PMD.CloseResource"
+                }) // current context, no need to enforce AutoClosable
+                LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
+                loggerContext.reconfigure(new DefaultConfiguration());
+
+                try {
+                    testData.tearDown();
+                } catch (Throwable t) {
+                    LOGGER.log(
+                            Logging.FATAL,
+                            "Failure to remove contents of the temporary data directory: " + t,
+                            t);
+                    throw t;
+                }
             } finally {
                 // clean up the static variables anyways, otherwise a failure
-                // to tear down will pullute the test and test data used by subsequent tests
+                // to tear down will pollute the test and test data used by subsequent tests
                 testData = null;
                 test = null;
             }
@@ -251,8 +291,7 @@ public abstract class GeoServerBaseTestSupport<T extends TestData> {
      */
     protected Service getService(String id, Version version) {
         List<Service> services =
-                GeoServerExtensions.extensions(Service.class)
-                        .stream()
+                GeoServerExtensions.extensions(Service.class).stream()
                         .filter(s -> id.equals(s.getId()) && version.equals(s.getVersion()))
                         .collect(Collectors.toList());
         if (services.isEmpty()) {

@@ -5,14 +5,15 @@
  */
 package org.geoserver.security;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.Vector;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.geotools.util.logging.Logging;
 import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.web.FilterInvocation;
 import org.springframework.security.web.access.intercept.FilterInvocationSecurityMetadataSource;
@@ -24,18 +25,20 @@ import org.springframework.util.StringUtils;
 public class RESTfulPathBasedFilterInvocationDefinitionMap
         implements FilterInvocationSecurityMetadataSource {
 
-    private static Log log = LogFactory.getLog(RESTfulPathBasedFilterInvocationDefinitionMap.class);
+    private static Logger log =
+            Logging.getLogger(RESTfulPathBasedFilterInvocationDefinitionMap.class);
 
     // ~ Instance fields
     // ================================================================================================
 
-    private Collection<EntryHolder> requestMap = new Vector<EntryHolder>();
+    private Collection<EntryHolder> requestMap = new ArrayList<>();
     private PathMatcher pathMatcher = new AntPathMatcher();
     private boolean convertUrlToLowercaseBeforeComparison = false;
 
     // ~ Methods
     // ========================================================================================================
-    public boolean supports(Class clazz) {
+    @Override
+    public boolean supports(Class<?> clazz) {
         return FilterInvocation.class.isAssignableFrom(clazz);
     }
 
@@ -43,8 +46,8 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
             String antPath, String[] httpMethods, Collection<ConfigAttribute> attrs) {
         requestMap.add(new EntryHolder(antPath, httpMethods, attrs));
 
-        if (log.isDebugEnabled()) {
-            log.debug(
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(
                     "Added Ant path: "
                             + antPath
                             + "; attributes: "
@@ -59,8 +62,9 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
                 "addSecureUrl(String, Collection<ConfigAttribute> ) is INVALID for RESTfulDefinitionSource");
     }
 
+    @Override
     public Collection<ConfigAttribute> getAllConfigAttributes() {
-        Set<ConfigAttribute> set = new HashSet<ConfigAttribute>();
+        Set<ConfigAttribute> set = new HashSet<>();
 
         for (EntryHolder h : requestMap) {
             set.addAll(h.getConfigAttributes());
@@ -83,6 +87,7 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
         this.convertUrlToLowercaseBeforeComparison = convertUrlToLowercaseBeforeComparison;
     }
 
+    @Override
     public Collection<ConfigAttribute> getAttributes(Object object)
             throws IllegalArgumentException {
         if ((object == null) || !this.supports(object.getClass())) {
@@ -111,8 +116,8 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
         if (isConvertUrlToLowercaseBeforeComparison()) {
             url = url.toLowerCase();
 
-            if (log.isDebugEnabled()) {
-                log.debug(
+            if (log.isLoggable(Level.FINE)) {
+                log.fine(
                         "Converted URL to lowercase, from: '"
                                 + url
                                 + "'; to: '"
@@ -128,8 +133,8 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
 
             String antPath = entryHolder.getAntPath();
             String[] methodList = entryHolder.getHttpMethodList();
-            if (log.isDebugEnabled()) {
-                log.debug(
+            if (log.isLoggable(Level.FINE)) {
+                log.fine(
                         "~~~~~~~~~~ antPath= "
                                 + antPath
                                 + " methodList= "
@@ -140,15 +145,15 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
             boolean matchedMethods = true;
             if (methodList != null) {
                 matchedMethods = false;
-                for (int ii = 0; ii < methodList.length; ii++) {
-                    if (methodList[ii].equals(httpMethod)) {
+                for (String s : methodList) {
+                    if (s.equals(httpMethod)) {
                         matchedMethods = true;
                         break;
                     }
                 }
             }
-            if (log.isDebugEnabled())
-                log.debug(
+            if (log.isLoggable(Level.FINE))
+                log.fine(
                         "Candidate is: '"
                                 + url
                                 + "'; antPath is "
@@ -159,7 +164,7 @@ public class RESTfulPathBasedFilterInvocationDefinitionMap
                                 + matchedMethods);
 
             if (matchedPath && matchedMethods) {
-                log.debug(
+                log.fine(
                         "returning "
                                 + StringUtils.collectionToCommaDelimitedString(
                                         entryHolder.getConfigAttributes()));

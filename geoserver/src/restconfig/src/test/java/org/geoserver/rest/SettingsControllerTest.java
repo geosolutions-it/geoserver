@@ -5,11 +5,20 @@
 package org.geoserver.rest;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
-import org.geoserver.config.*;
+import org.geoserver.config.ContactInfo;
+import org.geoserver.config.CoverageAccessInfo;
+import org.geoserver.config.GeoServer;
+import org.geoserver.config.GeoServerInfo;
+import org.geoserver.config.SettingsInfo;
 import org.geoserver.config.impl.ContactInfoImpl;
 import org.geoserver.ows.LocalWorkspace;
 import org.geoserver.rest.catalog.CatalogRESTTestSupport;
@@ -96,7 +105,19 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
 
     @Test
     public void testGetContactAsHTML() throws Exception {
-        Document dom = getAsDOM(RestBaseController.ROOT_PATH + "/settings/contact.html", 200);
+        getAsDOM(RestBaseController.ROOT_PATH + "/settings/contact.html", 200);
+    }
+
+    @Test
+    public void testGetContactAsHTMLXSS() throws Exception {
+        String decoded = "<foo>bar</foo>";
+        String encoded = "&lt;foo&gt;bar&lt;/foo&gt;";
+        GeoServerInfo geoServerInfo = geoServer.getGlobal();
+        geoServerInfo.getSettings().getContact().setAddress(decoded);
+        geoServer.save(geoServerInfo);
+        String html = getAsString(RestBaseController.ROOT_PATH + "/settings/contact.html");
+        assertThat(html, not(containsString(decoded)));
+        assertThat(html, containsString(encoded));
     }
 
     @Test
@@ -176,10 +197,11 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
         JSONObject contact = settings.getJSONObject("contact");
         assertNotNull(contact);
         assertEquals("Andrea Aime", contact.get("contactPerson"));
+        assertEquals("https://www.osgeo.org", contact.get("onlineResource"));
 
         assertEquals("UTF-8", settings.get("charset"));
         assertEquals("8", settings.get("numDecimals").toString().trim());
-        assertEquals("http://geoserver.org", settings.get("onlineResource"));
+        assertEquals("https://geoserver.org", settings.get("onlineResource"));
 
         JSONObject jaiInfo = global.getJSONObject("jai");
         assertNotNull(jaiInfo);
@@ -197,8 +219,10 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
         assertEquals("global", dom.getDocumentElement().getLocalName());
         assertXpathEvaluatesTo("UTF-8", "/global/settings/charset", dom);
         assertXpathEvaluatesTo("8", "/global/settings/numDecimals", dom);
-        assertXpathEvaluatesTo("http://geoserver.org", "/global/settings/onlineResource", dom);
+        assertXpathEvaluatesTo("https://geoserver.org", "/global/settings/onlineResource", dom);
         assertXpathEvaluatesTo("Andrea Aime", "/global/settings/contact/contactPerson", dom);
+        assertXpathEvaluatesTo(
+                "https://www.osgeo.org", "/global/settings/contact/onlineResource", dom);
         assertXpathEvaluatesTo("false", "/global/jai/allowInterpolation", dom);
         assertXpathEvaluatesTo("0.75", "/global/jai/memoryThreshold", dom);
         assertXpathEvaluatesTo("UNBOUNDED", "/global/coverageAccess/queueType", dom);
@@ -275,7 +299,7 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
 
     @Test
     public void testGetGlobalAsHTML() throws Exception {
-        Document dom = getAsDOM(RestBaseController.ROOT_PATH + "/settings.html", 200);
+        getAsDOM(RestBaseController.ROOT_PATH + "/settings.html", 200);
     }
 
     @Test
@@ -361,7 +385,7 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
 
     @Test
     public void testGetLocalAsHTML() throws Exception {
-        Document dom = getAsDOM(RestBaseController.ROOT_PATH + "/workspaces/sf/settings.html", 200);
+        getAsDOM(RestBaseController.ROOT_PATH + "/workspaces/sf/settings.html", 200);
     }
 
     @Test
@@ -565,5 +589,78 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
         json = getAsJSON(RestBaseController.ROOT_PATH + "/workspaces/sf/settings.json");
         JSONObject deletedJson = (JSONObject) json;
         assertNull(deletedJson.get("workspace"));
+    }
+
+    @Test
+    public void testPutContactAsJSONInternationalValues() throws Exception {
+        initContact();
+        String inputJson =
+                "{\n"
+                        + "    \"contact\": {\n"
+                        + "        \"internationalAddress\": {\n"
+                        + "            \"ar-EG\": \"Avenida Atlantica 15\",\n"
+                        + "            \"de\": \"via di Sotterra 13\"\n"
+                        + "        },\n"
+                        + "        \"internationalAddressCity\": {\n"
+                        + "            \"ar-EG\": \"Alexandria\",\n"
+                        + "            \"de\": \"Berlin\"\n"
+                        + "        },\n"
+                        + "        \"internationalAddressCountry\": {\n"
+                        + "            \"ar-EG\": \"Egypt\",\n"
+                        + "            \"de\": \"Germany\"\n"
+                        + "        },\n"
+                        + "        \"internationalAddressDeliveryPoint\": {\n"
+                        + "            \"ar-EG\": \"EG delivery point\",\n"
+                        + "            \"de\": \"DE delivery point\"\n"
+                        + "        },\n"
+                        + "        \"internationalAddressPostalCode\": {\n"
+                        + "            \"ar-EG\": 111110000011111,\n"
+                        + "            \"de\": \"000001111110000\"\n"
+                        + "        },\n"
+                        + "        \"internationalContactEmail\": {\n"
+                        + "            \"ar-EG\": \"claudius.ptolomaeus@gmail.com\",\n"
+                        + "            \"de\": \"alexander.von.humboldt@erdkunde.com\"\n"
+                        + "        },\n"
+                        + "        \"internationalContactPerson\": {\n"
+                        + "            \"ar-EG\": \"Claudius Ptolomaeus\",\n"
+                        + "            \"de\": \"Alexander von Humboldt\"\n"
+                        + "        },\n"
+                        + "    }\n"
+                        + "}";
+        MockHttpServletResponse response =
+                putAsServletResponse(
+                        RestBaseController.ROOT_PATH + "/settings/contact", inputJson, "text/json");
+        assertEquals(200, response.getStatus());
+        JSON jsonMod = getAsJSON(RestBaseController.ROOT_PATH + "/settings/contact.json");
+        JSONObject jsonObject = (JSONObject) jsonMod;
+        assertNotNull(jsonObject);
+        JSONObject contactInfo = jsonObject.getJSONObject("contact");
+        JSONObject country = contactInfo.getJSONObject("internationalAddressCountry");
+        assertEquals("Egypt", country.getString("ar-EG"));
+        assertEquals("Germany", country.getString("de"));
+
+        JSONObject address = contactInfo.getJSONObject("internationalAddress");
+        assertEquals("Avenida Atlantica 15", address.getString("ar-EG"));
+        assertEquals("via di Sotterra 13", address.getString("de"));
+
+        JSONObject addressCity = contactInfo.getJSONObject("internationalAddressCity");
+        assertEquals("Alexandria", addressCity.getString("ar-EG"));
+        assertEquals("Berlin", addressCity.getString("de"));
+
+        JSONObject delPoint = contactInfo.getJSONObject("internationalAddressDeliveryPoint");
+        assertEquals("EG delivery point", delPoint.getString("ar-EG"));
+        assertEquals("DE delivery point", delPoint.getString("de"));
+
+        JSONObject code = contactInfo.getJSONObject("internationalAddressPostalCode");
+        assertEquals("111110000011111", code.getString("ar-EG"));
+        assertEquals("000001111110000", code.getString("de"));
+
+        JSONObject pers = contactInfo.getJSONObject("internationalContactPerson");
+        assertEquals("Claudius Ptolomaeus", pers.getString("ar-EG"));
+        assertEquals("Alexander von Humboldt", pers.getString("de"));
+
+        JSONObject email = contactInfo.getJSONObject("internationalContactEmail");
+        assertEquals("claudius.ptolomaeus@gmail.com", email.getString("ar-EG"));
+        assertEquals("alexander.von.humboldt@erdkunde.com", email.getString("de"));
     }
 }

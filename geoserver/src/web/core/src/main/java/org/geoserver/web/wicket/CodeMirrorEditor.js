@@ -41,7 +41,8 @@ function isEndTag(str) {
 function isEmpty(str) {
   return str.trim() == "";
 }
-
+//the root codeMirrorEditor div
+var codeMirrorEditor=document.getElementById("$codeMirrorEditorId");
 var textarea = document.getElementById('$componentId');
 var editor = CodeMirror.fromTextArea(textarea, { 
     mode: '$mode',
@@ -49,7 +50,9 @@ var editor = CodeMirror.fromTextArea(textarea, {
     lineWrapping: true,
     lineNumbers: true,
     extraKeys: {
-        "Ctrl-Space": "autocomplete"
+        "Ctrl-Space": "autocomplete",
+        // override built-in to clear selection too on "Esc"
+        "Esc" : function(cm) {editor.execCommand("clearSearch"); editor.execCommand("singleSelection")}
     }
 });
 editor.getWrapperElement().style.fontSize = "12px"; 
@@ -80,13 +83,23 @@ document.getElementById('cm_goto').onclick = function() {
     editor.focus();
 };
 document.getElementById('cm_font_size').onchange = function() {
-    var fontSize = document.getElementById('cm_font_size').value;
+    var fontSize;
+    if (typeof(codeMirrorEditor) !== "undefined" && codeMirrorEditor !== null ){
+        fontSize=codeMirrorEditor.querySelector('#cm_font_size').value;
+    } else {
+        fontSize=document.getElementById('cm_font_size').value;
+    }
     editor.getWrapperElement().style.fontSize = fontSize+"px"; 
     editor.refresh();
 }
 document.getElementById('cm_editor_heigth').onchange = function() {
-    var height = document.getElementById('cm_editor_heigth').value;
-    editor.setSize("100%", height); 
+    var height;
+    if (typeof(codeMirrorEditor) !== "undefined" && codeMirrorEditor !== null ){
+         height=codeMirrorEditor.querySelector('#cm_editor_heigth').value;
+    } else {
+         height=document.getElementById('cm_editor_heigth').value;
+    }
+    editor.setSize("100%", height);
     editor.refresh();
 }
 document.getElementById('cm_reformat').onclick = function() {
@@ -102,6 +115,15 @@ document.getElementById('cm_reformat').onclick = function() {
         editor.indentLine(i);
     }
 }
+document.getElementById('cm_find').onclick = function() {
+    editor.execCommand('find')
+};
+document.getElementById('cm_find_next').onclick = function() {
+    editor.execCommand('findNext')
+};
+document.getElementById('cm_replace').onclick = function() {
+    editor.execCommand('replace')
+};
 replaceSelection = function(repl) {
 	start = editor.getCursor(true).line;
     editor.replaceSelection(repl);

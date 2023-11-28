@@ -36,7 +36,6 @@ Code
 :download:`Download the "Two-color gradient" YSLD <artifacts/raster_twocolorgradient.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Two color gradient'
   feature-styles:
@@ -73,7 +72,6 @@ Code
 :download:`Download the "Transparent gradient" YSLD <artifacts/raster_transparentgradient.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Transparent gradient'
   feature-styles:
@@ -92,7 +90,7 @@ Details
 ~~~~~~~
 
 
-This example is similar to the :ref:`ysld_cookbook_raster_twocolorgradient` example save for the addition of **line 7**, which sets the opacity of the layer to 0.3 (or 30% opaque). An opacity value of 1 means that the shape is drawn 100% opaque, while an opacity value of 0 means that the shape is rendered as completely transparent. The value of 0.3 means that the the raster partially takes on the color and style of whatever is drawn beneath it. Since the background is white in this example, the colors generated from the ``color-map`` look lighter, but were the raster imposed on a dark background the resulting colors would be darker.
+This example is similar to the :ref:`ysld_cookbook_raster_twocolorgradient` example save for the addition of **line 7**, which sets the opacity of the layer to 0.3 (or 30% opaque). An opacity value of 1 means that the shape is drawn 100% opaque, while an opacity value of 0 means that the shape is rendered as completely transparent. The value of 0.3 means that the raster partially takes on the color and style of whatever is drawn beneath it. Since the background is white in this example, the colors generated from the ``color-map`` look lighter, but were the raster imposed on a dark background the resulting colors would be darker.
 
 
 Brightness and contrast
@@ -110,7 +108,6 @@ Code
 :download:`Download the "Brightness and contrast" YSLD <artifacts/raster_brightnessandcontrast.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Brightness and contrast'
   feature-styles:
@@ -152,7 +149,6 @@ Code
 :download:`Download the "Three-color gradient" YSLD <artifacts/raster_threecolorgradient.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Three color gradient'
   feature-styles:
@@ -191,7 +187,6 @@ Code
 :download:`Download the "Alpha channel" YSLD <artifacts/raster_alphachannel.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Alpha channel'
   feature-styles:
@@ -229,7 +224,6 @@ Code
 :download:`Download the "Discrete colors" YSLD <artifacts/raster_discretecolors.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Discrete colors'
   feature-styles:
@@ -265,7 +259,6 @@ Code
 :download:`Download the "Many color gradient" YSLD <artifacts/raster_manycolorgradient.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Many color gradient'
   feature-styles:

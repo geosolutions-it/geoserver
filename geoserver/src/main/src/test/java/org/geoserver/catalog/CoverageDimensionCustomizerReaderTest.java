@@ -5,7 +5,10 @@
  */
 package org.geoserver.catalog;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 
 import java.awt.Color;
 import java.awt.geom.Rectangle2D;
@@ -31,7 +34,7 @@ import org.junit.Test;
 import org.opengis.coverage.ColorInterpretation;
 import org.opengis.coverage.SampleDimension;
 import org.opengis.coverage.SampleDimensionType;
-import tec.uom.se.unit.BaseUnit;
+import tech.units.indriya.unit.BaseUnit;
 
 public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSupport {
 
@@ -40,8 +43,6 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
     /**
      * Test that the null values and range of a wrapped sampleDimension are the same configured on
      * the {@link CoverageDimensionInfo} object used to customize them
-     *
-     * @throws IOException
      */
     @Test
     public void testDimensionsWrapping() throws IOException {
@@ -67,11 +68,10 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
 
         final double newMinimum = -2000d;
         final double newMaximum = 2000d;
-        final NumberRange<Double> range =
-                new NumberRange<Double>(Double.class, newMinimum, newMaximum);
+        final NumberRange<Double> range = new NumberRange<>(Double.class, newMinimum, newMaximum);
         coverageDim.setRange(range);
 
-        final List<Double> nullValues = new ArrayList<Double>();
+        final List<Double> nullValues = new ArrayList<>();
         final double noData1 = -32768d;
         final double noData2 = -32767d;
         nullValues.add(noData1);
@@ -116,11 +116,10 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
 
         final double newMinimum = -2000d;
         final double newMaximum = 2000d;
-        final NumberRange<Double> range =
-                new NumberRange<Double>(Double.class, newMinimum, newMaximum);
+        final NumberRange<Double> range = new NumberRange<>(Double.class, newMinimum, newMaximum);
         coverageDim.setRange(range);
 
-        final List<Double> nullValues = new ArrayList<Double>();
+        final List<Double> nullValues = new ArrayList<>();
         final double noData1 = -32768d;
         final double noData2 = -32767d;
         nullValues.add(noData1);
@@ -139,11 +138,7 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
         assertEquals(newMaximum, wrappedRange.getMaximum(), DELTA);
     }
 
-    /**
-     * Test that the wrapped nodata categories contains the defined nodata as an int
-     *
-     * @throws IOException
-     */
+    /** Test that the wrapped nodata categories contains the defined nodata as an int */
     @Test
     public void testIntegerNoDataCategoryWrapping() throws IOException {
 
@@ -155,7 +150,7 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
         coverageDim.setRange(NumberRange.create(0d, 10000d));
 
         // Definition of the nodata
-        final List<Double> nullValues = new ArrayList<Double>();
+        final List<Double> nullValues = new ArrayList<>();
         final double noData1 = -32768d;
         nullValues.add(noData1);
         coverageDim.setNullValues(nullValues);
@@ -180,18 +175,14 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
 
         // Ensure NoData Category is present
         Category category = categories.get(0);
-        assertTrue(category.getName().equals(Category.NODATA.getName()));
+        assertEquals(category.getName(), Category.NODATA.getName());
 
         // Check if it contains sampleToGeophisics and the Range contains the first nodata defined
         assertEquals(category.getRange().getMinimum(), noData1, DELTA);
         assertEquals(category.getRange().getMaximum(), noData1, DELTA);
     }
 
-    /**
-     * Test that the wrapped nodata categories contains the defined nodata
-     *
-     * @throws IOException
-     */
+    /** Test that the wrapped nodata categories contains the defined nodata */
     @Test
     public void testNoDataCategoryWrapping() throws IOException {
 
@@ -202,7 +193,7 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
         coverageDim.setDimensionType(SampleDimensionType.REAL_64BITS);
 
         // Definition of the nodata
-        final List<Double> nullValues = new ArrayList<Double>();
+        final List<Double> nullValues = new ArrayList<>();
         final double noData1 = -32768d;
         final double noData2 = -32767d;
         nullValues.add(noData1);
@@ -234,7 +225,7 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
 
         // Ensure NoData Category is present
         Category category = categories.get(0);
-        assertTrue(category.getName().equals(Category.NODATA.getName()));
+        assertEquals(category.getName(), Category.NODATA.getName());
 
         // Check that it does not contain sampleToGeophisics and that the Range contains only NaN
         assertEquals(category.getRange().getMinimum(), Double.NaN, DELTA);
@@ -260,18 +251,14 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
 
         // Ensure NoData Category is present
         category = categories.get(0);
-        assertTrue(category.getName().equals(Category.NODATA.getName()));
+        assertEquals(category.getName(), Category.NODATA.getName());
 
         // Check if it contains sampleToGeophisics and the Range contains the first nodata defined
         assertEquals(category.getRange().getMinimum(), noData1, DELTA);
         assertEquals(category.getRange().getMaximum(), noData1, DELTA);
     }
 
-    /**
-     * Test that if no range is defined, Category values or Default values are used
-     *
-     * @throws IOException
-     */
+    /** Test that if no range is defined, Category values or Default values are used */
     @Test
     public void testNoRange() throws IOException {
         GridSampleDimension sampleDim =
@@ -319,11 +306,7 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
         assertEquals(Double.POSITIVE_INFINITY, wrappedDim.getMaximumValue(), DELTA);
     }
 
-    /**
-     * Test GridCoverage unwrapping
-     *
-     * @throws IOException
-     */
+    /** Test GridCoverage unwrapping */
     @Test
     public void testGridCoverageUnwrapping() throws IOException {
 
@@ -335,8 +318,7 @@ public class CoverageDimensionCustomizerReaderTest extends GeoServerSystemTestSu
                         "original",
                         image,
                         new GeneralEnvelope(new Rectangle2D.Double(0, 0, 64, 64)));
-        GridSampleDimension[] gsd =
-                new GridSampleDimension[] {new GridSampleDimension("wrappedSampleDimension")};
+        GridSampleDimension[] gsd = {new GridSampleDimension("wrappedSampleDimension")};
         GridCoverageWrapper wrapper = new GridCoverageWrapper("wrapped", original, gsd, null);
         assertNotSame(original.getSampleDimensions(), wrapper.getSampleDimensions());
         assertNotSame(wrapper, original);

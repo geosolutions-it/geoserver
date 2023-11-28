@@ -52,6 +52,7 @@ public abstract class WFSDescribeFeatureTypeOutputFormat extends WFSResponse
      *
      * <p>This method may be extended to add additional checks, it should not be overriden.
      */
+    @Override
     public boolean canHandle(Operation operation) {
         if ("DescribeFeatureType".equalsIgnoreCase(operation.getId())) {
             return true;
@@ -66,6 +67,7 @@ public abstract class WFSDescribeFeatureTypeOutputFormat extends WFSResponse
     }
 
     /** Calls through to {@link #write(FeatureTypeInfo[], OutputStream, Operation)}. */
+    @Override
     public final void write(Object value, OutputStream output, Operation operation)
             throws IOException, ServiceException {
 
@@ -82,4 +84,14 @@ public abstract class WFSDescribeFeatureTypeOutputFormat extends WFSResponse
     protected abstract void write(
             FeatureTypeInfo[] featureTypeInfos, OutputStream output, Operation describeFeatureType)
             throws IOException;
+
+    @Override
+    public String getAttachmentFileName(Object value, Operation operation) {
+        FeatureTypeInfo[] infos = (FeatureTypeInfo[]) value;
+        if (infos.length == 1) {
+            return infos[0].prefixedName().replace(":", "-") + ".xsd";
+        } else {
+            return "schema.xsd";
+        }
+    }
 }

@@ -13,10 +13,18 @@ import org.geoserver.catalog.AuthorityURLInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.config.impl.ServiceInfoImpl;
+import org.geoserver.util.InternationalStringUtils;
+import org.geotools.util.GrowableInternationalString;
+import org.opengis.util.InternationalString;
 
 public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
 
-    List<String> srs = new ArrayList<String>();
+    public static final int DEFAULT_REMOTE_STYLE_MAX_REQUEST_TIME = 60000;
+    public static final int DEFAULT_REMOTE_STYLE_TIMEOUT = 30000;
+
+    List<String> srs = new ArrayList<>();
+
+    List<String> allowedURLsForAuthForwarding = new ArrayList<>();
 
     Boolean bboxForEachCRS;
 
@@ -25,10 +33,10 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
     WMSInterpolation interpolation = WMSInterpolation.Nearest;
 
     boolean getFeatureInfoMimeTypeCheckingEnabled;
-    Set<String> getFeatureInfoMimeTypes = new HashSet<String>();
+    Set<String> getFeatureInfoMimeTypes = new HashSet<>();
 
     boolean getMapMimeTypeCheckingEnabled;
-    Set<String> getMapMimeTypes = new HashSet<String>();
+    Set<String> getMapMimeTypes = new HashSet<>();
 
     boolean dynamicStylingDisabled;
 
@@ -41,7 +49,7 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
      *
      * @since 2.1.3
      */
-    protected List<AuthorityURLInfo> authorityURLs = new ArrayList<AuthorityURLInfo>(2);
+    protected List<AuthorityURLInfo> authorityURLs = new ArrayList<>(2);
 
     /**
      * This property is transient in 2.1.x series and stored under the metadata map with key
@@ -49,7 +57,7 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
      *
      * @since 2.1.3
      */
-    protected List<LayerIdentifierInfo> identifiers = new ArrayList<LayerIdentifierInfo>(2);
+    protected List<LayerIdentifierInfo> identifiers = new ArrayList<>(2);
 
     int maxBuffer;
 
@@ -63,39 +71,64 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
 
     private String rootLayerAbstract;
 
+    private GrowableInternationalString internationalRootLayerTitle;
+
+    private GrowableInternationalString internationalRootLayerAbstract;
+
     private Integer maxRequestedDimensionValues;
 
     private CacheConfiguration cacheConfiguration = new CacheConfiguration();
 
+    private Integer remoteStyleMaxRequestTime;
+    private Integer remoteStyleTimeout;
+
+    private Boolean defaultGroupStyleEnabled;
+
+    private boolean transformFeatureInfoDisabled;
+
+    private boolean autoEscapeTemplateValues;
+
     public WMSInfoImpl() {
-        authorityURLs = new ArrayList<AuthorityURLInfo>(2);
-        identifiers = new ArrayList<LayerIdentifierInfo>(2);
+        authorityURLs = new ArrayList<>(2);
+        identifiers = new ArrayList<>(2);
     }
 
+    @Override
+    public String getType() {
+        return "WMS";
+    }
+
+    @Override
     public int getMaxRequestMemory() {
         return maxRequestMemory;
     }
 
+    @Override
     public void setMaxRequestMemory(int maxRequestMemory) {
         this.maxRequestMemory = maxRequestMemory;
     }
 
+    @Override
     public WatermarkInfo getWatermark() {
         return watermark;
     }
 
+    @Override
     public void setWatermark(WatermarkInfo watermark) {
         this.watermark = watermark;
     }
 
+    @Override
     public void setInterpolation(WMSInterpolation interpolation) {
         this.interpolation = interpolation;
     }
 
+    @Override
     public WMSInterpolation getInterpolation() {
         return interpolation;
     }
 
+    @Override
     public List<String> getSRS() {
         return srs;
     }
@@ -104,6 +137,7 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
         this.srs = srs;
     }
 
+    @Override
     public Boolean isBBOXForEachCRS() {
         if (bboxForEachCRS != null) {
             return bboxForEachCRS;
@@ -114,30 +148,37 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
         return bool != null && bool;
     }
 
+    @Override
     public void setBBOXForEachCRS(Boolean bboxForEachCRS) {
         this.bboxForEachCRS = bboxForEachCRS;
     }
 
+    @Override
     public int getMaxBuffer() {
         return maxBuffer;
     }
 
+    @Override
     public void setMaxBuffer(int maxBuffer) {
         this.maxBuffer = maxBuffer;
     }
 
+    @Override
     public int getMaxRenderingTime() {
         return maxRenderingTime;
     }
 
+    @Override
     public void setMaxRenderingTime(int maxRenderingTime) {
         this.maxRenderingTime = maxRenderingTime;
     }
 
+    @Override
     public int getMaxRenderingErrors() {
         return maxRenderingErrors;
     }
 
+    @Override
     public void setMaxRenderingErrors(int maxRenderingErrors) {
         this.maxRenderingErrors = maxRenderingErrors;
     }
@@ -160,6 +201,7 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
         this.identifiers = identifiers;
     }
 
+    @Override
     public Set<String> getGetFeatureInfoMimeTypes() {
         return getFeatureInfoMimeTypes;
     }
@@ -168,6 +210,7 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
         this.getFeatureInfoMimeTypes = getFeatureInfoMimeTypes;
     }
 
+    @Override
     public Set<String> getGetMapMimeTypes() {
         return getMapMimeTypes;
     }
@@ -176,44 +219,49 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
         this.getMapMimeTypes = getMapMimeTypes;
     }
 
+    @Override
     public boolean isGetFeatureInfoMimeTypeCheckingEnabled() {
         return getFeatureInfoMimeTypeCheckingEnabled;
     }
 
+    @Override
     public void setGetFeatureInfoMimeTypeCheckingEnabled(
             boolean getFeatureInfoMimeTypeCheckingEnabled) {
         this.getFeatureInfoMimeTypeCheckingEnabled = getFeatureInfoMimeTypeCheckingEnabled;
     }
 
+    @Override
     public boolean isGetMapMimeTypeCheckingEnabled() {
         return getMapMimeTypeCheckingEnabled;
     }
 
+    @Override
     public void setGetMapMimeTypeCheckingEnabled(boolean getMapMimeTypeCheckingEnabled) {
         this.getMapMimeTypeCheckingEnabled = getMapMimeTypeCheckingEnabled;
     }
 
+    @Override
     public String getRootLayerTitle() {
-        return rootLayerTitle;
+        return InternationalStringUtils.getOrDefault(rootLayerTitle, internationalRootLayerTitle);
     }
 
+    @Override
     public void setRootLayerTitle(String rootLayerTitle) {
         this.rootLayerTitle = rootLayerTitle;
     }
 
+    @Override
     public String getRootLayerAbstract() {
-        return rootLayerAbstract;
+        return InternationalStringUtils.getOrDefault(
+                rootLayerAbstract, internationalRootLayerAbstract);
     }
 
+    @Override
     public void setRootLayerAbstract(String rootLayerAbstract) {
         this.rootLayerAbstract = rootLayerAbstract;
     }
 
-    /**
-     * Sets the status of dynamic styling (SLD and SLD_BODY params) allowance
-     *
-     * @param dynamicStylingDisabled
-     */
+    /** Sets the status of dynamic styling (SLD and SLD_BODY params) allowance */
     @Override
     public void setDynamicStylingDisabled(Boolean dynamicStylingDisabled) {
         this.dynamicStylingDisabled = dynamicStylingDisabled;
@@ -235,12 +283,14 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
         this.featuresReprojectionDisabled = featuresReprojectionDisabled;
     }
 
+    @Override
     public int getMaxRequestedDimensionValues() {
         return maxRequestedDimensionValues == null
                 ? DimensionInfo.DEFAULT_MAX_REQUESTED_DIMENSION_VALUES
                 : maxRequestedDimensionValues;
     }
 
+    @Override
     public void setMaxRequestedDimensionValues(int maxRequestedDimensionValues) {
         this.maxRequestedDimensionValues = maxRequestedDimensionValues;
     }
@@ -256,5 +306,90 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
     @Override
     public void setCacheConfiguration(CacheConfiguration cacheCfg) {
         this.cacheConfiguration = cacheCfg;
+    }
+
+    @Override
+    public int getRemoteStyleMaxRequestTime() {
+        return remoteStyleMaxRequestTime != null
+                ? remoteStyleMaxRequestTime
+                : DEFAULT_REMOTE_STYLE_MAX_REQUEST_TIME;
+    }
+
+    @Override
+    public void setRemoteStyleMaxRequestTime(int remoteStyleMaxRequestTime) {
+        this.remoteStyleMaxRequestTime = remoteStyleMaxRequestTime;
+    }
+
+    @Override
+    public int getRemoteStyleTimeout() {
+        return remoteStyleTimeout != null ? remoteStyleTimeout : DEFAULT_REMOTE_STYLE_TIMEOUT;
+    }
+
+    @Override
+    public void setRemoteStyleTimeout(int remoteStyleTimeout) {
+        this.remoteStyleTimeout = remoteStyleTimeout;
+    }
+
+    @Override
+    public boolean isDefaultGroupStyleEnabled() {
+        if (defaultGroupStyleEnabled == null) return true;
+        return defaultGroupStyleEnabled.booleanValue();
+    }
+
+    @Override
+    public void setDefaultGroupStyleEnabled(boolean defaultGroupStyleEnabled) {
+        this.defaultGroupStyleEnabled = defaultGroupStyleEnabled;
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalRootLayerTitle() {
+        return internationalRootLayerTitle;
+    }
+
+    @Override
+    public void setInternationalRootLayerTitle(InternationalString rootLayerTitle) {
+        this.internationalRootLayerTitle = InternationalStringUtils.growable(rootLayerTitle);
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalRootLayerAbstract() {
+        return this.internationalRootLayerAbstract;
+    }
+
+    @Override
+    public void setInternationalRootLayerAbstract(InternationalString rootLayerAbstract) {
+        this.internationalRootLayerAbstract = InternationalStringUtils.growable(rootLayerAbstract);
+    }
+
+    @Override
+    public List<String> getAllowedURLsForAuthForwarding() {
+        if (allowedURLsForAuthForwarding == null) {
+            allowedURLsForAuthForwarding = new ArrayList<>();
+        }
+        return allowedURLsForAuthForwarding;
+    }
+
+    public void setAllowedURLsForAuthForwarding(List<String> allowedURLsForAuthForwarding) {
+        this.allowedURLsForAuthForwarding = allowedURLsForAuthForwarding;
+    }
+
+    @Override
+    public boolean isTransformFeatureInfoDisabled() {
+        return transformFeatureInfoDisabled;
+    }
+
+    @Override
+    public void setTransformFeatureInfoDisabled(boolean transformFeatureInfoDisabled) {
+        this.transformFeatureInfoDisabled = transformFeatureInfoDisabled;
+    }
+
+    @Override
+    public boolean isAutoEscapeTemplateValues() {
+        return autoEscapeTemplateValues;
+    }
+
+    @Override
+    public void setAutoEscapeTemplateValues(boolean autoEscapeTemplateValues) {
+        this.autoEscapeTemplateValues = autoEscapeTemplateValues;
     }
 }

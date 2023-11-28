@@ -51,6 +51,7 @@ public class LocalWorkspaceCatalogFilter extends AbstractCatalogFilter {
         this.catalog = catalog;
     }
 
+    @Override
     public boolean hideLayer(LayerInfo layer) {
         PublishedInfo local = LocalPublished.get();
         if (local == null) {
@@ -73,6 +74,7 @@ public class LocalWorkspaceCatalogFilter extends AbstractCatalogFilter {
         }
     }
 
+    @Override
     public boolean hideResource(ResourceInfo resource) {
         if (LocalPublished.get() != null) {
             for (LayerInfo l : resource.getCatalog().getLayers(resource)) {
@@ -84,10 +86,12 @@ public class LocalWorkspaceCatalogFilter extends AbstractCatalogFilter {
         return hideWorkspace(resource.getStore().getWorkspace());
     }
 
+    @Override
     public boolean hideWorkspace(WorkspaceInfo workspace) {
         return LocalWorkspace.get() != null && !LocalWorkspace.get().equals(workspace);
     }
 
+    @Override
     public boolean hideStyle(StyleInfo style) {
         if (style.getWorkspace() == null) {
             // global style, hide it if a local workspace style shars the same name, ie overrides it
@@ -102,11 +106,7 @@ public class LocalWorkspaceCatalogFilter extends AbstractCatalogFilter {
     }
 
     static Boolean groupInherit = null;
-    /**
-     * Should local workspaces include layer groups from the global workspace
-     *
-     * @return
-     */
+    /** Should local workspaces include layer groups from the global workspace */
     public static boolean workspaceLayerGroupInherit() {
         if (groupInherit == null) {
             // Just sets it based on the property so no need to synchronize
@@ -163,11 +163,7 @@ public class LocalWorkspaceCatalogFilter extends AbstractCatalogFilter {
         return hideWorkspace(layerGroup.getWorkspace());
     }
 
-    /**
-     * Returns true if the sublayers of a layer group are all hidden.
-     *
-     * @param layerGroup
-     */
+    /** Returns true if the sublayers of a layer group are all hidden. */
     protected boolean subLayersHidden(LayerGroupInfo layerGroup) {
         boolean anySublayersVisible = false;
         for (PublishedInfo subLayer : layerGroup.getLayers()) {

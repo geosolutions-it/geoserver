@@ -5,7 +5,7 @@
  */
 package org.geoserver.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import org.geoserver.wfs.WFSInfo;
 import org.junit.Test;
@@ -16,7 +16,7 @@ import org.w3c.dom.Node;
 public class PropertyEncodingOrderTest extends AbstractAppSchemaTestSupport {
 
     @Override
-    protected PropertyEncodingOrderMockData createTestData() {
+    protected AbstractAppSchemaMockData createTestData() {
         return new PropertyEncodingOrderMockData();
     }
 

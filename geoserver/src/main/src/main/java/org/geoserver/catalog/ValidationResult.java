@@ -20,7 +20,7 @@ public class ValidationResult {
         if (errors == null) {
             this.errorList = Collections.emptyList();
         } else {
-            this.errorList = Collections.unmodifiableList(new ArrayList<RuntimeException>(errors));
+            this.errorList = Collections.unmodifiableList(new ArrayList<>(errors));
         }
     }
 
@@ -53,8 +53,7 @@ public class ValidationResult {
      * @return concatenation of all exceptions messages
      */
     public String getErrosAsString(String separator) {
-        return errorList
-                .stream()
+        return errorList.stream()
                 .map(RuntimeException::getMessage)
                 .collect(Collectors.joining(separator));
     }

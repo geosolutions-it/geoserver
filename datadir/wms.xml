@@ -72,4 +72,5 @@
     <maxEntries>1000</maxEntries>
     <maxEntrySize>51200</maxEntrySize>
   </cacheConfiguration>
+  <transformFeatureInfoDisabled>true</transformFeatureInfoDisabled>
 </wms>

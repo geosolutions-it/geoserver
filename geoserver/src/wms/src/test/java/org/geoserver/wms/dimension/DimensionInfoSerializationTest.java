@@ -7,7 +7,8 @@ package org.geoserver.wms.dimension;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -52,6 +53,32 @@ public class DimensionInfoSerializationTest extends WMSTestSupport {
         assertBackAndForthSerialization(Strategy.NEAREST, "2014-01-24T13:25:00.000Z");
     }
 
+    @Test
+    public void testDimensionRangeXMLSerialization() throws Exception {
+        String startValue = "2014-01-24T13:25:00.000Z";
+        String endValue = "2021";
+        DimensionInfo di = new DimensionInfoImpl();
+        di.setStartValue(startValue);
+        di.setEndValue(endValue);
+        Document doc = marshallToXML(di);
+
+        assertXpathExists("//startValue", doc);
+        assertXpathEvaluatesTo(startValue, "//startValue", doc);
+        assertXpathExists("//endValue", doc);
+        assertXpathEvaluatesTo(endValue, "//endValue", doc);
+
+        DimensionInfo di2 = unmarshallFromXML(doc);
+        assertEquals(
+                "Unmarshalled startValue does not match the original one",
+                di2.getStartValue(),
+                startValue);
+
+        assertEquals(
+                "Unmarshalled endValue does not match the original one",
+                di2.getEndValue(),
+                endValue);
+    }
+
     protected void assertBackAndForthSerialization(Strategy used) throws Exception {
         assertBackAndForthSerialization(used, null);
     }
@@ -74,14 +101,16 @@ public class DimensionInfoSerializationTest extends WMSTestSupport {
         }
 
         DimensionInfo di2 = unmarshallFromXML(diDOM);
-        assertTrue(
+        assertSame(
                 "Unmarshalled strategy does not match the original one",
-                di2.getDefaultValue().getStrategyType() == used);
+                di2.getDefaultValue().getStrategyType(),
+                used);
 
         if (referenceValue != null) {
-            assertTrue(
+            assertEquals(
                     "Unmarshalled referenceValue does not match the original one",
-                    di2.getDefaultValue().getReferenceValue().equals(referenceValue));
+                    di2.getDefaultValue().getReferenceValue(),
+                    referenceValue);
         }
     }
 

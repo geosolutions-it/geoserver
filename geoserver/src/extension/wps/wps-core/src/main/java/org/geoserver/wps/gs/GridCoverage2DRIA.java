@@ -49,7 +49,7 @@ import org.opengis.referencing.operation.TransformException;
  *
  * @author ETj <etj at geo-solutions.it>
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "PMD.ReplaceVectorWithList"})
 public class GridCoverage2DRIA extends GeometricOpImage {
 
     /** DEFAULT_BORDEREXTENDER */
@@ -179,7 +179,6 @@ public class GridCoverage2DRIA extends GeometricOpImage {
                 new double[] {nodata});
     }
 
-    @SuppressWarnings("rawtypes")
     protected GridCoverage2DRIA(
             final GridCoverage2D src,
             final GridGeometry2D dstGridGeometry,
@@ -249,11 +248,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         }
     }
 
-    /**
-     * @param src
-     * @param dstGridGeometry
-     * @throws IllegalArgumentException
-     */
+    /** */
     private void initTransformations() throws IllegalArgumentException {
         // === Take one for all all the transformation we need to pass from
         // model, sample, src, target and viceversa.
@@ -310,7 +305,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
             throw new IndexOutOfBoundsException("Bad src"); // JaiI18N.getString("Generic1"));
         }
 
-        double coords[] = new double[] {srcPt.getX(), srcPt.getY()};
+        double[] coords = {srcPt.getX(), srcPt.getY()};
 
         try {
             mapSourcePoint(coords);
@@ -399,7 +394,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
             throw new IndexOutOfBoundsException("Bad src"); // JaiI18N.getString("Generic1"));
         }
 
-        double coords[] = new double[] {destPt.getX(), destPt.getY()};
+        double[] coords = {destPt.getX(), destPt.getY()};
 
         try {
             mapDestPoint(coords);
@@ -616,7 +611,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
             // == cycle on destination image
             int minx = dst.getX(), x = 0;
             int miny = dst.getY(), y = 0;
-            final double coords[] = new double[2]; // temp point
+            final double[] coords = new double[2]; // temp point
             // == cycle on Y
             for (int h = 0; h < dstHeight; h++) {
                 int pixelOffset = lineOffset;
@@ -684,7 +679,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
             // == cycle on destination image
             int minx = dst.getX(), x = 0;
             int miny = dst.getY(), y = 0;
-            final double coords[] = new double[2]; // temp point
+            final double[] coords = new double[2]; // temp point
             // --- cycle on Y
             for (int h = 0; h < dstHeight; h++) {
                 int pixelOffset = lineOffset;
@@ -768,7 +763,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         // == cycle on destination image
         int minx = dst.getX(), x = 0;
         int miny = dst.getY(), y = 0;
-        final double coords[] = new double[2]; // temp point
+        final double[] coords = new double[2]; // temp point
         // --- cycle on Y
         for (int h = 0; h < dstHeight; h++) {
             int pixelOffset = lineOffset;
@@ -859,7 +854,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         // == cycle on destination image
         int minx = dst.getX(), x = 0;
         int miny = dst.getY(), y = 0;
-        final double coords[] = new double[2]; // temp point
+        final double[] coords = new double[2]; // temp point
         // --- cycle on Y
         for (int h = 0; h < dstHeight; h++) {
             int pixelOffset = lineOffset;
@@ -949,7 +944,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         // == cycle on destination image
         int minx = dst.getX(), x = 0;
         int miny = dst.getY(), y = 0;
-        final double coords[] = new double[2]; // temp point
+        final double[] coords = new double[2]; // temp point
         // --- cycle on Y
         for (int h = 0; h < dstHeight; h++) {
             int pixelOffset = lineOffset;
@@ -1030,7 +1025,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         // == cycle on destination image
         int minx = dst.getX(), x = 0;
         int miny = dst.getY(), y = 0;
-        final double coords[] = new double[2]; // temp point
+        final double[] coords = new double[2]; // temp point
         // --- cycle on Y
         for (int h = 0; h < dstHeight; h++) {
             int pixelOffset = lineOffset;
@@ -1113,7 +1108,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         // == cycle on destination image
         int minx = dst.getX(), x = 0;
         int miny = dst.getY(), y = 0;
-        final double coords[] = new double[2]; // temp point
+        final double[] coords = new double[2]; // temp point
         // --- cycle on Y
         for (int h = 0; h < dstHeight; h++) {
             int pixelOffset = lineOffset;
@@ -1209,7 +1204,7 @@ public class GridCoverage2DRIA extends GeometricOpImage {
         height += y0;
         int index = 0; // destRect index
 
-        double xy[] = new double[2];
+        double[] xy = new double[2];
 
         for (int y = y0; y < height; y += periodY) {
             for (int x = x0; x < width; x += periodX) {

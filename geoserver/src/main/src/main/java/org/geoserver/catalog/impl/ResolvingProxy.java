@@ -11,7 +11,19 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.geoserver.catalog.*;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.NamespaceInfo;
+import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 
 /**
  * A proxy which holds onto an identifier which will later be resolved into a real object.
@@ -21,7 +33,8 @@ import org.geoserver.catalog.*;
 public class ResolvingProxy extends ProxyBase {
 
     /** Avoids the cost of looking up over and over the same proxy class */
-    static final Map<Class, Constructor> PROXY_CLASS_CONSTRUCTOR_CACHE = new ConcurrentHashMap<>();
+    static final Map<Class<?>, Constructor> PROXY_CLASS_CONSTRUCTOR_CACHE =
+            new ConcurrentHashMap<>();
 
     /**
      * Wraps an object in the proxy.
@@ -37,6 +50,7 @@ public class ResolvingProxy extends ProxyBase {
      *
      * @throws RuntimeException If creating the proxy fails.
      */
+    @SuppressWarnings("unchecked")
     public static <T> T create(String ref, String prefix, Class<T> clazz) {
         InvocationHandler h = new ResolvingProxy(ref, prefix);
 
@@ -52,6 +66,10 @@ public class ResolvingProxy extends ProxyBase {
         if (object instanceof Proxy) {
             InvocationHandler h = Proxy.getInvocationHandler(object);
             if (h instanceof ResolvingProxy) {
+                if (catalog instanceof CatalogImpl) {
+                    catalog = ((CatalogImpl) catalog).getRawCatalog();
+                }
+
                 String ref = ((ResolvingProxy) h).getRef();
                 String pre = ((ResolvingProxy) h).getPrefix();
 
@@ -148,12 +166,31 @@ public class ResolvingProxy extends ProxyBase {
                         // still no luck
                         s = catalog.getStyleByName(ref);
                     }
+
                     return (T) s;
                 }
             }
         }
 
         return object;
+    }
+
+    /**
+     * Gets the proxy ref from an Object.
+     *
+     * @param object the object proxy from which retrieve the ref.
+     * @return the ref value if found, null otherwise.
+     */
+    public static String getRef(Object object) {
+        String result = null;
+        if (object instanceof Proxy) {
+            InvocationHandler h = Proxy.getInvocationHandler(object);
+            if (h instanceof ResolvingProxy) {
+                String ref = ((ResolvingProxy) h).getRef();
+                if (ref != null && !"".equals(ref)) result = ref;
+            }
+        }
+        return result;
     }
 
     /** the reference */

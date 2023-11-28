@@ -172,7 +172,10 @@ public class DynamicDimensionsTabPanel extends PublishedEditTabPanel<LayerInfo> 
 
             table =
                     new ReorderableTablePanel<DefaultValueConfiguration>(
-                            "defaultConfigs", configurations, properties) {
+                            "defaultConfigs",
+                            DefaultValueConfiguration.class,
+                            configurations,
+                            properties) {
 
                         private static final long serialVersionUID = 8562909315041926320L;
 
@@ -264,6 +267,7 @@ public class DynamicDimensionsTabPanel extends PublishedEditTabPanel<LayerInfo> 
                                         private static final long serialVersionUID =
                                                 685833036040462732L;
 
+                                        @Override
                                         public void onComponentTag(
                                                 Component component, ComponentTag tag) {
                                             if (property == DEFAULT_VALUE_EXPRESSION) {

@@ -40,18 +40,22 @@ public class DimensionInfoImpl implements DimensionInfo {
 
     Boolean nearestMatchEnabled;
 
+    Boolean rawNearestMatchEnabled;
+
     String acceptableInterval;
+
+    String startValue;
+
+    String endValue;
+
+    NearestFailBehavior nearestFailBehavior;
 
     /** The default constructor */
     public DimensionInfoImpl() {
         super();
     }
 
-    /**
-     * Creates a shallow copy of the given Dimension object
-     *
-     * @param info
-     */
+    /** Creates a shallow copy of the given Dimension object */
     public DimensionInfoImpl(DimensionInfo info) {
         super();
         this.enabled = info.isEnabled();
@@ -62,72 +66,103 @@ public class DimensionInfoImpl implements DimensionInfo {
         this.units = info.getUnits();
         this.unitSymbol = info.getUnitSymbol();
         this.defaultValue = info.getDefaultValue();
-        this.enabled = info.isEnabled();
+        this.nearestMatchEnabled = info.isNearestMatchEnabled();
+        this.rawNearestMatchEnabled = info.isRawNearestMatchEnabled();
+        this.nearestFailBehavior = info.getNearestFailBehavior();
+        this.startValue = info.getStartValue();
+        this.endValue = info.getEndValue();
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
     }
 
+    @Override
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
+    @Override
     public String getAttribute() {
         return attribute;
     }
 
+    @Override
     public void setAttribute(String attribute) {
         this.attribute = attribute;
     }
 
+    @Override
     public String getEndAttribute() {
         return this.endAttribute;
     }
 
+    @Override
     public void setEndAttribute(String attribute) {
         this.endAttribute = attribute;
     }
 
+    @Override
     public DimensionPresentation getPresentation() {
         return presentation;
     }
 
+    @Override
     public void setPresentation(DimensionPresentation presentation) {
         this.presentation = presentation;
     }
 
+    @Override
     public BigDecimal getResolution() {
         return resolution;
     }
 
+    @Override
     public void setResolution(BigDecimal resolution) {
         this.resolution = resolution;
     }
 
+    @Override
     public String getUnits() {
         return units;
     }
 
+    @Override
     public void setUnits(String units) {
         this.units = units;
     }
 
+    @Override
     public String getUnitSymbol() {
         return unitSymbol;
     }
 
+    @Override
     public void setUnitSymbol(String unitSymbol) {
         this.unitSymbol = unitSymbol;
     }
 
+    @Override
     public boolean isNearestMatchEnabled() {
         // for backwards compatiblity we allow nearest search to be null
         return nearestMatchEnabled == null ? false : nearestMatchEnabled;
     }
 
+    @Override
     public void setNearestMatchEnabled(boolean nearestMatchEnabled) {
         this.nearestMatchEnabled = nearestMatchEnabled;
+    }
+
+    @Override
+    public boolean isRawNearestMatchEnabled() {
+        // for backwards compatiblity we allow nearest search to be null
+        return rawNearestMatchEnabled == null ? false : rawNearestMatchEnabled;
+    }
+
+    @Override
+    public void setRawNearestMatchEnabled(boolean rawNearestMatchEnabled) {
+        this.rawNearestMatchEnabled = rawNearestMatchEnabled;
     }
 
     @Override
@@ -141,6 +176,26 @@ public class DimensionInfoImpl implements DimensionInfo {
     }
 
     @Override
+    public String getStartValue() {
+        return startValue;
+    }
+
+    @Override
+    public void setStartValue(String startValue) {
+        this.startValue = startValue;
+    }
+
+    @Override
+    public String getEndValue() {
+        return endValue;
+    }
+
+    @Override
+    public void setEndValue(String endValue) {
+        this.endValue = endValue;
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("DimensionInfoImpl [attribute=").append(attribute);
@@ -151,7 +206,11 @@ public class DimensionInfoImpl implements DimensionInfo {
         sb.append(", presentation=").append(presentation);
         sb.append(", resolution=").append(resolution);
         sb.append(", nearest=").append(nearestMatchEnabled);
+        sb.append(", rawNearestMatch=").append(rawNearestMatchEnabled);
         sb.append(", acceptableInterval=").append(acceptableInterval);
+        sb.append(", nearestFailBehavior=").append(nearestFailBehavior);
+        sb.append(", startValue=").append(startValue);
+        sb.append(", endValue=").append(endValue);
         sb.append("]");
         return sb.toString();
     }
@@ -167,8 +226,19 @@ public class DimensionInfoImpl implements DimensionInfo {
         result = prime * result + ((unitSymbol == null) ? 0 : unitSymbol.hashCode());
         result = prime * result + ((presentation == null) ? 0 : presentation.hashCode());
         result = prime * result + ((resolution == null) ? 0 : resolution.hashCode());
-        result = prime * result + ((nearestMatchEnabled == null) ? 0 : resolution.hashCode());
-        result = prime * result + ((acceptableInterval == null) ? 0 : resolution.hashCode());
+        result =
+                prime * result
+                        + ((nearestMatchEnabled == null) ? 0 : nearestMatchEnabled.hashCode());
+        result =
+                prime * result
+                        + ((rawNearestMatchEnabled == null)
+                                ? 0
+                                : rawNearestMatchEnabled.hashCode());
+        result =
+                prime * result + ((acceptableInterval == null) ? 0 : acceptableInterval.hashCode());
+        result = prime * result + ((startValue == null) ? 0 : startValue.hashCode());
+        result = prime * result + ((endValue == null) ? 0 : endValue.hashCode());
+        result = prime * ((nearestFailBehavior == null ? 0 : nearestFailBehavior.hashCode()));
         return result;
     }
 
@@ -186,7 +256,11 @@ public class DimensionInfoImpl implements DimensionInfo {
                 && Objects.equals(unitSymbol, that.unitSymbol)
                 && Objects.equals(defaultValue, that.defaultValue)
                 && Objects.equals(nearestMatchEnabled, that.nearestMatchEnabled)
-                && Objects.equals(acceptableInterval, that.acceptableInterval);
+                && Objects.equals(rawNearestMatchEnabled, that.rawNearestMatchEnabled)
+                && Objects.equals(acceptableInterval, that.acceptableInterval)
+                && Objects.equals(startValue, that.startValue)
+                && Objects.equals(endValue, that.endValue)
+                && Objects.equals(nearestFailBehavior, that.nearestFailBehavior);
     }
 
     @Override
@@ -197,5 +271,15 @@ public class DimensionInfoImpl implements DimensionInfo {
     @Override
     public void setDefaultValue(DimensionDefaultValueSetting defaultValue) {
         this.defaultValue = defaultValue;
+    }
+
+    @Override
+    public NearestFailBehavior getNearestFailBehavior() {
+        return nearestFailBehavior;
+    }
+
+    @Override
+    public void setNearestFailBehavior(NearestFailBehavior nearestFailBehavior) {
+        this.nearestFailBehavior = nearestFailBehavior;
     }
 }

@@ -26,6 +26,7 @@ public class PrintingServletWrappingController extends ServletWrappingController
 
     private Logger LOG = org.geotools.util.logging.Logging.getLogger("org.geoserver.printing");
 
+    @Override
     public void setInitParameters(Properties initParameters) {
         // find the config parameter and update it so it points to
         // $GEOSERVER_DATA_DIR/printing/$CONFIG
@@ -38,8 +39,9 @@ public class PrintingServletWrappingController extends ServletWrappingController
             Resource config = loader.get(configPath);
 
             if (config.getType() == Type.UNDEFINED) {
-                InputStream conf = getClass().getResourceAsStream("default-config.yaml");
-                IOUtils.copy(conf, config.out());
+                try (InputStream conf = getClass().getResourceAsStream("default-config.yaml")) {
+                    IOUtils.copy(conf, config.out());
+                }
             }
             if (!Resources.canRead(config)) {
                 LOG.warning(

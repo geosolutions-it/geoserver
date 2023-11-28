@@ -5,7 +5,10 @@
  */
 package org.geoserver.web;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -37,7 +40,7 @@ public class GeoServerSecuredPageTest extends GeoServerWicketTestSupport {
                 (SavedRequest)
                         tester.getHttpSession().getAttribute(GeoServerSecuredPage.SAVED_REQUEST);
         assertNotNull(sr);
-        String redirectUrl = new URLDecoder().decode(sr.getRedirectUrl(), "UTF8");
+        String redirectUrl = URLDecoder.decode(sr.getRedirectUrl(), "UTF8");
         assertTrue(
                 redirectUrl.contains("wicket/bookmarkable/org.geoserver.web.data.layer.LayerPage"));
     }
@@ -47,6 +50,14 @@ public class GeoServerSecuredPageTest extends GeoServerWicketTestSupport {
         login();
         tester.startPage(LayerPage.class);
         tester.assertRenderedPage(LayerPage.class);
+    }
+
+    @Test
+    public void testToolPageAllowsAccessWhenLoggedIn() {
+        login();
+        tester.startPage(ToolPage.class);
+        tester.assertRenderedPage(ToolPage.class);
+        tester.assertNoErrorMessage();
     }
 
     @Test

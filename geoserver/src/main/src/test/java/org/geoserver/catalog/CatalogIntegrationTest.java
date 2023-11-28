@@ -18,11 +18,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.CascadeRemovalReporter.ModificationType;
-import org.geoserver.catalog.event.CatalogEvent;
 import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.impl.ModificationProxy;
 import org.geoserver.config.GeoServerConfigPersister;
@@ -287,13 +285,7 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
                 ModificationProxy.unwrap(lim3.getMetadata().get(key)));
     }
 
-    /**
-     * Serializes and de-serializes the provided object
-     *
-     * @param object
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
+    /** Serializes and de-serializes the provided object */
     <T> T serialize(T object) throws IOException, ClassNotFoundException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
@@ -301,7 +293,9 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
         oos.close();
         ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
         ObjectInputStream ois = new ObjectInputStream(bis);
-        return (T) ois.readObject();
+        @SuppressWarnings("unchecked")
+        T cast = (T) ois.readObject();
+        return cast;
     }
 
     @Test
@@ -363,8 +357,8 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
         String wkt =
                 "GEOGCS[\"GCS_ATF_Paris\",DATUM[\"D_ATF\",SPHEROID[\"Plessis_1817\",6376523.0,308.64]],PRIMEM[\"Paris\",2.337229166666667],UNIT[\"Grad\",0.01570796326794897]]";
         CoordinateReferenceSystem lCrs = CRS.parseWKT(wkt);
-        ((FeatureTypeInfo) l.getResource()).setSRS(null);
-        ((FeatureTypeInfo) l.getResource()).setNativeCRS(lCrs);
+        l.getResource().setSRS(null);
+        l.getResource().setNativeCRS(lCrs);
         assertNull(CRS.lookupEpsgCode(lCrs, false));
 
         // Use the real thing now
@@ -569,7 +563,6 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
 
         // rename workspace
         Catalog catalog = getCatalog();
-        List<CatalogEvent> events = new ArrayList<>();
         final WorkspaceInfo ws = catalog.getDefaultWorkspace();
         String name = ws.getName();
         try {
@@ -610,8 +603,7 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
     public void testReloadDefaultStyles() throws Exception {
         // clear up all "point" styles
         final Resource styles = getDataDirectory().getStyles();
-        styles.list()
-                .stream()
+        styles.list().stream()
                 .filter(r -> r.getType() == Resource.Type.RESOURCE && r.name().contains("point"))
                 .forEach(r -> r.delete());
 
@@ -651,7 +643,7 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
         // check saved value
         StyleInfo styletoCheck = catalog.getStyleByName("Lakes");
         assertEquals(1, styletoCheck.getMetadata().size());
-        assertTrue(styletoCheck.getMetadata().get("timeToLive") != null);
+        assertNotNull(styletoCheck.getMetadata().get("timeToLive"));
         String timeToLive = (String) styletoCheck.getMetadata().get("timeToLive");
         assertEquals("500", timeToLive);
     }
@@ -661,7 +653,7 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
     public void testStyleMetadataMapNotNull() throws Exception {
         final Catalog catalog = getCatalog();
         StyleInfo styletoCheck = catalog.getStyleByName("relative");
-        assertTrue(styletoCheck.getMetadata() != null);
+        assertNotNull(styletoCheck.getMetadata());
         assertEquals(0, styletoCheck.getMetadata().size());
     }
 
@@ -677,7 +669,7 @@ public class CatalogIntegrationTest extends GeoServerSystemTestSupport {
         // check updated metadataMap
         styletoCheck = catalog.getStyleByName("Lakes");
         assertEquals(1, styletoCheck.getMetadata().size());
-        assertTrue(styletoCheck.getMetadata().get("timeToLive") == null);
+        assertNull(styletoCheck.getMetadata().get("timeToLive"));
     }
 
     private void setupInitialStyleToUpdate() {

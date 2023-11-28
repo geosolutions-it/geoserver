@@ -8,11 +8,13 @@ package org.geoserver.wms.capabilities;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import org.geoserver.catalog.LayerGroupHelper;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.LegendInfo;
 import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.wms.WMS;
 import org.geotools.styling.FeatureTypeStyle;
 import org.geotools.styling.Rule;
 import org.geotools.styling.Style;
@@ -25,6 +27,12 @@ import org.xml.sax.helpers.AttributesImpl;
  * @author Mauricio Pazos
  */
 public final class CapabilityUtil {
+
+    public static final String LAYER_GROUP_STYLE_NAME = "default-style";
+    protected static final String LAYER_GROUP_STYLE_TITLE_PREFIX = "";
+    protected static final String LAYER_GROUP_STYLE_TITLE_SUFFIX = " style";
+    protected static final String LAYER_GROUP_STYLE_ABSTRACT_PREFIX = "Default style for ";
+    protected static final String LAYER_GROUP_STYLE_ABSTRACT_SUFFIX = " layer";
 
     private CapabilityUtil() {
         // utility class
@@ -64,7 +72,7 @@ public final class CapabilityUtil {
         }
         assert minScaleDenominator <= maxScaleDenominator : "Min <= Max scale is expected";
 
-        return new NumberRange<Double>(Double.class, minScaleDenominator, maxScaleDenominator);
+        return new NumberRange<>(Double.class, minScaleDenominator, maxScaleDenominator);
     }
 
     /**
@@ -78,7 +86,6 @@ public final class CapabilityUtil {
      * </pre>
      *
      * @return Max and Min denominator
-     * @throws IOException
      */
     public static NumberRange<Double> searchMinMaxScaleDenominator(final LayerInfo layer)
             throws IOException {
@@ -86,7 +93,7 @@ public final class CapabilityUtil {
         Set<StyleInfo> stylesCopy;
         StyleInfo defaultStyle;
         synchronized (layer) {
-            stylesCopy = new HashSet<StyleInfo>(layer.getStyles());
+            stylesCopy = new HashSet<>(layer.getStyles());
             defaultStyle = layer.getDefaultStyle();
         }
         if (!stylesCopy.contains(defaultStyle)) {
@@ -127,12 +134,11 @@ public final class CapabilityUtil {
      * </pre>
      *
      * @return Max and Min denominator
-     * @throws IOException
      */
     public static NumberRange<Double> searchMinMaxScaleDenominator(final LayerGroupInfo layerGroup)
             throws IOException {
 
-        Set<StyleInfo> stylesCopy = new HashSet<StyleInfo>();
+        Set<StyleInfo> stylesCopy = new HashSet<>();
         findLayerGroupStyles(layerGroup, stylesCopy);
 
         return searchMinMaxScaleDenominator(stylesCopy);
@@ -150,7 +156,6 @@ public final class CapabilityUtil {
      * </pre>
      *
      * @return Max and Min denominator
-     * @throws IOException
      */
     public static NumberRange<Double> searchMinMaxScaleDenominator(
             final PublishedInfo publishedInfo) throws IOException {
@@ -166,7 +171,6 @@ public final class CapabilityUtil {
      * Computes the rendering scale taking into account the standard pixel size and the real world
      * scale denominator.
      *
-     * @param scaleDenominator
      * @return the rendering scale.
      */
     public static Double computeScaleHint(final Double scaleDenominator) {
@@ -204,5 +208,27 @@ public final class CapabilityUtil {
         attrs.addAttribute(XLINK_NS, "href", "xlink:href", "", legendURL);
 
         return attrs;
+    }
+
+    /** Checks if a default style name for layer groups should be used, or not */
+    public static boolean encodeGroupDefaultStyle(WMS wms, LayerGroupInfo lgi) {
+        boolean opaqueOrSingle = LayerGroupHelper.isSingleOrOpaque(lgi);
+        return opaqueOrSingle || wms.isDefaultGroupStyleEnabled();
+    }
+
+    /**
+     * Returns the layer group default style name (to be used when {@link
+     * #encodeGroupDefaultStyle(WMS, LayerGroupInfo)} returns true)
+     */
+    public static String getGroupDefaultStyleName(String groupName) {
+        return LAYER_GROUP_STYLE_NAME.concat("-").concat(groupName);
+    }
+
+    /**
+     * Returns the layer group default style name (to be used when {@link
+     * #encodeGroupDefaultStyle(WMS, LayerGroupInfo)} returns true)
+     */
+    public static String getGroupDefaultStyleName(LayerGroupInfo groupName) {
+        return getGroupDefaultStyleName(groupName.prefixedName());
     }
 }

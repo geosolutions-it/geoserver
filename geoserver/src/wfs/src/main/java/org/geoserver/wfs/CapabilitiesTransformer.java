@@ -16,9 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -37,10 +35,15 @@ import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.config.ContactInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ResourceErrorHandling;
+import org.geoserver.data.InternationalContentHelper;
+import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.Request;
 import org.geoserver.ows.URLMangler.URLType;
+import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.xml.v1_0.OWS;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
+import org.geoserver.util.InternationalStringUtils;
 import org.geoserver.wfs.CapabilitiesTransformer.WFS1_1.CapabilitiesTranslator1_1;
 import org.geoserver.wfs.request.GetCapabilitiesRequest;
 import org.geotools.factory.CommonFactoryFinder;
@@ -130,6 +133,10 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
     /** catalog */
     protected Catalog catalog;
 
+    protected InternationalContentHelper internationalContentHelper;
+
+    protected boolean i18nRequested = false;
+
     /** Creates a new CapabilitiesTransformer object. */
     public CapabilitiesTransformer(WFSInfo wfs, WFSInfo.Version version, Catalog catalog) {
         super();
@@ -147,9 +154,6 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
      * description for what the updatesequence parameter in the capabilities document should *do*.
      *
      * <p>So this behaviour is not used right now, at all (as of Jan 2007)
-     *
-     * @param request
-     * @throws ServiceException
      */
     public void verifyUpdateSequence(GetCapabilitiesRequest request) throws ServiceException {
         long reqUS = -1;
@@ -176,15 +180,13 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
     protected Set<FunctionName> getAvailableFunctionNames() {
         // Sort them up for easier visual inspection
-        SortedSet sortedFunctions =
-                new TreeSet(
-                        new Comparator() {
-                            public int compare(Object o1, Object o2) {
-                                String n1 = ((FunctionName) o1).getName();
-                                String n2 = ((FunctionName) o2).getName();
+        SortedSet<FunctionName> sortedFunctions =
+                new TreeSet<>(
+                        (fn1, fn2) -> {
+                            String n1 = fn1.getName();
+                            String n2 = fn2.getName();
 
-                                return n1.toLowerCase().compareTo(n2.toLowerCase());
-                            }
+                            return n1.toLowerCase().compareTo(n2.toLowerCase());
                         });
 
         Set<FunctionFactory> factories = CommonFactoryFinder.getFunctionFactories(null);
@@ -196,14 +198,16 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
     }
 
     protected String[] getAvailableOutputFormatNames(String first, Version wfsVersion) {
-        List<String> oflist = new ArrayList<String>();
+        List<String> oflist = new ArrayList<>();
         Collection featureProducers =
                 GeoServerExtensions.extensions(WFSGetFeatureOutputFormat.class);
-        for (Iterator i = featureProducers.iterator(); i.hasNext(); ) {
-            WFSGetFeatureOutputFormat format = (WFSGetFeatureOutputFormat) i.next();
+        for (Object featureProducer : featureProducers) {
+            WFSGetFeatureOutputFormat format = (WFSGetFeatureOutputFormat) featureProducer;
             if (format.canHandle(wfsVersion)) {
-                for (Iterator f = format.getOutputFormats().iterator(); f.hasNext(); ) {
-                    oflist.add(f.next().toString());
+                for (String s : format.getOutputFormats()) {
+                    if (isAllowed(s.toString())) {
+                        oflist.add(s.toString());
+                    }
                 }
             }
         }
@@ -212,7 +216,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             oflist.remove(first);
             oflist.add(0, first);
         }
-        return (String[]) oflist.toArray(new String[oflist.size()]);
+        return oflist.toArray(new String[oflist.size()]);
     }
 
     protected void updateSequence(AttributesImpl attributes) {
@@ -256,14 +260,17 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
     protected Map.Entry parameter(final String name, final Object value) {
         return new Map.Entry() {
+            @Override
             public Object getKey() {
                 return name;
             }
 
+            @Override
             public Object getValue() {
                 return value;
             }
 
+            @Override
             public Object setValue(Object value) {
                 return null;
             }
@@ -296,6 +303,43 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
         return sections;
     }
 
+    protected void handleAcceptLanguagesParameter(
+            WFS1_1.CapabilitiesTranslator1_1 delegate,
+            WFSInfo serviceInfo,
+            List<FeatureTypeInfo> featureTypeInfos) {
+        Request request = Dispatcher.REQUEST.get();
+        String[] acceptLanguages =
+                RequestUtils.getLanguageValue(
+                        request, InternationalContentHelper.ACCEPTLANGUAGES_PARAM);
+        i18nRequested = acceptLanguages != null && acceptLanguages.length > 0;
+        if (i18nRequested) {
+            this.internationalContentHelper =
+                    new InternationalContentHelper(
+                            acceptLanguages, serviceInfo, new ArrayList<>(featureTypeInfos));
+        }
+        delegate.i18nRequested = this.i18nRequested;
+        delegate.internationalContentHelper = this.internationalContentHelper;
+    }
+
+    protected List<FeatureTypeInfo> getFeatureTypeInfoList(String namespace) {
+        List<FeatureTypeInfo> featureTypes = new ArrayList<>(catalog.getFeatureTypes());
+
+        // filter out disabled feature types
+        for (Iterator<FeatureTypeInfo> it = featureTypes.iterator(); it.hasNext(); ) {
+            FeatureTypeInfo ft = it.next();
+            if (!ft.enabled()) it.remove();
+        }
+
+        // filter the layers if a namespace filter has been set
+        if (namespace != null) {
+            for (Iterator it = featureTypes.iterator(); it.hasNext(); ) {
+                FeatureTypeInfo ft = (FeatureTypeInfo) it.next();
+                if (!namespace.equals(ft.getNamespace().getPrefix())) it.remove();
+            }
+        }
+        return featureTypes;
+    }
+
     /** Transformer for wfs 1.0 capabilities document. */
     public static class WFS1_0 extends CapabilitiesTransformer {
         protected final boolean skipMisconfigured;
@@ -307,6 +351,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                             wfs.getGeoServer().getGlobal().getResourceErrorHandling());
         }
 
+        @Override
         public Translator createTranslator(ContentHandler handler) {
             return new CapabilitiesTranslator1_0(handler);
         }
@@ -318,9 +363,9 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 super(handler, null, null);
             }
 
+            @Override
             public void encode(Object object) throws IllegalArgumentException {
                 request = GetCapabilitiesRequest.adapt(object);
-
                 // Not used.  WFS 1.1 and 1.0 don't actually support updatesequence
                 // verifyUpdateSequence(request);
 
@@ -402,9 +447,27 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
                 handleKeywords(wfs.getKeywords());
 
-                element(
-                        "OnlineResource",
-                        buildURL(request.getBaseUrl(), "wfs", null, URLType.SERVICE));
+                GeoServer geoServer = wfs.getGeoServer();
+                ContactInfo contact = geoServer.getSettings().getContact();
+
+                String onlineResource =
+                        InternationalStringUtils.firstNonBlank(
+                                wfs.getOnlineResource(),
+                                contact.getOnlineResource(),
+                                wfs.getGeoServer().getSettings().getOnlineResource(),
+                                buildURL(request.getBaseUrl(), null, null, URLType.SERVICE));
+                if (onlineResource != null) {
+                    try {
+                        new URL(onlineResource);
+                    } catch (MalformedURLException e) {
+                        LOGGER.log(
+                                Level.WARNING,
+                                "WFS online resource seems to be an invalid URL: '"
+                                        + onlineResource
+                                        + "'");
+                    }
+                }
+                element("OnlineResource", onlineResource);
                 element("Fees", wfs.getFees());
                 element("AccessConstraints", wfs.getAccessConstraints());
                 end("Service");
@@ -422,27 +485,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              *         &lt;xsd:element name="Keywords" type="xsd:string"/&gt;
              *                 </pre>
              */
-            protected void handleKeywords(String[] kwlist) {
-                if (kwlist == null) {
-                    handleKeywords((List) null);
-                } else {
-                    handleKeywords(Arrays.asList(kwlist));
-                }
-            }
-
-            /**
-             * Encodes the wfs:Keywords element.
-             *
-             * <p>
-             *
-             * <pre>
-             *         &lt;!-- Short words to help catalog searching.
-             *                  Currently, no controlled vocabulary has
-             *                 been defined. --&gt;
-             *         &lt;xsd:element name="Keywords" type="xsd:string"/&gt;
-             *                 </pre>
-             */
-            protected void handleKeywords(List kwlist) {
+            protected void handleKeywords(List<KeywordInfo> kwlist) {
                 StringBuffer kwds = new StringBuffer();
 
                 for (int i = 0; (kwlist != null) && (i < kwlist.size()); i++) {
@@ -562,20 +605,22 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 start(resultFormat);
 
                 // we accept numerous formats, but cite only allows you to have GML2
-                if (wfs.isCiteCompliant()) {
+                if (wfs.isCiteCompliant() && isAllowed("GML2")) {
                     element("GML2", null);
                 } else {
                     // FULL MONTY
                     Collection featureProducers =
                             GeoServerExtensions.extensions(WFSGetFeatureOutputFormat.class);
 
-                    Map dupes = new HashMap();
-                    for (Iterator i = featureProducers.iterator(); i.hasNext(); ) {
-                        WFSGetFeatureOutputFormat format = (WFSGetFeatureOutputFormat) i.next();
+                    Set<String> dupes = new HashSet<>();
+                    for (Object featureProducer : featureProducers) {
+                        WFSGetFeatureOutputFormat format =
+                                (WFSGetFeatureOutputFormat) featureProducer;
+
                         for (String name : format.getCapabilitiesElementNames()) {
-                            if (!dupes.containsKey(name)) {
+                            if (!dupes.contains(name) && isAllowed(name)) {
                                 element(name, null);
-                                dupes.put(name, new Object());
+                                dupes.add(name);
                             }
                         }
                     }
@@ -743,7 +788,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
                 end("Operations");
 
-                List featureTypes = new ArrayList(catalog.getFeatureTypes());
+                List<FeatureTypeInfo> featureTypes = new ArrayList<>(catalog.getFeatureTypes());
 
                 // filter out disabled feature types
                 for (Iterator it = featureTypes.iterator(); it.hasNext(); ) {
@@ -761,8 +806,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 }
 
                 Collections.sort(featureTypes, new FeatureTypeInfoTitleComparator());
-                for (Iterator it = featureTypes.iterator(); it.hasNext(); ) {
-                    FeatureTypeInfo ftype = (FeatureTypeInfo) it.next();
+                for (FeatureTypeInfo ftype : featureTypes) {
                     try {
                         mark();
                         handleFeatureType(ftype);
@@ -814,9 +858,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              * @throws RuntimeException For any errors.
              */
             protected void handleFeatureType(FeatureTypeInfo info) {
-                Envelope bbox = null;
-                bbox = info.getLatLonBoundingBox();
-
+                Envelope bbox = info.getLatLonBoundingBox();
                 start("FeatureType");
                 element("Name", info.prefixedName());
                 element("Title", info.getTitle());
@@ -858,7 +900,9 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              * </pre>
              */
             protected void handleFilterCapabilities() {
-                String ogc = "ogc:";
+                nsSupport.declarePrefix(OGC_PREFIX, OGC_URI);
+
+                String ogc = OGC_PREFIX + ':';
 
                 // REVISIT: for now I"m just prepending ogc onto the name element.
                 // Is the proper way to only do that for the qname?  I guess it
@@ -926,17 +970,35 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
         }
     }
 
+    /**
+     * Checks if OutputFormat is allowed for this request.
+     *
+     * @param outputFormat OutputFormat to check.
+     * @return true if OutputFormat is allowed for this request.
+     */
+    public boolean isAllowed(String outputFormat) {
+        if (!wfs.isGetFeatureOutputTypeCheckingEnabled()) {
+            return true;
+        }
+        boolean contains = wfs.getGetFeatureOutputTypes().contains(outputFormat);
+        if (!contains) {
+            LOGGER.fine(
+                    "OutputFormat "
+                            + outputFormat
+                            + " is not allowed for this request.due to Global WFS Configuration");
+        }
+        return contains;
+    }
     /** Transformer for wfs 1.1 capabilities document. */
     public static class WFS1_1 extends CapabilitiesTransformer {
 
         public static final Version VERSION_11 = new Version("1.1.0");
 
         static final Set<String> VALID_LINKS_METADATATYPES =
-                new HashSet<String>(Arrays.asList("TC211", "FGDC", "19115", "13139"));
+                new HashSet<>(Arrays.asList("TC211", "FGDC", "19115", "13139"));
 
         static final Set<String> VALID_LINKS_FORMATS =
-                new HashSet<String>(
-                        Arrays.asList("text/xml", "text/html", "text/sgml", "text/plain"));
+                new HashSet<>(Arrays.asList("text/xml", "text/html", "text/sgml", "text/plain"));
 
         protected final boolean skipMisconfigured;
         protected final Collection<WFSExtendedCapabilitiesProvider> extCapsProviders;
@@ -965,6 +1027,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             this.baseUrl = baseUrl;
         }
 
+        @Override
         public Translator createTranslator(ContentHandler handler) {
             return new CapabilitiesTranslator1_1(handler, baseUrl, wfs, extCapsProviders);
         }
@@ -975,6 +1038,10 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             protected Collection<WFSExtendedCapabilitiesProvider> extCapsProviders;
             protected final WFSInfo wfs;
             protected final String schemaBaseURL;
+
+            boolean i18nRequested = false;
+
+            InternationalContentHelper internationalContentHelper;
 
             public CapabilitiesTranslator1_1(
                     ContentHandler handler,
@@ -992,6 +1059,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 }
             }
 
+            @Override
             public void encode(Object object) throws IllegalArgumentException {
                 request = GetCapabilitiesRequest.adapt(object);
 
@@ -1032,7 +1100,6 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                                     schemaLocation.toString()
                                 });
 
-                @SuppressWarnings("rawtypes")
                 Enumeration prefixes = getNamespaceSupport().getPrefixes();
                 while (prefixes.hasMoreElements()) {
                     String prefix = (String) prefixes.nextElement();
@@ -1054,7 +1121,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                     serviceIdentification();
                 }
                 if (sections.contains(Sections.ServiceProvider)) {
-                    serviceProvider(wfs.getGeoServer());
+                    encodeServiceProvider(wfs.getGeoServer());
                 }
                 if (sections.contains(Sections.OperationsMetadata)) {
                     operationsMetadata();
@@ -1156,8 +1223,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             protected void serviceIdentification(String version) {
                 start("ows:ServiceIdentification");
 
-                element("ows:Title", wfs.getTitle());
-                element("ows:Abstract", wfs.getAbstract());
+                handleServiceTitleAndAbstract();
 
                 keywords(wfs.getKeywords());
 
@@ -1182,6 +1248,16 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 element("ows:AccessConstraints", wfs.getAccessConstraints());
 
                 end("ows:ServiceIdentification");
+            }
+
+            private void handleServiceTitleAndAbstract() {
+                if (!i18nRequested) {
+                    element("ows:Title", wfs.getTitle());
+                    element("ows:Abstract", wfs.getAbstract());
+                } else {
+                    element("ows:Title", internationalContentHelper.getTitle(wfs));
+                    element("ows:Abstract", internationalContentHelper.getAbstract(wfs));
+                }
             }
 
             /**
@@ -1213,10 +1289,44 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              * &lt;/complexType&gt;
              * </pre>
              */
-            protected void serviceProvider(GeoServer gs) {
+            protected void encodeServiceProvider(GeoServer gs) {
                 ContactInfo contact = gs.getSettings().getContact();
                 start("ows:ServiceProvider");
+                if (!i18nRequested) serviceProvider(contact);
+                else internationalServiceProvider(contact);
+                end("ows:ServiceProvider");
+            }
 
+            /**
+             * Encodes the ows:ServiceProvider element.
+             *
+             * <p>
+             *
+             * <pre>
+             * &lt;complexType&gt;
+             *        &lt;sequence&gt;
+             *           &lt;element name="ProviderName" type="string"&gt;
+             *           &lt;annotation&gt;
+             *        &lt;documentation&gt;A unique identifier for the service provider organization. &lt;/documentation&gt;
+             *     &lt;/annotation&gt;
+             *     &lt;/element&gt;
+             *           &lt;element name="ProviderSite" type="ows:OnlineResourceType" minOccurs="0"&gt;
+             *     &lt;annotation&gt;
+             *        &lt;documentation&gt;Reference to the most relevant web site of the service provider. &lt;/documentation&gt;
+             *     &lt;/annotation&gt;
+             *     &lt;/element&gt;
+             *     &lt;element name="ServiceContact" type="ows:ResponsiblePartySubsetType"&gt;
+             *     &lt;annotation&gt;
+             *        &lt;documentation&gt;Information for contacting the service provider. The
+             *        OnlineResource element within this ServiceContact element should not be used
+             *        to reference a web site of the service provider. &lt;/documentation&gt;
+             *     &lt;/annotation&gt;
+             *     &lt;/element&gt;
+             *  &lt;/sequence&gt;
+             * &lt;/complexType&gt;
+             * </pre>
+             */
+            protected void serviceProvider(ContactInfo contact) {
                 element("ows:ProviderName", contact.getContactOrganization());
                 start("ows:ServiceContact");
                 /*
@@ -1270,8 +1380,69 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 end("ows:ContactInfo");
 
                 end("ows:ServiceContact");
+            }
 
-                end("ows:ServiceProvider");
+            protected void internationalServiceProvider(ContactInfo contact) {
+                element(
+                        "ows:ProviderName",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalContactOrganization()));
+                start("ows:ServiceContact");
+
+                element(
+                        "ows:IndividualName",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalContactPerson()));
+                element(
+                        "ows:PositionName",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalContactPosition()));
+
+                start("ows:ContactInfo");
+
+                start("ows:Phone");
+                element(
+                        "ows:Voice",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalContactVoice()));
+                element(
+                        "ows:Facsimile",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalContactFacsimile()));
+                end("ows:Phone");
+
+                start("ows:Address");
+
+                element(
+                        "ows:DeliveryPoint",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalAddressDeliveryPoint()));
+                element(
+                        "ows:City",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalAddressCity()));
+                element(
+                        "ows:AdministrativeArea",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalAddressState()));
+                element(
+                        "ows:PostalCode",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalAddressPostalCode()));
+                element(
+                        "ows:Country",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalAddressCountry()));
+                element(
+                        "ows:ElectronicMailAddress",
+                        internationalContentHelper.getNullableString(
+                                contact.getInternationalContactEmail()));
+
+                end("ows:Address");
+
+                end("ows:ContactInfo");
+
+                end("ows:ServiceContact");
             }
 
             /**
@@ -1444,18 +1615,22 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                     try {
                         cp.encode(
                                 new WFSExtendedCapabilitiesProvider.Translator() {
+                                    @Override
                                     public void start(String element) {
                                         CapabilitiesTranslator1_1.this.start(element);
                                     }
 
+                                    @Override
                                     public void start(String element, Attributes attributes) {
                                         CapabilitiesTranslator1_1.this.start(element, attributes);
                                     }
 
+                                    @Override
                                     public void chars(String text) {
                                         CapabilitiesTranslator1_1.this.chars(text);
                                     }
 
+                                    @Override
                                     public void end(String element) {
                                         CapabilitiesTranslator1_1.this.end(element);
                                     }
@@ -1535,25 +1710,11 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             }
 
             protected void featureTypes(boolean crs, String namespace) {
-                List featureTypes = new ArrayList(catalog.getFeatureTypes());
 
-                // filter out disabled feature types
-                for (Iterator it = featureTypes.iterator(); it.hasNext(); ) {
-                    FeatureTypeInfo ft = (FeatureTypeInfo) it.next();
-                    if (!ft.enabled()) it.remove();
-                }
-
-                // filter the layers if a namespace filter has been set
-                if (namespace != null) {
-                    for (Iterator it = featureTypes.iterator(); it.hasNext(); ) {
-                        FeatureTypeInfo ft = (FeatureTypeInfo) it.next();
-                        if (!namespace.equals(ft.getNamespace().getPrefix())) it.remove();
-                    }
-                }
+                List<FeatureTypeInfo> featureTypes = getFeatureTypeInfoList(namespace);
 
                 Collections.sort(featureTypes, new FeatureTypeInfoTitleComparator());
-                for (Iterator i = featureTypes.iterator(); i.hasNext(); ) {
-                    FeatureTypeInfo featureType = (FeatureTypeInfo) i.next();
+                for (FeatureTypeInfo featureType : featureTypes) {
                     if (featureType.enabled()) {
                         try {
                             mark();
@@ -1664,8 +1825,6 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              *      &lt;/xsd:sequence&gt;
              *   &lt;/xsd:complexType&gt;
              *         </pre>
-             *
-             * @param featureType
              */
             protected void featureType(FeatureTypeInfo featureType, boolean crs) {
                 GMLInfo gml = wfs.getGML().get(version);
@@ -1676,8 +1835,8 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 start("FeatureType", attributes(new String[] {"xmlns:" + prefix, uri}));
 
                 element("Name", featureType.prefixedName());
-                element("Title", featureType.getTitle());
-                element("Abstract", featureType.getAbstract());
+
+                handleTitleAndAbstract(featureType);
                 keywords(featureType.getKeywords());
 
                 String srs = featureType.getSRS();
@@ -1706,8 +1865,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                     }
                 }
 
-                Envelope bbox = null;
-                bbox = featureType.getLatLonBoundingBox();
+                Envelope bbox = featureType.getLatLonBoundingBox();
 
                 start("ows:WGS84BoundingBox");
 
@@ -1724,6 +1882,18 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 }
 
                 end("FeatureType");
+            }
+
+            private void handleTitleAndAbstract(FeatureTypeInfo featureTypeInfo) {
+                if (!i18nRequested) {
+                    element("Title", featureTypeInfo.getTitle());
+                    element("Abstract", featureTypeInfo.getAbstract());
+                } else {
+                    String title = internationalContentHelper.getTitle(featureTypeInfo);
+                    String abstrct = internationalContentHelper.getAbstract(featureTypeInfo);
+                    element("Title", title);
+                    element("Abstract", abstrct);
+                }
             }
 
             private String applySRSNameStyle(GMLInfo gml, String srs) {
@@ -1934,8 +2104,6 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              *     &lt;/sequence&gt;
              * &lt;/complexType&gt;
              * </pre>
-             *
-             * @param keywords
              */
             protected void keywords(KeywordInfo[] keywords) {
                 if ((keywords == null) || (keywords.length == 0)) {
@@ -1944,16 +2112,18 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
                 start("ows:Keywords");
 
-                for (int i = 0; i < keywords.length; i++) {
-                    element("ows:Keyword", keywords[i].getValue());
+                for (KeywordInfo keyword : keywords) {
+                    element("ows:Keyword", keyword.getValue());
                 }
 
                 end("ows:Keywords");
             }
 
-            protected void keywords(List keywords) {
+            protected void keywords(List<KeywordInfo> keywords) {
                 if (keywords != null) {
-                    keywords((KeywordInfo[]) keywords.toArray(new KeywordInfo[keywords.size()]));
+                    if (i18nRequested)
+                        keywords = internationalContentHelper.filterKeywords(keywords);
+                    keywords(keywords.toArray(new KeywordInfo[keywords.size()]));
                 }
             }
 
@@ -2002,11 +2172,6 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              *      &lt;/attribute&gt;
              *    &lt;/complexType&gt;
              * </pre>
-             *
-             * @param name
-             * @param parameters
-             * @param get
-             * @param post
              */
             protected void operation(
                     String name,
@@ -2021,14 +2186,14 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 dcp(serviceURL, get, post);
 
                 // parameters
-                for (int i = 0; i < parameters.length; i++) {
-                    String pname = (String) parameters[i].getKey();
-                    String[] pvalues = (String[]) parameters[i].getValue();
+                for (Map.Entry parameter : parameters) {
+                    String pname = (String) parameter.getKey();
+                    String[] pvalues = (String[]) parameter.getValue();
 
                     start("ows:Parameter", attributes(new String[] {"name", pname}));
 
-                    for (int j = 0; j < pvalues.length; j++) {
-                        element("ows:Value", pvalues[j]);
+                    for (String pvalue : pvalues) {
+                        element("ows:Value", pvalue);
                     }
 
                     end("ows:Parameter");
@@ -2041,8 +2206,8 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
                     start("ows:Constraint", attributes(new String[] {"name", cname}));
 
-                    for (int j = 0; j < cvalues.length; j++) {
-                        element("ows:Value", cvalues[j]);
+                    for (String cvalue : cvalues) {
+                        element("ows:Value", cvalue);
                     }
 
                     end("ows:Constraint");
@@ -2197,10 +2362,12 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                 delegate = (CapabilitiesTranslator1_1) wfs1_1.createTranslator(handler);
             }
 
+            @Override
             public void encode(Object o) throws IllegalArgumentException {
                 request = GetCapabilitiesRequest.adapt(o);
+                handleAcceptLanguagesParameter(
+                        delegate, wfs, getFeatureTypeInfoList(request.getNamespace()));
                 delegate.request = request;
-
                 StringBuilder schemaLocation = new StringBuilder();
                 schemaLocation.append(WFS20_URI);
                 schemaLocation.append(" ");
@@ -2237,7 +2404,6 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                                     schemaLocation.toString()
                                 });
 
-                @SuppressWarnings("rawtypes")
                 Enumeration prefixes = getNamespaceSupport().getPrefixes();
                 while (prefixes.hasMoreElements()) {
                     String prefix = (String) prefixes.nextElement();
@@ -2259,7 +2425,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
                     delegate.serviceIdentification("2.0.0");
                 }
                 if (sections.isEmpty() || sections.contains(Sections.ServiceProvider)) {
-                    delegate.serviceProvider(wfs.getGeoServer());
+                    delegate.encodeServiceProvider(wfs.getGeoServer());
                 }
                 if (sections.isEmpty() || sections.contains(Sections.OperationsMetadata)) {
                     operationsMetadata();
@@ -2860,7 +3026,7 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             }
 
             // default
-            Class clazz = arg.getType();
+            Class<?> clazz = arg.getType();
             if (clazz == null || clazz == Object.class) {
                 return new NameImpl(XS.STRING);
             }

@@ -10,7 +10,6 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.config.GeoServer;
@@ -63,16 +62,14 @@ public class DirectDownload {
          * and matching hash will be added to the list
          */
         private void collectSubset(String fileId, List<File> result) {
-            CloseableIterator<FileGroup> files = null;
-            try {
-                String hash = fileId;
-                // SHA-1 are 20 bytes in length
-                String fileBaseName = hash.substring(41);
-                Query query = new Query();
+            String hash = fileId;
+            // SHA-1 are 20 bytes in length
+            String fileBaseName = hash.substring(41);
+            Query query = new Query();
 
-                // Look for files in the catalog having the same base name
-                query.setFilter(FF.like(FF.property("location"), "*" + fileBaseName + "*"));
-                files = fileGroupProvider.getFiles(query);
+            // Look for files in the catalog having the same base name
+            query.setFilter(FF.like(FF.property("location"), "*" + fileBaseName + "*"));
+            try (CloseableIterator<FileGroup> files = fileGroupProvider.getFiles(query)) {
                 while (files.hasNext()) {
                     FileGroup fileGroup = files.next();
                     File mainFile = fileGroup.getMainFile();
@@ -88,22 +85,15 @@ public class DirectDownload {
                         }
                     }
                 }
-            } catch (NoSuchAlgorithmException e) {
+            } catch (NoSuchAlgorithmException | IOException e) {
                 throw new ServiceException(
                         "Exception occurred while looking for raw files for :" + fileId, e);
-            } catch (IOException e) {
-                throw new ServiceException(
-                        "Exception occurred while looking for raw files for :" + fileId, e);
-            } finally {
-                closeIterator(files);
             }
         }
 
         /** Collect all files from the fileGroupProvider */
         void collectFull(List<File> result) {
-            CloseableIterator<FileGroup> files = null;
-            try {
-                files = fileGroupProvider.getFiles(null);
+            try (CloseableIterator<FileGroup> files = fileGroupProvider.getFiles(null)) {
                 while (files.hasNext()) {
                     FileGroup fileGroup = files.next();
                     result.add(fileGroup.getMainFile());
@@ -112,8 +102,8 @@ public class DirectDownload {
                         result.addAll(supportFile);
                     }
                 }
-            } finally {
-                closeIterator(files);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
     }
@@ -140,13 +130,9 @@ public class DirectDownload {
         this.geoserver = csw.getGeoServer();
     }
 
-    /**
-     * Prepare the list of files to be downloaded from the current request.
-     *
-     * @param request
-     */
+    /** Prepare the list of files to be downloaded from the current request. */
     public List<File> run(DirectDownloadType request) {
-        List<File> result = new ArrayList<File>();
+        List<File> result = new ArrayList<>();
         String resourceId = request.getResourceId();
         String fileId = request.getFile();
 
@@ -198,15 +184,12 @@ public class DirectDownload {
     /**
      * Get extra files for the specified reader and add them to the result list. Extra files are
      * usually auxiliary files like, as an instance, indexer, properties, config files for a mosaic.
-     *
-     * @param reader
-     * @param result
      */
     private void getExtraFiles(GridCoverage2DReader reader, List<File> result) {
         ServiceInfo info = reader.getInfo();
         if (info instanceof FileServiceInfo) {
             FileServiceInfo fileInfo = (FileServiceInfo) info;
-            FileGroupProvider provider = (FileGroupProvider) fileInfo;
+            FileGroupProvider provider = fileInfo;
             FilesCollector collector = new FilesCollector(provider);
             collector.collectFull(result);
         } else {
@@ -219,11 +202,6 @@ public class DirectDownload {
     /**
      * Get the data files from the specified {@link GridCoverage2DReader}, related to the provided
      * coverageName, matching the specified fileId and add them to the result list.
-     *
-     * @param reader
-     * @param coverageName
-     * @param fileId
-     * @param result
      */
     private void getFileResources(
             GridCoverage2DReader reader, String coverageName, String fileId, List<File> result) {
@@ -232,7 +210,7 @@ public class DirectDownload {
             FileResourceInfo fileResourceInfo = (FileResourceInfo) resourceInfo;
 
             // Get the resource files
-            FileGroupProvider fileGroupProvider = (FileGroupProvider) fileResourceInfo;
+            FileGroupProvider fileGroupProvider = fileResourceInfo;
             FilesCollector collector = new FilesCollector(fileGroupProvider);
 
             // Only structuredReaders can support multiple coverages
@@ -253,8 +231,6 @@ public class DirectDownload {
     /**
      * Check the current download is not exceeding the maxDownloadSize limit (if activated). Throws
      * a {@link CSWException} in case the limit is exceeded
-     *
-     * @param info
      */
     private void checkSizeLimit(List<File> fileList, CoverageInfo info) {
         DirectDownloadSettings settings =
@@ -287,27 +263,6 @@ public class DirectDownload {
             return new DecimalFormat("#.##").format(bytes / 1048576.0) + "MB";
         } else {
             return new DecimalFormat("#.##").format(bytes / 1073741824.0) + "GB";
-        }
-    }
-
-    /**
-     * Gently close a {@link CloseableIterator}
-     *
-     * @param files
-     */
-    private void closeIterator(CloseableIterator<FileGroup> files) {
-        if (files != null) {
-            try {
-                // Make sure to close the iterator
-                files.close();
-            } catch (Throwable t) {
-                // Simply log it at finer level
-                if (LOGGER.isLoggable(Level.FINER)) {
-                    LOGGER.finer(
-                            "Exception occurred while closing the file iterator:\n "
-                                    + t.getLocalizedMessage());
-                }
-            }
         }
     }
 

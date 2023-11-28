@@ -11,14 +11,13 @@ The standard GeoServer installation supports the loading and serving of the foll
    :maxdepth: 1
 
    geotiff
-   gtopo30
    worldimage
    imagemosaic/index
    geopkg
 
 Other data sources are supplied as GeoServer extensions.  
 Extensions are downloadable modules that add functionality to GeoServer.  
-Extensions are available at the `GeoServer download page <http://geoserver.org/download>`_.
+Extensions are available at the :website:`GeoServer download page <download>`.
 
 .. warning:: The extension version must match the version of the GeoServer instance.
 
@@ -27,11 +26,7 @@ Extensions are available at the `GeoServer download page <http://geoserver.org/d
 
    arcgrid
    gdal
-   oraclegeoraster
-   postgisraster
    imagepyramid
-   imagemosaicjdbc
-   customjdbcaccess
 
 GeoServer provides extensive facilities for controlling how rasters are accessed.
 These are covered in the following sections.

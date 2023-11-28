@@ -24,7 +24,6 @@ import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.wms.ExtendedCapabilitiesProvider;
 import org.geoserver.wms.GetCapabilitiesRequest;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSInfo;
@@ -64,7 +63,7 @@ public class GetCapabilitiesScaleDenominatorTest extends WMSTestSupport {
 
     public GetCapabilitiesScaleDenominatorTest() {
 
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("xlink", "http://www.w3.org/1999/xlink");
         namespaces.put("wms", "http://www.opengis.net/wms");
         XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
@@ -199,10 +198,7 @@ public class GetCapabilitiesScaleDenominatorTest extends WMSTestSupport {
 
         Capabilities_1_3_0_Transformer tr =
                 new Capabilities_1_3_0_Transformer(
-                        wms,
-                        BASE_URL,
-                        wms.getAllowedMapFormats(),
-                        new HashSet<ExtendedCapabilitiesProvider>());
+                        wms, BASE_URL, wms.getAllowedMapFormats(), new HashSet<>());
         GetCapabilitiesRequest req = new GetCapabilitiesRequest();
         req.setBaseUrl(BASE_URL);
         req.setVersion(WMS.VERSION_1_3_0.toString());
@@ -218,10 +214,7 @@ public class GetCapabilitiesScaleDenominatorTest extends WMSTestSupport {
     /**
      * Searches the required layer in the capabilities document.
      *
-     * @param layerRequired
-     * @param capabilities
      * @return The layer element or null it the required layer isn't found
-     * @throws XpathException
      */
     private Element searchLayerElement(final String layerRequired, Document capabilities)
             throws XpathException {

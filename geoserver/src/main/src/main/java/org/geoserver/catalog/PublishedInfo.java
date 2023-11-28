@@ -6,6 +6,7 @@
 package org.geoserver.catalog;
 
 import java.util.List;
+import org.opengis.util.InternationalString;
 
 /**
  * Interface for publishable entities contained in a Layer Group.
@@ -44,11 +45,23 @@ public interface PublishedInfo extends CatalogInfo {
     /** Sets the title. */
     void setTitle(String title);
 
+    /** Returns the internationalTitle. */
+    InternationalString getInternationalTitle();
+
+    /** Sets the internationalTitle. */
+    void setInternationalTitle(InternationalString internationalTitle);
+
     /** Returns the abstract. */
     String getAbstract();
 
     /** Sets the abstract. */
     void setAbstract(String abstractTxt);
+
+    /** Returns the internationalAbstract. */
+    InternationalString getInternationalAbstract();
+
+    /** Sets the internationalAbstract. */
+    void setInternationalAbstract(InternationalString internationalAbstract);
 
     /** A persistent map of metadata. */
     MetadataMap getMetadata();
@@ -77,4 +90,27 @@ public interface PublishedInfo extends CatalogInfo {
      * @see AttributionInfo
      */
     void setAttribution(AttributionInfo attribution);
+
+    /**
+     * Flag indicating wether the layer is enabled or not.
+     *
+     * @uml.property name="enabled"
+     */
+    boolean isEnabled();
+
+    /**
+     * Sets the flag indicating wether the layer is enabled or not.
+     *
+     * @uml.property name="enabled"
+     */
+    void setEnabled(boolean enabled);
+
+    /**
+     * Returns true if the layer existence should be advertised (true by default, unless otherwise
+     * set)
+     */
+    boolean isAdvertised();
+
+    /** Set to true if the layer should be advertised, false otherwise */
+    void setAdvertised(boolean advertised);
 }

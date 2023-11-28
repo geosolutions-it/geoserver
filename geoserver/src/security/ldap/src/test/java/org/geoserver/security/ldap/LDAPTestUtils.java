@@ -12,6 +12,8 @@ import java.io.InputStream;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.naming.Binding;
 import javax.naming.ContextNotEmptyException;
 import javax.naming.Name;
@@ -23,6 +25,7 @@ import javax.naming.ldap.Rdn;
 import org.apache.commons.io.IOUtils;
 import org.apache.directory.server.core.DefaultDirectoryService;
 import org.apache.directory.server.protocol.shared.store.LdifFileLoader;
+import org.geotools.util.logging.Logging;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.ldap.core.ContextSource;
@@ -43,11 +46,11 @@ import org.springframework.ldap.support.LdapUtils;
  */
 public class LDAPTestUtils {
     public static final int LDAP_SERVER_PORT = 10389;
-    public static final String LDAP_SERVER_URL = "ldap://127.0.0.1:10389";
+    public static final String LDAP_SERVER_URL = "ldap://127.0.0.1";
     public static final String LDAP_BASE_PATH = "dc=example,dc=com";
     public static final String DEFAULT_PRINCIPAL = "uid=admin,ou=system";
     public static final String DEFAULT_PASSWORD = "secret";
-
+    static final Logger LOGGER = Logging.getLogger(LDAPTestUtils.class);
     private static EmbeddedLdapServer embeddedServer;
 
     /**
@@ -110,6 +113,7 @@ public class LDAPTestUtils {
      *
      * @param allowAnonymous anonymous access is allowed or not
      */
+    @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
     public static boolean initLdapServer(
             boolean allowAnonymous, String ldapServerUrl, String basePath, String ldifPath)
             throws Exception {
@@ -136,39 +140,20 @@ public class LDAPTestUtils {
                 return true;
             }
             return false;
-        } catch (Exception ee) {
-            ee.printStackTrace();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "", e);
             return false;
         }
     }
 
-    /**
-     * Checks if a network host / port is already occupied.
-     *
-     * @param host
-     * @param port
-     */
+    /** Checks if a network host / port is already occupied. */
     private static boolean portIsBusy(String host, int port) {
-        ServerSocket ss = null;
-        DatagramSocket ds = null;
-        try {
-            ss = new ServerSocket(port);
+        try (ServerSocket ss = new ServerSocket(port);
+                DatagramSocket ds = new DatagramSocket(port)) {
             ss.setReuseAddress(true);
-            ds = new DatagramSocket(port);
             ds.setReuseAddress(true);
             return false;
         } catch (IOException e) {
-        } finally {
-            if (ds != null) {
-                ds.close();
-            }
-            if (ss != null) {
-                try {
-                    ss.close();
-                } catch (IOException e) {
-                    /* should not be thrown */
-                }
-            }
         }
         return true;
     }
@@ -223,7 +208,7 @@ public class LDAPTestUtils {
                 }
             }
         } catch (NamingException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "", e);
         } finally {
             try {
                 enumeration.close();
@@ -289,8 +274,7 @@ public class LDAPTestUtils {
     public static void loadLdif(DefaultDirectoryService directoryService, Resource ldifFile)
             throws IOException {
         File tempFile = File.createTempFile("spring_ldap_test", ".ldif");
-        try {
-            InputStream inputStream = ldifFile.getInputStream();
+        try (InputStream inputStream = ldifFile.getInputStream()) {
             IOUtils.copy(inputStream, new FileOutputStream(tempFile));
             LdifFileLoader fileLoader =
                     new LdifFileLoader(directoryService.getSession(), tempFile.getAbsolutePath());

@@ -192,7 +192,8 @@ public enum JSONType {
         if (!(kvp.get("FORMAT_OPTIONS") instanceof Map)) {
             return JSONType.CALLBACK_FUNCTION;
         } else {
-            Map<String, String> map = (Map<String, String>) kvp.get("FORMAT_OPTIONS");
+            @SuppressWarnings("unchecked")
+            Map<String, String> map = (Map) kvp.get("FORMAT_OPTIONS");
             String callback = map.get(CALLBACK_FUNCTION_KEY);
             if (callback != null) {
                 return callback;
@@ -217,7 +218,8 @@ public enum JSONType {
         if (!(kvp.get("FORMAT_OPTIONS") instanceof Map)) {
             return null;
         } else {
-            Map<String, String> formatOptions = (Map<String, String>) kvp.get("FORMAT_OPTIONS");
+            @SuppressWarnings("unchecked")
+            Map<String, String> formatOptions = (Map) kvp.get("FORMAT_OPTIONS");
             if (formatOptions == null || formatOptions.isEmpty()) {
                 return null; // use fid as id in output
             }
@@ -263,6 +265,7 @@ public enum JSONType {
                         exception, request, response.getOutputStream(), charset, verbose);
             } else {
                 // json
+                @SuppressWarnings("PMD.CloseResource") // wrapper, actual stream managed outside
                 OutputStreamWriter outWriter = null;
                 try {
                     outWriter = new OutputStreamWriter(response.getOutputStream(), charset);

@@ -43,7 +43,10 @@ Edit a Layer Group
 
 To view or edit a layer group, click the layer group name.  A layer group configuration page will be displayed.  The initial fields allow you to configure the name, title, abstract, workspace, bounds, projection and mode of the layer group. To automatically set the bounding box, select the :guilabel:`Generate Bounds` button or the :guilabel:`Generate Bounds From CRS` button to use the bounds defined in the CRS (if available). You may also provide your own custom bounding box extents. To select an appropriate projection click the :guilabel:`Find` button.
 
+
 .. note:: A layer group can contain layers with dissimilar bounds and projections. GeoServer automatically reprojects all layers to the projection of the layer group.
+
+The new :guilabel:`Enabled` checkbox, if disabled, will cause the layer group to just show up at configuration time (and in REST config), while the new :guilabel:`Advertised` checkbox, if unchecked, will make it to not be available in GetCapabilities request and in the layer preview. The behaviour of layer group regarding both checkboxes will not affect the behaviour of any of the layers being grouped, which will follow respectively that specified  in the corresponding edit page.
 
 .. figure:: img/data_layergroups_edit.png
 
@@ -89,12 +92,45 @@ You can view layer groups in the :ref:`layerpreview` section of the web admin.
 
 .. note:: By default, a layer group is queryable when at least a child layer is queryable. Uncheck "Queryable" box if you want to explicitly indicate that it is not queryable independently of how the child layers are configured.
 
+
+Security tab allows to set data access rules at layer group level.
+
+.. note:: For more information on data access rules, please see the section on :ref:`security_webadmin_data`.
+
+.. figure:: img/data_layergroups_security.png
+
+To create/edit layergroup's data access rules simply check/uncheck checkboxes according to desired access mode and role. 
+The Grant access to any role checkbox grant each role for each access mode.
+
+Layer Group Styles
+^^^^^^^^^^^^^^^^^^^
+
+The user can also define styles for a Layer Group. By style in this context we mean a different group definition that, while carrying the same meaning, uses a different set of styles, or even a different set of layers (e.g., night versus day style, or full versus simplified). The styles are named and can be thus be referenced through the styles parameter in the various WMS operations (GetMap, GetLegendGraphic, GetFeatureInfo), while the usual Layer Group configuration is kept as the default style.
+
+To add a new style on the :guilabel:`Data` tab scroll down until reaching the :guilabel:`Layer Group Styles` section and click on :guilabel:`Add new`.
+
+.. figure:: img/add-group-style.png
+
+A form will pop up. Once defined a :guilabel:`name` (mandatory), it is possible to select the a list of layers and  corresponding styles for the group style definition.
+
+.. figure:: img/group-style-definition.png
+
+In the above example the style uses the same list of layers, but different styles have been defined for the ``tiger:giant_polygon`` and ``tiger:poly_landmarks`` layers, respectively ``giant-polygon-2`` and ``poly_landmarks-2``. 
+However the Layer Group Style might also contain a different list of layers comparing to the default one.
+
+Once a style has been defined it will appear in the ``GetCapabilities`` document and clients will be able to reference it in the ``styles`` parameter of ``GetMap``, ``GetLegendGraphic`` and ``GetFeatureInfo`` operations, using the :guilabel:`name` defined at configuration time.
+
+The base configuration will be treated as the default Style of the Layer Group and used when either no style name is provided or the style name matches the default Layer Group Style name.
+
+.. note:: The overall functionality is available only for Layer Group with mode SINGLE or OPAQUE. If a Layer Group is defined with another mode, the style name eventually present in a WMS operation will be ignored if not matching the default style name. Moreover the Layer Group Style section will not be available and the Style will not be advertised in the GetCapabilities response. This is due to the group internal structure appearing in the capabilities layer tree: only one list of sub-layers and sub-groups can be advertised.
+
+
 Add a Layer Group
 -----------------
 
 The buttons for adding and removing a layer group can be found at the top of the :guilabel:`Layer Groups` page. 
 
-.. figure:: img/data_layergroups_add.png
+.. figure:: img/data_layergroups_add_remove.png
 
    Buttons to add or remove a layer group
    
@@ -106,7 +142,7 @@ To add a new layer group, select the "Add a new layer group" button. You will be
 
 When finished, click :guilabel:`Submit`. You will be redirected to an empty layer group configuration page. Begin by adding layers by clicking the :guilabel:`Add layer...` button (described in the previous section). Once the layers are positioned accordingly, press :guilabel:`Generate Bounds` to automatically generate the bounding box and projection. You may also press the :guilabel:`Generate Bounds From CRS` button to use the CRS bounds (if available). Press :guilabel:`Save` to save the new layer group.
 
-.. figure:: img/data_layergroups_add_edit.png
+.. figure:: img/data_layergroups_edit.png
 
    New layer group configuration page
 
@@ -146,5 +182,11 @@ Finally, it is possible to override the service settings and force a **Yes** to 
   
    Layer groups root layer in capabilities options
 
+HTTP Settings
+^^^^^^^^^^^^^
 
+Cache parameters that apply to the HTTP response from client requests.
 
+* **Response Cache Headers**— If selected, conforming HTTP clients will not request the same tile twice within the time specified in :guilabel:`Cache Time`. One hour measured in seconds (3600), is the default value for :guilabel:`Cache Time`. Layer group **Response Cache Headers** configuration replace **Response Cache Headers** configured in layers defined in layer group.
+
+.. figure:: img/data_http_response_caching_settings.png

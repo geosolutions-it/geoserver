@@ -96,6 +96,7 @@ public class LayerGroupWorkspaceTest extends WMSTestSupport {
         cat.remove(world);
     }
 
+    @Override
     protected void registerNamespaces(java.util.Map<String, String> namespaces) {
         namespaces.put("wms", "http://www.opengis.net/wms");
     };
@@ -340,14 +341,14 @@ public class LayerGroupWorkspaceTest extends WMSTestSupport {
     public void testWorkspaceGetMap() throws Exception {
         Document dom = getAsDOM("sf/wms?request=reflect&layers=base&format=rss");
         assertXpathExists(
-                "rss/channel/title[text() = 'sf:PrimitiveGeoFeature,sf:AggregateGeoFeature']", dom);
+                "rss/channel/title[text() = 'PrimitiveGeoFeature,AggregateGeoFeature']", dom);
 
         dom = getAsDOM("cite/wms?request=reflect&layers=base&format=rss");
-        assertXpathExists("rss/channel/title[text() = 'cite:Bridges,cite:Buildings']", dom);
+        assertXpathExists("rss/channel/title[text() = 'Bridges,Buildings']", dom);
 
         dom = getAsDOM("sf/wms?request=reflect&layers=cite:base&format=rss");
         assertXpathExists(
-                "rss/channel/title[text() = 'sf:PrimitiveGeoFeature,sf:AggregateGeoFeature']", dom);
+                "rss/channel/title[text() = 'PrimitiveGeoFeature,AggregateGeoFeature']", dom);
     }
 
     @Test

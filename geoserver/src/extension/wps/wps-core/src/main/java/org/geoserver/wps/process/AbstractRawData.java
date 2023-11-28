@@ -78,11 +78,7 @@ public abstract class AbstractRawData implements RawData {
         return true;
     }
 
-    /**
-     * Extracts the list of mime types from the metadata entry
-     *
-     * @param p
-     */
+    /** Extracts the list of mime types from the metadata entry */
     public static String[] getMimeTypes(Parameter<?> p) {
         if (p.metadata != null && p.metadata.get(MIME_TYPES) != null) {
             String mimeTypes = (String) p.metadata.get(MIME_TYPES);
@@ -97,12 +93,10 @@ public abstract class AbstractRawData implements RawData {
      * Extracts the a map of process input parameters that should be filled with the chosen output
      * mime type for RawData outputs, the map goes from the output result name to the input that
      * will receive the user chosen mime type
-     *
-     * @param resultInfo
      */
     public static Map<String, String> getOutputMimeParameters(Name processName, ProcessFactory pf) {
         Map<String, Parameter<?>> resultInfo = pf.getResultInfo(processName, null);
-        Map<String, String> result = new HashMap<String, String>();
+        Map<String, String> result = new HashMap<>();
         for (Parameter p : resultInfo.values()) {
             if (RawData.class.isAssignableFrom(p.getType())) {
                 String attribute = (String) p.metadata.get(SELECTION_ATTRIBUTE);
@@ -124,13 +118,7 @@ public abstract class AbstractRawData implements RawData {
         return result;
     }
 
-    /**
-     * Returns the default mime type for the given raw result
-     *
-     * @param processName
-     * @param pf
-     * @param resultName
-     */
+    /** Returns the default mime type for the given raw result */
     public static String getDefaultMime(Name processName, ProcessFactory pf, String resultName) {
         Map<String, Parameter<?>> resultInfo = pf.getResultInfo(processName, null);
         Parameter<?> parameter = resultInfo.get(resultName);

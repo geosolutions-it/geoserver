@@ -5,9 +5,18 @@
  */
 package org.geoserver.wfs.request;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.opengis.wfs.DeleteElementType;
 import net.opengis.wfs.WfsFactory;
+import net.opengis.wfs.impl.DeleteElementTypeImpl;
+import net.opengis.wfs20.impl.DeleteTypeImpl;
 import org.eclipse.emf.ecore.EObject;
+import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.xsd.EMFUtils;
+import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory;
+import org.opengis.filter.Or;
 
 /**
  * Delete element in a Transaction request.
@@ -20,9 +29,25 @@ public abstract class Delete extends TransactionElement {
         super(adaptee);
     }
 
+    @Override
+    public abstract Filter getFilter();
+
+    public abstract void addFilter(Filter filter);
+
     public static class WFS11 extends Delete {
         public WFS11(EObject adaptee) {
             super(adaptee);
+        }
+
+        @Override
+        public Filter getFilter() {
+            Filter filter = eGet(adaptee, "filter", Filter.class);
+            return filter;
+        }
+
+        @Override
+        public void addFilter(Filter filter) {
+            eAddForDelete(adaptee, "filter", filter);
         }
 
         public static DeleteElementType unadapt(Delete delete) {
@@ -37,6 +62,52 @@ public abstract class Delete extends TransactionElement {
     public static class WFS20 extends Delete {
         public WFS20(EObject adaptee) {
             super(adaptee);
+        }
+
+        @Override
+        public Filter getFilter() {
+            Filter filter = eGet(adaptee, "filter", Filter.class);
+            return filter;
+        }
+
+        @Override
+        public void addFilter(Filter filter) {
+            eAddForDelete(adaptee, "filter", filter);
+        }
+    }
+
+    protected void eAddForDelete(EObject obj, String property, Filter newFilter) {
+        FilterFactory ff = CommonFactoryFinder.getFilterFactory2();
+        Filter currentFilter = (Filter) EMFUtils.get(obj, property);
+
+        List<Filter> filters = new ArrayList<>();
+
+        flattenFilter(newFilter, filters);
+        flattenFilter(currentFilter, filters);
+
+        Filter result;
+        if (filters.isEmpty()) {
+            result = null;
+        } else if (filters.size() == 1) {
+            result = filters.get(0);
+        } else {
+            result = ff.or(filters);
+        }
+
+        if (obj instanceof DeleteElementTypeImpl) {
+            ((DeleteElementTypeImpl) obj).setFilter(result);
+        } else if (obj instanceof DeleteTypeImpl) {
+            ((DeleteTypeImpl) obj).setFilter(result);
+        }
+    }
+
+    private void flattenFilter(Filter filter, List<Filter> filters) {
+        if (filter != null) {
+            if (filter instanceof Or) {
+                filters.addAll(((Or) filter).getChildren());
+            } else {
+                filters.add(filter);
+            }
         }
     }
 }

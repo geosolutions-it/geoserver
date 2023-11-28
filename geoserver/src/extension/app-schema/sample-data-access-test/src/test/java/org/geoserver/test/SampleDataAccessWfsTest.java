@@ -38,7 +38,7 @@ public class SampleDataAccessWfsTest extends SampleDataAccessTestSupport {
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         // Setup XMLUnit namespaces
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("wfs", "http://www.opengis.net/wfs");
         namespaces.put("ows", "http://www.opengis.net/ows");
         namespaces.put("ogc", "http://www.opengis.net/ogc");
@@ -137,23 +137,14 @@ public class SampleDataAccessWfsTest extends SampleDataAccessTestSupport {
         assertEquals(count, nodes.getLength());
     }
 
-    /**
-     * Return {@link Document} as a pretty-printed string.
-     *
-     * @param doc
-     */
+    /** Return {@link Document} as a pretty-printed string. */
     public String prettyString(Document doc) throws Exception {
         OutputStream out = new ByteArrayOutputStream();
         prettyPrint(doc, out);
         return out.toString();
     }
 
-    /**
-     * Pretty-print a {@link Document} to an {@link OutputStream}.
-     *
-     * @param doc
-     * @param out
-     */
+    /** Pretty-print a {@link Document} to an {@link OutputStream}. */
     public void prettyPrint(Document doc, OutputStream out) throws Exception {
         Transformer tx = TransformerFactory.newInstance().newTransformer();
         tx.setOutputProperty(OutputKeys.INDENT, "yes");

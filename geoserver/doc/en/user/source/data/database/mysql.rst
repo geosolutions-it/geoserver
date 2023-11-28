@@ -14,11 +14,11 @@ MySQL
 Installing the MySQL extension
 ------------------------------
 
-#. Download the MySQL extension from the `GeoServer download page <http://geoserver.org/download>`_.
+#. Visit the :website:`website download <download>` page, locate your release, and download: :download_extension:`mysql`
+   
+   .. warning:: Ensure to match plugin (example |release| above) version to the version of the GeoServer instance.
 
-   .. warning:: Make sure to match the version of the extension to the version of the GeoServer instance!
-
-#. Extract the contents of the archive into the ``WEB-INF/lib`` directory of the GeoServer installation.
+#. Extract the contents of the archive into the :file:`WEB-INF/lib` directory of the GeoServer installation.
 
 Adding a MySQL database
 -----------------------
@@ -46,7 +46,7 @@ Configuring a MySQL data store
    * - ``port``
      - The port on which the mysql server is accepting connections.
    * - ``database``
-     - The name of the database to connect to.
+     - The name of the database to connect to. Can also contain a suffix with a connection URL query, such as mydbname?useSSL=false
    * - ``user``
      - The name of the user to connect to the mysql database as.
    * - ``password``     

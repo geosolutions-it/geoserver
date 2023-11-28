@@ -96,7 +96,7 @@ The ``<property>`` is a string denoting the property name, while the ``<value>``
    * - Text
      - Quotes
      - ``Title``
-     - Spaces, colons, and other special characters are allowed. If value is amiguous, use single quotes.
+     - Spaces, colons, and other special characters are allowed. If value is ambiguous, use single quotes.
    * - Color
      - * '# + six digits' (hex)
        * rgb(r,g,b) (decimal)
@@ -241,7 +241,7 @@ The only constraint with using wrapped lines is that the subsequent lines need t
 Comments
 --------
 
-Comments are allowed in YSLD, both for descriptive reasons and to remove certain styling directives without deleting them outright. Comments are indicated by a ``#`` as the first non-whitespace character in a line. For example::
+Comments are allowed in YSLD, both for descriptive reasons and to remove certain styling directives without deleting them outright. Comments are indicated by a ``#`` as the first non-blank-space character in a line. For example::
 
   # This is a line symbolizer
   - line:

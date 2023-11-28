@@ -8,8 +8,8 @@ package org.geoserver.wms.map;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.awt.Color;
@@ -17,9 +17,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
@@ -28,10 +30,16 @@ import org.geoserver.catalog.WMTSLayerInfo;
 import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CoverageInfoImpl;
+import org.geoserver.catalog.impl.LayerGroupStyle;
+import org.geoserver.catalog.impl.LayerGroupStyleImpl;
 import org.geoserver.catalog.impl.LayerInfoImpl;
+import org.geoserver.catalog.impl.StyleInfoImpl;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
+import org.geoserver.logging.TestAppender;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.test.http.MockHttpClient;
 import org.geoserver.test.http.MockHttpResponse;
 import org.geoserver.wms.GetMapRequest;
@@ -60,6 +68,24 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
     @Rule public TestHttpClientRule clientMocker = new TestHttpClientRule();
 
     @Override
+    protected String getLogConfiguration() {
+        // needed for a test on logging capabilities
+        GeoServerResourceLoader loader =
+                new GeoServerResourceLoader(testData.getDataDirectoryRoot());
+
+        Resource resource = loader.get("logs/OL_LOGGING.properties");
+        if (resource.getType() == Resource.Type.UNDEFINED) {
+            try {
+                loader.copyFromClassPath("/OL_LOGGING.properties", "logs/OL_LOGGING.properties");
+            } catch (IOException e) {
+                LOGGER.fine("Unable to configure with OL_LOGGING");
+                return "TEST_LOGGING";
+            }
+        }
+        return "OL_LOGGING";
+    }
+
+    @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         // get default workspace info
         WorkspaceInfo workspaceInfo = getCatalog().getWorkspaceByName(MockData.DEFAULT_PREFIX);
@@ -75,8 +101,6 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
      * (something like: %3C%2Fscript%
      * 3E%3Cscript%3Ealert%28%27x-scripted%27%29%3C%2Fscript%3E%3Cscript%3E=foo) the causes js code
      * execution.
-     *
-     * @throws IOException
      */
     @Test
     public void testXssFix() throws Exception {
@@ -106,22 +130,28 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         StyleInfo styleByName = catalog.getStyleByName("Default");
         Style basicStyle = styleByName.getStyle();
         FeatureLayer layer = new FeatureLayer(fs, basicStyle);
-        layer.setTitle("Title");
+        layer.setTitle("Title</foo");
         map.addLayer(layer);
         request.setFormat("application/openlayers");
-        String htmlDoc = getAsHTML(map);
-        // check that weird param is correctly encoded to avoid js code execution
-        int index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf(
-                                "\"</script\\><script\\>alert(\\'x-scripted\\');</script\\><script\\>\": 'foo'");
-        assertTrue(index > -1);
-        index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf("\"25064;ALERT(1)//419\": '1'");
-        assertTrue(index > -1);
+
+        StyleInfo otherStyle = new StyleInfoImpl(null);
+        otherStyle.setName("style<>");
+        try {
+            request.getLayers().get(0).getLayerInfo().getStyles().add(otherStyle);
+            String htmlDoc = getAsHTML(map);
+            // check that weird param is correctly encoded to avoid js code execution
+            assertThat(
+                    htmlDoc,
+                    containsString(
+                            "\"<\\/script><script>alert(\\'x-scripted\\');<\\/script><script>\": 'foo'"));
+            assertThat(htmlDoc, containsString("\"25064;ALERT(1)//419\": '1'"));
+            assertThat(htmlDoc, not(containsString(layer.getTitle())));
+            assertThat(htmlDoc, containsString("Title<\\/foo"));
+            assertThat(htmlDoc, not(containsString(otherStyle.getName())));
+            assertThat(htmlDoc, containsString("style&lt;&gt;"));
+        } finally {
+            request.getLayers().get(0).getLayerInfo().getStyles().remove(otherStyle);
+        }
     }
 
     @Test
@@ -277,8 +307,6 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
      * <p>Exception is thrown when decoding CRS in isWms13FlippedCRS which is called by produceMap,
      * test uses produceMap and reads the resulting output steam to ensure "yx: true" is returned
      * for EPSG:4326, output is false before fix
-     *
-     * @throws Exception
      */
     @Test
     public void testUrnCodeFix() throws Exception {
@@ -304,7 +332,6 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         request.setFormat("application/openlayers");
 
         String htmlDoc = getAsHTML(map);
-        // System.out.println(htmlDoc);
         int index = htmlDoc.indexOf("yx : {'EPSG:4326' : true}");
 
         assertTrue(index > -1);
@@ -326,7 +353,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers",
                         firefoxAgent,
-                        OpenLayers3MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers3MapOutputFormat.MIME_TYPE));
         assertThat(contentFirefox, containsString("openlayers3/ol.js"));
 
         // generic request on browser not supporting OL3
@@ -334,7 +361,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers",
                         ie8Agent,
-                        OpenLayers2MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers2MapOutputFormat.MIME_TYPE));
         assertThat(contentIE8, containsString("OpenLayers.js"));
 
         // ask explicitly for OL2
@@ -342,7 +369,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers2",
                         firefoxAgent,
-                        OpenLayers2MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers2MapOutputFormat.MIME_TYPE));
         assertThat(contentOL2, containsString("OpenLayers.js"));
 
         // ask explicitly for OL3
@@ -350,7 +377,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers3",
                         firefoxAgent,
-                        OpenLayers3MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers3MapOutputFormat.MIME_TYPE));
         assertThat(contentOL3, containsString("openlayers3/ol.js"));
 
         // ask explicitly for OL3 on a non supporting browser
@@ -369,7 +396,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
             request.addHeader("USER-AGENT", userAgent);
         }
         MockHttpServletResponse response = dispatch(request);
-        assertEquals(expectedMimeType, response.getContentType());
+        assertEquals(expectedMimeType, getBaseMimeType(response.getContentType()));
         return response.getContentAsString();
     }
 
@@ -379,7 +406,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         RawMap rawMap = mapProducer.produceMap(map);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         rawMap.writeTo(bos);
-        return new String(bos.toByteArray(), "UTF-8");
+        return new String(bos.toByteArray(), StandardCharsets.UTF_8);
     }
 
     String getAsHTMLOL3(WMSMapContent map) throws IOException {
@@ -388,7 +415,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         RawMap rawMap = mapProducer.produceMap(map);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         rawMap.writeTo(bos);
-        return new String(bos.toByteArray(), "UTF-8");
+        return new String(bos.toByteArray(), StandardCharsets.UTF_8);
     }
 
     @Test
@@ -451,18 +478,77 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         layer.setTitle("Title");
         map.addLayer(layer);
         request.setFormat("application/openlayers3");
-        String htmlDoc = getAsHTMLOL3(map);
-        // check that weird param is correctly encoded to avoid js code execution
-        int index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf(
-                                "\"</script\\><script\\>alert(\\'x-scripted\\');</script\\><script\\>\": 'foo'");
-        assertTrue(index > -1);
-        index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf("\"25064;ALERT(1)//419\": '1'");
-        assertTrue(index > -1);
+
+        StyleInfo otherStyle = new StyleInfoImpl(null);
+        otherStyle.setName("style<>");
+        try {
+            request.getLayers().get(0).getLayerInfo().getStyles().add(otherStyle);
+            String htmlDoc = getAsHTMLOL3(map);
+            // check that weird param is correctly encoded to avoid js code execution
+            assertThat(
+                    htmlDoc,
+                    containsString(
+                            "\"<\\/script><script>alert(\\'x-scripted\\');<\\/script><script>\": 'foo'"));
+            assertThat(htmlDoc, containsString("\"25064;ALERT(1)//419\": '1'"));
+            assertThat(htmlDoc, not(containsString(otherStyle.getName())));
+            assertThat(htmlDoc, containsString("style&lt;&gt;"));
+        } finally {
+            request.getLayers().get(0).getLayerInfo().getStyles().remove(otherStyle);
+        }
+    }
+
+    @Test
+    public void testLayerGroupStylesInDropdown() throws Exception {
+        // tests that layer groups style are available from the styles dropdown in ol preview
+        LayerGroupInfo group = null;
+        Catalog catalog = getCatalog();
+        try {
+            createLakesPlacesLayerGroup(
+                    catalog, "lakes_and_places_group", LayerGroupInfo.Mode.SINGLE, null);
+            group = catalog.getLayerGroupByName("lakes_and_places_group");
+            LayerGroupStyle groupStyle = new LayerGroupStyleImpl();
+            StyleInfo styleName = new StyleInfoImpl(getCatalog());
+            styleName.setName("nature-style");
+            groupStyle.setName(styleName);
+            groupStyle.getLayers().add(getCatalog().getLayerByName("cite:Forests"));
+            groupStyle.getLayers().add(getCatalog().getLayerByName("cite:Lakes"));
+            groupStyle.getStyles().add(null);
+            groupStyle.getStyles().add(null);
+            group.getLayerGroupStyles().add(groupStyle);
+            catalog.save(group);
+            String url =
+                    "wms?LAYERS="
+                            + group.getName()
+                            + "&STYLES=&format=application/openlayers"
+                            + "&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG%3A4326&WIDTH=256&HEIGHT=256&bbox=-0.002,-0.003,0.005,0.002";
+            MockHttpServletResponse response = getAsServletResponse(url);
+            String content = response.getContentAsString();
+            assertTrue(content.contains("<option value=\"nature-style\">nature-style</option>"));
+        } finally {
+            if (group != null) catalog.remove(group);
+        }
+    }
+
+    @Test
+    public void testAutoCodeLogsErrors() throws Exception {
+        try (TestAppender appender = TestAppender.createAppender("testAutoCodeLogsErrors", null)) {
+            appender.startRecording("org.geoserver.wms.map");
+
+            GetMapRequest request = createGetMapRequest(MockData.BASIC_POLYGONS);
+            CoordinateReferenceSystem crs = CRS.decode("AUTO:42003,9001,-20,-45");
+            request.setCrs(crs);
+            request.setBbox(new Envelope(-3_000_000, 3_000_000, -3_000_000, 3_000_000));
+
+            final WMSMapContent map = new WMSMapContent();
+            map.setRequest(request);
+            request.setFormat("application/openlayers");
+
+            String htmlDoc = getAsHTML(map);
+            int index = htmlDoc.indexOf("yx : {'EPSG:4326' : false}");
+            assertTrue(index > -1);
+
+            appender.assertFalse("Error was logged", "Failed to determine CRS axis order");
+            appender.stopRecording("org.geoserver.wms.map");
+        }
     }
 }

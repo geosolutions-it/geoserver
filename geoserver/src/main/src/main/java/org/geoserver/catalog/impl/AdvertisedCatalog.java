@@ -23,7 +23,6 @@ import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.security.decorators.DecoratingLayerGroupInfo;
 import org.geotools.filter.expression.InternalVolatileFunction;
-import org.geotools.util.decorate.AbstractDecorator;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
 
@@ -68,8 +67,6 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
         /**
          * Returns the original layers, including the advertised ones. Use this method only if
          * strictly necessary (current use case, figuring out if the group is queryable or not)
-         *
-         * @return
          */
         public List<PublishedInfo> getOriginalLayers() {
             return delegate.getLayers();
@@ -78,18 +75,12 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
         /**
          * Returns the original styles, including the advertised ones. Use this method only if
          * strictly necessary (current use case, figuring out if the group is queryable or not)
-         *
-         * @return
          */
         public List<StyleInfo> getOriginalStyles() {
             return delegate.getStyles();
         }
 
-        /**
-         * Returns the delegate. Thread carefully when using this!
-         *
-         * @return
-         */
+        /** Returns the delegate. Thread carefully when using this! */
         public LayerGroupInfo unwrap() {
             return delegate;
         }
@@ -102,20 +93,12 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
         super(catalog);
     }
 
-    /**
-     * Set LayerGroup visibility policy.
-     *
-     * @param layerGroupPolicy
-     */
+    /** Set LayerGroup visibility policy. */
     public void setLayerGroupVisibilityPolicy(LayerGroupVisibilityPolicy layerGroupPolicy) {
         this.layerGroupPolicy = layerGroupPolicy;
     }
 
-    /**
-     * Hide Layer if Request is GetCapabilities and Layer or its Resource are not advertised.
-     *
-     * @param layer
-     */
+    /** Hide Layer if Request is GetCapabilities and Layer or its Resource are not advertised. */
     private boolean hideLayer(LayerInfo layer) {
         if (!layer.isAdvertised()) {
             return checkCapabilitiesRequest(layer.getResource());
@@ -124,11 +107,7 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
         }
     }
 
-    /**
-     * Hide Resource if it's not advertised and Request is GetCapabilities.
-     *
-     * @param resource
-     */
+    /** Hide Resource if it's not advertised and Request is GetCapabilities. */
     private boolean hideResource(ResourceInfo resource) {
         if (!resource.isAdvertised()) {
             return checkCapabilitiesRequest(resource);
@@ -189,7 +168,7 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
 
         // do not go and check every layer if the request is not a GetCapabilities
         Request request = Dispatcher.REQUEST.get();
-        if (request == null || !"GetCapabilities".equalsIgnoreCase(request.getRequest())) {
+        if (request == null || (!"GetCapabilities".equalsIgnoreCase(request.getRequest()))) {
             return group;
         }
 
@@ -197,6 +176,9 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
         final List<StyleInfo> styles = group.getStyles();
         final List<PublishedInfo> filteredLayers = new ArrayList<>();
         final List<StyleInfo> filteredStyles = new ArrayList<>();
+        if (!group.isAdvertised()) {
+            return null; // new AdvertisedLayerGroup(group, filteredLayers, filteredStyles);
+        }
         for (int i = 0; i < layers.size(); i++) {
             PublishedInfo p = layers.get(i);
             StyleInfo style = (styles != null && styles.size() > i) ? styles.get(i) : null;
@@ -226,7 +208,7 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
 
     @Override
     protected <T extends ResourceInfo> List<T> filterResources(List<T> resources) {
-        List<T> filtered = new ArrayList<T>(resources.size());
+        List<T> filtered = new ArrayList<>(resources.size());
         for (T resource : resources) {
             resource = checkAccess(resource);
             if (resource != null) {
@@ -238,7 +220,7 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
 
     @Override
     protected List<LayerGroupInfo> filterGroups(List<LayerGroupInfo> groups) {
-        List<LayerGroupInfo> filtered = new ArrayList<LayerGroupInfo>(groups.size());
+        List<LayerGroupInfo> filtered = new ArrayList<>(groups.size());
         for (LayerGroupInfo group : groups) {
             group = checkAccess(group);
             if (group != null) {
@@ -250,7 +232,7 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
 
     @Override
     protected List<LayerInfo> filterLayers(List<LayerInfo> layers) {
-        List<LayerInfo> filtered = new ArrayList<LayerInfo>(layers.size());
+        List<LayerInfo> filtered = new ArrayList<>(layers.size());
         for (LayerInfo layer : layers) {
             layer = checkAccess(layer);
             if (layer != null) {
@@ -347,8 +329,7 @@ public class AdvertisedCatalog extends AbstractFilteredCatalog {
     @Override
     public void save(LayerGroupInfo layerGroup) {
         if (layerGroup instanceof AdvertisedLayerGroup) {
-            AbstractDecorator<LayerGroupInfo> decorator =
-                    (AbstractDecorator<LayerGroupInfo>) layerGroup;
+            AdvertisedLayerGroup decorator = (AdvertisedLayerGroup) layerGroup;
             LayerGroupInfo unwrapped = decorator.unwrap(LayerGroupInfo.class);
             delegate.save(unwrapped);
         } else {

@@ -4,11 +4,78 @@ WMS vendor parameters
 =====================
 
 WMS vendor parameters are non-standard request parameters 
-that are defined by an implementation to provide enhanced capabilities.  
-GeoServer supports a variety of vendor-specific WMS parameters.
+that are defined by an implementation to provide enhanced capabilities.
+GeoServer supports a variety of vendor-specific parameters.
+
+.. include:: ../generic_vendor_options.txt
+
+GetCapabilities Request
+-----------------------
+
+format
+^^^^^^
+
+The ``format`` parameter can be used to request capabilities documents in a certain format. If the requested format is not supported the default format will be used.
+
+An example request:
+
+  http://localhost:8080/geoserver/ows?service=wms&version=1.1.1&request=GetCapabilities&format=text/xml
+
+.. note::  
+  Currently this parameter can only be used to request WMS 1.1.1 capabilities documents encoded in ``text/xml``, if used with other WMS versions or other formats it will have no effect.
+
+
+namespace
+^^^^^^^^^
+
+The ``namespace`` parameter causes WMS :ref:`wms_getcap` responses to be filtered to only contain layers in a particular namespace.  
+The syntax is::
+
+   namespace=<namespace>
+
+where ``<namespace>`` is the namespace prefix.
+
+.. warning::  Using an invalid namespace prefix will not cause an error, but the capabilities document returned will contain no layers, only layer groups.
+
+.. note::  This affects the capabilities document only, not other requests. 
+           Other WMS operations will still process all layers, even when a namespace is specified.
+
+rootLayer
+^^^^^^^^^
+
+The ``rootLayer`` parameter can be used to request capabilities documents to include or not a top level root Layer container.
+By default this top level root is always included as a parent of the configured layers and groups. The default can be changed at the service (WMS) level,
+or at the layer / group level.
+
+Using this parameter it is possible to exclude the default root when the resulting document has a single top element (e.g. a single group with nested children).
+To do that, use the **false** value.
+
+The parameter can also be used to override what is defined at the WMS or layer / group level. For example if the service is configure to exclude the Root element, we can force it
+with **rootLayer=true**.
+
+
+
+An example request:
+
+  http://localhost:8080/geoserver/ows?service=wms&version=1.1.1&request=GetCapabilities&rootLayer=false
+
+An example with XML POST:
+
+.. code-block:: xml
+
+   <?xml version="1.0" encoding="UTF-8"?>
+   <ogc:GetCapabilities xmlns:ogc="http://www.opengis.net/ows"
+               xmlns:gml="http://www.opengis.net/gml"
+      version="1.1.1" service="WMS" rootLayer="false">
+   </ogc:GetCapabilities>
+
+
+
+GetMap Request
+--------------
 
 angle
------
+^^^^^
 
 The ``angle`` parameter rotates the output map clockwise around its center. 
 The syntax is::
@@ -21,7 +88,7 @@ Map rotation is supported in all raster formats, PDF, and SVG when using the Bat
 
 
 buffer
-------
+^^^^^^
 
 The ``buffer`` parameter specifies the number of additional border pixels that are used in the ``GetMap`` and ``GetFeatureInfo`` operations.  
 The syntax is::
@@ -54,7 +121,7 @@ In this event, the following defaults are used:
 If these are not sufficiently large, the explicit parameter can be used.
 
 cql_filter
-----------
+^^^^^^^^^^
 
 The ``cql_filter`` parameter is similar to the standard ``filter`` parameter, but the filter is expressed using ECQL (Extended Common Query Language).  
 ECQL provides a more compact and readable syntax compared to OGC XML filters.
@@ -71,7 +138,7 @@ An example of a simple CQL filter is::
 
 
 sortBy
-------
+^^^^^^
 
 The ``sortBy`` parameter allows to control the order of features/rasters displayed in the map, using the same
 syntax as WFS 1.0, that is:
@@ -92,7 +159,7 @@ In particular:
 
 
 env
----
+^^^
 
 The ``env`` parameter defines the set of substitution values that can be used in SLD variable substitution. 
 The syntax is::
@@ -102,7 +169,7 @@ The syntax is::
 See :ref:`sld_variable_substitution` for more information.
 
 featureid
----------
+^^^^^^^^^
 
 The ``featureid`` parameter filters by feature ID, a unique value given to all features.  
 Multiple features can be selected by separating the featureids by comma, as in this example::
@@ -110,7 +177,7 @@ Multiple features can be selected by separating the featureids by comma, as in t
    featureid=states.1,states.45  
 
 filter
-------
+^^^^^^
 
 The WMS specification allows only limited filtering of data.  
 GeoServer enhances the WMS filter capability to match that provided by WFS.
@@ -124,10 +191,18 @@ An example of an OGC filter encoded in a GET request is::
 
    filter=%3CFilter%20xmlns:gml=%22http://www.opengis.net/gml%22%3E%3CIntersects%3E%3CPropertyName%3Ethe_geom%3C/PropertyName%3E%3Cgml:Point%20srsName=%224326%22%3E%3Cgml:coordinates%3E-74.817265,40.5296504%3C/gml:coordinates%3E%3C/gml:Point%3E%3C/Intersects%3E%3C/Filter%3E
 
+An example of an OGC filter encoding standard 2.0 in a GET request is::
+
+   filter=%3Cfes%3AFilter%20xmlns%3Axsi%3D%22http%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema-instance%22%20xmlns%3Agml%3D%22http%3A%2F%2Fwww.opengis.net%2Fgml%2F3.2%22%20xmlns%3Awfs%3D%22http%3A%2F%2Fwww.opengis.net%2Fwfs%22%20xmlns%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%20xmlns%3Afes%3D%22http%3A%2F%2Fwww.opengis.net%2Ffes%2F2.0%22%3E%3Cfes%3APropertyIsLike%20wildCard%3D%22*%22%20singleChar%3D%22.%22%20escapeChar%3D%22!%22%3E%3Cfes%3AValueReference%3ENAME%3C%2Ffes%3AValueReference%3E%3Cfes%3ALiteral%3E*United*%3C%2Ffes%3ALiteral%3E%3C%2Ffes%3APropertyIsLike%3E%3C%2Ffes%3AFilter%3E  
+
+An example of an OGC filter encoding standard 2.0 ::
+	
+	<fes:Filter xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:wfs="http://www.opengis.net/wfs" xmlns="http://www.opengis.net/fes/2.0" xmlns:fes="http://www.opengis.net/fes/2.0"><fes:PropertyIsLike wildCard="*" singleChar="." escapeChar="!"><fes:ValueReference>NAME</fes:ValueReference><fes:Literal>*United*</fes:Literal></fes:PropertyIsLike></fes:Filter>
+
 .. _format_options:
 
 format_options
---------------
+^^^^^^^^^^^^^^
 
 The ``format_options`` is a container for parameters that are format-specific. 
 The syntax is::
@@ -136,7 +211,7 @@ The syntax is::
 
 The supported format options are:
 
-* ``antialiasing`` (values = ``on``, ``off``, ``text``): controls the use of antialiased rendering in raster output. 
+* ``antialias`` (values = ``on``, ``off``, ``text``): controls the use of antialiased rendering in raster output. 
 * ``callback``: specifies the callback function name for the jsonp response format (default is ``parseResponse``).
 * ``dpi``: sets the rendering DPI (dots-per-inch) for raster outputs. 
   The OGC standard output resolution is 90 DPI. 
@@ -154,10 +229,10 @@ The supported format options are:
 * ``kmlvisible`` (values = ``true``, ``false``): Indicates whether layers selected will default to enabled or not. Default behavior is enabled. This parameter primarily affects Google Earth rendering.
 * ``advancedProjectionHandling`` (values = ``true``, ``false``): Enable \ Disable advanced projection handling, if it is enabled in the GUI. If it is disabled in the GUI, this option has no effect.
 * ``mapWrapping`` (values = ``true``, ``false``): Enable \ Disable continuous map wrapping, if it is enabled in the GUI. If it is disabled in the GUI, this option has no effect. Continuous map wrapping will also be disabled if ``advancedProjectionHandling`` is disabled.
-* ``decorationsOnly`` (values = ``true``, ``false``): Disabled by default. When value is true, it allows to get a transparent sized image for the request on which maps are not rendered, but it keeps the decorations applied (if present). This parameter is internally used for WPS gs:DownloadMap when applying multiple legends decorations in the process.
+* ``decorationsOnly`` (values = ``true``, ``false``): Disabled by default. When value is true, it allows to get a transparent sized image for the request on which maps are not rendered, but it keeps the decorations applied (if present).
 
 maxFeatures and startIndex
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The parameters ``maxFeatures`` and ``startIndex`` can be used together to provide "paging" support.  
 Paging is helpful in situations such as KML crawling, where it is desirable to be able to retrieve the map in sections when there are a large number of features.
@@ -173,25 +248,8 @@ Note that not all layers support paging.
 For a layer to be queried in this way, the underlying feature source must support paging.
 This is usually the case for databases (such as PostGIS).
 
-
-namespace
----------
-
-The ``namespace`` parameter causes WMS :ref:`wms_getcap` responses to be filtered to only contain layers in to a particular namespace.  
-The syntax is::
-
-   namespace=<namespace>
-
-where ``<namespace>`` is the namespace prefix.
-
-.. warning::  Using an invalid namespace prefix will not cause an error, but the capabilities document returned will contain no layers, only layer groups.
-
-.. note::  This affects the capabilities document only, not other requests. 
-           Other WMS operations will still process all layers, even when a namespace is specified.
-
-
 palette
-------- 
+^^^^^^^
 
 It is sometimes advisable (for speed and bandwidth reasons) to downsample the bit depth of returned maps.  
 The way to do this is to create an image with a limited color palette, and save it in the ``palettes`` directory inside your GeoServer Data Directory.  
@@ -203,7 +261,7 @@ where ``<image>`` is the filename of the palette image (without the extension). 
 For more information see the tutorial on :ref:`tutorials_palettedimages`
 
 propertyName
-------------
+^^^^^^^^^^^^
 
 The ``propertyName`` parameter specifies which properties are included in the response of the ``GetFeatureInfo`` operation. 
 The syntax is the same as in the WFS ``GetFeature`` operation.  
@@ -223,7 +281,7 @@ The nature of the properties depends on the layer type:
 
    
 tiled
------
+^^^^^
 
 Meta-tiling prevents issues with duplicated labels when using a tiled client such as OpenLayers. 
 When meta-tiling is used, images are rendered and then split into smaller tiles (by default in a 3x3 pattern) before being served.
@@ -238,7 +296,7 @@ The syntax is::
 To invoke meta-tiling use ``tiled=true``.
 
 tilesorigin
------------
+^^^^^^^^^^^
 
 The ``tilesorigin`` parameter is also required for meta-tiling.  
 The syntax is::
@@ -248,7 +306,7 @@ The syntax is::
 where ``x`` and ``y`` are the coordinates of the lower left corner (the "origin") of the tile grid system. 
 
 OpenLayers example
-^^^^^^^^^^^^^^^^^^
+''''''''''''''''''
 
 In OpenLayers, a good way to specify the ``tilesorigin`` is to reference the map  extents directly.
 
@@ -282,7 +340,7 @@ The following code shows how to specify the meta-tiling parameters:
     );
 
 scaleMethod
------------
+^^^^^^^^^^^
 
 The ``scaleMethod`` parameter controls how the scale denominator is computed by GeoServer
 The two possible values are:
@@ -299,7 +357,7 @@ do diverge to larger differences as the latitude approaches the poles.
 .. _wms_vendor_parameter_interpolations:
 
 interpolations
---------------
+^^^^^^^^^^^^^^
 
 The ``interpolations`` parameter allows choosing a specific resampling (interpolation) method. 
 It can be used in the ``GetMap`` operation. 
@@ -319,51 +377,8 @@ or empty if the default method has to be used for the related layer.
 
 The parameter allows to override the global *WMS Raster Rendering Options* setting (see :ref:`WMS Settings <services_webadmin_wms>` for more info), as well as the layer specific *Default Interpolation Method* publishing parameter (see :ref:`Layers <data_webadmin_layers>` for more info), on a layer by layer basis.
 
-format
-------
-
-The ``format`` parameter can be used to request capabilities documents in a certain format. If the requested format is not supported the default format will be used.
-
-An example request:
-
-  http://localhost:8080/geoserver/ows?service=wms&version=1.1.1&request=GetCapabilities&format=text/xml
-
-.. note::  
-  Currently this parameter can only be used to request WMS 1.1.1 capabilities documents encoded in ``text/xml``, if used with other WMS versions or other formats it will have no effect.
-
-
-rootLayer
----------
-
-The ``rootLayer`` parameter can be used to request capabilities documents to include or not a top level root Layer container.
-By default this top level root is always included as a parent of the configured layers and groups. The default can be changed at the service (WMS) level,
-or at the layer / group level.
-
-Using this parameter it is possible to exclude the default root when the resulting document has a single top element (e.g. a single group with nested children).
-To do that, use the **false** value.
-
-The parameter can also be used to override what is defined at the WMS or layer / group level. For example if the service is configure to exclude the Root element, we can force it
-with **rootLayer=true**.
-
-
-
-An example request:
-
-  http://localhost:8080/geoserver/ows?service=wms&version=1.1.1&request=GetCapabilities&rootLayer=false
-
-An example with XML POST:
-
-.. code-block:: xml
-
-   <?xml version="1.0" encoding="UTF-8"?>
-   <ogc:GetCapabilities xmlns:ogc="http://www.opengis.net/ows"
-               xmlns:gml="http://www.opengis.net/gml"
-      version="1.1.1" service="WMS" rootLayer="false">
-   </ogc:GetCapabilities>
-
-
 clip
-------
+^^^^
 
 The ``clip`` parameter can be used to clip WMS response using a Polygon mask represented by a valid WKT String.
 

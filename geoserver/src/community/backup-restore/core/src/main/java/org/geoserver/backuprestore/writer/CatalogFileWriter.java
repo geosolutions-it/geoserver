@@ -13,12 +13,13 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.geoserver.backuprestore.Backup;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.ValidationResult;
 import org.geoserver.config.util.XStreamPersister;
+import org.geotools.util.logging.Logging;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
@@ -42,7 +43,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
 
     private static final boolean DEFAULT_TRANSACTIONAL = false;
 
-    protected static final Log logger = LogFactory.getLog(CatalogFileWriter.class);
+    protected static final Logger logger = Logging.getLogger(CatalogFileWriter.class);
 
     private static final String WRITTEN_STATISTICS_NAME = "written";
 
@@ -68,6 +69,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
         super(clazz, backupFacade);
     }
 
+    @Override
     protected String getItemName(XStreamPersister xp) {
         return xp.getClassAliasingMapper().serializedClass(clazz);
     }
@@ -86,9 +88,10 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
             throw new WriterNotOpenException("Writer must be open before it can be written to");
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Writing to flat file with " + items.size() + " items.");
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Writing to flat file with " + items.size() + " items.");
         }
+        logger.fine(() -> "Writing to flat file with " + items.size() + " items.");
 
         OutputState state = getOutputState();
 
@@ -143,11 +146,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
         }
     }
 
-    /**
-     * Setter for resource. Represents a file that can be written.
-     *
-     * @param resource
-     */
+    /** Setter for resource. Represents a file that can be written. */
     @Override
     public void setResource(Resource resource) {
         this.resource = resource;
@@ -157,8 +156,6 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
      * Set the flag indicating whether or not state should be saved in the provided {@link
      * ExecutionContext} during the {@link ItemStream} call to update. Setting this to false means
      * that it will always start at the beginning on a restart.
-     *
-     * @param saveState
      */
     public void setSaveState(boolean saveState) {
         this.saveState = saveState;
@@ -200,7 +197,6 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
     /**
      * Initialize the reader. This method may be called multiple times before close is called.
      *
-     * @throws Exception
      * @see ItemStream#open(ExecutionContext)
      */
     @Override
@@ -235,10 +231,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
         }
     }
 
-    /**
-     * @throws Exception
-     * @see ItemStream#update(ExecutionContext)
-     */
+    /** @see ItemStream#update(ExecutionContext) */
     @Override
     public void update(ExecutionContext executionContext) {
         super.update(executionContext);
@@ -408,10 +401,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
             }
         }
 
-        /**
-         * @param line
-         * @throws IOException
-         */
+        /** */
         public void write(String line) throws IOException {
             if (!initialized) {
                 initializeBufferedWriter();
@@ -421,11 +411,7 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
             outputBufferedWriter.flush();
         }
 
-        /**
-         * Truncate the output at the last known good point.
-         *
-         * @throws IOException
-         */
+        /** Truncate the output at the last known good point. */
         public void truncate() throws IOException {
             fileChannel.truncate(lastMarkedByteOffsetPosition);
             fileChannel.position(lastMarkedByteOffsetPosition);
@@ -434,8 +420,6 @@ public class CatalogFileWriter<T> extends CatalogWriter<T> {
         /**
          * Creates the buffered writer for the output file channel based on configuration
          * information.
-         *
-         * @throws IOException
          */
         private void initializeBufferedWriter() throws IOException {
             File file = resource.getFile();

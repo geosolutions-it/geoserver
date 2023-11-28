@@ -55,7 +55,7 @@ public class OWS20ServiceExceptionHandler extends ServiceExceptionHandler {
 
     /** Constructor to be called if the exception is not for a particular service. */
     public OWS20ServiceExceptionHandler() {
-        super(Collections.EMPTY_LIST);
+        super(Collections.emptyList());
     }
 
     /**
@@ -63,7 +63,7 @@ public class OWS20ServiceExceptionHandler extends ServiceExceptionHandler {
      *
      * @param services List of services this handler handles exceptions for.
      */
-    public OWS20ServiceExceptionHandler(List services) {
+    public OWS20ServiceExceptionHandler(List<Service> services) {
         super(services);
     }
 
@@ -77,20 +77,9 @@ public class OWS20ServiceExceptionHandler extends ServiceExceptionHandler {
     }
 
     /** Writes out an OWS ExceptionReport document. */
+    @Override
     public void handleServiceException(ServiceException exception, Request request) {
-        String errorCode = exception.getCode();
-        String message = exception.getMessage();
-        Level level = Level.WARNING;
-
-        if ((errorCode != null && errorCode.toUpperCase().startsWith("INVALID"))
-                || (errorCode == null
-                        && message != null
-                        && message.toUpperCase().startsWith("INVALID"))) {
-            // Log Exceptions dealing with "Invalid" to INFO
-            level = Level.INFO;
-        }
-
-        LOGGER.log(level, "OWS20SEH: handling " + exception);
+        LOGGER.warning("OWS20SEH: handling " + exception);
 
         String version = null;
         if (useServiceVersion && request.getServiceDescriptor() != null) {
@@ -217,7 +206,7 @@ public class OWS20ServiceExceptionHandler extends ServiceExceptionHandler {
             // exception.
             sb.append("\nDetails:\n");
             ByteArrayOutputStream trace = new ByteArrayOutputStream();
-            exception.printStackTrace(new PrintStream(trace));
+            exception.printStackTrace(new PrintStream(trace)); // NOPMD
             sb.append(new String(trace.toByteArray()));
         }
 

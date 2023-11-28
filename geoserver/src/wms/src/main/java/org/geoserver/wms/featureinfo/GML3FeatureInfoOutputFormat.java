@@ -58,7 +58,7 @@ public class GML3FeatureInfoOutputFormat extends GetFeatureInfoOutputFormat {
      * superclass and constructs a <code>GetFeaturesResult</code> wich is passed to a <code>
      * GML2FeatureResponseDelegate</code>.
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     @Override
     public void write(
             FeatureCollectionType results, GetFeatureInfoRequest fInfoReq, OutputStream out)
@@ -104,7 +104,7 @@ public class GML3FeatureInfoOutputFormat extends GetFeatureInfoOutputFormat {
 
         // this is a dummy wrapper around our 'request' object so that the new Dispatcher will
         // accept it.
-        Service serviceDesc = new Service("wms", null, null, Collections.EMPTY_LIST);
+        Service serviceDesc = new Service("wms", null, null, Collections.emptyList());
         Operation opDescriptor = new Operation("", serviceDesc, null, new Object[] {gfreq});
         outputFormat.write(features, out, opDescriptor);
     }

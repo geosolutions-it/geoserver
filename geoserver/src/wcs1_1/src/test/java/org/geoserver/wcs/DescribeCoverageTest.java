@@ -21,10 +21,12 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageDimensionInfo;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
+import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.config.GeoServerInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wcs.test.WCSTestSupport;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -35,14 +37,11 @@ import org.w3c.dom.NodeList;
 public class DescribeCoverageTest extends WCSTestSupport {
 
     public static QName NO_RANGE = new QName(MockData.WCS_URI, "NoRange", MockData.WCS_PREFIX);
+    public static QName NO_ENVELOPE_SRS =
+            new QName(MockData.WCS_URI, "NoEnvelopeSRS", MockData.WCS_PREFIX);
     private static final QName SF_RAIN = new QName(MockData.SF_URI, "rain", MockData.SF_PREFIX);
     private static final QName GS_RAIN =
             new QName(MockData.DEFAULT_URI, "rain", MockData.DEFAULT_PREFIX);
-
-    // @Override
-    // protected String getDefaultLogConfiguration() {
-    // return "/DEFAULT_LOGGING.properties";
-    // }
 
     // public void testCRS() throws NoSuchAuthorityCodeException, FactoryException {
     // System.out.println(CRS.decode("EPSG:4326"));
@@ -62,6 +61,19 @@ public class DescribeCoverageTest extends WCSTestSupport {
         CoverageDimensionInfo cdi = noRange.getDimensions().get(0);
         cdi.setRange(null);
         getCatalog().save(noRange);
+
+        testData.addRasterLayer(
+                NO_ENVELOPE_SRS,
+                "norange.tiff",
+                null,
+                null,
+                DescribeCoverageTest.class,
+                getCatalog());
+        CoverageInfo noEnvelopeSRS = getCatalog().getCoverageByName(getLayerId(NO_ENVELOPE_SRS));
+        ReferencedEnvelope bbox = noEnvelopeSRS.getNativeBoundingBox();
+        noEnvelopeSRS.setNativeBoundingBox(ReferencedEnvelope.create(bbox, null));
+        noEnvelopeSRS.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
+        getCatalog().save(noEnvelopeSRS);
 
         GeoServerInfo global = getGeoServer().getGlobal();
         global.getSettings().setProxyBaseUrl("src/test/resources/geoserver");
@@ -85,9 +97,6 @@ public class DescribeCoverageTest extends WCSTestSupport {
 
     @Test
     public void testDescribeByIdentifiers() throws Exception {
-        String queryString =
-                "&request=getcoverage&service=wcs&version=1.1.1&&format=image/geotiff"
-                        + "&BoundingBox=-45,146,-42,149,urn:ogc:def:crs:EPSG:6.6:4326";
         // Get identifiers from getCapabilities
         Document dom = getAsDOM("wcs?request=GetCapabilities&service=WCS");
         NodeList nodes =
@@ -142,7 +151,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
 
     @Test
     public void testDescribeUnknownCoverageXml() throws Exception {
-        List<Exception> errors = new ArrayList<Exception>();
+        List<Exception> errors = new ArrayList<>();
         String request =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
                         + //
@@ -180,6 +189,36 @@ public class DescribeCoverageTest extends WCSTestSupport {
     }
 
     @Test
+    public void testDescribeNoEnvelopeSRS() throws Exception {
+        Document dom =
+                getAsDOM(
+                        BASEPATH
+                                + "?request=DescribeCoverage&service=WCS&version=1.1.1&identifiers="
+                                + getLayerId(NO_ENVELOPE_SRS));
+        // print(dom);
+        checkValidationErrors(dom, WCS11_SCHEMA);
+
+        // check the basics, the output is a single coverage description with the expected id
+        assertEquals(1, dom.getElementsByTagName("wcs:CoverageDescriptions").getLength());
+        assertEquals(1, dom.getElementsByTagName("wcs:CoverageDescription").getLength());
+        assertXpathEvaluatesTo(
+                getLayerId(NO_ENVELOPE_SRS),
+                "/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Identifier",
+                dom);
+        // check we generated a ows:AnyValue for the field definition (since we have no validity
+        // range)
+        assertXpathEvaluatesTo(
+                "2",
+                "/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Domain/wcs:SpatialDomain/ows:BoundingBox/@dimensions",
+                dom);
+
+        assertXpathEvaluatesTo(
+                "1",
+                "count(/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Domain/wcs:SpatialDomain/ows:BoundingBox[@crs='urn:ogc:def:crs:EPSG::26713' and @dimensions='2'])",
+                dom);
+    }
+
+    @Test
     public void testDescribeNoRangeKvp() throws Exception {
         Document dom =
                 getAsDOM(
@@ -203,7 +242,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
 
     @Test
     public void testDescribeDemCoverageXml() throws Exception {
-        List<Exception> errors = new ArrayList<Exception>();
+        List<Exception> errors = new ArrayList<>();
         String request =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
                         + //

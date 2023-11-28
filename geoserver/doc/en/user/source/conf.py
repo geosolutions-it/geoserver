@@ -47,13 +47,39 @@ copyright = u'{}, Open Source Geospatial Foundation'.format(now.year)
 # The default replacements for |version| and |release|, also used in various
 # other places throughout the built documents.
 #
-# The short X.Y version.
-version = '2.16'
-# The full version, including alpha/beta/rc tags.
-release = '2.16-SNAPSHOT'
+# The replacement |version| provides short X.Y version.
+version = '2.23'
+
+# The relacement |release| provides the full version, including alpha/beta/rc tags.
+
+# sphinx-build -D release=${project.version} overrides release configuration
+# but only after conf.py has been used...
+
+# check environmental variable to see if ant build.xml passed in project.version
+project_version = os.getenv("project.version")
+if project_version == None: 
+  release = '2.23-SNAPSHOT'
+else:
+  release = project_version
+
+# Used in build and documentation links
+# branch = version+'.x'
+branch = version+'.x'
+
 # Users don't need to see the "SNAPSHOT" notation when it's there
 if release.find('SNAPSHOT') != -1:
-   release = '2.16.x'
+   tags.add('snapshot')
+   download = version+'.x'
+   latest = '-latest'
+   download_release = 'https://build.geoserver.org/geoserver/'+branch+'/geoserver-'+version+'.x-latest-%s.zip'
+   download_extension = 'https://build.geoserver.org/geoserver/'+branch+'/ext-latest/geoserver-'+version+'-SNAPSHOT-%s-plugin.zip'
+   download_community = 'https://build.geoserver.org/geoserver/'+branch+'/community-latest/geoserver-'+version+'-SNAPSHOT-%s-plugin.zip'
+else:
+   download = release
+   latest = ''
+   download_release = 'http://sourceforge.net/projects/geoserver/files/GeoServer/'+release+'/geoserver-'+release+'-%s.zip'
+   download_extension = 'http://sourceforge.net/projects/geoserver/files/GeoServer/'+release+'/extensions/geoserver-'+release+'-%s-plugin.zip'
+   download_community = 'https://build.geoserver.org/geoserver/'+branch+'/community-latest/geoserver-'+version+'.x-SNAPSHOT-%s-plugin.zip'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -93,14 +119,18 @@ pygments_style = 'sphinx'
 # -----------------------------------
 
 extlinks = { 
-    'wiki': ('https://github.com/geoserver/geoserver/wiki/%s',''),
-    'website': ('http://geoserver.org/%s',''),
-    'user': ('http://docs.geoserver.org/latest/en/user/%s',''),
-    'developer': ('http://docs.geoserver.org/latest/en/developer/%s',''),
-    'docguide': ('http://docs.geoserver.org/latest/en/docguide/%s',''),
-    'geos': ('https://osgeo-org.atlassian.net/browse/GEOS-%s','GEOS-'),
-    'geot': ('https://osgeo-org.atlassian.net/browse/GEOT-%s','GEOT-'),
-    'api': ('http://docs.geoserver.org/latest/en/api/#/latest/en/api/1.0.0/%s','')
+    'wiki': ('https://github.com/geoserver/geoserver/wiki/%s', None),
+    'website': ('http://geoserver.org/%s', None),
+    'user': ('http://docs.geoserver.org/'+branch+'/en/user/%s', None),
+    'developer': ('http://docs.geoserver.org/latest/en/developer/%s', None),
+    'docguide': ('http://docs.geoserver.org/latest/en/docguide/%s', None),
+    'geos': ('https://osgeo-org.atlassian.net/browse/GEOS-%s','GEOS-%s'),
+    'geot': ('https://osgeo-org.atlassian.net/browse/GEOT-%s','GEOT-%s'),
+    'api': ('http://docs.geoserver.org/latest/en/api/#1.0.0/%s', None),
+    'geotools': ('https://docs.geotools.org/latest/userguide/%s', None),
+    'download_release': (download_release,'geoserver-'+download+latest+'-%s.zip'),
+    'download_extension': (download_extension,'geoserver-'+download+'-%s-plugin.zip'),
+    'download_community': (download_community,'geoserver-'+download+'-%s-plugin.zip')
 }
 
 # Common substitutions
@@ -194,8 +224,9 @@ html_context = {
   'display_github': True,
   'github_user': 'geoserver',
   'github_repo': 'geoserver',
-  'github_version': 'master',
-  'conf_py_path': 'doc/en/user/source'
+  'github_version': 'main',
+  'conf_py_path': 'doc/en/user/source',
+  'manual': manual,
 }
 
 

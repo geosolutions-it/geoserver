@@ -28,6 +28,7 @@ public class JMSCatalogPostModifyEventHandler extends JMSCatalogEventHandler {
     private final Catalog catalog;
     private final ToggleSwitch producer;
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public JMSCatalogPostModifyEventHandler(
             Catalog catalog, XStream xstream, Class clazz, ToggleSwitch producer) {
         super(xstream, clazz);
@@ -68,13 +69,7 @@ public class JMSCatalogPostModifyEventHandler extends JMSCatalogEventHandler {
         return true;
     }
 
-    /**
-     * @param catalog
-     * @param modifyEv
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
-     *     <p>TODO: synchronization on catalog object
-     */
+    /** TODO: synchronization on catalog object */
     protected static void postModify(final Catalog catalog, CatalogPostModifyEvent modifyEv)
             throws IllegalAccessException, InvocationTargetException {
 

@@ -5,8 +5,8 @@
  */
 package org.geoserver.rest.catalog;
 
-import static org.custommonkey.xmlunit.XMLAssert.assertNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
@@ -109,12 +109,7 @@ public class FeatureTypeControllerWFSTest extends CatalogRESTTestSupport {
                 "application/zip");
     }
 
-    /**
-     * Add a property data store with multiple feature types, but only configure the first.
-     *
-     * @param configureFeatureType
-     * @throws Exception
-     */
+    /** Add a property data store with multiple feature types, but only configure the first. */
     void addPropertyDataStoreOnlyConfigureFirst() throws Exception {
         ByteArrayOutputStream zbytes = new ByteArrayOutputStream();
         ZipOutputStream zout = new ZipOutputStream(zbytes);

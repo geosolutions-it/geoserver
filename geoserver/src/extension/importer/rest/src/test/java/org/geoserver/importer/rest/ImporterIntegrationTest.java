@@ -4,13 +4,15 @@
  */
 package org.geoserver.importer.rest;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -19,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -366,7 +369,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                         + "Content-Type: text/plain\n"
                         + "\r\n\r\n"
                         + FileUtils.readFileToString(locations, "UTF-8")
-                        + "\r\n\r\n--AaB03x--";
+                        + "\r\n--AaB03x--";
 
         post("/rest/imports/" + importId + "/tasks", body, "multipart/form-data; boundary=AaB03x");
 
@@ -379,7 +382,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertEquals(1, context.getTasks().size());
         ImportTask task = context.getTasks().get(0);
 
-        TransformChain transformChain = task.getTransform();
+        TransformChain<?> transformChain = task.getTransform();
         assertThat(
                 transformChain.getTransforms().get(0),
                 CoreMatchers.instanceOf(AttributesToPointGeometryTransform.class));
@@ -405,10 +408,11 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertEquals(3, featureType.getAttributeCount());
         FeatureSource<? extends FeatureType, ? extends Feature> featureSource =
                 fti.getFeatureSource(null, null);
+
         FeatureCollection<? extends FeatureType, ? extends Feature> features =
                 featureSource.getFeatures();
-        assertEquals(9, features.size());
 
+        assertEquals(9, features.size());
         try (FeatureIterator<? extends Feature> featureIterator = features.features()) {
             assertTrue("Expected features", featureIterator.hasNext());
             SimpleFeature feature = (SimpleFeature) featureIterator.next();
@@ -487,24 +491,18 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                                         contextDefinition,
                                         "application/json"));
         // print(json);
-        String state = null;
-        int importId;
-        if (async) {
-            importId = json.getJSONObject("import").getInt("id");
-            for (int i = 0; i < 60 * 2 * 2; i++) {
-                json = (JSONObject) getAsJSON("/rest/imports/" + importId);
-                // print(json);
-                state = json.getJSONObject("import").getString("state");
-                if ("INIT".equals(state) || "RUNNING".equals(state) || "PENDING".equals(state)) {
-                    Thread.sleep(500);
-                }
-            }
-        } else {
-            state = json.getJSONObject("import").getString("state");
-            importId = json.getJSONObject("import").getInt("id");
-        }
-        Thread.sleep(500);
-        assertEquals("COMPLETE", state);
+        int importId = json.getJSONObject("import").getInt("id");
+        await().pollInSameThread()
+                .atMost(2, TimeUnit.MINUTES)
+                .until(
+                        () -> {
+                            JSONObject pj = (JSONObject) getAsJSON("/rest/imports/" + importId);
+                            String state = pj.getJSONObject("import").getString("state");
+                            return completed(state);
+                        });
+        json = (JSONObject) getAsJSON("/rest/imports/" + importId);
+        assertEquals("COMPLETE", json.getJSONObject("import").getString("state"));
+
         assertThat(invoked[0], is(true));
         checkPoiImport();
 
@@ -581,20 +579,18 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                                         contextDefinition,
                                         "application/json"));
         // print(json);
-        String state = null;
-        int importId;
-        importId = json.getJSONObject("import").getInt("id");
+        int importId = json.getJSONObject("import").getInt("id");
 
         // wait until PENDING:
         if (async) {
-            for (int i = 0; i < 60 * 2 * 2; i++) {
-                json = (JSONObject) getAsJSON("/rest/imports/" + importId);
-                // print(json);
-                state = json.getJSONObject("import").getString("state");
-                if ("INIT".equals(state)) {
-                    Thread.sleep(500);
-                }
-            }
+            await().pollInSameThread()
+                    .atMost(2, TimeUnit.MINUTES)
+                    .until(
+                            () -> {
+                                JSONObject pj = (JSONObject) getAsJSON("/rest/imports/" + importId);
+                                String state = pj.getJSONObject("import").getString("state");
+                                return !"INIT".equals(state);
+                            });
         }
 
         assertThat(invoked[0], is(true));
@@ -603,23 +599,16 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         // run the import
         postAsServletResponse(
                 "/rest/imports/" + importId + (async ? "?async=true" : ""), "", "application/json");
-
-        if (async) {
-            for (int i = 0; i < 60 * 2 * 2; i++) {
-                json = (JSONObject) getAsJSON("/rest/imports/" + importId);
-                // print(json);
-                state = json.getJSONObject("import").getString("state");
-                if ("INIT".equals(state) || "RUNNING".equals(state) || "PENDING".equals(state)) {
-                    Thread.sleep(500);
-                }
-            }
-        } else {
-            MockHttpServletResponse response = getAsServletResponse("/rest/imports/" + importId);
-            assertEquals("application/json", response.getContentType());
-            json = (JSONObject) json(response);
-            state = json.getJSONObject("import").getString("state");
-        }
-        Thread.sleep(500);
+        await().pollInSameThread()
+                .atMost(2, TimeUnit.MINUTES)
+                .until(
+                        () -> {
+                            JSONObject pj = (JSONObject) getAsJSON("/rest/imports/" + importId);
+                            String state = pj.getJSONObject("import").getString("state");
+                            return completed(state);
+                        });
+        json = (JSONObject) getAsJSON("/rest/imports/" + importId);
+        String state = json.getJSONObject("import").getString("state");
         assertEquals("COMPLETE", state);
         assertThat(invoked[0], is(true));
         checkPoiImport();
@@ -629,9 +618,13 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertEquals(204, resp.getStatus());
     }
 
+    private boolean completed(String state) {
+        return !"INIT".equals(state) && !"RUNNING".equals(state) && !"PENDING".equals(state);
+    }
+
     protected Authentication createAuthentication() {
         GeoServerUser anonymous = GeoServerUser.createAnonymous();
-        List<GrantedAuthority> roles = new ArrayList<GrantedAuthority>();
+        List<GrantedAuthority> roles = new ArrayList<>();
         roles.addAll(anonymous.getAuthorities());
         AnonymousAuthenticationToken auth =
                 new AnonymousAuthenticationToken("geoserver", anonymous.getUsername(), roles);
@@ -746,11 +739,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertNotNull(layer);
     }
 
-    /**
-     * Attribute computation integration test
-     *
-     * @throws Exception
-     */
+    /** Attribute computation integration test */
     @Test
     public void testAttributeCompute() throws Exception {
         // create H2 store to act as a target
@@ -1083,7 +1072,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertEquals(ImportContext.State.PENDING, context.getState());
         importer.run(context);
         assertEquals(ImportContext.State.COMPLETE, context.getState());
-        assertTrue(context.getState() == ImportContext.State.COMPLETE);
+        assertSame(context.getState(), ImportContext.State.COMPLETE);
 
         assertFalse(new File(context.getUploadDirectory().getFile(), ".locking").exists());
         assertTrue(new File(context.getUploadDirectory().getFile(), ".clean-me").exists());
@@ -1141,7 +1130,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertEquals(ImportContext.State.PENDING, context.getState());
         importer.run(context);
         assertEquals(ImportContext.State.COMPLETE, context.getState());
-        assertTrue(context.getState() == ImportContext.State.COMPLETE);
+        assertSame(context.getState(), ImportContext.State.COMPLETE);
 
         assertTrue(new File(context.getUploadDirectory().getFile(), ".locking").exists());
     }
@@ -1246,8 +1235,9 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         assertEquals(ImportContext.State.PENDING, context.getState());
         importer.run(context);
         assertEquals(ImportContext.State.COMPLETE, context.getState());
-        assertTrue(context.getState() == ImportContext.State.COMPLETE);
+        assertSame(context.getState(), ImportContext.State.COMPLETE);
 
-        assertTrue(new File(context.getUploadDirectory().getFile(), ".locking").exists());
+        assertTrue(new File(context.getUploadDirectory().getFile(), "bad_char.shp").exists());
+        assertTrue(new File(context.getUploadDirectory().getFile(), "bad_char.dbf").exists());
     }
 }

@@ -9,7 +9,7 @@ import it.geosolutions.jaiext.colorindexer.CachingColorIndexer;
 import it.geosolutions.jaiext.colorindexer.ColorIndexer;
 import it.geosolutions.jaiext.colorindexer.LRUColorIndexer;
 import it.geosolutions.jaiext.colorindexer.Quantizer;
-import java.awt.*;
+import java.awt.Transparency;
 import java.awt.image.IndexColorModel;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
@@ -82,8 +82,6 @@ public abstract class RenderedImageMapResponse extends AbstractMapResponse {
      *
      * @param image The image to be formatted.
      * @param outStream The stream to write to.
-     * @throws ServiceException
-     * @throws IOException
      */
     public abstract void formatImageOutputStream(
             RenderedImage image, OutputStream outStream, WMSMapContent mapContent)
@@ -112,6 +110,9 @@ public abstract class RenderedImageMapResponse extends AbstractMapResponse {
                 formatImageOutputStream(image, output, mapContent);
                 output.flush();
             } finally {
+                if (image instanceof RenderedImageTimeDecorator) {
+                    ((RenderedImageTimeDecorator) image).getStatistics().renderingComplete();
+                }
                 // let go of the coverages created for rendering
                 for (GridCoverage2D coverage : renderedCoverages) {
                     RasterCleaner.addCoverage(coverage);
@@ -163,7 +164,8 @@ public abstract class RenderedImageMapResponse extends AbstractMapResponse {
                 image = forceIndexed8Bitmask(image, null);
             }
         } else {
-            if (!(image.getColorModel() instanceof IndexColorModel)) {
+            if (!(image.getColorModel() instanceof IndexColorModel)
+                    && (mapContent.getPalette() != null || palettedFormatCheck.apply(format))) {
                 // try to force a RGBA setup
                 image =
                         new ImageWorker(image)
@@ -218,18 +220,10 @@ public abstract class RenderedImageMapResponse extends AbstractMapResponse {
         return ImageUtils.forceIndexed8Bitmask(originalImage, paletteInverter);
     }
 
-    /**
-     * Returns the capabilities for this output format
-     *
-     * @param outputFormat
-     */
+    /** Returns the capabilities for this output format */
     public abstract MapProducerCapabilities getCapabilities(String outputFormat);
 
-    /**
-     * Returns a three letter extension for clients needing to name return files
-     *
-     * @return
-     */
+    /** Returns a three letter extension for clients needing to name return files */
     public String getExtension(RenderedImage image, WMSMapContent mapContent) {
         return "img";
     }

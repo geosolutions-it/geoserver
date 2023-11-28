@@ -6,7 +6,9 @@
 package org.geoserver.rest.service;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
@@ -117,5 +119,27 @@ public class WCSSettingsControllerTest extends CatalogRESTTestSupport {
                 405,
                 deleteAsServletResponse(RestBaseController.ROOT_PATH + "/services/wcs/settings")
                         .getStatus());
+    }
+
+    @Test
+    public void testPutAsJSONInternationalTitle() throws Exception {
+        String json =
+                "{'wcs': {'id':'wcs','enabled':'false','name':'WCS',"
+                        + " 'internationalTitle': {'en':'english WCS title','it': 'titolo italiano WCS'}}}";
+        MockHttpServletResponse response =
+                putAsServletResponse(
+                        RestBaseController.ROOT_PATH + "/services/wcs/settings/",
+                        json,
+                        "text/json");
+        assertEquals(200, response.getStatus());
+        JSON jsonMod = getAsJSON(RestBaseController.ROOT_PATH + "/services/wcs/settings.json");
+        JSONObject jsonObject = (JSONObject) jsonMod;
+        assertNotNull(jsonObject);
+        JSONObject wcsinfo = (JSONObject) jsonObject.get("wcs");
+        assertEquals(
+                "english WCS title",
+                wcsinfo.getJSONObject("internationalTitle").getString("en").trim());
+        assertEquals(
+                "titolo italiano WCS", wcsinfo.getJSONObject("internationalTitle").getString("it"));
     }
 }

@@ -5,6 +5,7 @@
  */
 package org.geoserver.wcs.kvp;
 
+import static org.vfny.geoserver.wcs.WcsException.WcsExceptionCode.InvalidParameterValue;
 import static org.vfny.geoserver.wcs.WcsException.WcsExceptionCode.MissingParameterValue;
 
 import java.util.Map;
@@ -17,6 +18,7 @@ import net.opengis.wcs11.TimeSequenceType;
 import net.opengis.wcs11.Wcs111Factory;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.ows.kvp.EMFKvpRequestReader;
+import org.geoserver.ows.util.KvpUtils;
 import org.vfny.geoserver.wcs.WcsException;
 import org.vfny.geoserver.wcs.WcsException.WcsExceptionCode;
 
@@ -30,7 +32,8 @@ public class GetCoverageRequestReader extends EMFKvpRequestReader {
     }
 
     @Override
-    public Object read(Object request, Map kvp, Map rawKvp) throws Exception {
+    public Object read(Object request, Map<String, Object> kvp, Map<String, Object> rawKvp)
+            throws Exception {
         GetCoverageType getCoverage = (GetCoverageType) super.read(request, kvp, rawKvp);
 
         // grab coverage info to perform further checks
@@ -43,6 +46,17 @@ public class GetCoverageRequestReader extends EMFKvpRequestReader {
 
         // build output element
         getCoverage.setOutput(parseOutputElement(kvp));
+
+        String store = KvpUtils.caseInsensitiveParam(rawKvp, "store", null);
+        if (store != null) {
+            if (!store.equalsIgnoreCase("TRUE") && !store.equalsIgnoreCase("FALSE")) {
+                // OGC Specification says that STORE must be either True or False
+                throw new WcsException(
+                        "store parameter has an invalid value - must be True or False",
+                        InvalidParameterValue,
+                        "store");
+            }
+        }
 
         return getCoverage;
     }
@@ -95,8 +109,8 @@ public class GetCoverageRequestReader extends EMFKvpRequestReader {
             gridCS = gridCRS.getGridCS();
         }
         gridCRS.setGridCS(gridCS);
-        gridCRS.setGridOrigin((Double[]) kvp.get("GridOrigin"));
-        gridCRS.setGridOffsets((Double[]) kvp.get("GridOffsets"));
+        gridCRS.setGridOrigin(kvp.get("GridOrigin"));
+        gridCRS.setGridOffsets(kvp.get("GridOffsets"));
 
         return output;
     }

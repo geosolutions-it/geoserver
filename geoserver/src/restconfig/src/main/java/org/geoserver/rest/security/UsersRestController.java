@@ -7,6 +7,7 @@ package org.geoserver.rest.security;
 import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 import org.geoserver.rest.RestBaseController;
+import org.geoserver.rest.catalog.SequentialExecutionController;
 import org.geoserver.rest.security.xml.JaxbGroupList;
 import org.geoserver.rest.security.xml.JaxbUser;
 import org.geoserver.rest.security.xml.JaxbUserList;
@@ -18,11 +19,19 @@ import org.geoserver.security.impl.GeoServerUserGroup;
 import org.geoserver.security.validation.PasswordPolicyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController(value = "usergroupRestController")
 @RequestMapping(path = RestBaseController.ROOT_PATH + "/security/usergroup")
-public class UsersRestController {
+public class UsersRestController implements SequentialExecutionController {
 
     protected GeoServerSecurityManager securityManager;
 
@@ -45,34 +54,30 @@ public class UsersRestController {
     }
 
     @GetMapping(
-        value = "/users",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/users",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbUserList getUsers() throws IOException {
         return getUsers(getDefaultServiceName());
     }
 
     @GetMapping(
-        value = "/groups",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/groups",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbGroupList getGroups() throws IOException {
         return getGroups(getDefaultServiceName());
     }
 
     @GetMapping(
-        value = "/group/{group}/users",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/group/{group}/users",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbUserList getUsersFromGroup(@PathVariable("group") String groupName)
             throws IOException {
         return getUsersFromGroup(getDefaultServiceName(), groupName);
     }
 
     @GetMapping(
-        value = "/user/{user}/groups",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/user/{user}/groups",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbGroupList getGroupsFromUser(@PathVariable("user") String userName)
             throws IOException {
         return getGroupsFromUser(getDefaultServiceName(), userName);
@@ -124,27 +129,24 @@ public class UsersRestController {
     }
 
     @GetMapping(
-        value = "/service/{serviceName}/users",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/service/{serviceName}/users",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbUserList getUsers(@PathVariable("serviceName") String serviceName)
             throws IOException {
         return new JaxbUserList(getService(serviceName).getUsers());
     }
 
     @GetMapping(
-        value = "/service/{serviceName}/groups",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/service/{serviceName}/groups",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbGroupList getGroups(@PathVariable("serviceName") String serviceName)
             throws IOException {
         return new JaxbGroupList(getService(serviceName).getUserGroups());
     }
 
     @GetMapping(
-        value = "/service/{serviceName}/group/{group}/users",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/service/{serviceName}/group/{group}/users",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbUserList getUsersFromGroup(
             @PathVariable("serviceName") String serviceName,
             @PathVariable("group") String groupName)
@@ -154,9 +156,8 @@ public class UsersRestController {
     }
 
     @GetMapping(
-        value = "/service/{serviceName}/user/{user}/groups",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            value = "/service/{serviceName}/user/{user}/groups",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public JaxbGroupList getGroupsFromUser(
             @PathVariable("serviceName") String serviceName, @PathVariable("user") String userName)
             throws IOException {

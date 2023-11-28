@@ -1,3 +1,7 @@
+/* (c) 2021 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.taskmanager.tasks;
 
 import static org.junit.Assert.assertEquals;
@@ -12,6 +16,7 @@ import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.Collections;
 import org.geoserver.gwc.GWC;
+import org.geoserver.gwc.config.GWCConfig;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.taskmanager.AbstractTaskManagerTest;
 import org.geoserver.taskmanager.data.Batch;
@@ -66,6 +71,10 @@ public class ClearCachedLayerTaskTest extends AbstractTaskManagerTest {
 
     @Override
     public boolean setupDataDirectory() throws Exception {
+        GWCConfig config = GWC.get().getConfig();
+        config.setCacheLayersByDefault(false);
+        GWC.get().saveConfig(config);
+
         DATA_DIRECTORY.addWcs11Coverages();
 
         return true;

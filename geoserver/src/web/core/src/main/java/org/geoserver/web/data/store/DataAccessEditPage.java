@@ -37,11 +37,7 @@ public class DataAccessEditPage extends AbstractDataAccessPage implements Serial
     /** Dialog to ask for save confirmation in case the store can't be reached */
     private GeoServerDialog dialog;
 
-    /**
-     * Uses a "name" parameter to locate the datastore
-     *
-     * @param parameters
-     */
+    /** Uses a "name" parameter to locate the datastore */
     public DataAccessEditPage(PageParameters parameters) {
         String wsName = parameters.get(WS_NAME).toOptionalString();
         String storeName = parameters.get(STORE_NAME).toString();
@@ -51,7 +47,7 @@ public class DataAccessEditPage extends AbstractDataAccessPage implements Serial
             getSession()
                     .error(
                             new ParamResourceModel(
-                                            "DataAccessEditPage.notFound", this, wsName, storeName)
+                                            "DataAccessEditPage.notFound", this, storeName, wsName)
                                     .getString());
             doReturn(StorePage.class);
             return;
@@ -87,6 +83,7 @@ public class DataAccessEditPage extends AbstractDataAccessPage implements Serial
         initUI(store);
     }
 
+    @Override
     protected void initUI(final DataStoreInfo dataStoreInfo) {
         // the confirm dialog
         dialog = new GeoServerDialog("dialog");
@@ -111,8 +108,9 @@ public class DataAccessEditPage extends AbstractDataAccessPage implements Serial
      *
      * @see AbstractDataAccessPage#onSaveDataStore(Form)
      */
+    @Override
     protected final void onSaveDataStore(
-            final DataStoreInfo info, final AjaxRequestTarget requestTarget) {
+            final DataStoreInfo info, final AjaxRequestTarget requestTarget, boolean doReturn) {
 
         if (!storeEditPanel.onSave()) {
             return;
@@ -133,18 +131,19 @@ public class DataAccessEditPage extends AbstractDataAccessPage implements Serial
                                 + ". Got a "
                                 + dataStore.getClass().getName());
                 doSaveStore(info);
-                doReturn(StorePage.class);
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Error obtaining datastore with the modified values", e);
-                confirmSaveOnConnectionFailure(info, requestTarget, e);
-            } catch (RuntimeException e) {
+                if (doReturn) {
+                    doReturn(StorePage.class);
+                }
+            } catch (IOException | RuntimeException e) {
                 LOGGER.log(Level.WARNING, "Error obtaining datastore with the modified values", e);
                 confirmSaveOnConnectionFailure(info, requestTarget, e);
             }
         } else {
             // store's disabled, no need to check the connection parameters
             doSaveStore(info);
-            doReturn(StorePage.class);
+            if (doReturn) {
+                doReturn(StorePage.class);
+            }
         }
     }
 

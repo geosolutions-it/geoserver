@@ -21,7 +21,7 @@ public class MemoryImportStore implements ImportStore {
 
     AtomicLong idseq = new AtomicLong();
 
-    Queue<ImportContext> imports = new ConcurrentLinkedQueue<ImportContext>();
+    Queue<ImportContext> imports = new ConcurrentLinkedQueue<>();
 
     @Override
     public String getName() {
@@ -99,6 +99,7 @@ public class MemoryImportStore implements ImportStore {
         return imports.iterator();
     }
 
+    @Override
     public Iterator<ImportContext> iterator(String sortBy) {
         if (sortBy == null) {
             return iterator();
@@ -150,7 +151,7 @@ public class MemoryImportStore implements ImportStore {
 
     abstract static class ImportCollector implements ImportVisitor {
 
-        List<ImportContext> collected = new ArrayList();
+        List<ImportContext> collected = new ArrayList<>();
 
         @Override
         public final void visit(ImportContext context) {

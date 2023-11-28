@@ -57,12 +57,7 @@ public class JDBCImportStore implements ImportStore {
         this.backingStore = loader.getStore();
     }
 
-    /**
-     * Used mostly for tests
-     *
-     * @param backingStore
-     * @param importer
-     */
+    /** Used mostly for tests */
     JDBCImportStore(JDBCDataStore backingStore, Importer importer) {
         this.mapper = new ImportContextMapper(importer);
         this.backingStore = backingStore;
@@ -178,9 +173,7 @@ public class JDBCImportStore implements ImportStore {
                 SimpleFeature feature = mapper.toFeature(context);
                 Id filter = FF.id(Collections.singleton(FF.featureId(feature.getID())));
                 String[] names =
-                        CTX_FEATURE_TYPE
-                                .getAttributeDescriptors()
-                                .stream()
+                        CTX_FEATURE_TYPE.getAttributeDescriptors().stream()
                                 .map(ad -> ad.getLocalName())
                                 .toArray(n -> new String[n]);
                 Object[] values = feature.getAttributes().toArray();

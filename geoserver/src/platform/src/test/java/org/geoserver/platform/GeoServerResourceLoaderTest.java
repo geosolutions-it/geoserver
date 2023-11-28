@@ -7,26 +7,28 @@ package org.geoserver.platform;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.io.Files;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 import javax.servlet.ServletContext;
 import org.easymock.EasyMock;
 import org.geoserver.platform.resource.FileSystemResourceStore;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.ResourceStore;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 /** Tests for {@link GeoServerResourceLoader}. */
 public class GeoServerResourceLoaderTest {
-
-    @Rule public final ExpectedException expected = ExpectedException.none();
 
     @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
 
@@ -53,10 +55,9 @@ public class GeoServerResourceLoaderTest {
      */
     @Test
     public void testRequireSingleMissingFile() {
-        expected.expect(IllegalArgumentException.class);
-        expected.expectMessage(
-                "Missing required file: does-not-exist From: Test fixture: does-not-exist");
-        GeoServerResourceLoader.requireFile("does-not-exist", "Test fixture");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> GeoServerResourceLoader.requireFile("does-not-exist", "Test fixture"));
     }
 
     /**
@@ -65,13 +66,11 @@ public class GeoServerResourceLoaderTest {
      */
     @Test
     public void testRequireSingleMissingFileOfTwo() {
-        expected.expect(IllegalArgumentException.class);
-        expected.expectMessage(
-                "Missing required file: does-not-exist From: Test fixture: pom.xml"
-                        + File.pathSeparator
-                        + "does-not-exist");
-        GeoServerResourceLoader.requireFile(
-                "pom.xml" + File.pathSeparator + "does-not-exist", "Test fixture");
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        GeoServerResourceLoader.requireFile(
+                                "pom.xml" + File.pathSeparator + "does-not-exist", "Test fixture"));
     }
 
     /**
@@ -109,13 +108,11 @@ public class GeoServerResourceLoaderTest {
         EasyMock.expect(context.getInitParameter("GEOSERVER_DATA_ROOT")).andReturn(null);
         EasyMock.expect(context.getRealPath("/data")).andReturn("data");
         EasyMock.replay(context);
-        expected.expect(IllegalArgumentException.class);
-        expected.expectMessage(
-                "Missing required file: does-not-exist "
-                        + "From: Java environment variable GEOSERVER_REQUIRE_FILE: does-not-exist");
         System.setProperty("GEOSERVER_REQUIRE_FILE", "does-not-exist");
         try {
-            GeoServerResourceLoader.lookupGeoServerDataDirectory(context);
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> GeoServerResourceLoader.lookupGeoServerDataDirectory(context));
         } finally {
             System.clearProperty("GEOSERVER_REQUIRE_FILE");
         }
@@ -134,11 +131,9 @@ public class GeoServerResourceLoaderTest {
         EasyMock.expect(context.getInitParameter("GEOSERVER_DATA_ROOT")).andReturn(null);
         EasyMock.expect(context.getRealPath("/data")).andReturn("data");
         EasyMock.replay(context);
-        expected.expect(IllegalArgumentException.class);
-        expected.expectMessage(
-                "Missing required file: does-not-exist "
-                        + "From: Servlet context parameter GEOSERVER_REQUIRE_FILE: does-not-exist");
-        GeoServerResourceLoader.lookupGeoServerDataDirectory(context);
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> GeoServerResourceLoader.lookupGeoServerDataDirectory(context));
     }
 
     @Test
@@ -161,5 +156,23 @@ public class GeoServerResourceLoaderTest {
         loader.setBaseDirectory(tempDir);
         assertEquals(tempDir, loader.getBaseDirectory());
         assertEquals(mockStore, loader.getResourceStore());
+    }
+
+    @Test
+    public void fromRelativeURLTest() throws IOException {
+        GeoServerResourceLoader loader = new GeoServerResourceLoader();
+        tempFolder.create();
+        File tempDir = tempFolder.getRoot();
+        loader.setBaseDirectory(tempDir);
+
+        Resource res = loader.fromURL("file:relative/with/special+characters%23%C3%BC");
+        assertEquals("relative/with/special characters#ü", res.path());
+
+        // test it is writeable
+        try (OutputStream out = res.out()) {
+            out.write("someText".getBytes());
+        }
+
+        assertEquals("someText", Files.asCharSource(res.file(), Charset.defaultCharset()).read());
     }
 }

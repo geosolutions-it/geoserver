@@ -120,7 +120,7 @@ Mappings
 typeMappings and FeatureTypeMapping
 ```````````````````````````````````
 
-The ``typeMappings`` section is the heart of the app-schema module. It defines the mapping from simple features to the the nested structure of one or more simple features. It consists of a list of ``FeatureTypeMapping`` elements, which each define one output feature type. For example::
+The ``typeMappings`` section is the heart of the app-schema module. It defines the mapping from simple features to the nested structure of one or more simple features. It consists of a list of ``FeatureTypeMapping`` elements, which each define one output feature type. For example::
 
     <typeMappings>
         <FeatureTypeMapping>
@@ -141,7 +141,7 @@ The ``typeMappings`` section is the heart of the app-schema module. It defines t
     * a table or view name, lowercase for PostGIS, uppercase for Oracle.
     * a property file name (without the .properties suffix)
 
-* ``targetElement`` is the the element name in the target application schema. This is the same as the WFS feature type name.
+* ``targetElement`` is the element name in the target application schema. This is the same as the WFS feature type name.
 
 * ``isDenormalised`` is an optional tag (default true) to indicate whether this type contains denormalised data or not. If data is not denormalised, then app-schema will build a more efficient query to apply the global feature limit.  When combined with a low global feature limit (via `Services --> WFS`), setting this option to false can prevent unnecessary processing and database lookups from taking place.
 
@@ -240,7 +240,7 @@ In this example, ``om:result`` is of ``xs:anyType``, which is abstract. We can u
 
     <AttributeMapping>
           <targetAttribute>om:result</targetAttribute>
-          <targetAttributeNode>gml:MeasureType<targetAttributeNode>
+          <targetAttributeNode>gml:MeasureType</targetAttributeNode>
           <sourceExpression>
               <OCQL>TOPAGE</OCQL>
           </sourceExpression>
@@ -380,7 +380,7 @@ This example of a ``ClientProperty`` element sets the ``codeSpace`` XML attribut
         <value>'urn:ietf:rfc:2141'</value>
     </ClientProperty>
 
-When the GML association pattern is used to encode a property by reference, the ``xlink:href`` attribute is set and the element is empty. This ``ClientProperty`` element sets the ``xlink:href`` XML attribute to to the value of the ``RELATED_FEATURE_URN`` field in the data source (for example, a column in an Oracle database table). This mapping could be applied to any property type, such a ``gml:FeaturePropertyType``, or other type modelled on the GML association pattern::
+When the GML association pattern is used to encode a property by reference, the ``xlink:href`` attribute is set and the element is empty. This ``ClientProperty`` element sets the ``xlink:href`` XML attribute to the value of the ``RELATED_FEATURE_URN`` field in the data source (for example, a column in an Oracle database table). This mapping could be applied to any property type, such a ``gml:FeaturePropertyType``, or other type modelled on the GML association pattern::
 
     <ClientProperty>
         <name>xlink:href</name>
@@ -409,7 +409,7 @@ Database identifiers
 When referring to database table/view names or column names, use:
 
 * lowercase for PostGIS
-* UPPERCASE for Oracle Spatial and ArcSDE
+* UPPERCASE for Oracle Spatial
 
 
 .. _app-schema.denormalised-sources:
@@ -440,7 +440,7 @@ ID       STATION_ID  TAG          CODE
 ======== =========== ============ =====
 tg.1     st.1        temperature  X1Y
 tg.2     st.1        wind         X2Y
-tg.2     st.2        pressure     X3Y
+tg.3     st.2        pressure     X3Y
 ======== =========== ============ =====
 
 A station can have multiple tags, establishing a one to many relationship between stations and tags, the GML representation of the first station should look like this::
@@ -477,6 +477,145 @@ When using JDBC based data stores attributes with a 1..N relationship can be map
   (...)
 
 The ``targetValue`` refers to the value of the ``<st:tag>`` element, the client property is mapped with the usual syntax. Behind the scenes App-Schema will take care of associating the ``st:code`` attribute value with the correct tag. 
+
+Another variant of this feature can be used for nested elements on an unbounded anonymous sequence, Using 'anonymousAttribute' element definition
+for generating child elements and values inside an anonymous umbounded sequence::
+
+  (...)
+  <AttributeMapping>
+    <targetAttribute>st:tag</targetAttribute>
+    <jdbcMultipleValue>
+      <sourceColumn>ID</sourceColumn>
+      <targetTable>TAGS</targetTable>
+      <targetColumn>STATION_ID</targetColumn>
+    </jdbcMultipleValue>
+    <anonymousAttribute>
+      <name>st:code</name>
+      <value>CODE</value>
+    </anonymousAttribute>
+  </AttributeMapping>
+  (...)
+  
+In this case 'st:code' element children will be generated with the computed client property value::
+
+  (...)
+  <st:Station gml:id="st.1">
+    <st:name>Station 1</st:name>
+    <st:tag>
+      <st:code>X1Y</st:code>
+      <st:code>X2Y</st:code>
+    </st:tag>
+  </st:Station_gml32>
+  (...)
+
+Having an schema with anonymous unbounded sequence like ::
+  
+  <xs:complexType name="StationType">
+    <xs:complexContent>
+      <xs:extension base="gml:AbstractFeatureType">
+        <xs:sequence>
+          <xs:element name="name" type="xs:string"/>
+          <xs:element name="contact" type="st:ContactPropertyType"/>
+          <xs:element name="location" type="gml:GeometryPropertyType"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="tag" type="st:TagType"/>
+          <xs:element name="measurements" type="ms:MeasurementPropertyType" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="maintainer" minOccurs="0">
+            <xs:complexType>
+              <xs:sequence maxOccurs="unbounded">
+                <xs:element name="name" type="xs:string"/>
+                <xs:element name="level" type="xs:integer" nillable="true"/>
+                <xs:element name="classType" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  
+We could define the following mapping ::
+
+     <FeatureTypeMapping>
+      <sourceDataStore>stations_gml32</sourceDataStore>
+      <sourceType>stations_gml32</sourceType>
+      <targetElement>st_gml32:Station_gml32</targetElement>
+      <attributeMappings>
+        <AttributeMapping>
+          <targetAttribute>st_gml32:Station_gml32</targetAttribute>
+          <idExpression>
+            <OCQL>ID</OCQL>
+          </idExpression>
+        </AttributeMapping>
+        <AttributeMapping>
+          <targetAttribute>st_gml32:name</targetAttribute>
+          <sourceExpression>
+            <OCQL>NAME</OCQL>
+          </sourceExpression>
+        </AttributeMapping>
+        <AttributeMapping>
+          <targetAttribute>st_gml32:location</targetAttribute>
+          <sourceExpression>
+            <OCQL>LOCATION</OCQL>
+          </sourceExpression>
+        </AttributeMapping>
+        <AttributeMapping>
+          <targetAttribute>st_gml32:maintainer</targetAttribute>
+          <jdbcMultipleValue>
+            <sourceColumn>ID</sourceColumn>
+            <targetTable>MAINTAINERS_GML32</targetTable>
+            <targetColumn>OWNER</targetColumn>
+          </jdbcMultipleValue>
+          <anonymousAttribute>
+            <name>st_gml32:name</name>
+            <value>NAME</value>
+          </anonymousAttribute>
+          <anonymousAttribute>
+            <name>st_gml32:level</name>
+            <value>LEVEL</value>
+          </anonymousAttribute>
+          <anonymousAttribute>
+            <name>st_gml32:classType</name>
+            <value>CLASSTYPE</value>
+          </anonymousAttribute>
+        </AttributeMapping>
+        <AttributeMapping>
+          <targetAttribute>st_gml32:measurements</targetAttribute>
+          <sourceExpression>
+            <OCQL>ID</OCQL>
+            <linkElement>ms_gml32:Measurement_gml32</linkElement>
+            <linkField>FEATURE_LINK[1]</linkField>
+          </sourceExpression>
+        </AttributeMapping>
+      </attributeMappings>
+    </FeatureTypeMapping>
+    
+So Geoserver will produce GML like this ::
+
+    <st_gml32:Station_gml32 gml:id="st.2">
+      <st_gml32:name>station2</st_gml32:name>
+      <st_gml32:location>
+        <gml:Point srsDimension="2" srsName="urn:ogc:def:crs:EPSG::4326">
+          <gml:pos>-3 -2</gml:pos>
+        </gml:Point>
+      </st_gml32:location>
+      <st_gml32:measurements>
+        <ms_gml32:Measurement_gml32 gml:id="ms.3">
+          <ms_gml32:name>pressure</ms_gml32:name>
+          <ms_gml32:tag>pressure_tag</ms_gml32:tag>
+        </ms_gml32:Measurement_gml32>
+      </st_gml32:measurements>
+      <st_gml32:maintainer>
+        <st_gml32:name>mnt_c</st_gml32:name>
+        <st_gml32:level>73</st_gml32:level>
+        <st_gml32:classType>st_2_mnt_c</st_gml32:classType>
+        <st_gml32:name>mnt_d</st_gml32:name>
+        <st_gml32:level>74</st_gml32:level>
+        <st_gml32:classType>st_2_mnt_d</st_gml32:classType>
+        <st_gml32:name>mnt_e</st_gml32:name>
+        <st_gml32:level>75</st_gml32:level>
+        <st_gml32:classType>st_2_mnt_e</st_gml32:classType>
+      </st_gml32:maintainer>
+    </st_gml32:Station_gml32>
 
 Apache Solr
 ```````````

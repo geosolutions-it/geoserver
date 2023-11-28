@@ -10,7 +10,6 @@ import java.io.InputStream;
 import org.geoserver.wps.WPSException;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Parser;
-import org.locationtech.jts.geom.Geometry;
 
 /**
  * ComplexTransmuter interface
@@ -27,11 +26,7 @@ public abstract class ComplexTransmuter implements Transmuter {
     /** Returns mime-type of encoded data */
     public abstract String getMimeType();
 
-    /**
-     * Used to decode external XML documents for use as process inputs
-     *
-     * @param stream
-     */
+    /** Used to decode external XML documents for use as process inputs */
     public Object decode(InputStream stream) {
         Object decoded = null;
         Configuration config = null;
@@ -45,7 +40,7 @@ public abstract class ComplexTransmuter implements Transmuter {
         Parser parser = new Parser(config);
 
         try {
-            decoded = (Geometry) parser.parse(stream);
+            decoded = parser.parse(stream);
         } catch (Exception e) {
             throw new WPSException("NoApplicableCode", "Parsing error " + e);
         }
@@ -53,11 +48,7 @@ public abstract class ComplexTransmuter implements Transmuter {
         return decoded;
     }
 
-    /**
-     * Used to encode document for server storage
-     *
-     * @param input
-     */
+    /** Used to encode document for server storage */
     public Object encode(Object input) {
         throw new WPSException("NoApplicableCode", "Unimplemented encoder for ComplexTransmuter.");
     }

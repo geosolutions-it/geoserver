@@ -5,16 +5,28 @@
  */
 package org.geoserver.wms.wms_1_1_1;
 
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import javax.xml.namespace.QName;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONNull;
+import net.sf.json.JSONObject;
 import org.custommonkey.xmlunit.XMLAssert;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -38,8 +50,15 @@ import org.geoserver.test.RemoteOWSTestSupport;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSTestSupport;
-import org.geoserver.wms.featureinfo.*;
+import org.geoserver.wms.featureinfo.GML2FeatureInfoOutputFormat;
+import org.geoserver.wms.featureinfo.GML3FeatureInfoOutputFormat;
+import org.geoserver.wms.featureinfo.GetFeatureInfoOutputFormat;
+import org.geoserver.wms.featureinfo.TextFeatureInfoOutputFormat;
+import org.geoserver.wms.featureinfo.XML2FeatureInfoOutputFormat;
+import org.geoserver.wms.featureinfo.XML311FeatureInfoOutputFormat;
+import org.geoserver.wms.wms_1_3.GetMapIntegrationTest;
 import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope3D;
 import org.geotools.referencing.CRS;
@@ -48,10 +67,16 @@ import org.geotools.styling.Rule;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleFactory;
 import org.geotools.util.logging.Logging;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Polygon;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
@@ -72,6 +97,20 @@ public class GetFeatureInfoTest extends WMSTestSupport {
 
     protected static QName TIMESERIES =
             new QName(MockData.SF_URI, "timeseries", MockData.SF_PREFIX);
+
+    private static final QName RAIN = new QName(MockData.SF_URI, "rain", MockData.SF_PREFIX);
+    private static final String RAIN_RT_STYLE = "filteredRain";
+    private static final String RAIN_RT_2_STYLE = "filteredRainTransformEnabled";
+    private static final String RAIN_RT_3_STYLE = "filteredRainTransformDisabled";
+    private static final String RAIN_CONTOUR_STYLE = "contourRain";
+    private static final String RAIN_CONTOUR_2_STYLE = "contourRainTransformEnabled";
+    private static final String RAIN_CONTOUR_3_STYLE = "contourRainTransformDisabled";
+    private static final String FOOTPRINTS_STYLE = "footprints";
+
+    @Override
+    protected String getLogConfiguration() {
+        return "DEFAULT_LOGGING";
+    }
 
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
@@ -116,11 +155,11 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         testData.addStyle("stacker", "stacker.sld", GetFeatureInfoTest.class, catalog);
         testData.addVectorLayer(
                 SQUARES,
-                Collections.EMPTY_MAP,
+                Collections.emptyMap(),
                 "squares.properties",
                 GetFeatureInfoTest.class,
                 catalog);
-        Map propertyMap = new HashMap<SystemTestData.LayerProperty, Object>();
+        Map<LayerProperty, Object> propertyMap = new HashMap<>();
         propertyMap.put(LayerProperty.STYLE, "raster");
         testData.addRasterLayer(
                 TASMANIA_BM, "tazbm.tiff", "tiff", propertyMap, SystemTestData.class, catalog);
@@ -138,7 +177,7 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         setupRasterDimension(
                 TIMESERIES, ResourceInfo.TIME, DimensionPresentation.LIST, null, null, null);
 
-        Map<LayerProperty, Object> properties = new HashMap<SystemTestData.LayerProperty, Object>();
+        Map<LayerProperty, Object> properties = new HashMap<>();
         properties.put(
                 LayerProperty.LATLON_ENVELOPE,
                 new ReferencedEnvelope(
@@ -164,7 +203,7 @@ public class GetFeatureInfoTest extends WMSTestSupport {
                 GetFeatureInfoTest.class,
                 catalog);
 
-        properties = new HashMap<SystemTestData.LayerProperty, Object>();
+        properties = new HashMap<>();
         properties.put(
                 LayerProperty.LATLON_ENVELOPE,
                 new ReferencedEnvelope(
@@ -202,6 +241,33 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         LayerInfo layer = catalog.getLayerByName(getLayerId(STATES));
         layer.setQueryable(false);
         catalog.save(layer);
+
+        // add global rain and style
+        testData.addRasterLayer(RAIN, "rain.zip", "asc", getCatalog());
+        testData.addStyle(RAIN_RT_STYLE, "filteredRain.sld", GetMapIntegrationTest.class, catalog);
+        testData.addStyle(RAIN_RT_2_STYLE, "filteredRain2.sld", GetFeatureInfoTest.class, catalog);
+        testData.addStyle(RAIN_RT_3_STYLE, "filteredRain3.sld", GetFeatureInfoTest.class, catalog);
+        testData.addStyle(RAIN_CONTOUR_STYLE, "rainContour.sld", GetFeatureInfoTest.class, catalog);
+        testData.addStyle(
+                RAIN_CONTOUR_2_STYLE, "rainContour2.sld", GetFeatureInfoTest.class, catalog);
+        testData.addStyle(
+                RAIN_CONTOUR_3_STYLE, "rainContour3.sld", GetFeatureInfoTest.class, catalog);
+
+        // footprints extraction tx
+        testData.addStyle(FOOTPRINTS_STYLE, "footprints.sld", GetFeatureInfoTest.class, catalog);
+    }
+
+    @After
+    public void resetSettings() {
+        setTransformFeatureInfoDisabled(false);
+    }
+
+    private void setTransformFeatureInfoDisabled(boolean disabled) {
+        WMSInfo wms = getGeoServer().getService(WMSInfo.class);
+        if (wms.isTransformFeatureInfoDisabled() != disabled) {
+            wms.setTransformFeatureInfoDisabled(disabled);
+            getGeoServer().save(wms);
+        }
     }
 
     /** Test GetFeatureInfo with 3D content, and the result returns the expected point. */
@@ -434,14 +500,14 @@ public class GetFeatureInfoTest extends WMSTestSupport {
                         + layer
                         + "&width=20&height=20&x=10&y=10";
         Document dom = getAsDOM(request);
-
+        assertNotNull(dom);
         // count lines that do contain a forest reference
         XMLAssert.assertXpathEvaluatesTo(
                 "1", "count(/html/body/table/tr/td[starts-with(.,'Forests.')])", dom);
 
         MockHttpServletResponse response = getAsServletResponse(request, "");
         // Check if the character encoding is the one expected
-        assertTrue("UTF-8".equals(response.getCharacterEncoding()));
+        assertEquals("UTF-8", response.getCharacterEncoding());
     }
 
     /**
@@ -878,6 +944,19 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         assertEquals("ServiceExceptionReport", dom.getDocumentElement().getNodeName());
     }
 
+    /** Check the group default style name works */
+    @Test
+    public void testGroupDefaultStyle() throws Exception {
+        String url =
+                "wms?service=wms&version=1.1.1"
+                        + "&layers=nature&style=default-style-nature&width=100&height=100&format=image/png"
+                        + "&srs=epsg:4326&bbox=-0.002,-0.003,0.005,0.002&info_format=text/plain"
+                        + "&request=GetFeatureInfo&query_layers=nature&x=50&y=50&feature_count=2";
+        String result = getAsString(url);
+        assertTrue(result.indexOf("Blue Lake") > 0);
+        assertTrue(result.indexOf("Green Forest") > 0);
+    }
+
     @Test
     public void testNonExactVersion() throws Exception {
         String layer = getLayerId(MockData.FORESTS);
@@ -1057,8 +1136,6 @@ public class GetFeatureInfoTest extends WMSTestSupport {
     /**
      * The rendering engine has a 10-6 tolerance when evaluating rule scale activation,
      * GetFeatureInfo did not
-     *
-     * @throws Exception
      */
     @Test
     public void testScaleTolerance() throws Exception {
@@ -1076,11 +1153,7 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         assertPixel(image, 150, 150, Color.BLUE);
     }
 
-    /**
-     * Test GetFeatureInfo on a group layer with some no-queryable layers
-     *
-     * @throws Exception
-     */
+    /** Test GetFeatureInfo on a group layer with some no-queryable layers */
     @Test
     public void testGroupLayerWithNotQueryableLayers() throws Exception {
         Catalog catalog = getCatalog();
@@ -1132,11 +1205,7 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         catalog.remove(layerGroup);
     }
 
-    /**
-     * Test GetFeatureInfo on a group layer with no-queryable flag activated
-     *
-     * @throws Exception
-     */
+    /** Test GetFeatureInfo on a group layer with no-queryable flag activated */
     @Test
     public void testNotQueryableGroupLayer() throws Exception {
         Catalog catalog = getCatalog();
@@ -1304,5 +1373,521 @@ public class GetFeatureInfoTest extends WMSTestSupport {
         String request2 = request + "&EXCLUDE_NODATA_RESULT=true";
         result = getAsString(request2);
         assertTrue(result.indexOf("NaN") > 0);
+    }
+
+    @Test
+    public void testClipParam() throws Exception {
+        // for simplicity the mask covers 4th quadrant of bbox
+        Polygon geom = JTS.toGeometry(new Envelope(0, 0.002, 0, -0.002));
+        String wkt = geom.toText();
+        String layer = getLayerId(MockData.FORESTS);
+
+        CoordinateReferenceSystem crs =
+                getCatalog().getLayerByName(MockData.FORESTS.getLocalPart()).getResource().getCRS();
+        int srid = CRS.lookupEpsgCode(crs, false);
+        // click outside mask geom
+        String insideXY =
+                "&x=18&y=18"; // click area inside clip mask and geometry:should return geom
+        String outsideXY =
+                "&x=5&y=20"; // click area outside clip mask and inside geometry:-should not return
+        // geom
+        String clipBorderXY = "&x=10&y=10"; // click area bordering clip mask and inside geometry
+        String request =
+                "wms?version=1.1.1&bbox=-0.002,-0.002,0.002,0.002&styles=&format=jpeg"
+                        + "&info_format=application/json&request=GetFeatureInfo&layers="
+                        + layer
+                        + "&query_layers="
+                        + layer
+                        + "&width=20&height=20"
+                        + insideXY
+                        + "&srs=EPSG:"
+                        + srid
+                        + "&clip="
+                        + wkt;
+        String result = getAsString(request);
+        assertNotNull(result);
+        // assert a feature was returned
+        JSONObject responseJson = JSONObject.fromObject(result);
+        assertFalse(responseJson.getJSONArray("features").isEmpty());
+
+        // click outside
+        request =
+                "wms?version=1.1.1&bbox=-0.002,-0.002,0.002,0.002&styles=&format=jpeg"
+                        + "&info_format=application/json&request=GetFeatureInfo&layers="
+                        + layer
+                        + "&query_layers="
+                        + layer
+                        + "&width=20&height=20"
+                        + outsideXY
+                        + "&srs=EPSG:"
+                        + srid
+                        + "&clip="
+                        + wkt;
+        result = getAsString(request);
+        assertNotNull(result);
+        // assert no features were returned
+        responseJson = JSONObject.fromObject(result);
+        assertTrue(responseJson.getJSONArray("features").isEmpty());
+
+        // click border
+        request =
+                "wms?version=1.1.1&bbox=-0.002,-0.002,0.002,0.002&styles=&format=jpeg"
+                        + "&info_format=application/json&request=GetFeatureInfo&layers="
+                        + layer
+                        + "&query_layers="
+                        + layer
+                        + "&width=20&height=20"
+                        + clipBorderXY
+                        + "&srs=EPSG:"
+                        + srid
+                        + "&clip="
+                        + wkt;
+        result = getAsString(request);
+        assertNotNull(result);
+        //  assert a feature was returned
+        responseJson = JSONObject.fromObject(result);
+        assertFalse(responseJson.getJSONArray("features").isEmpty());
+
+        // asserting that the returned geometry is clipped
+        JSONObject geoJson = responseJson.getJSONArray("features").getJSONObject(0);
+        JSONArray coordsArray =
+                geoJson.getJSONObject("geometry")
+                        .getJSONArray("coordinates")
+                        .getJSONArray(0)
+                        .getJSONArray(0);
+        final GeometryFactory gf = new GeometryFactory();
+        Coordinate[] coordinates =
+                Arrays.stream(coordsArray.toArray())
+                        .map(
+                                t -> {
+                                    JSONArray cArray = (JSONArray) t;
+                                    return new Coordinate(cArray.getDouble(0), cArray.getDouble(1));
+                                })
+                        .toArray(Coordinate[]::new);
+
+        // the clipped feature geometry
+        Polygon clippedPolygon = gf.createPolygon(coordinates);
+        // should be empty since clip mask is completely inside clipped polygon
+        assertTrue(clippedPolygon.difference(geom).isEmpty());
+    }
+
+    @Test
+    public void testCoverageClipParam() throws Exception {
+        // for simplicity the mask covers 4th quadrant of bbox
+        Polygon geom = JTS.toGeometry(new Envelope(147.25, 148.0, -43.75, -44.5));
+        String wkt = geom.toText();
+        String insideXY = "&x=400&y=400"; // click area inside clip mask, should return results
+        String outsideXY = "&x=5&y=5"; // click area outside clip mask , should not return results
+        String clipBorderXY =
+                "&x=300&y=300"; // click area bordering clip mask should return results
+        String layer = getLayerId(TASMANIA_BM);
+        String request =
+                "wms?service=wms&request=GetFeatureInfo&version=1.1.1"
+                        + "&layers="
+                        + layer
+                        + "&styles=&bbox=146.5,-44.5,148,-43&width=600&height=600"
+                        + "&info_format=application/json&query_layers="
+                        + layer
+                        + insideXY
+                        + "&srs=EPSG:4326"
+                        + "&clip="
+                        + wkt;
+        String json = getAsString(request);
+        assertNotNull(json);
+        // assert features were returned
+        JSONObject responseJson = JSONObject.fromObject(json);
+        assertFalse(responseJson.getJSONArray("features").isEmpty());
+
+        request =
+                "wms?service=wms&request=GetFeatureInfo&version=1.1.1"
+                        + "&layers="
+                        + layer
+                        + "&styles=&bbox=146.5,-44.5,148,-43&width=600&height=600"
+                        + "&info_format=application/json&query_layers="
+                        + layer
+                        + clipBorderXY
+                        + "&srs=EPSG:4326"
+                        + "&clip="
+                        + wkt;
+        json = getAsString(request);
+        assertNotNull(json);
+        // assert features were returned
+        responseJson = JSONObject.fromObject(json);
+        assertFalse(responseJson.getJSONArray("features").isEmpty());
+
+        request =
+                "wms?service=wms&request=GetFeatureInfo&version=1.1.1"
+                        + "&layers="
+                        + layer
+                        + "&styles=&bbox=146.5,-44.5,148,-43&width=600&height=600"
+                        + "&info_format=application/json&query_layers="
+                        + layer
+                        + outsideXY
+                        + "&srs=EPSG:4326"
+                        + "&clip="
+                        + wkt;
+        json = getAsString(request);
+        assertNotNull(json);
+        // assert no features were returned
+        responseJson = JSONObject.fromObject(json);
+        assertTrue(responseJson.getJSONArray("features").isEmpty());
+    }
+
+    @Test
+    public void testRasterWithoutRasterTransformation() throws Exception {
+        // the WMS setting doesn't affect styles without a rendering transformation
+        doTestRasterTransformation(false, "", "rain", 491);
+        doTestRasterTransformation(true, "", "rain", 491);
+    }
+
+    @Test
+    public void testRasterToRasterSettingEnabledOptionMissing() throws Exception {
+        // transformations enabled in WMS settings and no SLD vendor option provided
+        // transformed features will be returned
+        doTestRasterTransformation(false, RAIN_RT_STYLE, "jiffle", JSONNull.getInstance());
+    }
+
+    @Test
+    public void testRasterToRasterSettingEnabledOptionEnabled() throws Exception {
+        // transformations enabled in WMS settings and enabled in SLD vendor option
+        // transformed features will be returned
+        doTestRasterTransformation(false, RAIN_RT_2_STYLE, "jiffle", JSONNull.getInstance());
+    }
+
+    @Test
+    public void testRasterToRasterSettingEnabledOptionDisabled() throws Exception {
+        // transformations enabled in WMS settings and disabled in SLD vendor option
+        // raw features will be returned
+        doTestRasterTransformation(false, RAIN_RT_3_STYLE, "rain", 491);
+    }
+
+    @Test
+    public void testRasterToRasterSettingDisabledOptionMissing() throws Exception {
+        // transformations disabled in WMS settings and no SLD vendor option provided
+        // raw features will be returned
+        doTestRasterTransformation(true, RAIN_RT_STYLE, "rain", 491);
+    }
+
+    @Test
+    public void testRasterToRasterSettingDisabledOptionEnabled() throws Exception {
+        // transformations disabled in WMS settings and enabled in SLD vendor option
+        // transformed features will be returned
+        doTestRasterTransformation(true, RAIN_RT_2_STYLE, "jiffle", JSONNull.getInstance());
+    }
+
+    @Test
+    public void testRasterToRasterSettingDisabledOptionDisabled() throws Exception {
+        // transformations disabled in WMS settings and disabled in SLD vendor option
+        // raw features will be returned
+        doTestRasterTransformation(true, RAIN_RT_3_STYLE, "rain", 491);
+    }
+
+    @Test
+    public void testRasterToVectorSettingEnabledOptionMissing() throws Exception {
+        // transformations enabled in WMS settings and no SLD vendor option provided
+        // transformed features will be returned
+        doTestRasterTransformation(false, RAIN_CONTOUR_STYLE, "value", 1000);
+    }
+
+    @Test
+    public void testRasterToVectorSettingEnabledOptionEnabled() throws Exception {
+        // transformations enabled in WMS settings and enabled in SLD vendor option
+        // transformed features will be returned
+        doTestRasterTransformation(false, RAIN_CONTOUR_2_STYLE, "value", 1000);
+    }
+
+    @Test
+    public void testRasterToVectorSettingEnabledOptionDisabled() throws Exception {
+        // transformations enabled in WMS settings and disabled in SLD vendor option
+        // raw features will be returned
+        doTestRasterTransformation(false, RAIN_CONTOUR_3_STYLE, "rain", 491);
+    }
+
+    @Test
+    public void testRasterToVectorSettingDisabledOptionMissing() throws Exception {
+        // transformations disabled in WMS settings and no SLD vendor option provided
+        // raw features will be returned
+        doTestRasterTransformation(true, RAIN_CONTOUR_STYLE, "rain", 491);
+    }
+
+    @Test
+    public void testRasterToVectorSettingDisabledOptionEnabled() throws Exception {
+        // transformations disabled in WMS settings and enabled in SLD vendor option
+        // transformed features will be returned
+        doTestRasterTransformation(true, RAIN_CONTOUR_2_STYLE, "value", 1000);
+    }
+
+    @Test
+    public void testRasterToVectorSettingDisabledOptionDisabled() throws Exception {
+        // transformations disabled in WMS settings and disabled in SLD vendor option
+        // raw features will be returned
+        doTestRasterTransformation(true, RAIN_CONTOUR_3_STYLE, "rain", 491);
+    }
+
+    private void doTestRasterTransformation(
+            boolean setting, String style, String property, Object expected) throws Exception {
+        setTransformFeatureInfoDisabled(setting);
+        JSONObject json =
+                (JSONObject)
+                        getAsJSON(
+                                "wms?service=wms&request=GetFeatureInfo&version=1.1.1"
+                                        + "&layers=rain"
+                                        + "&styles="
+                                        + style
+                                        + "&bbox=-180,-90,180,90&width=600&height=300"
+                                        + "&x=20&y=150"
+                                        + "&info_format=application/json&query_layers=rain"
+                                        + "&srs=EPSG:4326&buffer=2");
+        JSONObject properties =
+                json.getJSONArray("features").getJSONObject(0).getJSONObject("properties");
+        assertTrue(properties.has(property));
+        assertEquals(expected, properties.get(property));
+    }
+
+    @Test
+    public void testFootprintsExtraction() throws Exception {
+        // lower scale, the footprint tx kicks in
+        String response =
+                getAsString(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES="
+                                + FOOTPRINTS_STYLE
+                                + "&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetFeatureInfo&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150"
+                                + "&transparent=false&CQL_FILTER=location like 'green%25' + "
+                                + "&query_layers=sf:mosaic&x=10&y=10");
+        assertThat(
+                response,
+                allOf(
+                        containsString("location = green_00000002T0000000Z.tiff"),
+                        containsString("ingestion =")));
+    }
+
+    @Test
+    public void testFootprintsExtractionProperties() throws Exception {
+        // lower scale, the footprint tx kicks in
+        String response =
+                getAsString(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES="
+                                + FOOTPRINTS_STYLE
+                                + "&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetFeatureInfo&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150"
+                                + "&transparent=false&CQL_FILTER=location like 'green%25' + "
+                                + "&query_layers=sf:mosaic&x=10&y=10&propertyname=ingestion");
+        assertThat(
+                response,
+                allOf(
+                        not(containsString("location = green_00000002T0000000Z.tiff")),
+                        containsString("ingestion =")));
+    }
+
+    @Test
+    public void testFootprintsExtractionHigherScale() throws Exception {
+        // higher scale, the fts with no tx and raster symbolizer kicks in
+        String response =
+                getAsString(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES="
+                                + FOOTPRINTS_STYLE
+                                + "&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetFeatureInfo&SRS=EPSG:4326&BBOX=0.49,0.49,0.51,0.51&WIDTH=150&HEIGHT=150"
+                                + "&transparent=false&CQL_FILTER=location like 'green%25' + "
+                                + "&query_layers=sf:mosaic&x=10&y=10");
+
+        assertThat(
+                response,
+                allOf(
+                        containsString("RED_BAND = "),
+                        containsString("GREEN_BAND = "),
+                        containsString("BLUE_BAND = ")));
+    }
+
+    @Test
+    public void testFootprintsExtractionHigherScaleProps() throws Exception {
+        // higher scale, the fts with no tx and raster symbolizer kicks in
+        String response =
+                getAsString(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES="
+                                + FOOTPRINTS_STYLE
+                                + "&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetFeatureInfo&SRS=EPSG:4326&BBOX=0.49,0.49,0.51,0.51&WIDTH=150&HEIGHT=150"
+                                + "&transparent=false&CQL_FILTER=location like 'green%25' + "
+                                + "&query_layers=sf:mosaic&x=10&y=10&propertyname=RED_BAND");
+
+        assertThat(
+                response,
+                allOf(
+                        containsString("RED_BAND = "),
+                        not(containsString("GREEN_BAND = ")),
+                        not(containsString("BLUE_BAND = "))));
+    }
+
+    @Test
+    public void testLayerGroupStyleSingle() throws Exception {
+        LayerGroupInfo group = null;
+        Catalog catalog = getCatalog();
+        try {
+            String lgStyleName = "nature-style";
+            String lgName = "single_lake_and_places";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            LayerInfo lakesL = getCatalog().getLayerByName("cite:Lakes");
+            group =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.SINGLE,
+                            lgStyleName,
+                            Arrays.asList(forestL, lakesL),
+                            Arrays.asList(null, null));
+
+            String url =
+                    "wms?version=1.1.1&bbox=0.0000,-0.0020,0.0035,0.0010"
+                            + "&info_format=application/json&request=GetFeatureInfo"
+                            + "&WIDTH=20&HEIGHT=20&x=10&y=10"
+                            + "&layers="
+                            + group.getName()
+                            + "&query_layers="
+                            + group.getName()
+                            + "&SRS=EPSG%3A4326&styles=nature-style&FEATURE_COUNT=2";
+            JSONObject jsonResult = (JSONObject) getAsJSON(url);
+            JSONArray features = jsonResult.getJSONArray("features");
+            JSONObject f1 = features.getJSONObject(0);
+            JSONObject f2 = features.getJSONObject(1);
+            String idForest = f1.getString("id");
+            String idLake = f2.getString("id");
+            assertTrue(idForest.startsWith("Forests"));
+            assertTrue(idLake.startsWith("Lake"));
+
+        } finally {
+            if (group != null) catalog.remove(group);
+        }
+    }
+
+    @Test
+    public void testLayerGroupStyleOpaque() throws Exception {
+        LayerGroupInfo group = null;
+        Catalog catalog = getCatalog();
+        try {
+            String lgStyleName = "nature-style";
+            String lgName = "opaque_lakes_and_places";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            LayerInfo lakesL = getCatalog().getLayerByName("cite:Lakes");
+            group =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.OPAQUE_CONTAINER,
+                            lgStyleName,
+                            Arrays.asList(forestL, lakesL),
+                            Arrays.asList(null, null));
+
+            String url =
+                    "wms?version=1.1.1&bbox=0.0000,-0.0020,0.0035,0.0010"
+                            + "&info_format=application/json&request=GetFeatureInfo"
+                            + "&WIDTH=20&HEIGHT=20&x=10&y=10"
+                            + "&layers="
+                            + group.getName()
+                            + "&query_layers="
+                            + group.getName()
+                            + "&SRS=EPSG%3A4326&styles=nature-style&FEATURE_COUNT=2";
+            JSONObject jsonResult = (JSONObject) getAsJSON(url);
+            JSONArray features = jsonResult.getJSONArray("features");
+            JSONObject f1 = features.getJSONObject(0);
+            JSONObject f2 = features.getJSONObject(1);
+            String idForest = f1.getString("id");
+            String idLake = f2.getString("id");
+            assertTrue(idForest.startsWith("Forests"));
+            assertTrue(idLake.startsWith("Lakes"));
+
+        } finally {
+            if (group != null) catalog.remove(group);
+        }
+    }
+
+    @Test
+    public void testNestedLayerGroupWithStyle() throws Exception {
+        Catalog catalog = getCatalog();
+        LayerGroupInfo nested = null;
+        LayerGroupInfo container = null;
+        try {
+            String lgName = "nested-lakes_and_places_group";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            List<StyleInfo> styles = new ArrayList<>();
+            styles.add(null);
+            nested =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.SINGLE,
+                            "forest-style",
+                            Arrays.asList(forestL),
+                            styles);
+
+            createLakesPlacesLayerGroup(
+                    catalog, "lakes-and-place", LayerGroupInfo.Mode.SINGLE, null);
+            container = catalog.getLayerGroupByName("lakes-and-place");
+            container.getLayers().add(0, nested);
+            container.getStyles().add(0, nested.getLayerGroupStyles().get(0).getName());
+            catalog.save(container);
+
+            String url =
+                    "wms?version=1.1.1&bbox=0.0000,-0.0020,0.0035,0.0010"
+                            + "&info_format=application/json&request=GetFeatureInfo"
+                            + "&WIDTH=20&HEIGHT=20&x=10&y=10"
+                            + "&layers="
+                            + container.getName()
+                            + "&query_layers="
+                            + container.getName()
+                            + "&SRS=EPSG%3A4326&styles=&FEATURE_COUNT=3";
+            JSONObject jsonResult = (JSONObject) getAsJSON(url);
+            JSONArray features = jsonResult.getJSONArray("features");
+            JSONObject f1 = features.getJSONObject(0);
+            JSONObject f2 = features.getJSONObject(1);
+            JSONObject f3 = features.getJSONObject(2);
+            String idForest = f1.getString("id");
+            String idLake = f2.getString("id");
+            String idPlace = f3.getString("id");
+            assertTrue(idForest.startsWith("Forests"));
+            assertTrue(idLake.startsWith("Lakes"));
+            assertTrue(idPlace.startsWith("NamedPlaces"));
+
+        } finally {
+            if (container != null) catalog.remove(container);
+            if (nested != null) catalog.remove(nested);
+        }
+    }
+
+    @Test
+    public void testLayerGroupStyleIgnoredIfTree() throws Exception {
+        LayerGroupInfo group = null;
+        Catalog catalog = getCatalog();
+        try {
+            String lgName = "lakes_and_places_named";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            LayerInfo lakesL = getCatalog().getLayerByName("cite:Lakes");
+            group =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.NAMED,
+                            "nature-style",
+                            Arrays.asList(forestL, lakesL),
+                            Arrays.asList(null, null));
+
+            String url =
+                    "wms?version=1.1.1&bbox=0.0000,-0.0020,0.0035,0.0010"
+                            + "&info_format=application/json&request=GetFeatureInfo"
+                            + "&WIDTH=20&HEIGHT=20&x=10&y=10"
+                            + "&layers="
+                            + group.getName()
+                            + "&query_layers="
+                            + group.getName()
+                            + "&SRS=EPSG%3A4326&styles=nature-style&FEATURE_COUNT=2";
+            JSONObject jsonResult = (JSONObject) getAsJSON(url);
+            JSONArray features = jsonResult.getJSONArray("features");
+            JSONObject f1 = features.getJSONObject(0);
+            JSONObject f2 = features.getJSONObject(1);
+            String idLake = f1.getString("id");
+            String idPlaces = f2.getString("id");
+            assertTrue(idLake.startsWith("Lake"));
+            assertTrue(idPlaces.startsWith("NamedPlaces"));
+
+        } finally {
+            if (group != null) catalog.remove(group);
+        }
     }
 }

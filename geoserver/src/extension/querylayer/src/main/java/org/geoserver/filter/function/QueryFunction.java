@@ -65,7 +65,6 @@ public class QueryFunction extends FunctionImpl {
 
     @Override
     public Object evaluate(Object object) {
-        FeatureIterator fi = null;
         try {
             // extract layer
             String layerName = getParameters().get(0).evaluate(object, String.class);
@@ -107,7 +106,7 @@ public class QueryFunction extends FunctionImpl {
             }
             Filter filter;
             try {
-                filter = (Filter) ECQL.toFilter(cql);
+                filter = ECQL.toFilter(cql);
             } catch (Exception e) {
                 throw new IllegalArgumentException(
                         "The third argument of the query "
@@ -120,21 +119,22 @@ public class QueryFunction extends FunctionImpl {
             // .. just enough to judge if we went beyond the limit
             query.setMaxFeatures(maxResults + 1);
             FeatureSource fs = ft.getFeatureSource(null, null);
-            fi = fs.getFeatures(query).features();
-            List<Object> results = new ArrayList<Object>(maxResults);
-            while (fi.hasNext()) {
-                Feature f = fi.next();
-                Object value = f.getProperty(attribute).getValue();
-                if (value instanceof Geometry && crs != null) {
-                    // if the crs is not associated with the geometry do so, this
-                    // way other code will get to know the crs (e.g. for reprojection purposes)
-                    Geometry geom = (Geometry) value;
-                    geom.apply(new GeometryCRSFilter(crs));
+            List<Object> results = new ArrayList<>(maxResults);
+            try (FeatureIterator fi = fs.getFeatures(query).features()) {
+                while (fi.hasNext()) {
+                    Feature f = fi.next();
+                    Object value = f.getProperty(attribute).getValue();
+                    if (value instanceof Geometry && crs != null) {
+                        // if the crs is not associated with the geometry do so, this
+                        // way other code will get to know the crs (e.g. for reprojection purposes)
+                        Geometry geom = (Geometry) value;
+                        geom.apply(new GeometryCRSFilter(crs));
+                    }
+                    results.add(value);
                 }
-                results.add(value);
             }
 
-            if (results.size() == 0) {
+            if (results.isEmpty()) {
                 return null;
             }
             if (maxResults > 0 && results.size() > maxResults && !single) {
@@ -153,10 +153,6 @@ public class QueryFunction extends FunctionImpl {
 
         } catch (IOException e) {
             throw new RuntimeException("Failed to evaluated the query: " + e.getMessage(), e);
-        } finally {
-            if (fi != null) {
-                fi.close();
-            }
         }
     }
 

@@ -24,7 +24,7 @@ public class CoverageCleanerCallback extends AbstractDispatcherCallback {
 
     static final Logger LOGGER = Logging.getLogger(CoverageCleanerCallback.class);
 
-    static final ThreadLocal<List<GridCoverage>> COVERAGES = new ThreadLocal<List<GridCoverage>>();
+    static final ThreadLocal<List<GridCoverage>> COVERAGES = new ThreadLocal<>();
 
     @Override
     public Object operationExecuted(Request request, Operation operation, Object result) {
@@ -44,25 +44,17 @@ public class CoverageCleanerCallback extends AbstractDispatcherCallback {
         clean();
     }
 
-    /**
-     * Mark coverage for cleaning.
-     *
-     * @param coverages
-     */
+    /** Mark coverage for cleaning. */
     public static void addCoverages(GridCoverage... coverages) {
         List<GridCoverage> list = COVERAGES.get();
         if (list == null) {
-            list = new ArrayList<GridCoverage>();
+            list = new ArrayList<>();
             COVERAGES.set(list);
         }
         list.addAll(Arrays.asList(coverages));
     }
 
-    /**
-     * Cleans up a coverage and its internal rendered image
-     *
-     * @param coverage
-     */
+    /** Cleans up a coverage and its internal rendered image */
     public static void disposeCoverage(GridCoverage coverage) {
         RenderedImage ri = coverage.getRenderedImage();
         if (coverage instanceof GridCoverage2D) {

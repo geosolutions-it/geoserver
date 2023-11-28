@@ -48,12 +48,12 @@ copyright = u'{}, Open Source Geospatial Foundation'.format(now.year)
 # other places throughout the built documents.
 #
 # The short X.Y version.
-version = '2.16'
+version = '2.23'
 # The full version, including alpha/beta/rc tags.
-release = '2.16-SNAPSHOT'
+release = '2.23-SNAPSHOT'
 # Users don't need to see the "SNAPSHOT" notation when it's there
 if release.find('SNAPSHOT') != -1:
-   release = '2.16.x'
+   release = '2.23.x'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -165,7 +165,7 @@ html_context = {
   'display_github': True,
   'github_user': 'geoserver',
   'github_repo': 'geoserver',
-  'github_version': 'master',
+  'github_version': 'main',
   'conf_py_path': 'doc/en/docguide/source'
 }
 

@@ -41,7 +41,6 @@ public class BlobStorePage extends GeoServerSecuredPage {
 
     private static final long serialVersionUID = -59024268194792891L;
 
-    @SuppressWarnings("rawtypes")
     private DropDownChoice<BlobStoreType> typeOfBlobStore;
 
     private WebMarkupContainer blobConfigContainer;
@@ -58,18 +57,18 @@ public class BlobStorePage extends GeoServerSecuredPage {
         this(null);
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     public BlobStorePage(final BlobStoreInfo originalStore) {
 
-        final List<String> assignedLayers = new ArrayList<String>();
+        final List<String> assignedLayers = new ArrayList<>();
 
         add(dialog = new GeoServerDialog("confirmDisableDialog"));
         dialog.setTitle(new ParamResourceModel("confirmDisableDialog.title", getPage()));
         dialog.setInitialHeight(200);
 
         typeOfBlobStore =
-                new DropDownChoice<BlobStoreType>(
-                        "typeOfBlobStore", new Model<BlobStoreType>(), BlobStoreTypes.getAll());
+                new DropDownChoice<>("typeOfBlobStore", new Model<>(), BlobStoreTypes.getAll());
+
         typeOfBlobStore.setOutputMarkupId(true);
         typeOfBlobStore.add(
                 new AjaxFormComponentUpdatingBehavior("change") {
@@ -77,8 +76,9 @@ public class BlobStorePage extends GeoServerSecuredPage {
 
                     @Override
                     protected void onUpdate(AjaxRequestTarget target) {
-                        blobStoreForm.setVisible(typeOfBlobStore.getModelObject() != null);
-                        if (typeOfBlobStore.getModelObject() != null) {
+                        boolean visible = typeOfBlobStore.getModelObject() != null;
+                        blobStoreForm.setVisible(visible);
+                        if (visible) {
                             blobStoreForm
                                     .getModel()
                                     .setObject(typeOfBlobStore.getModelObject().newConfigObject());
@@ -95,7 +95,7 @@ public class BlobStorePage extends GeoServerSecuredPage {
         typeOfBlobStore.add(
                 new AttributeModifier("title", new ResourceModel("typeOfBlobStore.title")));
 
-        Form<BlobStoreType<?>> selector = new Form<BlobStoreType<?>>("selector");
+        Form<BlobStoreType<?>> selector = new Form<>("selector");
         selector.add(typeOfBlobStore);
         add(selector);
 
@@ -104,16 +104,16 @@ public class BlobStorePage extends GeoServerSecuredPage {
         add(blobConfigContainer);
 
         blobStoreForm =
-                new Form<BlobStoreInfo>(
+                new Form<>(
                         "blobStoreForm",
-                        new CompoundPropertyModel<BlobStoreInfo>(
+                        new CompoundPropertyModel<>(
                                 originalStore == null
                                         ? null
                                         : (BlobStoreInfo) originalStore.clone()));
         blobConfigContainer.add(blobStoreForm);
         blobStoreForm.setVisible(originalStore != null);
 
-        blobStoreForm.add((tfId = new TextField<String>("name")).setRequired(true));
+        blobStoreForm.add((tfId = new TextField<>("name")).setRequired(true));
         tfId.add(new AttributeModifier("title", new ResourceModel("name.title")));
         blobStoreForm.add(cbEnabled = new CheckBox("enabled"));
         cbEnabled.add(new AttributeModifier("title", new ResourceModel("enabled.title")));
@@ -183,82 +183,7 @@ public class BlobStorePage extends GeoServerSecuredPage {
                 });
 
         // build the submit/cancel
-        blobStoreForm.add(
-                new AjaxSubmitLink("save") {
-                    private static final long serialVersionUID = 3735176778941168701L;
-
-                    @Override
-                    public void onSubmit(AjaxRequestTarget target, Form<?> form) {
-
-                        final BlobStoreInfo blobStore = (BlobStoreInfo) getForm().getModelObject();
-
-                        if (originalStore != null
-                                && originalStore.isEnabled()
-                                && !blobStore.isEnabled()
-                                && assignedLayers.size() > 0) {
-                            dialog.showOkCancel(
-                                    target,
-                                    new GeoServerDialog.DialogDelegate() {
-                                        private static final long serialVersionUID =
-                                                5257987095800108993L;
-
-                                        private boolean success;
-
-                                        private String error = null;
-
-                                        @Override
-                                        protected Component getContents(String id) {
-                                            StringBuilder sb = new StringBuilder();
-                                            sb.append(
-                                                    new ParamResourceModel(
-                                                                    "confirmDisableDialog.content",
-                                                                    getPage())
-                                                            .getString());
-                                            for (String layer : assignedLayers) {
-                                                sb.append("\n&nbsp;&nbsp;");
-                                                sb.append(StringEscapeUtils.escapeHtml4(layer));
-                                            }
-                                            return new MultiLineLabel("userPanel", sb.toString())
-                                                    .setEscapeModelStrings(false);
-                                        }
-
-                                        @Override
-                                        protected boolean onSubmit(
-                                                AjaxRequestTarget target, Component contents) {
-                                            try {
-                                                save(originalStore, blobStore, assignedLayers);
-                                                success = true;
-                                            } catch (ConfigurationException e) {
-                                                error = e.getMessage();
-                                            }
-                                            return true;
-                                        }
-
-                                        @Override
-                                        public void onClose(AjaxRequestTarget target) {
-                                            if (success) {
-                                                doReturn(BlobStoresPage.class);
-                                            } else if (error != null) {
-                                                error(error);
-                                                addFeedbackPanels(target);
-                                            }
-                                        }
-                                    });
-                        } else {
-                            try {
-                                save(originalStore, blobStore, assignedLayers);
-                                doReturn(BlobStoresPage.class);
-                            } catch (ConfigurationException e) {
-                                error(e.getMessage());
-                                addFeedbackPanels(target);
-                            }
-                        }
-                    }
-
-                    protected void onError(AjaxRequestTarget target, Form<?> form) {
-                        addFeedbackPanels(target);
-                    }
-                });
+        blobStoreForm.add(new SaveLink(originalStore, assignedLayers));
         blobStoreForm.add(new BookmarkablePageLink<BlobStoreInfo>("cancel", BlobStoresPage.class));
     }
 
@@ -309,6 +234,89 @@ public class BlobStorePage extends GeoServerSecuredPage {
                     GWC.get().save(layer);
                 }
             }
+        }
+    }
+
+    private class SaveLink extends AjaxSubmitLink {
+        private static final long serialVersionUID = 3735176778941168701L;
+        private final BlobStoreInfo originalStore;
+        private final List<String> assignedLayers;
+
+        public SaveLink(BlobStoreInfo originalStore, List<String> assignedLayers) {
+            super("save");
+            this.originalStore = originalStore;
+            this.assignedLayers = assignedLayers;
+        }
+
+        @Override
+        public void onSubmit(AjaxRequestTarget target, Form<?> form) {
+
+            final BlobStoreInfo blobStore = (BlobStoreInfo) getForm().getModelObject();
+
+            if (originalStore != null
+                    && originalStore.isEnabled()
+                    && !blobStore.isEnabled()
+                    && !assignedLayers.isEmpty()) {
+                dialog.showOkCancel(
+                        target,
+                        new GeoServerDialog.DialogDelegate() {
+                            private static final long serialVersionUID = 5257987095800108993L;
+
+                            private boolean success;
+
+                            private String error = null;
+
+                            @Override
+                            protected Component getContents(String id) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append(
+                                        new ParamResourceModel(
+                                                        "confirmDisableDialog.content", getPage())
+                                                .getString());
+                                for (String layer : assignedLayers) {
+                                    sb.append("\n&nbsp;&nbsp;");
+                                    sb.append(StringEscapeUtils.escapeHtml4(layer));
+                                }
+                                return new MultiLineLabel("userPanel", sb.toString())
+                                        .setEscapeModelStrings(false);
+                            }
+
+                            @Override
+                            protected boolean onSubmit(
+                                    AjaxRequestTarget target, Component contents) {
+                                try {
+                                    save(originalStore, blobStore, assignedLayers);
+                                    success = true;
+                                } catch (ConfigurationException e) {
+                                    error = e.getMessage();
+                                }
+                                return true;
+                            }
+
+                            @Override
+                            public void onClose(AjaxRequestTarget target) {
+                                if (success) {
+                                    doReturn(BlobStoresPage.class);
+                                } else if (error != null) {
+                                    error(error);
+                                    addFeedbackPanels(target);
+                                }
+                            }
+                        });
+            } else {
+                try {
+                    save(originalStore, blobStore, assignedLayers);
+                    doReturn(BlobStoresPage.class);
+                } catch (ConfigurationException e) {
+                    error(e.getMessage());
+                    addFeedbackPanels(target);
+                }
+            }
+        }
+
+        @Override
+        protected void onError(AjaxRequestTarget target, Form<?> form) {
+            addFeedbackPanels(target);
         }
     }
 }

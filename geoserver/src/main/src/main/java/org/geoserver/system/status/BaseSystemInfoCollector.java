@@ -21,6 +21,9 @@ public class BaseSystemInfoCollector implements SystemInfoCollector, Serializabl
 
     public static String DEFAULT_VALUE = "NOT AVAILABLE";
 
+    Boolean statisticsEnabled = false;
+
+    @Override
     public final Metrics retrieveAllSystemInfo() {
         Metrics metrics = new Metrics();
         for (MetricInfo sip : MetricInfo.values()) {
@@ -30,15 +33,25 @@ public class BaseSystemInfoCollector implements SystemInfoCollector, Serializabl
     }
 
     /**
-     * Retrieve one or more metric for each element defined in {@link MetricInfo}
+     * Retrieve one or more metric values for a {@link MetricInfo} element.
      *
      * @param info the element to retrieve
-     * @return a list of {@link MetricValue} for each {@link MetricInfo}
+     * @return a list of {@link MetricValue} for the {@link MetricInfo} element.
      */
     List<MetricValue> retrieveSystemInfo(MetricInfo info) {
         MetricValue mv = new MetricValue(info);
         mv.setAvailable(false);
         mv.setValue(DEFAULT_VALUE);
         return Collections.singletonList(mv);
+    }
+
+    @Override
+    public void setStatisticsStatus(Boolean statistics) {
+        this.statisticsEnabled = statistics;
+    }
+
+    @Override
+    public Boolean getStatisticsStatus() {
+        return Boolean.TRUE.equals(statisticsEnabled);
     }
 }

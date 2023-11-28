@@ -4,6 +4,9 @@
  */
 package org.geoserver.gwc.web.layer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -13,18 +16,18 @@ import java.util.List;
 import java.util.Set;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.geoserver.gwc.GWC;
+import org.geoserver.gwc.GWCSynchEnv;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.test.GeoServerTestSupport;
 import org.geowebcache.config.ConfigurationException;
 import org.geowebcache.diskquota.DiskQuotaConfig;
 import org.geowebcache.diskquota.DiskQuotaMonitor;
 import org.geowebcache.layer.TileLayer;
-import org.junit.After;
 import org.junit.Test;
 
 public class CachedLayerProviderTest extends GeoServerTestSupport {
 
-    @After
+    @Test
     public void testQuotaDisabledWithSystemVariable() throws IllegalAccessException {
         DiskQuotaMonitor monitor = GeoServerExtensions.bean(DiskQuotaMonitor.class);
         // the field is initialized once based on system variable, we use reflection
@@ -81,8 +84,10 @@ public class CachedLayerProviderTest extends GeoServerTestSupport {
     @Test
     public void testAdvertised() {
         GWC oldGWC = GWC.get();
+        GWCSynchEnv oldGWCSynchEnv = GWC.get().getGwcSynchEnv();
         GWC gwc = mock(GWC.class);
-        GWC.set(gwc);
+        GWCSynchEnv synchEnv = mock(GWCSynchEnv.class);
+        GWC.set(gwc, synchEnv);
         // Adding a few Mocks for an Unadvertised Layer
         TileLayer l = mock(TileLayer.class);
         when(l.isAdvertised()).thenReturn(false);
@@ -104,7 +109,7 @@ public class CachedLayerProviderTest extends GeoServerTestSupport {
         // Ensure that the two numbers are equal
         assertEquals(gwcSize, providerSize);
 
-        // Set the old GWC
-        GWC.set(oldGWC);
+        // Set the old GWC and GWCSynchEnv
+        GWC.set(oldGWC, oldGWCSynchEnv);
     }
 }

@@ -43,6 +43,7 @@ The full syntax of a point symbolizer is::
       x-labelObstacle: <boolean>
       x-composite-base: <boolean>
       x-composite: <text>
+      x-inclusion: <text>
 
 where:
 
@@ -94,7 +95,7 @@ where:
      - ``[0,0]``
    * - ``opacity``
      - No
-     - Specifies the level of transparency. Value of ``0`` means entirely transparent, while ``1`` means entirely opaque. Only affects graphics referenced by the ``external`` parameter; the opacity of ``mark`` symbols is controled by the ``fill-opacity`` and ``stroke-opacity`` of the mark.
+     - Specifies the level of transparency. Value of ``0`` means entirely transparent, while ``1`` means entirely opaque. Only affects graphics referenced by the ``external`` parameter; the opacity of ``mark`` symbols is controlled by the ``fill-opacity`` and ``stroke-opacity`` of the mark.
      - ``1``
    * - ``rotation``
      - No
@@ -107,7 +108,14 @@ The following properties are equivalent to SLD "vendor options".
 
 .. include:: include/misc.txt
 
+Additional "vendor options" properties for :ref:`sld-extensions_composite-blend`:
+
 .. include:: include/composite.txt
+
+Additional "vendor options" properties for :ref:`rendering_selection`:
+
+.. include:: include/inclusion.txt
+
 
 Examples
 --------

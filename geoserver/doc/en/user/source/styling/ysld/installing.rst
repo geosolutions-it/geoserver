@@ -3,8 +3,16 @@
 Installing the GeoServer YSLD extension
 =======================================
 
- #. Download the extension from the `nightly GeoServer extension builds <https://build.geoserver.org/geoserver/master/ext-latest/>`_.
+The YSLD extension is listed on the GeoServer download page.
 
-    .. warning:: Make sure to match the version of the extension to the version of the GeoServer instance!
+To install:
 
- #. Extract the contents of the archive into the ``WEB-INF/lib`` directory of the GeoServer installation.
+#. Download the :download_extension:`ysld`
+   
+   Verify that the version number in the filename corresponds to the version of GeoServer you are running (for example |release| above).
+
+#. Extract the contents of the archive into the :file:`WEB-INF/lib` directory in GeoServer. Make sure you do not create any sub-directories during the extraction process.
+
+#. Restart GeoServer.
+
+#. To confirm successful installation, check for a new YSLD entry in the :ref:`styling_webadmin` editor. 

@@ -6,9 +6,14 @@
 package org.geoserver.rest.catalog;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.StringWriter;
 import java.util.List;
@@ -156,15 +161,20 @@ public class WorkspaceTest extends CatalogRESTTestSupport {
         assertEquals(201, response.getStatus());
         assertEquals(MediaType.TEXT_PLAIN_VALUE, response.getContentType());
         assertNotNull(response.getHeader("Location"));
-        System.out.println(response.getHeader("Location"));
+        // System.out.println(response.getHeader("Location"));
         assertTrue(response.getHeader("Location").endsWith("/workspaces/foo"));
 
         WorkspaceInfo ws = getCatalog().getWorkspaceByName("foo");
         assertNotNull(ws);
-
+        assertNotNull(ws.getDateCreated());
         // check corresponding namespace creation
         NamespaceInfo ns = getCatalog().getNamespaceByPrefix("foo");
         assertNotNull(ns);
+
+        MockHttpServletResponse conflictResponse =
+                postAsServletResponse(
+                        RestBaseController.ROOT_PATH + "/workspaces", xml, "text/xml");
+        assertEquals(409, conflictResponse.getStatus());
 
         removeWorkspace("foo");
     }
@@ -192,6 +202,12 @@ public class WorkspaceTest extends CatalogRESTTestSupport {
 
         WorkspaceInfo ws = getCatalog().getWorkspaceByName("foo");
         assertNotNull(ws);
+        assertNotNull(ws.getDateCreated());
+
+        MockHttpServletResponse conflictResponse =
+                postAsServletResponse(
+                        RestBaseController.ROOT_PATH + "/workspaces", json, "text/json");
+        assertEquals(409, conflictResponse.getStatus());
     }
 
     @Test
@@ -497,6 +513,7 @@ public class WorkspaceTest extends CatalogRESTTestSupport {
         WorkspaceInfo workspace = getCatalog().getWorkspaceByName("isolated_workspace");
         assertThat(workspace, notNullValue());
         assertThat(workspace.isIsolated(), is(true));
+        assertNotNull(workspace.getDateCreated());
         // check that the created namespace is isolated
         NamespaceInfo namespace = getCatalog().getNamespaceByPrefix("isolated_workspace");
         assertThat(namespace, notNullValue());
@@ -517,6 +534,7 @@ public class WorkspaceTest extends CatalogRESTTestSupport {
         workspace = getCatalog().getWorkspaceByName("isolated_workspace");
         assertThat(workspace, notNullValue());
         assertThat(workspace.isIsolated(), is(false));
+        assertNotNull(workspace.getDateModified());
         // check that the namespace was correctly updated
         namespace = getCatalog().getNamespaceByPrefix("isolated_workspace");
         assertThat(namespace, notNullValue());

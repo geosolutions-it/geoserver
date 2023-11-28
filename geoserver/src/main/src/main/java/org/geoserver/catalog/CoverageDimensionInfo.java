@@ -53,14 +53,14 @@ public interface CoverageDimensionInfo extends Serializable {
      *
      * @uml.property name="range"
      */
-    NumberRange getRange();
+    NumberRange<? extends Number> getRange();
 
     /**
      * Sets the range of the dimension.
      *
      * @uml.property name="range"
      */
-    void setRange(NumberRange range);
+    void setRange(NumberRange<? extends Number> range);
 
     /**
      * The null values of the dimension.
@@ -72,11 +72,7 @@ public interface CoverageDimensionInfo extends Serializable {
     /** Returns the unit name for this dimension, or null if unknown */
     String getUnit();
 
-    /**
-     * Sets the dimenions unit name
-     *
-     * @param unit
-     */
+    /** Sets the dimenions unit name */
     void setUnit(String unit);
 
     /** */

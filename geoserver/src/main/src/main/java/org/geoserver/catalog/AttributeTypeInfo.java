@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.util.InternationalString;
 
 /**
  * An attribute exposed by a {@link FeatureTypeInfo}.
@@ -68,25 +69,17 @@ public interface AttributeTypeInfo extends Serializable {
     void setAttribute(AttributeDescriptor attribute);
 
     /** The java class that values of this attribute are bound to. */
-    Class getBinding();
+    Class<?> getBinding();
 
-    /**
-     * Sets the binding for this attribute
-     *
-     * @param type
-     */
-    void setBinding(Class type);
+    /** Sets the binding for this attribute */
+    void setBinding(Class<?> type);
 
     /**
      * Returns the length of this attribute. It's usually non null only for string and numeric types
      */
     Integer getLength();
 
-    /**
-     * Sets the attribute length
-     *
-     * @param length
-     */
+    /** Sets the attribute length */
     void setLength(Integer length);
 
     /**
@@ -94,4 +87,31 @@ public interface AttributeTypeInfo extends Serializable {
      * avoid recursion.
      */
     boolean equalsIngnoreFeatureType(Object obj);
+
+    /**
+     * Source expression (a valid CQL expression). If not set, it will default to the attribute name
+     * (no renaming)
+     */
+    String getSource();
+
+    /**
+     * Sets the attribute source
+     *
+     * @param source A valid CQL expression, in the simple case, the attribute name
+     */
+    void setSource(String source);
+
+    /**
+     * Get Attribute description
+     *
+     * @return Attribute description
+     */
+    InternationalString getDescription();
+
+    /**
+     * Set attribute description
+     *
+     * @param description
+     */
+    void setDescription(InternationalString description);
 }

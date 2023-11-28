@@ -28,6 +28,7 @@ public class JMSGeoServerHandler extends JMSConfigurationHandler<JMSGlobalModify
 
     private final ToggleSwitch producer;
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public JMSGeoServerHandler(GeoServer geo, XStream xstream, Class clazz, ToggleSwitch producer) {
         super(xstream, clazz);
         this.geoServer = geo;
@@ -72,8 +73,6 @@ public class JMSGeoServerHandler extends JMSConfigurationHandler<JMSGlobalModify
      * @param geoServer the local GeoServer instance
      * @param deserInfo the de-serialized GeoServerInfo instance
      * @return the updated and local GeoServerInfo
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
      * @throws NoSuchMethodException {@link BeanUtilsBean.copyProperties}
      * @throws IllegalArgumentException if arguments are null
      */
@@ -177,8 +176,6 @@ public class JMSGeoServerHandler extends JMSConfigurationHandler<JMSGlobalModify
      * @param geoServer the local GeoServer instance
      * @param deserInfo the de-serialized JAIInfo instance
      * @return the updated local ContactInfo.
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
      * @throws IllegalArgumentException if arguments are null
      */
     private static ContactInfo localizeContactInfo(
@@ -202,8 +199,6 @@ public class JMSGeoServerHandler extends JMSConfigurationHandler<JMSGlobalModify
      * @param geoServer the local GeoServer instance
      * @param deserInfo the de-serialized JAIInfo instance
      * @return the updated local CoverageAccessInfo.
-     * @throws IllegalAccessException
-     * @throws InvocationTargetException
      * @throws IllegalArgumentException if arguments are null
      */
     private static CoverageAccessInfo localizeCoverageAccessInfo(

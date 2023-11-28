@@ -22,6 +22,17 @@ To translate the GeoServer UI to another language, copy and rename each of these
 
 Once created, each line in the files represents a string that will need to be translated.  When finished, you will need to commit these files or submit a JIRA issue with attached patch.  See the section on :ref:`source` for more information on how to commit.
 
+.. warning:: property files must always be encoded in ISO-8859 (or something equivalent like us-ascii or latin1). If you need a whole unicode file, the extension of the file must be `utf8.properties`. 
+
+Translating in Transifex
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+A GeoServer project is maintained on the Transifex website to allow people to participate to the translation of the UI without going into the source code of GeoServer. Transifex requires an account to log in but GitHub accounts can be used.
+
+The project is available here : https://www.transifex.com/GeoServer/geoserver-github-integration/dashboard/.
+
+The administrators of the project update the Transifex resources on a regular basis and synchronize the translations in GeoServer at the same time.
+
 Editing in Eclipse
 ~~~~~~~~~~~~~~~~~~
 
@@ -30,7 +41,7 @@ If you are using `Eclipse <http://www.eclipse.org/>`_, you can install the `Ecli
 Translating documentation
 -------------------------
 
-The GeoServer User Manual contains a wealth of information from the novice to the experienced GeoServer user.  It is written using the `Sphinx Documentation Generator <http://sphinx.pocoo.org/>`_.  The stable branch version of the User Manual exists as the following URL:
+The GeoServer User Manual contains a wealth of information from the novice to the experienced GeoServer user.  It is written using the `Sphinx Documentation Generator <https://www.sphinx-doc.org/>`_.  The stable branch version of the User Manual exists as the following URL:
 
   http://docs.geoserver.org/stable/en/user/
 

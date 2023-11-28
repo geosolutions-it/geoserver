@@ -6,8 +6,18 @@ package org.geoserver.opensearch.eo.store;
 
 import com.google.common.base.Objects;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -15,10 +25,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.apache.commons.lang.WordUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.config.GeoServer;
 import org.geoserver.opensearch.eo.ProductClass;
+import org.geotools.data.DataSourceException;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.FeatureSource;
@@ -26,7 +41,9 @@ import org.geotools.data.FeatureStore;
 import org.geotools.data.Query;
 import org.geotools.data.Repository;
 import org.geotools.data.ServiceInfo;
+import org.geotools.data.Transaction;
 import org.geotools.data.collection.ListFeatureCollection;
+import org.geotools.data.postgis.PostGISDialect;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.simple.SimpleFeatureStore;
@@ -39,12 +56,15 @@ import org.geotools.feature.NameImpl;
 import org.geotools.feature.SchemaException;
 import org.geotools.feature.TypeBuilder;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.geotools.filter.AttributeExpressionImpl;
+import org.geotools.filter.function.JsonPointerFunction;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.text.ecql.ECQL;
 import org.geotools.jdbc.JDBCDataStore;
 import org.geotools.jdbc.SQLDialect;
 import org.geotools.jdbc.VirtualTable;
 import org.geotools.util.SoftValueHashMap;
+import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Polygon;
 import org.opengis.feature.Feature;
 import org.opengis.feature.Property;
@@ -60,6 +80,10 @@ import org.opengis.filter.And;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.PropertyIsEqualTo;
+import org.opengis.filter.expression.Expression;
+import org.opengis.filter.expression.Function;
+import org.opengis.filter.expression.Literal;
+import org.opengis.filter.expression.PropertyName;
 
 /**
  * A data store building OpenSearch for EO records based on a wrapped data store providing all
@@ -70,7 +94,9 @@ import org.opengis.filter.PropertyIsEqualTo;
  *
  * @author Andrea Aime - GeoSolutions
  */
-public class JDBCOpenSearchAccess implements OpenSearchAccess {
+public class JDBCOpenSearchAccess implements org.geoserver.opensearch.eo.store.OpenSearchAccess {
+
+    static final Logger LOGGER = Logging.getLogger(JDBCOpenSearchAccess.class);
 
     protected static FilterFactory2 FF = CommonFactoryFinder.getFilterFactory2();
 
@@ -81,6 +107,8 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
     public static final String GRANULE = "granule";
 
     static final String EO_PREFIX = "eo";
+
+    static final String EOP_PREFIX = "eop";
 
     static final String SAR_PREFIX = "sar";
 
@@ -106,6 +134,8 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
     private SoftValueHashMap<Name, SimpleFeatureSource> featureSourceCache =
             new SoftValueHashMap<>();
 
+    private SourcePropertyMapper propertyMapper;
+
     public JDBCOpenSearchAccess(
             Repository repository, Name delegateStoreName, String namespaceURI, GeoServer geoServer)
             throws IOException {
@@ -121,15 +151,17 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
             throw new IOException("Missing required tables in the backing store " + missingTables);
         }
 
-        collectionFeatureType = buildCollectionFeatureType(delegate);
+        collectionFeatureType = buildCollectionFeatureType(delegate, this.namespaceURI);
         productFeatureType = buildProductFeatureType(delegate);
+        this.propertyMapper = new SourcePropertyMapper(productFeatureType);
     }
 
     String getNamespaceURI() {
         return namespaceURI;
     }
 
-    private FeatureType buildCollectionFeatureType(DataStore delegate) throws IOException {
+    private FeatureType buildCollectionFeatureType(DataStore delegate, String namespaceURI)
+            throws IOException {
         SimpleFeatureType flatSchema = delegate.getSchema(COLLECTION);
 
         TypeBuilder typeBuilder = new OrderedTypeBuilder();
@@ -138,13 +170,15 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         for (AttributeDescriptor ad : flatSchema.getAttributeDescriptors()) {
             AttributeTypeBuilder ab = new AttributeTypeBuilder();
             String name = ad.getLocalName();
-            String namespaceURI = this.namespaceURI;
+            String prefix = "";
+            String attributeNamespace = namespaceURI;
             if (name.startsWith(EO_PREFIX)) {
                 name = name.substring(EO_PREFIX.length());
-                char c[] = name.toCharArray();
+                char[] c = name.toCharArray();
                 c[0] = Character.toLowerCase(c[0]);
                 name = new String(c);
-                namespaceURI = EO_NAMESPACE;
+                attributeNamespace = EO_NAMESPACE;
+                prefix = EO_PREFIX;
             }
             // get a more predictable name structure (will have to do something for oracle
             // like names too I guess)
@@ -154,36 +188,35 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
             // map into output type
             ab.init(ad);
             ab.setMinOccurs(0);
-            ab.name(name).namespaceURI(namespaceURI).userData(SOURCE_ATTRIBUTE, ad.getLocalName());
+            ab.name(name)
+                    .namespaceURI(attributeNamespace)
+                    .userData(SOURCE_ATTRIBUTE, ad.getLocalName());
+            ab.userData(PREFIX, prefix);
             AttributeDescriptor mappedDescriptor;
             if (ad instanceof GeometryDescriptor) {
                 GeometryType at = ab.buildGeometryType();
                 ab.setCRS(((GeometryDescriptor) ad).getCoordinateReferenceSystem());
-                mappedDescriptor = ab.buildDescriptor(new NameImpl(namespaceURI, name), at);
+                mappedDescriptor = ab.buildDescriptor(new NameImpl(attributeNamespace, name), at);
             } else {
                 AttributeType at = ab.buildType();
-                mappedDescriptor = ab.buildDescriptor(new NameImpl(namespaceURI, name), at);
+                mappedDescriptor = ab.buildDescriptor(new NameImpl(attributeNamespace, name), at);
             }
 
             typeBuilder.add(mappedDescriptor);
         }
 
-        // adding the metadata property
-        AttributeDescriptor metadataDescriptor =
-                buildSimpleDescriptor(METADATA_PROPERTY_NAME, String.class);
-        typeBuilder.add(metadataDescriptor);
-
         // adding the layer publishing property
-        Name layerPropertyName = new NameImpl(this.namespaceURI, OpenSearchAccess.LAYERS);
         AttributeDescriptor layerDescriptor =
                 buildFeatureListDescriptor(
-                        LAYERS_PROPERTY_NAME, delegate.getSchema("collection_ogclink"));
+                        LAYERS_PROPERTY_NAME, EO_PREFIX, delegate.getSchema("collection_ogclink"));
         typeBuilder.add(layerDescriptor);
 
         // map OGC links
         AttributeDescriptor linksDescriptor =
                 buildFeatureListDescriptor(
-                        OGC_LINKS_PROPERTY_NAME, delegate.getSchema("collection_ogclink"));
+                        OGC_LINKS_PROPERTY_NAME,
+                        EO_PREFIX,
+                        delegate.getSchema("collection_ogclink"));
         typeBuilder.add(linksDescriptor);
 
         typeBuilder.setName(COLLECTION);
@@ -191,26 +224,57 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         return typeBuilder.feature();
     }
 
-    private AttributeDescriptor buildSimpleDescriptor(Name name, Class binding) {
+    private AttributeDescriptor buildSimpleDescriptor(Name name, String prefix, Class<?> binding) {
         AttributeTypeBuilder ab = new AttributeTypeBuilder();
         ab.name(name.getLocalPart()).namespaceURI(name.getNamespaceURI());
         ab.setBinding(binding);
+        ab.userData(PREFIX, prefix);
         AttributeDescriptor descriptor = ab.buildDescriptor(name, ab.buildType());
         return descriptor;
     }
 
-    private AttributeDescriptor buildFeatureListDescriptor(Name name, SimpleFeatureType schema) {
-        return buildFeatureDescriptor(name, schema, 0, Integer.MAX_VALUE);
+    private AttributeDescriptor buildFeatureListDescriptor(
+            Name name, String prefix, SimpleFeatureType schema) {
+        return buildFeatureDescriptor(name, prefix, schema, 0, Integer.MAX_VALUE);
     }
 
     private AttributeDescriptor buildFeatureDescriptor(
-            Name name, SimpleFeatureType schema, int minOccurs, int maxOccurs) {
+            Name name, String prefix, SimpleFeatureType schema, int minOccurs, int maxOccurs) {
         AttributeTypeBuilder ab = new AttributeTypeBuilder();
-        ab.name(name.getLocalPart()).namespaceURI(name.getNamespaceURI());
+        String ns = name.getNamespaceURI();
+        ab.name(name.getLocalPart()).namespaceURI(ns);
         ab.setMinOccurs(minOccurs);
         ab.setMaxOccurs(maxOccurs);
+        ab.userData(PREFIX, prefix);
+        AttributeDescriptor descriptor = ab.buildDescriptor(name, applyNamespace(ns, schema));
+        return descriptor;
+    }
+
+    private AttributeDescriptor buildFeatureDescriptor(
+            Name name, String prefix, FeatureType schema, int minOccurs, int maxOccurs) {
+        AttributeTypeBuilder ab = new AttributeTypeBuilder();
+        String ns = name.getNamespaceURI();
+        ab.name(name.getLocalPart()).namespaceURI(ns);
+        ab.setMinOccurs(minOccurs);
+        ab.setMaxOccurs(maxOccurs);
+        ab.userData(PREFIX, prefix);
         AttributeDescriptor descriptor = ab.buildDescriptor(name, schema);
         return descriptor;
+    }
+
+    private FeatureType applyNamespace(String namespaceURI, SimpleFeatureType schema) {
+        TypeBuilder tb = new OrderedTypeBuilder();
+        tb.setName(schema.getTypeName());
+        tb.setNamespaceURI(namespaceURI);
+        AttributeTypeBuilder ab = new AttributeTypeBuilder();
+        for (AttributeDescriptor ad : schema.getAttributeDescriptors()) {
+            ab.init(ad);
+            ab.setNamespaceURI(namespaceURI);
+            NameImpl name = new NameImpl(namespaceURI, ad.getLocalName());
+            AttributeDescriptor newDescriptor = ab.buildDescriptor(name, ab.buildType());
+            tb.add(newDescriptor);
+        }
+        return tb.feature();
     }
 
     private FeatureType buildProductFeatureType(DataStore delegate) throws IOException {
@@ -223,18 +287,21 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         for (AttributeDescriptor ad : flatSchema.getAttributeDescriptors()) {
             String name = ad.getLocalName();
             String namespaceURI = this.namespaceURI;
+            String prefix = "";
             // hack to avoid changing the whole product attributes prefixes from eo to eop
             if (name.startsWith(EO_PREFIX)) {
                 name = "eop" + name.substring(2);
+                prefix = EOP_PREFIX;
             }
             for (ProductClass pc : ProductClass.getProductClasses(geoServer)) {
-                String prefix = pc.getPrefix();
-                if (name.startsWith(prefix)) {
-                    name = name.substring(prefix.length());
-                    char c[] = name.toCharArray();
+                String pcPrefix = pc.getPrefix();
+                if (name.startsWith(pcPrefix)) {
+                    name = name.substring(pcPrefix.length());
+                    char[] c = name.toCharArray();
                     c[0] = Character.toLowerCase(c[0]);
                     name = new String(c);
                     namespaceURI = pc.getNamespace();
+                    prefix = pcPrefix;
                     break;
                 }
             }
@@ -248,6 +315,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
             ab.init(ad);
             ab.setMinOccurs(0);
             ab.name(name).namespaceURI(namespaceURI).userData(SOURCE_ATTRIBUTE, ad.getLocalName());
+            ab.userData(PREFIX, prefix);
             AttributeDescriptor mappedDescriptor;
             if (ad instanceof GeometryDescriptor) {
                 GeometryType at = ab.buildGeometryType();
@@ -260,21 +328,23 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
 
             typeBuilder.add(mappedDescriptor);
         }
-        // adding the metadata property
-        AttributeDescriptor metadataDescriptor =
-                buildSimpleDescriptor(METADATA_PROPERTY_NAME, String.class);
-        typeBuilder.add(metadataDescriptor);
 
         // adding the quicklook property
         AttributeDescriptor quicklookDescriptor =
-                buildSimpleDescriptor(QUICKLOOK_PROPERTY_NAME, byte[].class);
+                buildSimpleDescriptor(QUICKLOOK_PROPERTY_NAME, EO_PREFIX, byte[].class);
         typeBuilder.add(quicklookDescriptor);
 
         // map OGC links
         AttributeDescriptor linksDescriptor =
                 buildFeatureListDescriptor(
-                        OGC_LINKS_PROPERTY_NAME, delegate.getSchema("product_ogclink"));
+                        OGC_LINKS_PROPERTY_NAME, EO_PREFIX, delegate.getSchema("product_ogclink"));
         typeBuilder.add(linksDescriptor);
+
+        // the product collection itself
+        FeatureType collectionType = buildCollectionFeatureType(delegate, EO_NAMESPACE);
+        AttributeDescriptor collectionDescriptor =
+                buildFeatureDescriptor(COLLECTION_PROPERTY_NAME, EO_PREFIX, collectionType, 0, 1);
+        typeBuilder.add(collectionDescriptor);
 
         typeBuilder.setName(PRODUCT);
         typeBuilder.setNamespaceURI(namespaceURI);
@@ -290,12 +360,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Returns the store from the repository (which is based on GeoServer own resource pool)
-     *
-     * @return
-     * @throws IOException
-     */
+    /** Returns the store from the repository (which is based on GeoServer own resource pool) */
     DataStore getDelegateStore() throws IOException {
         DataStore store = getRawDelegateStore();
         if (delegateStoreCache != null && delegateStoreCache.wraps(store)) {
@@ -376,7 +441,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
             throws IOException {
         FeatureSource<FeatureType, Feature> collectionSource = getCollectionSource();
         Query query = new Query(collectionSource.getName().getLocalPart());
-        query.setPropertyNames(new String[] {COLLECTION_NAME, LAYERS});
+        query.setPropertyNames(COLLECTION_NAME, LAYERS);
         FeatureCollection<FeatureType, Feature> features = collectionSource.getFeatures(query);
         Map<String, List<CollectionLayer>> result = new LinkedHashMap<>();
         features.accepts(
@@ -411,6 +476,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public FeatureSource<FeatureType, Feature> getFeatureSource(Name typeName) throws IOException {
         if (collectionFeatureType.getName().equals(typeName)) {
@@ -428,6 +494,410 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         }
 
         throw new IOException("Schema '" + typeName + "' does not exist.");
+    }
+
+    @Override
+    public void updateIndexes(String collection, List<Indexable> indexables) throws IOException {
+        try (Connection cx = getRawDelegateStore().getConnection(Transaction.AUTO_COMMIT)) {
+            List<JDBCIndex> existing = getIndexes(cx, collection);
+
+            // loop and find indexes that need to be created, and build a map from queryables to
+            // expressions as recorded in the DB, for later match and index disposal
+            Map<String, String> expressions = new HashMap<>();
+            for (Indexable indexable : indexables) {
+                try {
+                    String queryable = indexable.getQueryable();
+                    String expression =
+                            getIndexExpression(indexable.getExpression(), indexable.getFieldType());
+                    expressions.put(queryable, expression);
+                    boolean exists =
+                            existing.stream().anyMatch(idx -> idx.matches(queryable, expression));
+                    logIndexHandling("already exists", collection, queryable, expression, exists);
+                    if (!exists) createIndex(cx, collection, indexable);
+                } catch (IOException e) {
+                    // thrown only by getIndexExpression
+                    LOGGER.log(Level.WARNING, "Failed to index expression", e);
+                }
+            }
+
+            // find indexes that are no longer needed and remove
+            for (JDBCIndex index : existing) {
+                String queryable = index.getQueryable();
+                String expression = expressions.get(queryable);
+                boolean exists = Objects.equal(expression, index.getExpression());
+                logIndexHandling("still needed", collection, queryable, expression, exists);
+                if (!exists) {
+                    dropIndex(cx, collection, queryable, index.getExpression());
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new DataSourceException(e);
+        }
+    }
+
+    private void logIndexHandling(
+            String action, String collection, String queryable, String expression, boolean exists) {
+        LOGGER.info(
+                () ->
+                        "Checking if index is "
+                                + action
+                                + " for "
+                                + collection
+                                + "/"
+                                + queryable
+                                + " over "
+                                + expression
+                                + ": "
+                                + exists);
+    }
+
+    private List<JDBCIndex> getIndexes(Connection cx, String collection) throws SQLException {
+        List<JDBCIndex> indexes = new ArrayList<>();
+        try (PreparedStatement ps =
+                cx.prepareStatement("SELECT * FROM queryable_idx_tracker WHERE collection = ?")) {
+            ps.setString(1, collection);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    JDBCIndex index = new JDBCIndex();
+                    index.setQueryable(rs.getString("queryable"));
+                    index.setName(rs.getString("index_name"));
+                    index.setCollection(rs.getString("collection"));
+                    index.setExpression(rs.getString("expression"));
+                    indexes.add(index);
+                }
+            }
+        }
+        return indexes;
+    }
+
+    private String getIndexExpression(Expression expression, Indexable.FieldType fieldType)
+            throws IOException {
+        switch (fieldType) {
+            case Geometry:
+            case Array:
+            case Other:
+                return getIndexField(expression);
+            default:
+                return encodeJsonPointer((Function) expression, fieldType);
+        }
+    }
+
+    /** Create indices on Product fields */
+    private void createIndex(Connection cx, String collectionName, Indexable idx) {
+        JDBCDataStore delegate = getRawDelegateStore();
+        SQLDialect dialect = delegate.getSQLDialect();
+        if (!(dialect instanceof PostGISDialect)) {
+            throw new IllegalArgumentException(
+                    "Index creation is only current supported with PostGIS");
+        }
+        try {
+            String indexTitle = getIndexTitle(collectionName, idx.getQueryable());
+            Indexable.FieldType fieldType = idx.getFieldType();
+            String indexExpression = getIndexExpression(idx.getExpression(), fieldType);
+
+            if (!isFieldOrPointerIndexed(cx, indexExpression)) {
+                LOGGER.info(
+                        "Creating missing index on " + collectionName + "/" + idx.getQueryable());
+                StringBuilder sql = new StringBuilder("CREATE INDEX IF NOT EXISTS ");
+                sql.append(indexTitle).append(" ON product ");
+                if (fieldType == Indexable.FieldType.Geometry) {
+                    sql.append(" USING GIST ");
+                } else if (fieldType == Indexable.FieldType.Array) {
+                    sql.append(" USING GIN ");
+                }
+                sql.append("(");
+                if (fieldType == Indexable.FieldType.Other
+                        || fieldType == Indexable.FieldType.Geometry) {
+                    sql.append(indexExpression);
+                } else {
+                    sql.append("(").append(indexExpression).append(")");
+                }
+                sql.append(")");
+                LOGGER.log(Level.FINE, "Creating index " + sql);
+                try (PreparedStatement preparedStatement = cx.prepareStatement(sql.toString())) {
+                    preparedStatement.execute();
+                }
+            } else {
+                LOGGER.info(
+                        "Index for indexExpression already exists, tracking new queryable: "
+                                + collectionName
+                                + "/"
+                                + idx.getQueryable());
+                indexTitle = getExistingIndexTitle(cx, indexExpression);
+            }
+            recordIndex(cx, collectionName, idx.getQueryable(), indexExpression, indexTitle);
+        } catch (IOException | SQLException e) {
+            LOGGER.log(Level.WARNING, "Error when creating index on " + idx.getQueryable(), e);
+        }
+    }
+
+    private String getExistingIndexTitle(Connection cx, String fieldOrPointer) throws SQLException {
+        try (PreparedStatement ps =
+                cx.prepareStatement(
+                        "SELECT index_name FROM queryable_idx_tracker WHERE expression = ? LIMIT 1")) {
+            ps.setString(1, fieldOrPointer);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isFieldOrPointerIndexed(Connection cx, String fieldOrPointer)
+            throws SQLException {
+        boolean out = false;
+        try (PreparedStatement preparedStatement =
+                cx.prepareStatement(
+                        "SELECT count(*)>0 FROM queryable_idx_tracker WHERE expression = ?")) {
+            preparedStatement.setString(1, fieldOrPointer);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    out = rs.getBoolean(1);
+                }
+            }
+        }
+        return out;
+    }
+
+    private void recordIndex(
+            Connection cx,
+            String collectionName,
+            String queryable,
+            String fieldOrPointer,
+            String indexTitle)
+            throws SQLException {
+        try (PreparedStatement preparedStatement =
+                cx.prepareStatement(
+                        "insert into queryable_idx_tracker (index_name, collection, queryable, expression) "
+                                + "values (?,?,?,?)")) {
+            preparedStatement.setString(1, indexTitle);
+            preparedStatement.setString(2, collectionName);
+            preparedStatement.setString(3, queryable);
+            preparedStatement.setString(4, fieldOrPointer);
+            preparedStatement.execute();
+        }
+    }
+
+    /** Drop product table index */
+    private void dropIndex(
+            Connection cx, String collectionName, String queryable, String indexExpression) {
+        JDBCDataStore delegate = getRawDelegateStore();
+        SQLDialect dialect = delegate.getSQLDialect();
+        if (!(dialect instanceof PostGISDialect)) {
+            throw new IllegalArgumentException(
+                    "Index deletion is only current supported with PostGIS");
+        }
+        try {
+            int indexWithExpressionCount = getIndexExpressionCount(cx, indexExpression);
+            LOGGER.info("Removing tracking of : " + collectionName + "/" + queryable);
+            String indexName =
+                    deleteIndexExpressionRecord(cx, collectionName, queryable, indexExpression);
+            // if there is an index, and this is the last field using it, drop
+            if (indexWithExpressionCount <= 1 && indexName != null) {
+                LOGGER.info("Dropping index " + indexName);
+                String sql = "DROP INDEX IF EXISTS " + indexName;
+                try (PreparedStatement ps = cx.prepareStatement(sql)) {
+                    ps.execute();
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Error when deleting index on " + indexExpression, e);
+        }
+    }
+
+    private String deleteIndexExpressionRecord(
+            Connection cx, String collection, String queryable, String expression)
+            throws SQLException {
+        String out = null;
+        // two queryables might be pointing to the same field, just remove one
+        try (PreparedStatement preparedStatement =
+                cx.prepareStatement(
+                        "DELETE FROM queryable_idx_tracker "
+                                + " WHERE collection = ? AND queryable = ? AND expression = ? "
+                                + "RETURNING index_name")) {
+            preparedStatement.setString(1, collection);
+            preparedStatement.setString(2, queryable);
+            preparedStatement.setString(3, expression);
+            preparedStatement.execute();
+            try (ResultSet rs = preparedStatement.getResultSet()) {
+                while (rs.next()) {
+                    out = rs.getString(1);
+                }
+            }
+        }
+        return out;
+    }
+
+    private int getIndexExpressionCount(Connection cx, String indexExpression) throws SQLException {
+        int out = 0;
+        try (PreparedStatement preparedStatement =
+                cx.prepareStatement(
+                        "SELECT count(*) FROM queryable_idx_tracker WHERE expression = ?")) {
+            preparedStatement.setString(1, indexExpression);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    out = rs.getInt(1);
+                }
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public List<String> getIndexNames(String tableName) throws IOException {
+        // check we're running against PostGIS
+        JDBCDataStore delegate = getRawDelegateStore();
+        SQLDialect dialect = delegate.getSQLDialect();
+        if (!(dialect instanceof PostGISDialect)) {
+            throw new IOException("Index creation is only current supported with PostGIS");
+        }
+
+        List<String> out = new ArrayList<>();
+        try (Connection cx = delegate.getConnection(Transaction.AUTO_COMMIT);
+                PreparedStatement ps =
+                        cx.prepareStatement(
+                                "SELECT indexname FROM pg_indexes WHERE tablename = ?")) {
+            ps.setString(1, tableName);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(rs.getString(1));
+                }
+            }
+        } catch (IOException | SQLException e) {
+            LOGGER.log(Level.WARNING, "Error when getting index  list for " + tableName, e);
+        }
+
+        return out;
+    }
+
+    private String getIndexField(Expression expression) throws IOException {
+        String indexField;
+        if (expression instanceof AttributeExpressionImpl) {
+            AttributeExpressionImpl aei = (AttributeExpressionImpl) expression;
+            indexField = propertyMapper.getSourceName(aei.getPropertyName());
+        } else if (expression instanceof JsonPointerFunction) {
+            Function function = (Function) expression;
+            Expression p0 = function.getParameters().get(0);
+            if (p0 instanceof PropertyName) {
+                indexField = propertyMapper.getSourceName(((PropertyName) p0).getPropertyName());
+            } else {
+                throw new IOException(
+                        "The first argument for the function "
+                                + function
+                                + " arg: "
+                                + p0
+                                + " is not "
+                                + " property name and cannot be converted into a field name");
+            }
+        } else {
+            throw new IOException(
+                    "Expression "
+                            + expression
+                            + " is neither a JSON pointer nor a "
+                            + "attribute and can not be converted into a field name, cannot index it.");
+        }
+
+        if (indexField == null)
+            throw new IOException("Could not map " + expression + " to a source field");
+
+        return "\"" + indexField + "\"";
+    }
+
+    private String getIndexTitle(String collectionName, String fieldName) {
+        return collectionName.replaceAll(":", "_") + "_" + fieldName.replaceAll(":", "_") + "_idx";
+    }
+
+    private String encodeJsonPointer(Function jsonPointer, Indexable.FieldType type)
+            throws IOException {
+        StringBuilder out = new StringBuilder();
+        Expression json = getParameter(jsonPointer, 0, true);
+        Expression pointer = getParameter(jsonPointer, 1, true);
+        if (json instanceof PropertyName && pointer instanceof Literal) {
+            // if not a string need to cast the json attribute
+            boolean needCast = !type.equals(Indexable.FieldType.JsonString);
+            if (needCast) out.append('(');
+            out.append("\"");
+            out.append(((PropertyName) json).getPropertyName());
+            out.append("\"");
+            String strPointer = ((Literal) pointer).getValue().toString();
+            List<String> pointerEl =
+                    Stream.of(strPointer.split("/"))
+                            .filter(p -> !p.equals(""))
+                            .collect(Collectors.toList());
+            for (int i = 0; i < pointerEl.size(); i++) {
+                String p = pointerEl.get(i);
+                if (i != pointerEl.size() - 1) out.append(" -> ");
+                // using for last element the ->> operator
+                // to have a text instead of a json returned
+                else out.append(" ->> ");
+                out.append("'");
+                out.append(p);
+                out.append("'");
+            }
+            if (needCast) {
+                // cast from text to needed type
+                out.append(')');
+                out.append(cast("", type));
+            }
+        } else {
+            throw new IOException(
+                    "The first argument of the JSONPointer has to be a property name "
+                            + "and the second has to be a literal");
+        }
+        return out.toString();
+    }
+
+    private String cast(String property, Indexable.FieldType type) {
+        if (String.class.getSimpleName().equals(type.name())) {
+            return property + "::text";
+        } else if (Short.class.getSimpleName().equals(type.name())
+                || Byte.class.equals(type.name())) {
+            return property + "::smallint";
+        } else if (Integer.class.getSimpleName().equals(type.name())) {
+            return property + "::integer";
+        } else if (Long.class.getSimpleName().equals(type.name())) {
+            return property + "::bigint";
+        } else if (Float.class.getSimpleName().equals(type.name())) {
+            return property + "::real";
+        } else if (Double.class.getSimpleName().equals(type.name())) {
+            return property + "::float8";
+        } else if (BigInteger.class.getSimpleName().equals(type.name())) {
+            return property + "::numeric";
+        } else if (BigDecimal.class.getSimpleName().equals(type.name())) {
+            return property + "::decimal";
+        } else if (Double.class.getSimpleName().equals(type.name())) {
+            return property + "::float8";
+        } else if (Time.class.getSimpleName().equals(type.name())) {
+            return property + "::time";
+        } else if (Timestamp.class.getSimpleName().equals(type.name())) {
+            return property + "::timestamp";
+        } else if (Date.class.getSimpleName().equals(type.name())) {
+            return property + "::date";
+        } else if (java.util.Date.class.getSimpleName().equals(type.name())) {
+            return property + "::timestamp";
+        } else {
+            // dunno how to cast, leave as is
+            return property;
+        }
+    }
+
+    Expression getParameter(Function function, int idx, boolean mandatory) {
+        final List<Expression> params = function.getParameters();
+        if (params == null || params.size() <= idx) {
+            if (mandatory) {
+                throw new IllegalArgumentException(
+                        "Missing parameter number "
+                                + (idx + 1)
+                                + "for function "
+                                + function.getName()
+                                + ", cannot encode in SQL");
+            }
+        }
+        return params.get(idx);
     }
 
     public SimpleFeatureSource getCollectionGranulesSource(String typeName) throws IOException {
@@ -469,6 +939,9 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         // get the product type, if any (might be a virtual collection)
         SimpleFeature collectionFeature =
                 getCollectionFeature(collection, delegate, collectionTableName);
+        if (collectionFeature == null)
+            throw new IOException("Collection " + collection + " not found");
+
         String sensorType = (String) collectionFeature.getAttribute("eoSensorType");
         ProductClass productClass = null;
         if (sensorType != null) {
@@ -478,33 +951,8 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         final String dbSchema = delegate.getDatabaseSchema();
         // build the joining SQL
         StringJoiner attributes = new StringJoiner(", ");
-        // collection attributes
-        ContentFeatureSource collectionSource = delegate.getFeatureSource(collectionTableName);
-        for (AttributeDescriptor ad : collectionSource.getSchema().getAttributeDescriptors()) {
-            if (ad.getLocalName().startsWith(JDBCOpenSearchAccess.EO_PREFIX)) {
-                String column = encodeColumn(dialect, "collection", ad.getLocalName());
-                if (ad.getLocalName().equals("eoIdentifier")) {
-                    attributes.add(column + " as \"collectionEoIdentifier\"");
-                } else if (!"eoAcquisitionStation".equals(ad.getLocalName())) {
-                    // add everything that's not duplicate
-                    attributes.add(column);
-                }
-            }
-        }
-        // product attributes
-        ContentFeatureSource productSource = delegate.getFeatureSource(productTableName);
-        for (AttributeDescriptor ad : productSource.getSchema().getAttributeDescriptors()) {
-            final String localName = ad.getLocalName();
-            if (localName.startsWith(JDBCOpenSearchAccess.EO_PREFIX)
-                    || "timeStart".equals(localName)
-                    || "timeEnd".equals(localName)
-                    || "crs".equals(localName)
-                    || (productClass != null && localName.startsWith(productClass.getPrefix()))
-                    || (productClass == null && matchesAnyProductClass(localName))) {
-                String column = encodeColumn(dialect, "product", localName);
-                attributes.add(column);
-            }
-        }
+        Set<String> names = new HashSet<>();
+
         // granule attributes
         SimpleFeatureType granuleSchema = delegate.getSchema(granuleTableName);
         String productIdColumn = null;
@@ -518,8 +966,9 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
             } else if ("product_id".equalsIgnoreCase(localName)) {
                 productIdColumn = localName;
             } else {
-                String column = encodeColumn(dialect, "granule", ad.getLocalName());
+                String column = encodeColumn(dialect, "granule", localName);
                 attributes.add(column);
+                names.add(localName);
             }
             if ("the_geom".equalsIgnoreCase(localName)) {
                 theGeomName = localName;
@@ -528,8 +977,45 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
             }
         }
 
+        // product attributes
+        ContentFeatureSource productSource = delegate.getFeatureSource(productTableName);
+        for (AttributeDescriptor ad : productSource.getSchema().getAttributeDescriptors()) {
+            final String localName = ad.getLocalName();
+            if (localName.startsWith(JDBCOpenSearchAccess.EO_PREFIX)
+                    || "timeStart".equals(localName)
+                    || "timeEnd".equals(localName)
+                    || "crs".equals(localName)
+                    || (productClass != null && localName.startsWith(productClass.getPrefix()))
+                    || (productClass == null && matchesAnyProductClass(localName))) {
+                String column = encodeColumn(dialect, "product", localName);
+                attributes.add(column);
+                names.add(localName);
+            }
+        }
+
+        // collection attributes
+        ContentFeatureSource collectionSource = delegate.getFeatureSource(collectionTableName);
+        for (AttributeDescriptor ad : collectionSource.getSchema().getAttributeDescriptors()) {
+            String localName = ad.getLocalName();
+            if (localName.startsWith(JDBCOpenSearchAccess.EO_PREFIX)) {
+                String column = encodeColumn(dialect, "collection", localName);
+                if (names.contains(localName)) {
+                    int counter = 1;
+                    String base = "collection" + WordUtils.capitalize(localName);
+                    String alias = base;
+                    while (names.contains(alias)) {
+                        alias = base + counter++;
+                    }
+                    attributes.add(column + " as \"" + alias + "\"");
+                    names.add(alias);
+                } else {
+                    attributes.add(column);
+                }
+            }
+        }
+
         StringBuffer sb = new StringBuffer("SELECT ");
-        sb.append(attributes.toString());
+        sb.append(attributes);
         sb.append("\n");
         sb.append(" FROM ");
         encodeTableName(dialect, dbSchema, granuleTableName, sb);
@@ -639,10 +1125,12 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         }
     }
 
+    @Override
     public FeatureStore<FeatureType, Feature> getProductSource() throws IOException {
         return new JDBCProductFeatureStore(this, productFeatureType);
     }
 
+    @Override
     public FeatureStore<FeatureType, Feature> getCollectionSource() throws IOException {
         return new JDBCCollectionFeatureStore(this, collectionFeatureType);
     }
@@ -672,9 +1160,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         // granule attributes
         SimpleFeatureType granuleSchema = delegate.getSchema(granuleTableName);
         final String productIdColumn =
-                granuleSchema
-                        .getAttributeDescriptors()
-                        .stream()
+                granuleSchema.getAttributeDescriptors().stream()
                         .map(ad -> ad.getLocalName())
                         .filter(s -> "product_id".equalsIgnoreCase(s))
                         .findFirst()
@@ -702,9 +1188,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
         granulesQuery.setFilter(
                 FF.equal(FF.property(productIdColumn), FF.literal(dbProductId), true));
         List<String> names =
-                granuleSchema
-                        .getAttributeDescriptors()
-                        .stream()
+                granuleSchema.getAttributeDescriptors().stream()
                         .map(ad -> ad.getLocalName())
                         .filter(s -> !s.equals(productIdColumn))
                         .collect(Collectors.toList());
@@ -714,6 +1198,7 @@ public class JDBCOpenSearchAccess implements OpenSearchAccess {
                 (SimpleFeatureStore) delegate.getFeatureSource(granuleTableName);
         try {
             return new WritableDataView(granulesStore, granulesQuery) {
+                @Override
                 public java.util.List<org.opengis.filter.identity.FeatureId> addFeatures(
                         org.geotools.feature.FeatureCollection<SimpleFeatureType, SimpleFeature>
                                 featureCollection)

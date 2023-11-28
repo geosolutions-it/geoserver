@@ -26,11 +26,17 @@ import org.geotools.util.logging.Logging;
  */
 public class GeoServerConfigurationLock {
 
-    /** DEFAULT_TRY_LOCK_TIMEOUT_MS */
-    public static long DEFAULT_TRY_LOCK_TIMEOUT_MS =
-            (GeoServerExtensions.getProperty("CONFIGURATION_TRYLOCK_TIMEOUT") != null
-                    ? Long.valueOf(GeoServerExtensions.getProperty("CONFIGURATION_TRYLOCK_TIMEOUT"))
-                    : 30000);
+    /**
+     * Environment property resolved according to {@link GeoServerExtensions#getProperty(String)}
+     */
+    static final String TRYLOCK_TIMEOUT_SYSTEM_PROPERTY = "CONFIGURATION_TRYLOCK_TIMEOUT";
+
+    /**
+     * DEFAULT_TRY_LOCK_TIMEOUT_MS.
+     *
+     * @see #getLockTimeoutMillis()
+     */
+    public static long DEFAULT_TRY_LOCK_TIMEOUT_MS = 30000;
 
     private static final Level LEVEL = Level.FINE;
 
@@ -55,17 +61,40 @@ public class GeoServerConfigurationLock {
             enabled = true;
         }
 
-        LOGGER.info("GeoServer configuration lock is " + (enabled ? "enabled" : "disabled"));
+        LOGGER.config("GeoServer configuration lock is " + (enabled ? "enabled" : "disabled"));
+    }
+
+    private long getLockTimeoutMillis() {
+        String configValue = GeoServerExtensions.getProperty(TRYLOCK_TIMEOUT_SYSTEM_PROPERTY);
+        return configValue == null || configValue.isEmpty()
+                ? DEFAULT_TRY_LOCK_TIMEOUT_MS
+                : Long.valueOf(configValue);
+    }
+
+    /**
+     * Queries if the write lock is held by any thread. This method is designed for use in
+     * monitoring system state, not for synchronization control.
+     *
+     * @return {@code true} if any thread holds the write lock and {@code false} otherwise
+     */
+    public boolean isWriteLocked() {
+        return readWriteLock.isWriteLocked();
     }
 
     /**
      * Opens a lock in the specified mode. To avoid deadlocks make sure the corresponding unlock
-     * method is called as well before the code exits
+     * method is called as well before the code exits.
      *
-     * @param type
+     * <p>If a write lock is already held by the current thread, and a read lock is requested, the
+     * write lock is preserved.
      */
     public void lock(LockType type) {
         if (!enabled) {
+            return;
+        }
+
+        if (LockType.READ == type && readWriteLock.isWriteLockedByCurrentThread()) {
+            // preserve the write lock
             return;
         }
 
@@ -104,7 +133,9 @@ public class GeoServerConfigurationLock {
      * This usage ensures that the lock is unlocked if it was acquired, and doesn't try to unlock if
      * the lock was not acquired.
      *
-     * @param type
+     * <p>If a write lock is already held by the current thread, and a read lock is requested, the
+     * write lock is preserved.
+     *
      * @return true if the lock was acquired and false otherwise
      */
     public boolean tryLock(LockType type) {
@@ -112,11 +143,16 @@ public class GeoServerConfigurationLock {
             return true;
         }
 
+        if (LockType.READ == type && readWriteLock.isWriteLockedByCurrentThread()) {
+            // preserve the write lock
+            return true;
+        }
+
         Lock lock = getLock(type);
 
         boolean res = false;
         try {
-            res = lock.tryLock(DEFAULT_TRY_LOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            res = lock.tryLock(getLockTimeoutMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             LOGGER.log(
                     Level.WARNING,
@@ -180,8 +216,6 @@ public class GeoServerConfigurationLock {
     /**
      * Unlocks a previously acquired lock. The lock type must match the previous {@link
      * #lock(LockType)} call
-     *
-     * @param type
      */
     public void unlock() {
         if (!enabled) {
@@ -205,7 +239,15 @@ public class GeoServerConfigurationLock {
             }
             lock.unlock();
         } finally {
-            currentLock.set(null);
+            final int currThreadReentrantReadLockCount = readWriteLock.getReadHoldCount();
+            final int currThreadReentrantWriteLockCount = readWriteLock.getWriteHoldCount();
+            // reentrancy check
+            final boolean canUnset =
+                    (LockType.READ == type && currThreadReentrantReadLockCount == 0)
+                            || (LockType.WRITE == type && currThreadReentrantWriteLockCount == 0);
+            if (canUnset) {
+                currentLock.set(null);
+            }
         }
     }
 
@@ -217,10 +259,7 @@ public class GeoServerConfigurationLock {
         this.enabled = enabled;
     }
 
-    /**
-     * @param type
-     * @return
-     */
+    /** */
     private Lock getLock(LockType type) {
         Lock lock;
         if (type == LockType.WRITE) {
@@ -235,11 +274,7 @@ public class GeoServerConfigurationLock {
         return lock;
     }
 
-    /**
-     * Returns the lock type owned by the current thread (could be {@code null} for no lock)
-     *
-     * @return
-     */
+    /** Returns the lock type owned by the current thread (could be {@code null} for no lock) */
     public LockType getCurrentLock() {
         return currentLock.get();
     }

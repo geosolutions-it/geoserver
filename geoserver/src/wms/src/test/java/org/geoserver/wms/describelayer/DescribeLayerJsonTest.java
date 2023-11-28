@@ -77,7 +77,7 @@ public class DescribeLayerJsonTest extends WMSTestSupport {
                         + JSONType.json;
 
         String result = getAsString(request);
-        System.out.println(result);
+        // System.out.println(result);
 
         checkJSONDescribeLayer(result, layer);
     }
@@ -85,7 +85,6 @@ public class DescribeLayerJsonTest extends WMSTestSupport {
     /**
      * @param body Accepts:<br>
      *     DescribeLayer(...)<br>
-     * @param layer
      */
     private void checkJSONPDescribeLayer(String body, String layer) {
         assertNotNull(body);
@@ -169,6 +168,6 @@ public class DescribeLayerJsonTest extends WMSTestSupport {
                         + JSONType.json;
 
         MockHttpServletResponse result = getAsServletResponse(request, "");
-        assertTrue("UTF-8".equals(result.getCharacterEncoding()));
+        assertEquals("UTF-8", result.getCharacterEncoding());
     }
 }

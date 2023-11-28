@@ -14,26 +14,18 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.web.GeoServerApplication;
 
-/** Simple detachable model listing all the available workspaces */
+/**
+ * Simple detachable model listing all the available workspaces from the {@link
+ * Catalog#getWorkspaces()}.
+ */
 public class WorkspacesModel extends LoadableDetachableModel<List<WorkspaceInfo>> {
     private static final long serialVersionUID = -2014677058862746780L;
 
     @Override
     protected List<WorkspaceInfo> load() {
         Catalog catalog = GeoServerApplication.get().getCatalog();
-        List<WorkspaceInfo> workspaces = new ArrayList<WorkspaceInfo>(catalog.getWorkspaces());
-        Collections.sort(workspaces, new WorkspaceComparator());
+        List<WorkspaceInfo> workspaces = new ArrayList<>(catalog.getWorkspaces());
+        Collections.sort(workspaces, Comparator.comparing(WorkspaceInfo::getName));
         return workspaces;
-    }
-
-    protected static class WorkspaceComparator implements Comparator<WorkspaceInfo> {
-
-        public WorkspaceComparator() {
-            //
-        }
-
-        public int compare(WorkspaceInfo w1, WorkspaceInfo w2) {
-            return w1.getName().compareToIgnoreCase(w2.getName());
-        }
     }
 }

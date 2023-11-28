@@ -6,18 +6,17 @@
 package org.geoserver.wps.gs;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import javax.xml.namespace.QName;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.data.test.MockData;
 import org.geoserver.wps.WPSTestSupport;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -264,19 +263,19 @@ public class AggregateProcessTest extends WPSTestSupport {
     public void testSumAsJson() throws Exception {
         String xml = aggregateCall("Sum", true, "application/json", false);
         JSONObject result = executeJsonRequest(xml);
-        assertTrue(result.size() == 4);
+        assertEquals(4, result.size());
         String aggregationAttribute = (String) result.get("AggregationAttribute");
         JSONArray aggregationFunctions = (JSONArray) result.get("AggregationFunctions");
         JSONArray groupByAttributes = (JSONArray) result.get("GroupByAttributes");
         JSONArray aggregationResults = (JSONArray) result.get("AggregationResults");
-        assertTrue(aggregationAttribute.equals("intProperty"));
-        assertTrue(aggregationFunctions.size() == 1);
-        assertTrue(aggregationFunctions.get(0).equals("Sum"));
-        assertTrue(groupByAttributes.size() == 0);
-        assertTrue(aggregationResults.size() == 1);
+        assertEquals("intProperty", aggregationAttribute);
+        assertEquals(1, aggregationFunctions.size());
+        assertEquals("Sum", aggregationFunctions.get(0));
+        assertEquals(0, groupByAttributes.size());
+        assertEquals(1, aggregationResults.size());
         JSONArray sumResult = (JSONArray) aggregationResults.get(0);
-        assertTrue(sumResult.size() == 1);
-        assertTrue(sumResult.get(0).equals(-111L));
+        assertEquals(1, sumResult.size());
+        assertEquals(sumResult.get(0), -111);
     }
 
     @Test
@@ -291,17 +290,17 @@ public class AggregateProcessTest extends WPSTestSupport {
     public void testSumAsJsonWithGroupBy() throws Exception {
         String xml = aggregateCall("Sum", true, "application/json", true);
         JSONObject result = executeJsonRequest(xml);
-        assertTrue(result.size() == 4);
+        assertEquals(4, result.size());
         String aggregationAttribute = (String) result.get("AggregationAttribute");
         JSONArray aggregationFunctions = (JSONArray) result.get("AggregationFunctions");
         JSONArray groupByAttributes = (JSONArray) result.get("GroupByAttributes");
         JSONArray aggregationResults = (JSONArray) result.get("AggregationResults");
-        assertTrue(aggregationAttribute.equals("intProperty"));
-        assertTrue(aggregationFunctions.size() == 1);
-        assertTrue(aggregationFunctions.get(0).equals("Sum"));
-        assertTrue(groupByAttributes.size() == 1);
-        assertTrue(groupByAttributes.get(0).equals("name"));
-        assertTrue(aggregationResults.size() == 5);
+        assertEquals("intProperty", aggregationAttribute);
+        assertEquals(1, aggregationFunctions.size());
+        assertEquals("Sum", aggregationFunctions.get(0));
+        assertEquals(1, groupByAttributes.size());
+        assertEquals("name", groupByAttributes.get(0));
+        assertEquals(5, aggregationResults.size());
     }
 
     protected JSONObject executeJsonRequest(String wpsRequest) throws Exception {
@@ -309,9 +308,7 @@ public class AggregateProcessTest extends WPSTestSupport {
                 postAsServletResponse(getWorkspaceAndServicePath(), wpsRequest);
         String content = response.getContentAsString();
         assertFalse(content.isEmpty());
-        Object jsonObject = new JSONParser().parse(content);
-        assertNotNull(jsonObject);
-        return (JSONObject) jsonObject;
+        return (JSONObject) json(response);
     }
 
     protected String getWorkspaceAndServicePath() {

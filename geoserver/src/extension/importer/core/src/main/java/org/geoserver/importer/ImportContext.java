@@ -7,7 +7,6 @@ package org.geoserver.importer;
 
 import static org.geoserver.importer.ImporterUtils.resolve;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.io.IOException;
@@ -77,7 +76,7 @@ public class ImportContext implements Serializable {
     StoreInfo targetStore;
 
     /** import tasks */
-    List<ImportTask> tasks = new ArrayList<ImportTask>();
+    List<ImportTask> tasks = new ArrayList<>();
 
     /** The default transformations that will be applied on task creation */
     List<ImportTransform> defaultTransforms = new ArrayList<>();
@@ -193,9 +192,9 @@ public class ImportContext implements Serializable {
         TransformChain chain = task.getTransform();
         for (ImportTransform tx : defaultTransforms) {
             if (chain instanceof RasterTransformChain && tx instanceof RasterTransform) {
-                chain.add(tx);
+                ((RasterTransformChain) chain).add((RasterTransform) tx);
             } else if (chain instanceof VectorTransformChain && tx instanceof VectorTransform) {
-                chain.add(tx);
+                ((VectorTransformChain) chain).add((VectorTransform) tx);
             }
         }
     }
@@ -278,15 +277,7 @@ public class ImportContext implements Serializable {
      * @return boolean
      */
     public boolean isDirect() {
-        boolean isDirect =
-                Iterables.any(
-                        getTasks(),
-                        new Predicate<ImportTask>() {
-                            @Override
-                            public boolean apply(ImportTask input) {
-                                return input.isDirect();
-                            }
-                        });
+        boolean isDirect = Iterables.any(getTasks(), input -> input.isDirect());
         return isDirect;
     }
 
@@ -303,17 +294,14 @@ public class ImportContext implements Serializable {
         boolean noLayersAvailable =
                 Iterables.all(
                         getTasks(),
-                        new Predicate<ImportTask>() {
-                            @Override
-                            public boolean apply(ImportTask input) {
-                                final StoreInfo store = input != null ? input.getStore() : null;
-                                final Catalog catalog = store != null ? store.getCatalog() : null;
-                                final LayerInfo layer =
-                                        catalog != null
-                                                ? catalog.getLayer(input.getLayer().getId())
-                                                : null;
-                                return (layer == null);
-                            }
+                        input -> {
+                            final StoreInfo store = input != null ? input.getStore() : null;
+                            final Catalog catalog = store != null ? store.getCatalog() : null;
+                            final LayerInfo layer =
+                                    catalog != null
+                                            ? catalog.getLayer(input.getLayer().getId())
+                                            : null;
+                            return (layer == null);
                         });
         return noLayersAvailable;
     }
@@ -323,9 +311,6 @@ public class ImportContext implements Serializable {
      *
      * <p>Whenever a ".locking" file is present, the scheduler won't wipe out the directory.
      * Otherwise the folder will be completely removed.
-     *
-     * @param directory
-     * @throws IOException
      */
     public void lockUploadFolder(Directory directory) throws IOException {
         if (directory != null) {
@@ -341,8 +326,6 @@ public class ImportContext implements Serializable {
      *
      * <p>Whenever a ".locking" file is present, the scheduler won't wipe out the directory.
      * Otherwise the folder will be completely removed.
-     *
-     * @param directory
      */
     public void unlockUploadFolder(Directory directory) {
         if (directory != null) {
@@ -375,7 +358,6 @@ public class ImportContext implements Serializable {
      *
      * <p>Default: a folder named "uploads" into the GEOSERVER_DATA_DIR/
      *
-     * @param context
      * @return {@linkplain Directory}
      */
     public Directory getUploadDirectory() {

@@ -17,7 +17,7 @@ Review of line symbology:
 
 * SLD uses a **LineSymbolizer** record how the shape of a line is drawn. The primary characteristic documented is the **Stroke** used to draw each segment between vertices.
 
-* Labeling of line work is anchored to the mid-point of the line. GeoServer provides an option to allow label rotation aligned with line segments.
+* Labeling of line work is anchored to the midpoint of the line. GeoServer provides an option to allow label rotation aligned with line segments.
 
 For our exercises we are going to be using simple CSS documents, often consisting of a single rule, in order to focus on the properties used for line symbology.
 
@@ -229,7 +229,7 @@ This is also our first example making use of a dynamic style (where the value of
       
 #. The **label-offset** property is used to adjust the starting position used for labeling.
    
-   Normally the displacement offset is supplied using two numbers (allowing an x and y offset from the the midway point used for LineString labeling).
+   Normally the displacement offset is supplied using two numbers (allowing an x and y offset from the midway point used for LineString labeling).
 
    When labeling a LineString there is a special twist: by specifying a single number for **label-offset** we can ask the rendering engine to position our label a set distance away from the LineString. 
   
@@ -359,7 +359,7 @@ This section explores the use of attribute selectors and the :kbd:`@scale` selec
 
 #. As shown above selectors can be combined in the same rule:
 
-   * Selectors separated by whitespace are combined CQL Filter AND
+   * Selectors separated by blank-space are combined CQL Filter AND
    * Selectors separated by a comma are combined using CQL Filter OR
 
    Our first rule `[@scale < 9000000] [scalerank > 7]` checks that the scale is less than 9M AND scalerank is greater than 7.

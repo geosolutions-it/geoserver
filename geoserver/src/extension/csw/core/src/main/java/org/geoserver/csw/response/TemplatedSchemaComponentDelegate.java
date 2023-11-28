@@ -5,13 +5,13 @@
  */
 package org.geoserver.csw.response;
 
-import static org.geoserver.ows.util.ResponseUtils.*;
+import static org.geoserver.ows.util.ResponseUtils.buildSchemaURL;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Writer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import net.opengis.cat.csw20.DescribeRecordType;
 import org.geoserver.config.GeoServer;
 import org.geoserver.csw.CSWInfo;
@@ -71,7 +71,7 @@ public class TemplatedSchemaComponentDelegate implements SchemaComponentDelegate
                 new BufferedReader(
                         new InputStreamReader(
                                 getClass().getResourceAsStream(schemaPath),
-                                Charset.forName("UTF-8")))) {
+                                StandardCharsets.UTF_8))) {
 
             String line;
             while ((line = reader.readLine()) != null) {

@@ -78,17 +78,14 @@ public class GeoServerDataSource extends BasicDataSource {
             Properties db = new Properties();
             if (dbprops.getType() != Type.RESOURCE) {
                 // use the default parameters and save them out
-                OutputStream fout = dbprops.out();
-                try {
+                try (OutputStream fout = dbprops.out()) {
                     defaultParameters.store(fout, null);
-                } finally {
-                    fout.close();
                 }
                 db.putAll(defaultParameters);
             } else {
-                InputStream in = dbprops.in();
-                db.load(in);
-                in.close();
+                try (InputStream in = dbprops.in()) {
+                    db.load(in);
+                }
             }
 
             // TODO: check for nulls

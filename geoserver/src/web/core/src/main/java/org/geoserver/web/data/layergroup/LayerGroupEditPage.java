@@ -14,7 +14,6 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.form.CheckBox;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.Form;
-import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
@@ -28,8 +27,11 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.web.data.resource.MetadataLinkEditor;
+import org.geoserver.web.data.resource.TitleAndAbstractPanel;
 import org.geoserver.web.data.workspace.WorkspaceChoiceRenderer;
 import org.geoserver.web.data.workspace.WorkspacesModel;
 import org.geoserver.web.publish.PublishedConfigurationPage;
@@ -49,7 +51,7 @@ public class LayerGroupEditPage extends PublishedConfigurationPage<LayerGroupInf
     public static final String GROUP = "group";
     public static final String WORKSPACE = "workspace";
 
-    LayerGroupEntryPanel lgEntryPanel;
+    LayerGroupEntryPanel<LayerGroupInfo> lgEntryPanel;
     private CheckBox queryableCheckBox;
 
     protected LayerGroupEditPage(boolean isNew) {
@@ -109,6 +111,7 @@ public class LayerGroupEditPage extends PublishedConfigurationPage<LayerGroupInf
 
         private EnvelopePanel envelopePanel;
         protected RootLayerEntryPanel rootLayerPanel;
+        private LayerGroupStyleConfig groupStyleConfig;
 
         @SuppressWarnings("serial")
         private void initUI() {
@@ -125,14 +128,15 @@ public class LayerGroupEditPage extends PublishedConfigurationPage<LayerGroupInf
 
             updateRootLayerPanel(getPublishedInfo().getMode());
 
-            TextField<String> name = new TextField<String>("name");
+            TextField<String> name = new TextField<>("name");
             name.setRequired(true);
             // JD: don't need this, this is validated at the catalog level
             // name.add(new GroupNameValidator());
             add(name);
-
+            add(new CheckBox("enabled"));
+            add(new CheckBox("advertised"));
             final DropDownChoice<LayerGroupInfo.Mode> modeChoice =
-                    new DropDownChoice<LayerGroupInfo.Mode>(
+                    new DropDownChoice<>(
                             "mode", new LayerGroupModeModel(), new LayerGroupModeChoiceRenderer());
             modeChoice.setNullValid(false);
             modeChoice.setRequired(true);
@@ -144,22 +148,26 @@ public class LayerGroupEditPage extends PublishedConfigurationPage<LayerGroupInf
                         protected void onUpdate(AjaxRequestTarget target) {
                             LayerGroupInfo.Mode mode = modeChoice.getModelObject();
                             updateRootLayerPanel(mode);
-                            target.add(rootLayerPanelContainer);
+                            if (mode.equals(LayerGroupInfo.Mode.SINGLE)
+                                    || mode.equals(LayerGroupInfo.Mode.OPAQUE_CONTAINER))
+                                groupStyleConfig.setVisible(true);
+                            else groupStyleConfig.setVisible(false);
+                            target.add(rootLayerPanelContainer, groupStyleConfig);
                         }
                     });
 
             add(modeChoice);
 
             queryableCheckBox =
-                    new CheckBox(
-                            "queryable", new Model<Boolean>(!getPublishedInfo().isQueryDisabled()));
+                    new CheckBox("queryable", new Model<>(!getPublishedInfo().isQueryDisabled()));
             add(queryableCheckBox);
 
-            add(new TextField<String>("title"));
-            add(new TextArea<String>("abstract"));
+            add(
+                    new TitleAndAbstractPanel(
+                            "titleAndAbstract", myModel, "layerGroupTitle", "abstract", this));
 
             DropDownChoice<WorkspaceInfo> wsChoice =
-                    new DropDownChoice<WorkspaceInfo>(
+                    new DropDownChoice<>(
                             "workspace", new WorkspacesModel(), new WorkspaceChoiceRenderer());
             wsChoice.setNullValid(true);
             wsChoice.add(
@@ -244,9 +252,23 @@ public class LayerGroupEditPage extends PublishedConfigurationPage<LayerGroupInf
 
             add(
                     lgEntryPanel =
-                            new LayerGroupEntryPanel(
-                                    "layers", getPublishedInfo(), wsChoice.getModel()));
+                            new LayerGroupEntryPanel<LayerGroupInfo>(
+                                    "layers", getPublishedInfo(), wsChoice.getModel()) {
 
+                                @Override
+                                protected List<PublishedInfo> getLayers(LayerGroupInfo object) {
+                                    return object.getLayers();
+                                }
+
+                                @Override
+                                protected List<StyleInfo> getStyles(LayerGroupInfo object) {
+                                    return object.getStyles();
+                                }
+                            });
+
+            add(groupStyleConfig = new LayerGroupStyleConfig("layerGroupStyles", myModel));
+            groupStyleConfig.setOutputMarkupId(true);
+            groupStyleConfig.setOutputMarkupPlaceholderTag(true);
             add(new MetadataLinkEditor("metadataLinks", myModel));
 
             // add keywords editor
@@ -304,7 +326,7 @@ public class LayerGroupEditPage extends PublishedConfigurationPage<LayerGroupInf
     protected void doSaveInternal() {
         // validation
         if (lgEntryPanel.getEntries().size() == 0) {
-            error((String) new ParamResourceModel("oneLayerMinimum", getPage()).getObject());
+            error(new ParamResourceModel("oneLayerMinimum", getPage()).getObject());
             return;
         }
 

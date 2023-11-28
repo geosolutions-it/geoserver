@@ -13,15 +13,18 @@
         <include>gt-css-*.jar</include>
         <include>gt-brewer-*.jar</include>
         <include>parboiled*.jar</include>
-        <include>asm*6.2.1.jar</include>
+        <include>asm*9.2.jar</include>
       </includes>
     </fileSet>
     <fileSet>
-       <directory>release/extensions/css</directory>
-       <outputDirectory></outputDirectory>
-       <includes>
-         <include>SCALA-LICENSE.txt</include>
-       </includes>
+        <directory>release/target/html/licenses</directory>
+        <outputDirectory></outputDirectory>
+        <includes>
+            <include>GPL.html</include>
+            <include>NOTICE.html</include>
+            <include>LGPL.html</include>
+            <include>GEOTOOLS_NOTICE.html</include>
+        </includes>
     </fileSet>
   </fileSets>
 </assembly>

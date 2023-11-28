@@ -61,7 +61,6 @@ public class KMLFileFormat extends VectorFormat {
         }
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public FeatureReader read(ImportData data, ImportTask task) throws IOException {
         File file = getFileFromData(data);
@@ -69,7 +68,7 @@ public class KMLFileFormat extends VectorFormat {
         // we need to get the feature type, to use for the particular parse through the file
         // since we put it on the metadata from the list method, we first check if that's still
         // available
-        SimpleFeatureType ft = (SimpleFeatureType) task.getFeatureType();
+        SimpleFeatureType ft = task.getFeatureType();
         if (ft == null) {
             // if the type is not available, we can generate one from the resource
             // we aren't able to ask for the feature type from the resource directly,
@@ -100,8 +99,7 @@ public class KMLFileFormat extends VectorFormat {
     }
 
     @Override
-    public void dispose(@SuppressWarnings("rawtypes") FeatureReader reader, ImportTask task)
-            throws IOException {
+    public void dispose(FeatureReader reader, ImportTask task) throws IOException {
         reader.close();
     }
 
@@ -132,14 +130,8 @@ public class KMLFileFormat extends VectorFormat {
 
     public Collection<SimpleFeatureType> parseFeatureTypes(String typeName, File file)
             throws IOException {
-        InputStream inputStream = null;
-        try {
-            inputStream = new FileInputStream(file);
+        try (InputStream inputStream = new FileInputStream(file)) {
             return parseFeatureTypes(typeName, inputStream);
-        } finally {
-            if (inputStream != null) {
-                inputStream.close();
-            }
         }
     }
 
@@ -150,7 +142,7 @@ public class KMLFileFormat extends VectorFormat {
         SimpleFeatureTypeBuilder ftb = new SimpleFeatureTypeBuilder();
         ftb.init(a);
         List<AttributeDescriptor> attributeDescriptors = a.getAttributeDescriptors();
-        Set<String> attrNames = new HashSet<String>(attributeDescriptors.size());
+        Set<String> attrNames = new HashSet<>(attributeDescriptors.size());
         for (AttributeDescriptor ad : attributeDescriptors) {
             attrNames.add(ad.getLocalName());
         }
@@ -167,7 +159,7 @@ public class KMLFileFormat extends VectorFormat {
         SimpleFeatureType transformedType = kmlTransform.convertFeatureType(ft);
         SimpleFeatureTypeBuilder ftb = new SimpleFeatureTypeBuilder();
         ftb.init(transformedType);
-        Set<String> existringAttrNames = new HashSet<String>();
+        Set<String> existringAttrNames = new HashSet<>();
         for (AttributeDescriptor ad : ft.getAttributeDescriptors()) {
             existringAttrNames.add(ad.getLocalName());
         }
@@ -186,9 +178,9 @@ public class KMLFileFormat extends VectorFormat {
             throws IOException {
         KMLRawReader reader =
                 new KMLRawReader(inputStream, KMLRawReader.ReadType.SCHEMA_AND_FEATURES);
-        Set<String> untypedAttributes = new HashSet<String>();
-        List<String> schemaNames = new ArrayList<String>();
-        List<SimpleFeatureType> schemas = new ArrayList<SimpleFeatureType>();
+        Set<String> untypedAttributes = new HashSet<>();
+        List<String> schemaNames = new ArrayList<>();
+        List<SimpleFeatureType> schemas = new ArrayList<>();
         SimpleFeatureType aggregateFeatureType = null;
         for (Object object : reader) {
             if (object instanceof SimpleFeature) {
@@ -232,7 +224,7 @@ public class KMLFileFormat extends VectorFormat {
         CatalogFactory factory = catalog.getFactory();
 
         Collection<SimpleFeatureType> featureTypes = parseFeatureTypes(baseName, file);
-        List<ImportTask> result = new ArrayList<ImportTask>(featureTypes.size());
+        List<ImportTask> result = new ArrayList<>(featureTypes.size());
         for (SimpleFeatureType featureType : featureTypes) {
             String name = featureType.getName().getLocalPart();
             FeatureTypeInfo ftinfo = factory.createFeatureType();

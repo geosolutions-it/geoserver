@@ -22,17 +22,13 @@ import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.WCS20Const;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
 import org.geoserver.wcs2_0.util.NCNameResourceCodec;
-import org.geoserver.wcs2_0.util.RequestUtils;
 import org.geoserver.wcs2_0.util.WCS20DescribeCoverageExtension;
-import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
-import org.geotools.coverage.grid.GridEnvelope2D;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.referencing.CRS;
@@ -73,11 +69,7 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
      */
     private boolean availableDescribeCoverageExtensions;
 
-    /**
-     * Creates a new WFSCapsTransformer object.
-     *
-     * @param mimemapper
-     */
+    /** Creates a new WFSCapsTransformer object. */
     public WCS20DescribeCoverageTransformer(
             Catalog catalog,
             EnvelopeAxesLabelsMapper envelopeDimensionsMapper,
@@ -93,6 +85,7 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 wcsDescribeCoverageExtensions != null && !wcsDescribeCoverageExtensions.isEmpty();
     }
 
+    @Override
     public WCS20DescribeCoverageTranslator createTranslator(ContentHandler handler) {
         return new WCS20DescribeCoverageTranslator(handler);
     }
@@ -116,10 +109,10 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
             this.request = (DescribeCoverageType) o;
 
             // collect coverages
-            List<CoverageInfo> coverages = new ArrayList<CoverageInfo>();
+            List<CoverageInfo> coverages = new ArrayList<>();
 
-            List<String> covIds = new ArrayList<String>();
-            for (String encodedCoverageId : (List<String>) request.getCoverageId()) {
+            List<String> covIds = new ArrayList<>();
+            for (String encodedCoverageId : request.getCoverageId()) {
                 String newCoverageID = encodedCoverageId;
                 // Extension point for encoding the coverageId
                 if (availableDescribeCoverageExtensions) {
@@ -266,14 +259,15 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 element("wcs:CoverageId", encodedId);
 
                 // handle coverage function
-                handleCoverageFunction((GridEnvelope2D) reader.getOriginalGridRange(), axisSwap);
+                handleCoverageFunction(reader.getOriginalGridRange(), axisSwap);
 
                 // metadata
                 handleMetadata(ci, dimensionsHelper);
 
                 // handle domain
                 builder.setLength(0);
-                axesNames = envelopeDimensionsMapper.getAxesNames(ci.getNativeBoundingBox(), false);
+
+                axesNames = envelopeDimensionsMapper.getAxesNames(ci.boundingBox(), false);
                 for (String axisName : axesNames) {
                     builder.append(axisName).append(" ");
                 }
@@ -289,19 +283,6 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 end("wcs:CoverageDescription");
             } catch (Exception e) {
                 throw new WcsException(e);
-            }
-        }
-
-        private GridSampleDimension[] getSampleDimensions(GridCoverage2DReader reader)
-                throws Exception {
-            GridCoverage2D coverage = null;
-            try {
-                coverage = RequestUtils.readSampleGridCoverage(reader);
-                return coverage.getSampleDimensions();
-            } finally {
-                if (coverage != null) {
-                    CoverageCleanerCallback.addCoverages(coverage);
-                }
             }
         }
 
@@ -367,7 +348,7 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
          * </gmlcov:rangeType>
          * }</pre>
          */
-        public void handleRangeType(final List<CoverageDimensionInfo> bands) {
+        private void handleRangeType(final List<CoverageDimensionInfo> bands) {
             start("gmlcov:rangeType");
             start("swe:DataRecord");
 

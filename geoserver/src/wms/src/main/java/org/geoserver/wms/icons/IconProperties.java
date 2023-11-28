@@ -6,8 +6,8 @@
 package org.geoserver.wms.icons;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
@@ -103,10 +103,10 @@ public abstract class IconProperties {
             public String getIconName(Style style) {
                 try {
                     final MessageDigest digest = MessageDigest.getInstance("MD5");
-                    digest.update(style.getName().getBytes("UTF-8"));
+                    digest.update(style.getName().getBytes(StandardCharsets.UTF_8));
                     for (Map.Entry<String, String> property : styleProperties.entrySet()) {
-                        digest.update(property.getKey().getBytes("UTF-8"));
-                        digest.update(property.getValue().getBytes("UTF-8"));
+                        digest.update(property.getKey().getBytes(StandardCharsets.UTF_8));
+                        digest.update(property.getValue().getBytes(StandardCharsets.UTF_8));
                     }
                     final byte[] hash = digest.digest();
                     final StringBuilder builder = new StringBuilder();
@@ -115,8 +115,6 @@ public abstract class IconProperties {
                     }
                     return builder.toString();
                 } catch (NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -163,12 +161,10 @@ public abstract class IconProperties {
                             file = graphicFile = file.getCanonicalFile();
                             if (file.getAbsolutePath().startsWith(styles.getAbsolutePath())) {
                                 // ok, part of the styles directory, extract only the relative path
-                                file =
-                                        new File(
-                                                file.getAbsolutePath()
-                                                        .substring(
-                                                                styles.getAbsolutePath().length()
-                                                                        + 1));
+                                String relativePath =
+                                        file.getAbsolutePath()
+                                                .substring(styles.getAbsolutePath().length() + 1);
+                                file = new File(relativePath);
                             } else {
                                 // we wont' transform this, other dirs are not published
                                 file = null;
@@ -189,7 +185,7 @@ public abstract class IconProperties {
                         return ResponseUtils.buildURL(
                                 baseURL,
                                 "styles/" + target.getPath(),
-                                Collections.<String, String>emptyMap(),
+                                Collections.emptyMap(),
                                 URLType.RESOURCE);
                     } else if (!("http".equals(graphicProtocol)
                             || "https".equals(graphicProtocol))) {

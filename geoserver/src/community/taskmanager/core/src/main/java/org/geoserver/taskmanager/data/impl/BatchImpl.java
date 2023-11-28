@@ -4,6 +4,7 @@
  */
 package org.geoserver.taskmanager.data.impl;
 
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.CascadeType;
@@ -16,25 +17,25 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.OrderBy;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 import org.geoserver.taskmanager.data.Batch;
 import org.geoserver.taskmanager.data.BatchElement;
 import org.geoserver.taskmanager.data.BatchRun;
 import org.geoserver.taskmanager.data.Configuration;
+import org.geoserver.taskmanager.data.LatestBatchRun;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
 
 /** @author Niels Charlier */
 @Entity
 @Table(
-    uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"name", "configuration", "removeStamp"}),
-        @UniqueConstraint(columnNames = {"nameNoConfig", "removeStamp"})
-    }
-)
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"name", "configuration", "removeStamp"}),
+            @UniqueConstraint(columnNames = {"nameNoConfig", "removeStamp"})
+        })
 @FilterDef(name = "activeElementFilter", defaultCondition = "removeStamp = 0")
 public class BatchImpl extends BaseImpl implements Batch {
 
@@ -43,14 +44,14 @@ public class BatchImpl extends BaseImpl implements Batch {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @XStreamOmitField
     private Long id;
 
     @OneToMany(
-        fetch = FetchType.LAZY,
-        targetEntity = BatchElementImpl.class,
-        mappedBy = "batch",
-        cascade = CascadeType.ALL
-    )
+            fetch = FetchType.LAZY,
+            targetEntity = BatchElementImpl.class,
+            mappedBy = "batch",
+            cascade = CascadeType.ALL)
     @OrderBy("index, id")
     @Filter(name = "activeElementFilter")
     private List<BatchElement> elements = new ArrayList<BatchElement>();
@@ -62,7 +63,7 @@ public class BatchImpl extends BaseImpl implements Batch {
 
     // stupid work-around
     // duplicate of name only set if configuration == null, just for unique constraint
-    @Column private String nameNoConfig;
+    @Column @XStreamOmitField private String nameNoConfig;
 
     @ManyToOne
     @JoinColumn(name = "configuration", nullable = true)
@@ -77,18 +78,21 @@ public class BatchImpl extends BaseImpl implements Batch {
     private Boolean enabled = true;
 
     @Column(nullable = false)
+    @XStreamOmitField
     private Long removeStamp = 0L;
 
     @OneToMany(
-        fetch = FetchType.LAZY,
-        targetEntity = BatchRunImpl.class,
-        mappedBy = "batch",
-        cascade = CascadeType.ALL
-    )
+            fetch = FetchType.LAZY,
+            targetEntity = BatchRunImpl.class,
+            mappedBy = "batch",
+            cascade = CascadeType.ALL)
     @OrderBy("id")
+    @XStreamOmitField
     private List<BatchRun> batchRuns = new ArrayList<BatchRun>();
 
-    @Transient private BatchRun latestBatchRun;
+    @OneToOne(fetch = FetchType.LAZY, targetEntity = LatestBatchRunImpl.class, mappedBy = "batch")
+    @XStreamOmitField
+    private LatestBatchRun latestBatchRun;
 
     @Override
     public Long getId() {
@@ -187,12 +191,11 @@ public class BatchImpl extends BaseImpl implements Batch {
         return removeStamp;
     }
 
-    @Override
-    public BatchRun getLatestBatchRun() {
+    public LatestBatchRun getLatestBatchRun() {
         return latestBatchRun;
     }
 
-    public void setLatestBatchRun(BatchRun latestBatchRun) {
+    public void setLatestBatchRun(LatestBatchRun latestBatchRun) {
         this.latestBatchRun = latestBatchRun;
     }
 }

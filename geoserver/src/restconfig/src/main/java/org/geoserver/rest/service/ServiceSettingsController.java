@@ -24,25 +24,25 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /** Service Settings controller */
-public abstract class ServiceSettingsController extends AbstractGeoServerController {
-    private Class clazz;
+public abstract class ServiceSettingsController<T extends ServiceInfo>
+        extends AbstractGeoServerController {
+    private Class<T> clazz;
 
     @Autowired
-    public ServiceSettingsController(@Qualifier("geoServer") GeoServer geoServer, Class clazz) {
+    public ServiceSettingsController(@Qualifier("geoServer") GeoServer geoServer, Class<T> clazz) {
         super(geoServer);
         this.clazz = clazz;
     }
 
     @GetMapping(
-        value = {"/settings", "/workspaces/{workspaceName}/settings"},
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            value = {"/settings", "/workspaces/{workspaceName}/settings"},
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper serviceSettingsGet(@PathVariable(required = false) String workspaceName) {
-        ServiceInfo service;
+        T service;
         if (workspaceName != null) {
             WorkspaceInfo ws = geoServer.getCatalog().getWorkspaceByName(workspaceName);
             if (ws == null) {
@@ -63,11 +63,11 @@ public abstract class ServiceSettingsController extends AbstractGeoServerControl
         return wrapObject(service, clazz);
     }
 
-    public void serviceSettingsPut(ServiceInfo info, String workspaceName) {
+    public void serviceSettingsPut(T info, String workspaceName) {
         WorkspaceInfo ws = null;
         if (workspaceName != null) ws = geoServer.getCatalog().getWorkspaceByName(workspaceName);
 
-        ServiceInfo originalInfo;
+        T originalInfo;
         if (ws != null) {
             originalInfo = geoServer.getService(ws, clazz);
         } else {

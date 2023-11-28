@@ -52,11 +52,9 @@ public class ModuleStatusPanel extends Panel {
 
         // get the list of ModuleStatuses
         List<ModuleStatus> applicationStatus =
-                GeoServerExtensions.extensions(ModuleStatus.class)
-                        .stream()
-                        .filter(status -> !status.getModule().matches("\\A[system-](.*)"))
+                GeoServerExtensions.extensions(ModuleStatus.class).stream()
                         .map(ModuleStatusImpl::new)
-                        .sorted(Comparator.comparing(ModuleStatus::getModule))
+                        .sorted(Comparator.comparing(ModuleStatus::getName))
                         .collect(Collectors.toList());
 
         final ListView<ModuleStatus> moduleView =
@@ -71,12 +69,13 @@ public class ModuleStatusPanel extends Panel {
                         item.add(
                                 new Label(
                                         "component",
-                                        new Model(
+                                        new Model<>(
                                                 item.getModelObject().getComponent().orElse(""))));
                         item.add(
                                 new Label(
                                         "version",
-                                        new Model(item.getModelObject().getVersion().orElse(""))));
+                                        new Model<>(
+                                                item.getModelObject().getVersion().orElse(""))));
                         msgLink =
                                 new AjaxLink("msg") {
                                     @Override
@@ -117,9 +116,10 @@ public class ModuleStatusPanel extends Panel {
             Label component =
                     new Label(
                             "component",
-                            new Model(item.getModelObject().getComponent().orElse("")));
+                            new Model<>(item.getModelObject().getComponent().orElse("")));
             Label version =
-                    new Label("version", new Model(item.getModelObject().getVersion().orElse("")));
+                    new Label(
+                            "version", new Model<>(item.getModelObject().getVersion().orElse("")));
             MultiLineLabel msgLabel =
                     new MultiLineLabel("msg", item.getModelObject().getMessage().orElse(""));
 

@@ -4,6 +4,7 @@
  */
 package org.geoserver.taskmanager.data.impl;
 
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,8 +32,9 @@ import org.hibernate.annotations.FilterDef;
 
 @Entity
 @Table(
-    uniqueConstraints = {@UniqueConstraint(columnNames = {"name", "configuration", "removeStamp"})}
-)
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"name", "configuration", "removeStamp"})
+        })
 @FilterDef(name = "activeTaskElementFilter", defaultCondition = "removeStamp = 0")
 // TODO: need alias support for filters, for now need to filter this out manually
 // @FilterDef(name="activeTaskElementFilter", defaultCondition="removeStamp = 0 and
@@ -44,6 +46,7 @@ public class TaskImpl extends BaseImpl implements Task {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @XStreamOmitField
     private Long id;
 
     @Column private String name;
@@ -55,12 +58,11 @@ public class TaskImpl extends BaseImpl implements Task {
     private ConfigurationImpl configuration;
 
     @OneToMany(
-        fetch = FetchType.EAGER,
-        targetEntity = ParameterImpl.class,
-        mappedBy = "task",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+            fetch = FetchType.EAGER,
+            targetEntity = ParameterImpl.class,
+            mappedBy = "task",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     @MapKey(name = "name")
     @OrderBy("id")
     private Map<String, Parameter> parameters = new LinkedHashMap<String, Parameter>();
@@ -71,6 +73,7 @@ public class TaskImpl extends BaseImpl implements Task {
     private List<BatchElement> batchElements = new ArrayList<BatchElement>();
 
     @Column(nullable = false)
+    @XStreamOmitField
     private Long removeStamp = 0L;
 
     @Override

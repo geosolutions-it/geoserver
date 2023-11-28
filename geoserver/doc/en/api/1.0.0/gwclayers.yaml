@@ -4,14 +4,20 @@ info:
   version: 1.0.0
   title: GeoWebCache Layers
   description: A layer is a published resource (feature type or coverage).
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
 schemes:
 - http
-host: localhost:8080
 basePath: /geoserver/gwc/rest
 paths:
   /layers:
     get:
       operationId: layersGet
+      tags:
+       - "GwcLayers"
       summary: Get a list of cached layers
       description: Displays a list of all cached layers on the server.
       produces:
@@ -38,6 +44,8 @@ paths:
   /layers/{layerName}:
     get:
       operationId: layersNameGet
+      tags:
+       - "GwcLayers"
       summary: Retrieve a cached layer
       description: Retrieves a single cached layer definition.
       produces:
@@ -92,6 +100,8 @@ paths:
 
     put:
       operationId: layersNamePut
+      tags:
+       - "GwcLayers"
       summary: Create or update a cached layer.
       description: Creates a new cached layer on the server, or modifies an existing cached layer.
       parameters:
@@ -117,6 +127,8 @@ paths:
 
     post:
       operationId: layersNamePost
+      tags:
+       - "GwcLayers"
       summary: Modify a cached layer (Deprecated).
       description: Modifies an existing cached layer on the server. Deprecated - use PUT instead.
       parameters:
@@ -140,6 +152,8 @@ paths:
 
     delete:
       operationId: layersNameDelete
+      tags:
+       - "GwcLayers"
       summary: Delete cached layer
       description: Deletes a cached layer from the server.
       parameters:
@@ -213,7 +227,7 @@ definitions:
                     description: Coordinates used to set bounds uses double(ie. {-x,-y,x,y})
               'zoomStart':
                 type: integer
-                description: If the the layer does not make sense at high zoom levels you can define a starting point here.
+                description: If the layer does not make sense at high zoom levels you can define a starting point here.
               'zoomStop':
                 type: integer
                 description: If the layer does not contain features that make sense to show when zoomed in then you can set the stop level here.

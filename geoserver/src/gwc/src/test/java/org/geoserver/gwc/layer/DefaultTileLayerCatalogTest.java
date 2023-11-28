@@ -5,10 +5,12 @@
  */
 package org.geoserver.gwc.layer;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableSet;
 import com.thoughtworks.xstream.XStream;
@@ -20,6 +22,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import org.apache.commons.io.FileUtils;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
@@ -35,7 +38,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.springframework.web.context.WebApplicationContext;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -56,11 +58,13 @@ public class DefaultTileLayerCatalogTest {
 
         new File(baseDirectory, "gwc-layers").mkdir();
 
-        XStream xStream =
-                XMLConfiguration.getConfiguredXStreamWithContext(
-                        new SecureXStream(), (WebApplicationContext) null, Context.PERSIST);
+        Supplier<XStream> xStream =
+                () ->
+                        XMLConfiguration.getConfiguredXStreamWithContext(
+                                new SecureXStream(), null, Context.PERSIST);
 
         catalog = new DefaultTileLayerCatalog(resourceLoader, xStream);
+        catalog.initialize();
     }
 
     @Test
@@ -176,7 +180,7 @@ public class DefaultTileLayerCatalogTest {
     public void testEvents() throws IOException, InterruptedException {
 
         ((FileSystemWatcher) resourceLoader.getResourceNotificationDispatcher())
-                .schedule(50, TimeUnit.MILLISECONDS);
+                .schedule(50, MILLISECONDS);
 
         AtomicBoolean hasBeenCreated = new AtomicBoolean(false);
 
@@ -185,48 +189,41 @@ public class DefaultTileLayerCatalogTest {
         AtomicBoolean hasBeenDeleted = new AtomicBoolean(false);
 
         catalog.addListener(
-                new TileLayerCatalogListener() {
-
-                    @Override
-                    public void onEvent(String layerId, Type type) {
-                        switch (type) {
-                            case CREATE:
-                                hasBeenCreated.set(true);
-                                break;
-                            case DELETE:
-                                hasBeenDeleted.set(true);
-                                break;
-                            case MODIFY:
-                                hasBeenModified.set(true);
-                                break;
-                            default:
-                                break;
-                        }
+                (layerId, type) -> {
+                    switch (type) {
+                        case CREATE:
+                            hasBeenCreated.set(true);
+                            break;
+                        case DELETE:
+                            hasBeenDeleted.set(true);
+                            break;
+                        case MODIFY:
+                            hasBeenModified.set(true);
+                            break;
+                        default:
+                            break;
                     }
                 });
 
         File file = new File(baseDirectory, "gwc-layers/id1.xml");
 
-        FileUtils.writeStringToFile(
-                file,
-                "<org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl><id>id1</id><name>originalname</name></org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl>",
-                "UTF-8");
+        writeFileLayerInfoImpl(file, "originalname");
 
-        waitForFlag(hasBeenCreated, 200);
+        await().atMost(60, TimeUnit.SECONDS).until(() -> hasBeenCreated.get());
         GeoServerTileLayerInfo info = catalog.getLayerById("id1");
         assertEquals("originalname", info.getName());
         assertNotNull(catalog.getLayerByName("originalname"));
 
-        // it is necessary to wait a second, otherwise
-        // the change is not detected because it is too soon after creation
-        Thread.sleep(1000);
+        // on linux and older versions of Java the minimim
+        long lastModified = file.lastModified();
+        await().atMost(1100, MILLISECONDS)
+                .until(
+                        () -> {
+                            writeFileLayerInfoImpl(file, "newname");
+                            return file.lastModified() > lastModified;
+                        });
 
-        FileUtils.writeStringToFile(
-                file,
-                "<org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl><id>id1</id><name>newname</name></org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl>",
-                "UTF-8");
-
-        waitForFlag(hasBeenModified, 200);
+        await().atMost(60, SECONDS).until(() -> hasBeenModified.get());
 
         info = catalog.getLayerById("id1");
         assertEquals("newname", info.getName());
@@ -235,19 +232,19 @@ public class DefaultTileLayerCatalogTest {
 
         file.delete();
 
-        waitForFlag(hasBeenDeleted, 200);
+        await().atMost(60, SECONDS).until(() -> hasBeenDeleted.get());
 
         assertNull(catalog.getLayerById("id1"));
         assertNull(catalog.getLayerByName("newname"));
     }
 
-    public void waitForFlag(AtomicBoolean flag, int maxMillis) throws InterruptedException {
-        int counter = 0;
-        while (!flag.get() && counter * 100 < maxMillis) {
-            Thread.sleep(100);
-            counter++;
-        }
-        assertTrue(flag.get());
+    private void writeFileLayerInfoImpl(File file, String name) throws IOException {
+        FileUtils.writeStringToFile(
+                file,
+                "<org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl><id>id1</id><name>"
+                        + name
+                        + "</name></org.geoserver.gwc.layer.GeoServerTileLayerInfoImpl>",
+                "UTF-8");
     }
 
     @Test

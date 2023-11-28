@@ -12,7 +12,7 @@ Using an external data directory allows for much easier upgrades, since there is
 Use a spatial database
 **********************
 
-Shapefiles are a very common format for geospatial data. But if you are running GeoServer in a production environment, it is better to use a spatial database such as `PostGIS <http://www.postgis.org>`_.  This is essential if doing transactions (WFS-T). Most spatial databases provide shapefile conversion tools. Although there are many options for spatial databases (see the section on :ref:`data_database`), PostGIS is recommended. Oracle, DB2, and ArcSDE are also supported.
+Shapefiles are a very common format for geospatial data. But if you are running GeoServer in a production environment, it is better to use a spatial database such as `PostGIS <http://www.postgis.org>`_.  This is essential if doing transactions (WFS-T). Most spatial databases provide shapefile conversion tools. Although there are many options for spatial databases (see the section on :ref:`data_database`), PostGIS is recommended. Oracle, and DB2 are also supported.
 
 Pick the best performing coverage formats
 *****************************************
@@ -46,13 +46,14 @@ Inner tiling sets up the image layout so that it's organized in tiles instead of
    gdal_translate -of GTiff -projwin -180 90 -50 -10 -co "TILED=YES" bigDataSet.ecw myTiff.tiff
 
 An overview is a downsampled version of the same image, that is, a zoomed out version, which is usually much smaller. When GeoServer needs to render the Geotiff, it'll look for the most appropriate overview as a starting point, thus reading and converting way less data. Overviews can be added using 
-`gdaladdo <http://www.gdal.org/gdaladdo.html>`_, or the the OverviewsEmbedded command included in Geotools. Here is a sample of using gdaladdo to add overviews that are downsampled 2, 4, 8 and 16 times compared to the original:
+`gdaladdo <http://www.gdal.org/gdaladdo.html>`_, or the OverviewsEmbedded command included in Geotools. Here is a sample of using gdaladdo to add overviews that are downsampled 2, 4, 8 and 16 times compared to the original:
 
 .. code-block:: xml
 
    gdaladdo -r average mytiff.tif 2 4 8 16
 
-As a final note, Geotiff supports various kinds of compression, but we do suggest to not use it. Whilst it allows for much smaller files, the decompression process is expensive and will be performed on each data access, significantly slowing down rendering. In our experience, the decompression time is higher than the pure disk data reading.
+As a final note, Geotiff supports various kinds of compression both lossles as well as lossy. JPEG compression can produce artifacts but it usually produce very good results on RGB or RGBA images if coupled with inner masks. Deflate compression is to be preferred with elevation or similar data when a lossless compressions is needed.
+Generally speaking, if I/O is the bottleneck, compression can help a lot as it reduces the cost of I/O although at the expenses of some CPU cycles.
 
 Handling huge data sets
 -----------------------

@@ -38,11 +38,6 @@ public class FileInput extends Panel {
     protected IModel<? extends FileFilter> fileFilter;
 
     /**
-     * @param id
-     * @param paramsMap
-     * @param paramName
-     * @param paramLabelModel
-     * @param required
      * @param validators any extra validator that should be added to the input field, or {@code
      *     null}
      */
@@ -127,11 +122,11 @@ public class FileInput extends Panel {
                         }
 
                         GeoServerFileChooser chooser =
-                                new GeoServerFileChooser(
-                                        dialog.getContentId(), new Model<File>(file)) {
+                                new GeoServerFileChooser(dialog.getContentId(), new Model<>(file)) {
                                     private static final long serialVersionUID =
                                             -7096642192491726498L;
 
+                                    @Override
                                     protected void fileClicked(
                                             File file, AjaxRequestTarget target) {
                                         // clear the raw input of the field won't show the new model
@@ -158,11 +153,7 @@ public class FileInput extends Panel {
         return textField;
     }
 
-    /**
-     * Sets the filter that will act in the file chooser dialog
-     *
-     * @param fileFilter
-     */
+    /** Sets the filter that will act in the file chooser dialog */
     public void setFileFilter(IModel<? extends FileFilter> fileFilter) {
         this.fileFilter = fileFilter;
     }

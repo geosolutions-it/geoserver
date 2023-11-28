@@ -7,11 +7,17 @@ package org.geoserver.wfs.xslt.config;
 
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -265,7 +271,9 @@ public class TransformRepositoryTest {
         File xslt = new File(testRoot, "test-tx.xslt");
         assertTrue(xslt.exists());
 
-        String expected = IOUtils.toString(getClass().getResourceAsStream("test.xslt"), "UTF-8");
+        String expected =
+                IOUtils.toString(
+                        getClass().getResourceAsStream("test.xslt"), StandardCharsets.UTF_8);
         String actual = FileUtils.readFileToString(xslt, "UTF-8");
         assertEquals(expected, actual);
 
@@ -330,19 +338,20 @@ public class TransformRepositoryTest {
         repo.putTransformSheet(info, getClass().getResourceAsStream("test.xslt"));
 
         Transformer transformer = repo.getTransformer(info);
-        InputStream is = getClass().getResourceAsStream("sample.xml");
-        StreamSource source = new StreamSource(is);
-        DOMResult result = new DOMResult();
-        transformer.transform(source, result);
-        Document dom = (Document) result.getNode();
-        XMLAssert.assertXpathEvaluatesTo("12", "count(/html/body/table/tr/td)", dom);
-        XMLAssert.assertXpathEvaluatesTo("1", "count(/html/body/table/tr[td='museum'])", dom);
-        XMLAssert.assertXpathEvaluatesTo(
-                "1", "count(/html/body/table/tr[td='-74.0104611,40.70758763'])", dom);
+        try (InputStream is = getClass().getResourceAsStream("sample.xml"); ) {
+            StreamSource source = new StreamSource(is);
+            DOMResult result = new DOMResult();
+            transformer.transform(source, result);
+            Document dom = (Document) result.getNode();
+            XMLAssert.assertXpathEvaluatesTo("12", "count(/html/body/table/tr/td)", dom);
+            XMLAssert.assertXpathEvaluatesTo("1", "count(/html/body/table/tr[td='museum'])", dom);
+            XMLAssert.assertXpathEvaluatesTo(
+                    "1", "count(/html/body/table/tr[td='-74.0104611,40.70758763'])", dom);
+        }
     }
 
     private Set<String> getConfigurationNames(List<TransformInfo> configs) {
-        Set<String> result = new HashSet<String>();
+        Set<String> result = new HashSet<>();
         for (TransformInfo ti : configs) {
             result.add(ti.getName());
         }

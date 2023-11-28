@@ -41,6 +41,7 @@ import org.geoserver.taskmanager.web.model.BatchElementsModel;
 import org.geoserver.taskmanager.web.panel.DropDownPanel;
 import org.geoserver.taskmanager.web.panel.FrequencyPanel;
 import org.geoserver.taskmanager.web.panel.PositionPanel;
+import org.geoserver.web.ComponentAuthorizer;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.GeoServerSecuredPage;
 import org.geoserver.web.UnauthorizedPage;
@@ -251,19 +252,22 @@ public class BatchPage extends GeoServerSecuredPage {
                     } else {
                         form.success(new ParamResourceModel("success", getPage()).getString());
                     }
-                } catch (ConstraintViolationException e) {
-                    form.error(new ParamResourceModel("duplicate", getPage()).getString());
                 } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, e.getMessage(), e);
-                    Throwable rootCause = ExceptionUtils.getRootCause(e);
-                    form.error(
-                            rootCause == null
-                                    ? e.getLocalizedMessage()
-                                    : rootCause.getLocalizedMessage());
+                    if (e.getCause() instanceof ConstraintViolationException) {
+                        form.error(new ParamResourceModel("duplicate", getPage()).getString());
+                    } else {
+                        LOGGER.log(Level.WARNING, e.getMessage(), e);
+                        Throwable rootCause = ExceptionUtils.getRootCause(e);
+                        form.error(
+                                rootCause == null
+                                        ? e.getLocalizedMessage()
+                                        : rootCause.getLocalizedMessage());
+                    }
                 }
                 addFeedbackPanels(target);
             }
 
+            @Override
             protected void onError(AjaxRequestTarget target, Form<?> form) {
                 addFeedbackPanels(target);
             }
@@ -309,7 +313,7 @@ public class BatchPage extends GeoServerSecuredPage {
                                     if (!addedTasks.contains(task)
                                             && TaskManagerBeans.get()
                                                     .getSecUtil()
-                                                    .isWriteable(
+                                                    .isWritable(
                                                             BatchPage.this
                                                                     .getSession()
                                                                     .getAuthentication(),
@@ -431,5 +435,10 @@ public class BatchPage extends GeoServerSecuredPage {
                 return null;
             }
         };
+    }
+
+    @Override
+    protected ComponentAuthorizer getPageAuthorizer() {
+        return ComponentAuthorizer.WORKSPACE_ADMIN;
     }
 }

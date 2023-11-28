@@ -13,7 +13,6 @@ import org.geoserver.config.impl.ServiceInfoImpl;
  *
  * @author Andrea Aime, GeoSolutions
  */
-@SuppressWarnings("unchecked")
 public class CSWInfoImpl extends ServiceInfoImpl implements CSWInfo {
 
     /** */
@@ -21,7 +20,10 @@ public class CSWInfoImpl extends ServiceInfoImpl implements CSWInfo {
 
     boolean canonicalSchemaLocation;
 
-    public CSWInfoImpl() {}
+    @Override
+    public String getType() {
+        return "CSW";
+    }
 
     @Override
     public boolean isCanonicalSchemaLocation() {

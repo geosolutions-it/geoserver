@@ -7,7 +7,7 @@ package org.geoserver.rest.catalog;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Collections;
 import org.geoserver.catalog.Catalog;
@@ -118,7 +118,7 @@ public class AdminRequestTest extends CatalogRESTTestSupport {
     public void testWorkspacesWithProxyHeaders() throws Exception {
         GeoServerInfo ginfo = getGeoServer().getGlobal();
         SettingsInfo settings = getGeoServer().getGlobal().getSettings();
-        ginfo.setUseHeadersProxyURL(true);
+        settings.setUseHeadersProxyURL(true);
         settings.setProxyBaseUrl(
                 "${X-Forwarded-Proto}://${X-Forwarded-Host}/${X-Forwarded-Path} ${X-Forwarded-Proto}://${X-Forwarded-Host}");
         ginfo.setSettings(settings);

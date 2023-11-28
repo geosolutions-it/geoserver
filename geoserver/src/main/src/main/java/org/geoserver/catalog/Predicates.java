@@ -15,8 +15,11 @@ import org.opengis.filter.And;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
 import org.opengis.filter.MultiValuedFilter.MatchAction;
+import org.opengis.filter.Not;
 import org.opengis.filter.Or;
 import org.opengis.filter.PropertyIsEqualTo;
+import org.opengis.filter.expression.Expression;
+import org.opengis.filter.expression.Function;
 import org.opengis.filter.expression.PropertyName;
 import org.opengis.filter.sort.SortBy;
 import org.opengis.filter.sort.SortOrder;
@@ -203,7 +206,7 @@ public class Predicates {
      * a false predicate is found.
      */
     public static Filter and(Filter op1, Filter op2) {
-        List<Filter> children = new ArrayList<Filter>();
+        List<Filter> children = new ArrayList<>();
         if (op1 instanceof And) {
             children.addAll(((And) op1).getChildren());
         } else {
@@ -216,6 +219,17 @@ public class Predicates {
         }
 
         return factory.and(children);
+    }
+
+    /**
+     * Returns a negated filter. If the filter was already a negation, its child fiter will be
+     * returned instead (simplifying out the double negation)
+     */
+    public static Filter not(Filter filter) {
+        if (filter instanceof Not) {
+            return ((Not) filter).getFilter();
+        }
+        return factory.not(filter);
     }
 
     /**
@@ -238,7 +252,7 @@ public class Predicates {
      * a false predicate is found.
      */
     public static Filter and(List<Filter> operands) {
-        if (operands.size() == 0) {
+        if (operands.isEmpty()) {
             return Filter.INCLUDE;
         } else if (operands.size() == 1) {
             return operands.get(0);
@@ -255,7 +269,7 @@ public class Predicates {
      * a true predicate is found.
      */
     public static Filter or(Filter op1, Filter op2) {
-        List<Filter> children = new ArrayList<Filter>();
+        List<Filter> children = new ArrayList<>();
         if (op1 instanceof Or) {
             children.addAll(((Or) op1).getChildren());
         } else {
@@ -275,7 +289,7 @@ public class Predicates {
     }
 
     public static Filter or(List<Filter> operands) {
-        if (operands.size() == 0) {
+        if (operands.isEmpty()) {
             return Filter.EXCLUDE;
         } else if (operands.size() == 1) {
             return operands.get(0);
@@ -300,7 +314,7 @@ public class Predicates {
         return factory.sort(propertyName, ascending ? SortOrder.ASCENDING : SortOrder.DESCENDING);
     }
 
-    public static Filter isInstanceOf(Class clazz) {
+    public static Filter isInstanceOf(Class<?> clazz) {
         return factory.equals(
                 factory.function("isInstanceOf", factory.literal(clazz)), factory.literal(true));
     }
@@ -329,5 +343,14 @@ public class Predicates {
      */
     public static Filter notEqual(final String property, final Object expected) {
         return factory.notEqual(factory.property(property), factory.literal(expected));
+    }
+
+    /** Encodes a Filter checking that the given property is equal to one of the provided values. */
+    public static Filter in(String propertyName, List<? extends Object> values) {
+        List<Expression> arguments = new ArrayList<>();
+        arguments.add(factory.property(propertyName));
+        values.stream().map(v -> factory.literal(v)).forEach(l -> arguments.add(l));
+        Function in = factory.function("in", arguments.toArray(new Expression[arguments.size()]));
+        return factory.equals(in, factory.literal(true));
     }
 }

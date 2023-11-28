@@ -1,4 +1,4 @@
-/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 - 2023 Open Source Geospatial Foundation - all rights reserved
  * (c) 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -7,8 +7,6 @@ package org.geoserver.security.ldap;
 
 import java.util.function.Supplier;
 import javax.naming.directory.DirContext;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLSession;
 import org.springframework.ldap.NamingException;
 import org.springframework.ldap.core.ContextSource;
 import org.springframework.ldap.core.support.AbstractContextSource;
@@ -26,11 +24,7 @@ import org.springframework.security.ldap.authentication.SpringSecurityAuthentica
  */
 public class LDAPUtils {
 
-    /**
-     * Creates an LdapContext from a configuration object.
-     *
-     * @param ldapConfig
-     */
+    /** Creates an LdapContext from a configuration object. */
     public static LdapContextSource createLdapContext(LDAPBaseSecurityServiceConfig ldapConfig) {
         LdapContextSource ldapContext =
                 new DefaultSpringSecurityContextSource(ldapConfig.getServerURL());
@@ -43,25 +37,14 @@ public class LDAPUtils {
 
             DefaultTlsDirContextAuthenticationStrategy tls =
                     new DefaultTlsDirContextAuthenticationStrategy();
-            tls.setHostnameVerifier(
-                    new HostnameVerifier() {
-                        @Override
-                        public boolean verify(String hostname, SSLSession session) {
-                            return true;
-                        }
-                    });
+            tls.setHostnameVerifier((hostname, session) -> true);
 
             ldapContext.setAuthenticationStrategy(tls);
         }
         return ldapContext;
     }
 
-    /**
-     * Returns an LDAP template bounded to the given context, if not null.
-     *
-     * @param ctx
-     * @param template
-     */
+    /** Returns an LDAP template bounded to the given context, if not null. */
     public static SpringSecurityLdapTemplate getLdapTemplateInContext(
             final DirContext ctx, final SpringSecurityLdapTemplate template) {
         SpringSecurityLdapTemplate authTemplate;
@@ -125,5 +108,21 @@ public class LDAPUtils {
                             });
         }
         return authTemplate;
+    }
+    /**
+     * Escapes the "\" token in search strings for the Spring method template.search().
+     *
+     * <p>For the Spring method template.search(...) several characters are escaped with a "\". For
+     * example, if you have user CNs with a comma such as "Smith, John", this comma is escaped with
+     * a "\". This results in "Smith\, John". Characters other than commas are also escaped (see
+     * https://ldap.com/ldap-dns-and-rdns).
+     *
+     * <p>In the new Spring version, the escape token must be "\\" or "\5C" to get correct results
+     * when searching for users etc. For example the search string "Smith\, John" is escaped to
+     * "Smith\\, John". Actually, there is a double escape.
+     */
+    public static String escapeSearchString(String searchString) {
+        // Replace the escape token "\\" with "\\\\" to search.
+        return searchString.replace("\\", "\\\\");
     }
 }

@@ -52,7 +52,6 @@ public class LogPage extends GeoServerSecuredPage {
 
     @SuppressWarnings("serial")
     public LogPage(PageParameters params) {
-        @SuppressWarnings("rawtypes")
         Form<?> form = new Form("form");
         add(form);
 
@@ -103,12 +102,13 @@ public class LogPage extends GeoServerSecuredPage {
                     }
                 });
 
+        @SuppressWarnings("PMD.UseDiamondOperator") // java 8 compiler cannot infer type
         NumberTextField<Integer> lines =
-                new NumberTextField<Integer>("lines", new PropertyModel<Integer>(this, "lines"));
+                new NumberTextField<Integer>("lines", new PropertyModel<>(this, "lines"));
         lines.add(RangeValidator.minimum(1));
         form.add(lines);
 
-        TextArea<String> logs = new TextArea<String>("logs", new GSLogsModel());
+        TextArea<String> logs = new TextArea<>("logs", new GSLogsModel());
         logs.setOutputMarkupId(true);
         logs.setMarkupId("logs");
         add(logs);
@@ -118,8 +118,10 @@ public class LogPage extends GeoServerSecuredPage {
 
                     @Override
                     public void onClick() {
+                        @SuppressWarnings("PMD.CloseResource") // wrapped and returned
                         IResourceStream stream =
                                 new FileResourceStream(logFile) {
+                                    @Override
                                     public String getContentType() {
                                         return "text/plain";
                                     }
@@ -138,16 +140,14 @@ public class LogPage extends GeoServerSecuredPage {
 
         @Override
         protected String load() {
-            BufferedReader br = null;
-            try {
-                // load the logs line by line, keep only the last 1000 lines
-                LinkedList<String> lineList = new LinkedList<String>();
+            // load the logs line by line, keep only the last 1000 lines
+            LinkedList<String> lineList = new LinkedList<>();
 
-                if (!logFile.exists()) {
-                    return "";
-                }
+            if (!logFile.exists()) {
+                return "";
+            }
 
-                br = new BufferedReader(new FileReader(logFile));
+            try (BufferedReader br = new BufferedReader(new FileReader(logFile))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     lineList.addLast(line);
@@ -164,14 +164,6 @@ public class LogPage extends GeoServerSecuredPage {
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Failed to load log file contents", e);
                 return e.getMessage();
-            } finally {
-                if (br != null) {
-                    try {
-                        br.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
             }
         }
     }

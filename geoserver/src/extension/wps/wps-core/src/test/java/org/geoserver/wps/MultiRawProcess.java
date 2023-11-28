@@ -23,9 +23,8 @@ import org.geotools.util.SimpleInternationalString;
  * @author Andrea Aime - GeoSolutions
  */
 @DescribeProcess(
-    title = "MultiRaw",
-    description = "Process used to test processes with multiple raw outputs"
-)
+        title = "MultiRaw",
+        description = "Process used to test processes with multiple raw outputs")
 public class MultiRawProcess {
 
     static final ProcessFactory getFactory() {
@@ -41,24 +40,22 @@ public class MultiRawProcess {
 
     @DescribeResults({
         @DescribeResult(
-            name = "text",
-            description = "Text output",
-            meta = {"mimeTypes=text/plain"},
-            type = RawData.class
-        ),
+                name = "text",
+                description = "Text output",
+                meta = {"mimeTypes=text/plain"},
+                type = RawData.class),
         @DescribeResult(
-            name = "binary",
-            description = "Binary output",
-            meta = {"mimeTypes=application/zip,image/png", "chosenMimeType=binaryMimeType"},
-            type = RawData.class
-        ),
+                name = "binary",
+                description = "Binary output",
+                meta = {"mimeTypes=application/zip,image/png", "chosenMimeType=binaryMimeType"},
+                type = RawData.class),
         @DescribeResult(name = "literal", description = "A string", type = String.class)
     })
     public Map<String, Object> execute(
             @DescribeParameter(name = "id") String id,
             @DescribeParameter(name = "binaryMimeType", min = 0) String binaryMimeType)
             throws Exception {
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new HashMap<>();
         result.put("literal", id);
         result.put("text", new StringRawData("This is the raw text", "text/plain"));
         result.put("binary", new ByteArrayRawData(new byte[100], binaryMimeType));

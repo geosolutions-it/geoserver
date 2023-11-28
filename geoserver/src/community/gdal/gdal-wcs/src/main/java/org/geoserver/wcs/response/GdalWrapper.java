@@ -35,6 +35,7 @@ public class GdalWrapper extends AbstractToolWrapper {
      * Returns a list of the gdal_translate supported formats (i.e. what must be passed to
      * gdal_translate via its -of parameter)
      */
+    @Override
     public Set<String> getSupportedFormats() {
         try {
             // this works with gdal_translate v. 1.11.2
@@ -61,8 +62,6 @@ public class GdalWrapper extends AbstractToolWrapper {
      *
      * @param commands the command to run
      * @param formats the parsed formats will be added to this set
-     * @throws IOException
-     * @throws InterruptedException
      */
     private void addFormats(List<String> commands, Set<String> formats)
             throws IOException, InterruptedException {
@@ -84,6 +83,7 @@ public class GdalWrapper extends AbstractToolWrapper {
      * Returns true if gdal_translate is available, that is, if executing "gdal_translate --version"
      * returns 0 as the exit code.
      */
+    @Override
     public boolean isAvailable() {
         List<String> commands = new ArrayList<String>();
         commands.add(getExecutable());

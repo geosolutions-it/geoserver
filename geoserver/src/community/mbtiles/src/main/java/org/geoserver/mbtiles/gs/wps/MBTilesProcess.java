@@ -21,7 +21,6 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.mbtiles.MBTilesGetMapOutputFormat;
 import org.geoserver.platform.ServiceException;
-import org.geoserver.platform.resource.Resource;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wps.gs.GeoServerProcess;
@@ -34,9 +33,9 @@ import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
 import org.geotools.referencing.CRS;
 import org.geotools.styling.Style;
-import org.geotools.util.URLs;
 import org.geotools.util.logging.Logging;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.util.ProgressListener;
 
 @DescribeProcess(title = "MBTiles", description = "MBTiles Process")
 public class MBTilesProcess implements GeoServerProcess {
@@ -88,82 +87,67 @@ public class MBTilesProcess implements GeoServerProcess {
     @DescribeResult(name = "mbtile", description = "Link to Compiled MBTiles File")
     public URL execute(
             @DescribeParameter(
-                        name = "layers",
-                        description = "Name of the input layer",
-                        collectionType = String.class
-                    )
+                            name = "layers",
+                            description = "Name of the input layer",
+                            collectionType = String.class)
                     Collection<String> layerz,
             @DescribeParameter(name = "format", description = "Tiles format") String format,
             @DescribeParameter(
-                        name = "boundingbox",
-                        description = "Bounding Box of the final MBTile",
-                        min = 0
-                    )
+                            name = "boundingbox",
+                            description = "Bounding Box of the final MBTile",
+                            min = 0)
                     ReferencedEnvelope boundingbox,
             @DescribeParameter(name = "filename", description = "Name of the .mbtile file", min = 0)
                     String filename,
             @DescribeParameter(
-                        name = "path",
-                        description = "Path to the directory where the .mbtile file can be stored ",
-                        min = 0
-                    )
-                    URL path,
-            @DescribeParameter(
-                        name = "minZoom",
-                        description = "Minimum Zoom level to generate",
-                        min = 0
-                    )
+                            name = "minZoom",
+                            description = "Minimum Zoom level to generate",
+                            min = 0)
                     Integer minZoom,
             @DescribeParameter(
-                        name = "maxZoom",
-                        description = "Maximum Zoom level to generate",
-                        min = 0
-                    )
+                            name = "maxZoom",
+                            description = "Maximum Zoom level to generate",
+                            min = 0)
                     Integer maxZoom,
             @DescribeParameter(name = "minRow", description = "Minimum Row to generate", min = 0)
                     Integer minRow,
             @DescribeParameter(name = "maxRow", description = "Maximum Row to generate", min = 0)
                     Integer maxRow,
             @DescribeParameter(
-                        name = "minColumn",
-                        description = "Minimum Column to generate",
-                        min = 0
-                    )
+                            name = "minColumn",
+                            description = "Minimum Column to generate",
+                            min = 0)
                     Integer minColumn,
             @DescribeParameter(
-                        name = "maxColumn",
-                        description = "Maximum Column to generate",
-                        min = 0
-                    )
+                            name = "maxColumn",
+                            description = "Maximum Column to generate",
+                            min = 0)
                     Integer maxColumn,
             @DescribeParameter(name = "bgColor", description = "Background color", min = 0)
                     String bgColor,
             @DescribeParameter(
-                        name = "transparency",
-                        description = "Transparency enabled or not",
-                        min = 0,
-                        defaultValue = "false"
-                    )
+                            name = "transparency",
+                            description = "Transparency enabled or not",
+                            min = 0,
+                            defaultValue = "false")
                     Boolean transparency,
             @DescribeParameter(
-                        name = "styleNames",
-                        description = "Name of the styles to use",
-                        min = 0,
-                        collectionType = String.class
-                    )
+                            name = "styleNames",
+                            description = "Name of the styles to use",
+                            min = 0,
+                            collectionType = String.class)
                     Collection<String> styleNames,
             @DescribeParameter(
-                        name = "stylePath",
-                        description = "Path of the style to use",
-                        min = 0
-                    )
+                            name = "stylePath",
+                            description = "Path of the style to use",
+                            min = 0)
                     URL stylePath,
             @DescribeParameter(
-                        name = "styleBody",
-                        description = "Body of the style to use",
-                        min = 0
-                    )
-                    String styleBody)
+                            name = "styleBody",
+                            description = "Body of the style to use",
+                            min = 0)
+                    String styleBody,
+            ProgressListener listener)
             throws IOException {
 
         // Extract the filename if present
@@ -183,18 +167,8 @@ public class MBTilesProcess implements GeoServerProcess {
             throw new ProcessException("Layers and styleNames must have the same size");
         }
 
-        // Extract the file path if present
-        final File file;
-
         String outputResourceName = name + ".mbtiles";
-        if (path != null) {
-            File urlToFile = URLs.urlToFile(path);
-            urlToFile.mkdirs();
-            file = new File(urlToFile, outputResourceName);
-        } else {
-            final Resource resource = resources.getOutputResource(null, outputResourceName);
-            file = resource.file();
-        }
+        File file = resources.getOutputResource(null, outputResourceName).file();
 
         // Create the MBTile file
         MBTilesFile mbtile = new MBTilesFile(file, true);
@@ -278,7 +252,7 @@ public class MBTilesProcess implements GeoServerProcess {
 
             // Add a style
             if (stylePath != null) {
-                request.setStyleUrl(stylePath);
+                request.setStyleUrl(stylePath.toURI());
             } else if (styleBody != null && !styleBody.isEmpty()) {
                 request.setStyleBody(styleBody);
             } else {
@@ -328,7 +302,7 @@ public class MBTilesProcess implements GeoServerProcess {
             request.setFormatOptions(formatOptions);
 
             // Execute the requests
-            mapOutput.addTiles(mbtile, request, name);
+            mapOutput.addTiles(mbtile, request, name, listener);
         } catch (Exception e) {
             if (LOGGER.isLoggable(Level.SEVERE)) {
                 LOGGER.log(Level.SEVERE, e.getMessage(), e);
@@ -347,12 +321,6 @@ public class MBTilesProcess implements GeoServerProcess {
             }
         }
 
-        // Add to storage only if it is a temporary file
-        if (path != null) {
-            return URLs.fileToUrl(file);
-        } else {
-            return new URL(
-                    resources.getOutputResourceUrl(outputResourceName, "application/x-mbtiles"));
-        }
+        return new URL(resources.getOutputResourceUrl(outputResourceName, "application/x-mbtiles"));
     }
 }

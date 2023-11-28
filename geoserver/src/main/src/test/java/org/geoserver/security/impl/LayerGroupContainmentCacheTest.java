@@ -4,20 +4,39 @@
  */
 package org.geoserver.security.impl;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.net.URL;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
-import org.geoserver.catalog.*;
+import org.geoserver.catalog.CascadeDeleteVisitor;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogBuilder;
+import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerGroupInfo.Mode;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.NamespaceInfo;
+import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geoserver.catalog.impl.NamespaceInfoImpl;
 import org.geoserver.catalog.impl.WorkspaceInfoImpl;
 import org.geoserver.data.test.MockData;
+import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.security.impl.LayerGroupContainmentCache.LayerGroupSummary;
 import org.geotools.data.property.PropertyDataStore;
@@ -27,6 +46,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.opengis.feature.type.Name;
+import org.springframework.context.event.ContextRefreshedEvent;
 
 /** Tests {@link LayerGroupContainmentCache} udpates in face of catalog setup and changes */
 public class LayerGroupContainmentCacheTest {
@@ -49,6 +69,7 @@ public class LayerGroupContainmentCacheTest {
 
     @BeforeClass
     public static void setupBaseCatalog() throws Exception {
+        GeoServerExtensionsHelper.setIsSpringContext(false);
         catalog = new CatalogImpl();
         catalog.setResourceLoader(new GeoServerResourceLoader());
 
@@ -164,6 +185,17 @@ public class LayerGroupContainmentCacheTest {
 
     private String getLayerId(QName name) {
         return "ws:" + name.getLocalPart();
+    }
+
+    @Test
+    public void buildLayerGroupCaches() {
+        LayerGroupContainmentCache layerGroupContainmentCache =
+                new LayerGroupContainmentCache(catalog);
+        ContextRefreshedEvent contextRefreshedEvent = mock(ContextRefreshedEvent.class);
+
+        layerGroupContainmentCache.onApplicationEvent(contextRefreshedEvent);
+
+        assertEquals(2, layerGroupContainmentCache.groupCache.size());
     }
 
     @Test

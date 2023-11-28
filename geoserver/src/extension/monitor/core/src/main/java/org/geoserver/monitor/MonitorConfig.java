@@ -9,8 +9,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.config.GeoServerPluginConfigurator;
@@ -28,7 +32,6 @@ import org.geotools.util.Converters;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -61,6 +64,10 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
     boolean enabled = true;
     Exception error;
     private GeoServerResourceLoader loader;
+
+    static final int POSTPROCES_THREADS_DEFAULT = 2;
+
+    static final String DNS_CACHE_DEFAULT = "expireAfterWrite=15m,maximumSize=1000";
 
     public MonitorConfig() {
         props = new PropertyFileWatcher.LinkedProperties();
@@ -109,8 +116,6 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
         }
         try {
             return CRS.decode(srs);
-        } catch (NoSuchAuthorityCodeException e) {
-            LOGGER.log(Level.FINER, e.getMessage(), e);
         } catch (FactoryException e) {
             LOGGER.log(Level.FINER, e.getMessage(), e);
         }
@@ -130,6 +135,14 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
         return BboxMode.valueOf(mode.toUpperCase());
     }
 
+    public Set<String> getIgnorePostProcessors() {
+        String list = props.getProperty("ignorePostProcessors");
+
+        if (list == null || list.isEmpty()) return Collections.emptySet();
+
+        return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(list.split(","))));
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -146,6 +159,7 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
         this.error = error;
     }
 
+    @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.context = applicationContext;
     }
@@ -248,11 +262,7 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
         return configurationFiles;
     }
 
-    /**
-     * @param loader
-     * @return
-     * @throws IOException
-     */
+    /** */
     public Resource getConfigurationFile(GeoServerResourceLoader loader) throws IOException {
         Resource f = loader.get(Paths.path("monitoring", MonitorConfig.PROPERTYFILENAME));
         if (!Resources.exists(f)) {
@@ -279,12 +289,9 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
         } else if (props != null) {
             File monitoringConfigurationFile =
                     Resources.file(resourceLoader.get(MonitorConfig.PROPERTYFILENAME), true);
-            OutputStream out = Files.out(monitoringConfigurationFile);
-            try {
+            try (OutputStream out = Files.out(monitoringConfigurationFile)) {
                 props.store(out, "");
-            } finally {
                 out.flush();
-                out.close();
             }
         }
     }
@@ -298,5 +305,34 @@ public class MonitorConfig implements GeoServerPluginConfigurator, ApplicationCo
                 fw.setKnownLastModified(System.currentTimeMillis());
             }
         }
+    }
+
+    public int getPostProcessorThreads() {
+        Properties props = props();
+        String key = "postProcessorThreads";
+        String svalue = props.getProperty(key);
+        if (svalue != null) {
+            try {
+                int nvalue = Integer.parseInt(svalue.trim());
+                if (nvalue < 1) {
+                    LOGGER.warning(key + " is not 1 or more :" + svalue + "!");
+                } else {
+                    return nvalue;
+                }
+            } catch (NumberFormatException e) {
+                LOGGER.warning(key + " has non-integer value:" + svalue + "!");
+            }
+        }
+        return POSTPROCES_THREADS_DEFAULT;
+    }
+
+    public String getDNSCacheConfiguration() {
+        Properties props = props();
+        String key = "dnsCacheConfiguration";
+        String value = props.getProperty(key);
+        if (value == null) {
+            value = DNS_CACHE_DEFAULT;
+        }
+        return value;
     }
 }

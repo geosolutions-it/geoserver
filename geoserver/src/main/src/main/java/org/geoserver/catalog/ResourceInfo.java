@@ -11,6 +11,7 @@ import java.util.Map;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.feature.type.Name;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.util.InternationalString;
 
 /**
  * A geospatial resource.
@@ -30,6 +31,8 @@ public interface ResourceInfo extends CatalogInfo {
 
     /** Prefix for custom dimensions */
     public static final String CUSTOM_DIMENSION_PREFIX = "custom_dimension_";
+
+    public static final String VECTOR_CUSTOM_DIMENSION_PREFIX = "dim_";
 
     /** Key for the HTTP caching max age value in the metadata map */
     public static final String CACHE_AGE_MAX = "cacheAgeMax";
@@ -124,6 +127,18 @@ public interface ResourceInfo extends CatalogInfo {
      */
     void setTitle(String title);
 
+    /** Returns the internationalTitle. */
+    InternationalString getInternationalTitle();
+
+    /** Sets the internationalTitle. */
+    void setInternationalTitle(InternationalString internationalTitle);
+
+    /** Returns the internationalAbstract. */
+    InternationalString getInternationalAbstract();
+
+    /** Sets the internationalAbstract. */
+    void setInternationalAbstract(InternationalString internationalAbstract);
+
     /**
      * The abstract for the resource.
      *
@@ -198,11 +213,14 @@ public interface ResourceInfo extends CatalogInfo {
     void setLatLonBoundingBox(ReferencedEnvelope box);
 
     /**
-     * Returns the bounds of the resource in the native crs.
+     * Record of the bounds of the resource in the native crs.
      *
-     * <p>This value represents a "fixed value" and is not calulated on the underlying dataset.
+     * <p>This value represents a "fixed value" and is not calculated on the underlying dataset.
      *
-     * @return The bounds of the resource in native crs., or <code>null</code> if not set.
+     * <p>This value is combined with {@link #getProjectionPolicy()}, {@link #getNativeCRS()} by
+     * {@link #boundingBox()} to determine user supplied bounds in native crs.
+     *
+     * @return Records the bounds of the resource in native crs, or <code>null</code> if not set.
      * @uml.property name="boundingBox"
      */
     ReferencedEnvelope getNativeBoundingBox();
@@ -218,12 +236,14 @@ public interface ResourceInfo extends CatalogInfo {
     /**
      * Returns the bounds of the resource in its declared CRS.
      *
-     * <p>This value is derived from {@link #getNativeBoundingBox()}, {@link #getCRS()}, and {@link
-     * #getProjectionPolicy()}. In the case where the native bounding box is unset, {@link
-     * #getLatLonBoundingBox()} should be reprojected to {@link #getCRS()}. If the reprojection
-     * fails, null should be returned. So clients calling this method should be prepared to handle
-     * null.
+     * <p>This value is derived from {@link #getNativeBoundingBox()}, {@link #getNativeCRS()},
+     * {@link #getCRS()}, and {@link #getProjectionPolicy()}.
      *
+     * <p>In the case where the native bounding box is unset, {@link #getLatLonBoundingBox()} should
+     * be reprojected to {@link #getCRS()}. If the reprojection fails, null should be returned. So
+     * clients calling this method should be prepared to handle null.
+     *
+     * @return bounds of resource in declared CRS, or {@code null} if unable to reproject
      * @throws Exception If the bounding box can not be calculated.
      */
     ReferencedEnvelope boundingBox() throws Exception;
@@ -234,6 +254,7 @@ public interface ResourceInfo extends CatalogInfo {
      * <p>Srs can be in multiple forms, examples:
      *
      * <ol>
+     *   <li>EPSG:26713
      * </ol>
      *
      * @return A crs identifier, or <code>null</code> if not set.
@@ -358,11 +379,7 @@ public interface ResourceInfo extends CatalogInfo {
      */
     boolean isAdvertised();
 
-    /**
-     * Set to true if the resource should be advertised, false otherwise
-     *
-     * @param advertised
-     */
+    /** Set to true if the resource should be advertised, false otherwise */
     void setAdvertised(boolean advertised);
 
     /** Returns true if the resource will configure services access, false otherwise */
@@ -376,4 +393,16 @@ public interface ResourceInfo extends CatalogInfo {
 
     /** Set the list of disabled services names for this resource */
     void setDisabledServices(List<String> disabledServices);
+
+    /**
+     * Flag that determines if complex features will be converted to simple feature for compatible
+     * output formats.
+     */
+    boolean isSimpleConversionEnabled();
+
+    /**
+     * Sets the flag that determines if complex features will be converted to simple feature for
+     * compatible output formats.
+     */
+    void setSimpleConversionEnabled(boolean activateComplexToSimpleOutput);
 }

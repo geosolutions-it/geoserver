@@ -42,6 +42,7 @@ public abstract class XStreamServiceLoader<T extends ServiceInfo> implements Ser
         this.xpf = xpf;
     }
 
+    @Override
     public final T load(GeoServer gs) throws Exception {
         return load(gs, resourceLoader.get(""));
     }
@@ -53,58 +54,76 @@ public abstract class XStreamServiceLoader<T extends ServiceInfo> implements Ser
         if (Resources.exists(file = directory.get(getFilename()))) {
             // xstream it in
             try (BufferedInputStream in = new BufferedInputStream(file.in())) {
-                XStreamPersister xp = xpf.createXMLPersister();
-                initXStreamPersister(xp, gs);
+                XStreamPersister xp = getXstreamPersister(gs);
                 return initialize(xp.load(in, getServiceClass()));
             }
         } else {
             // create an 'empty' object
-            ServiceInfo service = createServiceFromScratch(gs);
-            return initialize((T) service);
+            T service = createServiceFromScratch(gs);
+            return initialize(service);
         }
+    }
+
+    private volatile GeoServer geoserver;
+    private volatile XStreamPersister persister;
+
+    /**
+     * Creates and initializes a new {@link XStreamPersister} only if it wasn't created before or
+     * it's been called for a different {@link GeoServer} instance, and then caches it as an
+     * instance variable; thus avoiding the overhead on each call to load(), which can be
+     * significant when the number of services is large (e.g. 3 seconds instead of 35 seconds to
+     * load about 17k service files)
+     */
+    private XStreamPersister getXstreamPersister(GeoServer gs) {
+        if (this.geoserver != gs) {
+            this.geoserver = gs;
+            this.persister = xpf.createXMLPersister();
+            initXStreamPersister(persister, gs);
+        }
+        return persister;
     }
 
     /**
      * Fills in all the bits that are normally not loaded automatically by XStream, such as empty
      * collections
-     *
-     * @param info
      */
-    public void initializeService(ServiceInfo info) {
-        initialize((T) info);
+    public void initializeService(T info) {
+        initialize(info);
     }
 
     /**
      * Fills in the blanks of the service object loaded by XStream. This implementation makes sure
      * all collections in {@link ServiceInfoImpl} are initialized, subclasses should override to add
      * more specific initializations (such as the actual supported versions and so on)
-     *
-     * @param service
      */
     protected T initialize(T service) {
         if (service instanceof ServiceInfoImpl) {
             // initialize all collections to
             ServiceInfoImpl impl = (ServiceInfoImpl) service;
             if (impl.getClientProperties() == null) {
-                impl.setClientProperties(new HashMap());
+                impl.setClientProperties(new HashMap<>());
             }
             if (impl.getExceptionFormats() == null) {
-                impl.setExceptionFormats(new ArrayList());
+                impl.setExceptionFormats(new ArrayList<>());
             }
             if (impl.getKeywords() == null) {
-                impl.setKeywords(new ArrayList());
+                impl.setKeywords(new ArrayList<>());
             }
             if (impl.getMetadata() == null) {
                 impl.setMetadata(new MetadataMap());
             }
             if (impl.getVersions() == null) {
-                impl.setVersions(new ArrayList());
+                impl.setVersions(new ArrayList<>());
+            }
+            if (impl.getName() == null) {
+                impl.setName(impl.getType());
             }
         }
 
         return service;
     }
 
+    @Override
     public final void save(T service, GeoServer gs) throws Exception {}
 
     public final void save(T service, GeoServer gs, Resource directory) throws Exception {
@@ -114,8 +133,7 @@ public abstract class XStreamServiceLoader<T extends ServiceInfo> implements Ser
 
         // using resource output stream makes sure we write on a temp file and them move
         try (OutputStream out = resource.out()) {
-            XStreamPersister xp = xpf.createXMLPersister();
-            initXStreamPersister(xp, gs);
+            XStreamPersister xp = getXstreamPersister(gs);
             xp.save(service, out);
         }
     }
@@ -131,6 +149,7 @@ public abstract class XStreamServiceLoader<T extends ServiceInfo> implements Ser
         xp.getXStream().alias(filenameBase, getServiceClass());
     }
 
+    @Override
     public final T create(GeoServer gs) {
         return createServiceFromScratch(gs);
     }

@@ -49,6 +49,8 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
 
     public static final String PARAM_EXT_GS = "external-geoserver";
 
+    public static final String PARAM_WORKSPACE = "workspace";
+
     public static final String PARAM_LAYER = "layer";
 
     protected final Map<String, ParameterInfo> paramInfo =
@@ -63,7 +65,13 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
     @PostConstruct
     public void initParamInfo() {
         paramInfo.put(PARAM_EXT_GS, new ParameterInfo(PARAM_EXT_GS, extTypes.extGeoserver, true));
-        paramInfo.put(PARAM_LAYER, new ParameterInfo(PARAM_LAYER, extTypes.internalLayer, true));
+        ParameterInfo paramWorkspace =
+                new ParameterInfo(PARAM_WORKSPACE, extTypes.workspace, false);
+        paramInfo.put(PARAM_WORKSPACE, paramWorkspace);
+        paramInfo.put(
+                PARAM_LAYER,
+                new ParameterInfo(PARAM_LAYER, extTypes.internalLayer, true)
+                        .dependsOn(false, paramWorkspace));
     }
 
     @Override
@@ -94,7 +102,6 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
             throw new TaskException("Failed to connect to geoserver " + extGS.getUrl());
         }
 
-        final boolean createStore;
         final Set<String> createWorkspaces = new HashSet<String>();
         final Set<StyleInfo> createStyles = new HashSet<StyleInfo>();
 
@@ -116,15 +123,49 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
         }
 
         final String storeName = getStoreName(store, ctx);
-        createStore =
-                neverReuseStore()
-                        || !(storeType == StoreType.DATASTORES
-                                ? restManager.getReader().existsDatastore(ws, storeName)
-                                : restManager.getReader().existsCoveragestore(ws, storeName));
+        final boolean existsStore =
+                (storeType == StoreType.DATASTORES
+                        ? restManager.getReader().existsDatastore(ws, storeName)
+                        : restManager.getReader().existsCoveragestore(ws, storeName));
+        final boolean createStore = neverReuseStore() || !existsStore;
+        final boolean existsResource =
+                existsStore && storeType == StoreType.DATASTORES
+                        ? restManager
+                                .getReader()
+                                .existsFeatureType(ws, storeName, resource.getName())
+                        : restManager.getReader().existsCoverage(ws, storeName, resource.getName());
         final String tempName = "_temp_" + UUID.randomUUID().toString().replace('-', '_');
         ctx.getBatchContext()
                 .put(layer.prefixedName(), resource.getNamespace().getPrefix() + ":" + tempName);
         final String actualStoreName = neverReuseStore() && createStore ? tempName : storeName;
+
+        final GSResourceEncoder finalRe =
+                resource instanceof CoverageInfo
+                        ? new GSCoverageEncoder(false)
+                        : new GSFeatureTypeEncoder(false);
+        finalRe.setName(resource.getName());
+        finalRe.setAdvertised(true);
+        final Finalizer finalizer =
+                new Finalizer(
+                        finalRe,
+                        new TaskRunnable<GSResourceEncoder>() {
+                            @Override
+                            public void run(GSResourceEncoder re) throws TaskException {
+                                if (!restManager
+                                        .getPublisher()
+                                        .configureResource(
+                                                ws, storeType, storeName, tempName, re)) {
+                                    throw new TaskException(
+                                            "Failed to rename/reconfigure resource "
+                                                    + ws
+                                                    + ":"
+                                                    + tempName
+                                                    + " to "
+                                                    + resource.getName());
+                                }
+                                ctx.getBatchContext().delete(layer.prefixedName());
+                            }
+                        });
 
         try {
 
@@ -171,32 +212,34 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
             // create resource (and layer)
 
             final GSResourceEncoder re = catalogUtil.syncMetadata(resource, tempName);
+            re.setNativeName(resource.getNativeName());
+            if (re instanceof GSCoverageEncoder) {
+                ((GSCoverageEncoder) re)
+                        .setNativeCoverageName(((CoverageInfo) resource).getNativeCoverageName());
+            }
             re.setAdvertised(false);
-            postProcess(
-                    re,
-                    ctx,
-                    new TaskRunnable<GSResourceEncoder>() {
-                        @Override
-                        public void run(GSResourceEncoder re) throws TaskException {
-                            if (!restManager
-                                    .getPublisher()
-                                    .configureResource(
-                                            ws, storeType, storeName, resource.getName(), re)) {
-                                throw new TaskException(
-                                        "Failed to configure resource " + ws + ":" + re.getName());
-                            }
-                        }
-                    });
+
+            postProcess(storeType, resource, re, ctx, finalizer);
+
+            // -- disable old store to avoid conflicts
+            if (createStore && existsStore) {
+                restManager
+                        .getStoreManager()
+                        .update(
+                                ws,
+                                storeName,
+                                new GSGenericStoreEncoder(
+                                        storeType, null, null, null, null, null, false));
+            }
 
             // -- resource might have already been created together with store
-            if (createStore
-                    && (storeType == StoreType.DATASTORES
-                            ? restManager
-                                    .getReader()
-                                    .existsFeatureType(ws, actualStoreName, actualStoreName)
-                            : restManager
-                                    .getReader()
-                                    .existsCoverage(ws, actualStoreName, actualStoreName))) {
+            if (createStore && storeType == StoreType.DATASTORES
+                    ? restManager
+                            .getReader()
+                            .existsFeatureType(ws, actualStoreName, actualStoreName)
+                    : restManager
+                            .getReader()
+                            .existsCoverage(ws, actualStoreName, actualStoreName)) {
                 if (!restManager
                         .getPublisher()
                         .configureResource(ws, storeType, actualStoreName, actualStoreName, re)) {
@@ -227,10 +270,19 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
                                 si.getName())) {
                     throw new TaskException("Failed to create style " + si.getName());
                 }
+                if (!restManager
+                        .getStyleManager()
+                        .updateStyleInWorkspace(
+                                CatalogUtil.wsName(si.getWorkspace()),
+                                catalogUtil.syncStyle(si),
+                                si.getName())) {
+                    throw new TaskException("Failed to sync style " + si.getName());
+                }
             }
 
             // config layer
             final GSLayerEncoder layerEncoder = new GSLayerEncoder();
+            catalogUtil.syncMetadata(layer, layerEncoder);
             if (layer.getDefaultStyle() != null) {
                 layerEncoder.setDefaultStyle(
                         CatalogUtil.wsName(layer.getDefaultStyle().getWorkspace()),
@@ -272,13 +324,7 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
             @Override
             public void commit() throws TaskException {
                 // remove old resource if exists
-                if (storeType == StoreType.DATASTORES
-                        ? restManager
-                                .getReader()
-                                .existsFeatureType(ws, storeName, resource.getName())
-                        : restManager
-                                .getReader()
-                                .existsCoverage(ws, storeName, resource.getName())) {
+                if (existsResource) {
                     if (!restManager.getPublisher().removeLayer(ws, resource.getName())
                             || !restManager
                                     .getPublisher()
@@ -290,16 +336,11 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
 
                 if (!actualStoreName.equals(storeName)) {
                     // remove old store if exists
-                    if (storeType == StoreType.DATASTORES
-                            ? restManager.getReader().existsDatastore(ws, storeName)
-                            : restManager.getReader().existsCoveragestore(ws, storeName)) {
-                        if (!restManager
-                                .getPublisher()
-                                .removeStore(ws, storeName, storeType, true, Purge.NONE)) {
+                    if (existsStore) {
+                        if (!cleanStore(restManager, store, storeType, storeName, ctx, true)) {
                             throw new TaskException(
                                     "Failed to remove old store " + ws + ":" + storeName);
                         }
-                        ;
                     }
 
                     // set proper name store
@@ -321,25 +362,9 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
                 }
 
                 // set proper name resource
-                final GSResourceEncoder re =
-                        resource instanceof CoverageInfo
-                                ? new GSCoverageEncoder(false)
-                                : new GSFeatureTypeEncoder(false);
-                re.setName(resource.getName());
-                re.setAdvertised(true);
-                if (!restManager
-                        .getPublisher()
-                        .configureResource(ws, storeType, storeName, tempName, re)) {
-                    throw new TaskException(
-                            "Failed to rename resource "
-                                    + ws
-                                    + ":"
-                                    + tempName
-                                    + " to "
-                                    + resource.getName());
+                if (finalizer.isFinalizeAtCommit()) {
+                    finalizer.run();
                 }
-
-                ctx.getBatchContext().delete(layer.prefixedName());
             }
 
             @Override
@@ -353,11 +378,19 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
                 }
 
                 if (createStore) {
-                    if (!restManager
-                            .getPublisher()
-                            .removeStore(ws, actualStoreName, storeType, true, Purge.NONE)) {
+                    if (!cleanStore(restManager, store, storeType, actualStoreName, ctx, true)) {
                         throw new TaskException(
                                 "Failed to remove store " + ws + ":" + actualStoreName);
+                    }
+                    // -- re-enable old store to avoid conflicts
+                    if (existsStore) {
+                        restManager
+                                .getStoreManager()
+                                .update(
+                                        ws,
+                                        storeName,
+                                        new GSGenericStoreEncoder(
+                                                storeType, null, null, null, null, null, true));
                     }
                 }
 
@@ -406,9 +439,7 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
                             .removeResource(ws, storeType, storeName, resource.getName())) {
                 throw new TaskException("Failed to remove layer " + ws + ":" + resource.getName());
             }
-            if (!restManager
-                    .getPublisher()
-                    .removeStore(ws, storeName, storeType, false, Purge.NONE)) {
+            if (!cleanStore(restManager, store, storeType, storeName, ctx, false)) {
                 if (neverReuseStore()) {
                     throw new TaskException("Failed to remove store " + ws + ":" + storeName);
                 } // else store is still in use
@@ -432,7 +463,52 @@ public abstract class AbstractRemotePublicationTaskTypeImpl implements TaskType 
         return store.getName();
     }
 
+    protected boolean cleanStore(
+            GeoServerRESTManager restManager,
+            StoreInfo store,
+            StoreType storeType,
+            String storeName,
+            TaskContext ctx,
+            boolean recurse)
+            throws TaskException {
+        return restManager
+                .getPublisher()
+                .removeStore(
+                        store.getWorkspace().getName(), storeName, storeType, recurse, Purge.NONE);
+    }
+
     protected void postProcess(
-            GSResourceEncoder re, TaskContext ctx, TaskRunnable<GSResourceEncoder> update)
+            StoreType storeType,
+            ResourceInfo resource,
+            GSResourceEncoder re,
+            TaskContext ctx,
+            Finalizer finalizer)
             throws TaskException {}
+
+    protected class Finalizer {
+        private GSResourceEncoder encoder;
+        private TaskRunnable<GSResourceEncoder> runnable;
+        private boolean finalizeAtCommit = true;
+
+        public Finalizer(GSResourceEncoder encoder, TaskRunnable<GSResourceEncoder> runnable) {
+            this.runnable = runnable;
+            this.encoder = encoder;
+        }
+
+        public boolean isFinalizeAtCommit() {
+            return finalizeAtCommit;
+        }
+
+        public void setFinalizeAtCommit(boolean finalizeAtCommit) {
+            this.finalizeAtCommit = finalizeAtCommit;
+        }
+
+        public GSResourceEncoder getEncoder() {
+            return encoder;
+        }
+
+        public void run() throws TaskException {
+            runnable.run(encoder);
+        }
+    }
 }

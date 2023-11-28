@@ -5,8 +5,8 @@
 package org.geoserver.wms.vector;
 
 import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -24,7 +24,7 @@ public class VectorTilesIntegrationTest extends WMSTestSupport {
     protected DocumentContext getAsJSONPath(String path, int expectedHttpCode) throws Exception {
         MockHttpServletResponse response = getAsServletResponse(path);
         if (!isQuietTests()) {
-            System.out.println(response.getContentAsString());
+            LOGGER.info(response.getContentAsString());
         }
 
         assertEquals(expectedHttpCode, response.getStatus());
@@ -83,14 +83,12 @@ public class VectorTilesIntegrationTest extends WMSTestSupport {
         assertEquals(5, featuresList.size());
         assertEquals(
                 3,
-                featuresList
-                        .stream()
+                featuresList.stream()
                         .filter(f -> "Route 5".equals(f.getAttributes().get("NAME")))
                         .count());
         assertEquals(
                 1,
-                featuresList
-                        .stream()
+                featuresList.stream()
                         .filter(f -> "Main Street".equals(f.getAttributes().get("NAME")))
                         .count());
         assertEquals("Extent should be 12288", 12288, featuresList.get(0).getExtent());
@@ -119,6 +117,23 @@ public class VectorTilesIntegrationTest extends WMSTestSupport {
                                 json.read(
                                         "$.features[?(@.properties.NAME == 'Dirt Road by Green Forest')]"))
                         .size());
+    }
+
+    @Test
+    public void testCqlFilterNoMatch() throws Exception {
+        String request =
+                "wms?service=WMS&version=1.1.0&request=GetMap&layers="
+                        + getLayerId(MockData.ROAD_SEGMENTS)
+                        + "&styles=&bbox=-1,-1,1,1&width=768&height=330&srs=EPSG:4326"
+                        + "&CQL_FILTER=1=0&format="
+                        + MapBoxTileBuilderFactory.MIME_TYPE;
+        MockHttpServletResponse response = getAsServletResponse(request);
+        assertEquals(200, response.getStatus());
+        assertEquals(MapBoxTileBuilderFactory.MIME_TYPE, response.getContentType());
+        byte[] responseBytes = response.getContentAsByteArray();
+        VectorTileDecoder decoder = new VectorTileDecoder();
+        List<VectorTileDecoder.Feature> featuresList = decoder.decode(responseBytes).asList();
+        assertEquals(0, featuresList.size());
     }
 
     @Test

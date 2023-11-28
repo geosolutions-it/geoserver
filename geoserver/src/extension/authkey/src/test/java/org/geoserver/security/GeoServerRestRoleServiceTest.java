@@ -5,16 +5,21 @@
 package org.geoserver.security;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.google.common.util.concurrent.ExecutionError;
 import java.io.IOException;
 import java.util.SortedSet;
+import org.geoserver.platform.GeoServerEnvironment;
 import org.geoserver.security.impl.GeoServerRole;
+import org.geoserver.test.GeoServerSystemTestSupport;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.http.MediaType;
@@ -22,7 +27,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
 /** @author Alessio Fabiani, GeoSolutions S.A.S. */
-public class GeoServerRestRoleServiceTest {
+public class GeoServerRestRoleServiceTest extends GeoServerSystemTestSupport {
 
     public static final String uri = "http://rest.geoserver.org";
 
@@ -32,6 +37,12 @@ public class GeoServerRestRoleServiceTest {
 
     @Before
     public void setUp() throws Exception {
+        System.setProperty("ALLOW_ENV_PARAMETRIZATION", "true");
+        GeoServerEnvironment.reloadAllowEnvParametrization();
+
+        System.setProperty("test_role_service_base_url", "http://example.com/rest");
+        System.setProperty("test_role_service_auth_api_key", "letmein");
+
         template = new RestTemplate();
         mockServer = MockRestServiceServer.createServer(template);
 
@@ -76,8 +87,16 @@ public class GeoServerRestRoleServiceTest {
                                 MediaType.APPLICATION_JSON));
 
         mockServer
-                .expect(requestTo(uri + "/api/adminRole"))
+                .expect(requestTo("http://example.com/api/adminRole"))
+                .andExpect(header("Authorization", "ApiKey letmein"))
                 .andRespond(withSuccess("{\"adminRole\": \"admin\"}", MediaType.APPLICATION_JSON));
+    }
+
+    @After
+    public void tearDown() {
+        System.clearProperty("ALLOW_ENV_PARAMETRIZATION");
+        System.clearProperty("test_role_service_base_url");
+        System.clearProperty("test_role_service_auth_api_key");
     }
 
     @Test
@@ -104,15 +123,25 @@ public class GeoServerRestRoleServiceTest {
         assertEquals(3, roles.size());
         assertEquals("ROLE_ADMIN", adminRole.getAuthority());
         assertEquals(testUserEmailRoles.size(), testUserRoles.size());
-        assertTrue(!testUserRoles.contains(GeoServerRole.ADMIN_ROLE));
-        assertTrue(!testUserRoles.contains(adminRole));
+        assertFalse(testUserRoles.contains(GeoServerRole.ADMIN_ROLE));
+        assertFalse(testUserRoles.contains(adminRole));
         assertTrue(adminUserRoles.contains(GeoServerRole.ADMIN_ROLE));
+
+        roleServiceconfig.setBaseUrl("${test_role_service_base_url}");
+        roleServiceconfig.setAuthApiKey("${test_role_service_auth_api_key}");
+        final GeoServerRole adminRole1 = roleService.getAdminRole();
+        assertNotNull(adminRole1);
+        assertEquals("ROLE_ADMIN", adminRole1.getAuthority());
+
+        mockServer.verify();
     }
 
     @Test
     public void testGeoServerRestRoleServiceInternalCache()
             throws IOException, InterruptedException {
         GeoServerRestRoleServiceConfig roleServiceconfig = new GeoServerRestRoleServiceConfig();
+        int EXPIRATION = 500;
+        roleServiceconfig.setCacheExpirationTime(EXPIRATION);
         roleServiceconfig.setBaseUrl(uri);
 
         GeoServerRestRoleService roleService = new GeoServerRestRoleService(roleServiceconfig);
@@ -121,12 +150,7 @@ public class GeoServerRestRoleServiceTest {
         roleService.getRoles();
         roleService.getAdminRole();
         roleService.getRolesForUser("test");
-        Thread.sleep(31 * 1000);
-        try {
-            roleService.getRolesForUser("test@geoserver.org");
-            fail("Expecting ExecutionError to be thrown");
-        } catch (ExecutionError e) {
-            // OK
-        }
+        Thread.sleep((long) (EXPIRATION * 1.5));
+        assertThrows(ExecutionError.class, () -> roleService.getRolesForUser("test@geoserver.org"));
     }
 }

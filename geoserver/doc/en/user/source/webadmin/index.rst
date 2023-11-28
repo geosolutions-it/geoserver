@@ -9,7 +9,21 @@ The Web administration interface is a web-based tool for configuring all aspects
 
    Web admin interface
 
-The following sections detail the menu options available in GeoServer. **Unless otherwise specified, you will need to be logged in with administrative credentials to see these options.**
+The following sections detail the menu options available in GeoServer. **Unless otherwise specified, you will need to be logged in with administrative credentials to see the complete list of pages.**
+
+
+.. toctree:: 
+   :hidden:
+   
+   welcome
+   about
+   
+Welcome
+-------
+
+* The :ref:`welcome` page lists the web services published by GeoServer.
+  
+  When logged in with administrative credentials a configuration overview is provided, along with any information or warning notifications.
 
 About & Status
 --------------
@@ -22,15 +36,18 @@ The :guilabel:`About & Status` section provides access to GeoServer diagnostic a
 
 * The :ref:`config_contact` page sets the public contact information available in the Capabilities document of the WMS server.
 
-* The :guilabel:`About GeoServer` section provides links to the GeoServer documentation, homepage and bug tracker. **You do not need to be logged into GeoServer to access this page.**
-
-
+* The :ref:`about` section provides links to the GeoServer documentation, homepage and bug tracker.
+  
+  **You do not need to be logged into GeoServer to access this page.**
+  
 Data
 ----
 
 The :ref:`Data` section contains configuration options for all the different data-related settings. 
 
-* The :ref:`Layer Preview <layerpreview>` page provides links to layer previews in various output formats, including the common OpenLayers and KML formats. This page helps to visually verify and explore the configuration of a particular layer. **You do not need to be logged into GeoServer to access the Layer Preview.**
+* The :ref:`Layer Preview <layerpreview>` page provides links to layer previews in various output formats, including the common OpenLayers and KML formats. This page helps to visually verify and explore the configuration of a particular layer.
+
+  **You do not need to be logged into GeoServer to access the Layer Preview.**
 
 * The :ref:`Workspaces <data_webadmin_workspaces>` page displays a list of workspaces, with the ability to add, edit, and delete. Also shows which workspace is the default for the server. 
 
@@ -44,6 +61,8 @@ The :ref:`Data` section contains configuration options for all the different dat
 
 In each of these pages that contain a table, there are three different ways to locate an object: sorting, searching, and paging. To alphabetically sort a data type, click on the column header. For simple searching, enter the search criteria in the search box and hit Enter. And to page through the entries (25 at a time), use the arrow buttons located on the bottom and top of the table.
 
+**These pages are shown to administrators, and users that have data admin permissions.**
+
 Services
 --------
 
@@ -54,6 +73,8 @@ The :ref:`services` section is for configuring the services published by GeoServ
 * The :ref:`Web Feature Service (WFS) <services_webadmin_wfs>` page manages metadata, feature publishing, service level options, and data-specific output for WFS.
 
 * The :ref:`Web Map Service (WMS) <services_webadmin_wms>` page manages metadata, resource limits, SRS availability, and other data-specific output for WMS.
+
+* The :ref:`Web Processing Service (WPS) <webadmin_wps>` page manages metadata and resource limits for WPS.
 
 Settings
 --------
@@ -91,7 +112,7 @@ The :ref:`Security <security_webadmin>` section configures the built-in :ref:`se
 
 * The :ref:`Authentication <security_webadmin_auth>` page manages authentication filters, filter chains, and providers.
 
-* The :ref:`Passwords <security_webadmin_passwd>` page manages the password policies for users and the master (root) account.
+* The :ref:`Passwords <security_webadmin_passwd>` page manages the password policies for users and the root account.
 
 * The :ref:`Users, Groups, Roles <security_webadmin_ugr>` page manages the users, groups, and roles, and how they are all associated with each other. Passwords for user accounts can be changed here.
 
@@ -102,14 +123,46 @@ The :ref:`Security <security_webadmin>` section configures the built-in :ref:`se
 Demos
 -----
 
-The :ref:`demos` section contains links to example WMS, WCS, and WFS requests for GeoServer as well as a listing all SRS info known to GeoServer. In addition, there is a reprojection console for converting coordinates between spatial reference systems, and a request builder for WCS requests. **You do not need to be logged into GeoServer to access these pages.**
+The :ref:`demos` section contains links to example WMS, WCS, and WFS requests for GeoServer as well as a listing all SRS info known to GeoServer. In addition, there is a reprojection console for converting coordinates between spatial reference systems, and a request builder for WCS requests.
+
+**You do not need to be logged into GeoServer to access these pages.**
 
 Tools
 -----
 
-The :guilabel:`Tools` section contains administrative tools. By default, the only tool is the :guilabel:`Catalog Bulk Load Tool`, which can bulk copy test data into the catalog.
+The :ref:`tools` section contains administrative tools.
+
+* The :ref:`Web Resource <tool_resource>` tool provides management of data directory icons, fonts, and configuration files.
+* The :ref:`Catalog Bulk Load Tool <tool_bulk>` can bulk copy configuration for testing
 
 Extensions
 ----------
 
 :ref:`GeoServer extensions <extensions>` can add functionality and extra options to the web interface. Details can be found in the section for each extension.
+
+User interface
+--------------
+
+Navigation
+^^^^^^^^^^
+
+A navigation menu is provided along the left-hand-side of the screen listing configuration pages.
+
+To return to the main :ref:`welcome` click on the GeoServer logo at the top of the navigation menu.
+ 
+User login
+^^^^^^^^^^
+
+The upper right of the web administration interface provides options to :ref:`login <logging_in>`.
+
+GeoServer will share only the web services and layers available to the current user.
+
+Choosing the UI language
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The administration interface is displayed using the browser's preferred language when available,
+otherwise it will fall back to English.
+The drop-down chooser on the side of the login/logout button allows selection of a different language.
+
+The language choice is saved in the session, as well as in a cookie, to retain the language
+choice across user sessions.

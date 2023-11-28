@@ -4,11 +4,19 @@ info:
   version: 1.0.0
   title: GeoServer Fonts
   description: A font is a set of characters that can be used in a style for displaying labels.
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
+basePath: /geoserver/rest
 
 paths:
   /fonts:
     get:
       operationId: getFonts
+      tags:
+       - "Fonts"
       summary: Get a list of fonts
       description: Displays a list of all fonts on the server. You must use the "Accept:" header to specify format or append an extension to the endpoint (example "/fonts.xml" for XML)
       produces:
@@ -39,6 +47,8 @@ paths:
 
     post:
       operationId: postFonts
+      tags:
+       - "Fonts"
       description: Invalid. Fonts cannot be added through the REST API.
       responses:
         401:
@@ -48,6 +58,8 @@ paths:
 
     put:
       operationId: putFonts
+      tags:
+       - "Fonts"
       description: Invalid. Fonts cannot be updated through the REST API.
       responses:
         401:
@@ -57,6 +69,8 @@ paths:
 
     delete:
       operationId: deleteFonts
+      tags:
+       - "Fonts"
       description: Invalid. Fonts cannot be deleted through the REST API.
       responses:
         401:

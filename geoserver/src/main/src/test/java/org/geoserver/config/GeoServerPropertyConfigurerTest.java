@@ -5,10 +5,12 @@
  */
 package org.geoserver.config;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Properties;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +38,17 @@ public class GeoServerPropertyConfigurerTest {
     }
 
     @Test
+    public void testConfigFileCreated() throws IOException {
+        Properties p = new Properties();
+        try (FileInputStream is = new FileInputStream("target/foo.properties")) {
+            p.load(is);
+        }
+        assertEquals(p.size(), 2);
+        assertEquals(p.get("prop1"), "value1");
+        assertEquals(p.get("prop2"), "value2");
+    }
+
+    @Test
     public void testDefaults() {
 
         Foo f = (Foo) ctx.getBean("myBean");
@@ -49,11 +62,11 @@ public class GeoServerPropertyConfigurerTest {
         p.put("prop1", "foobar");
         p.put("prop2", "barfoo");
 
-        FileOutputStream out = new FileOutputStream("target/foo.properties");
-        p.store(out, "");
+        try (FileOutputStream out = new FileOutputStream("target/foo.properties")) {
+            p.store(out, "");
 
-        out.flush();
-        out.close();
+            out.flush();
+        }
 
         ctx.refresh();
         Foo f = (Foo) ctx.getBean("myBean");

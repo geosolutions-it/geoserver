@@ -9,28 +9,38 @@ import static org.geoserver.rest.RestBaseController.ROOT_PATH;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import freemarker.template.ObjectWrapper;
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.geoserver.AtomLink;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.platform.resource.ResourceStore;
 import org.geoserver.platform.resource.ResourceStoreFactory;
-import org.geoserver.rest.*;
+import org.geoserver.rest.ObjectToMapWrapper;
+import org.geoserver.rest.RequestInfo;
+import org.geoserver.rest.ResourceNotFoundException;
+import org.geoserver.rest.RestBaseController;
+import org.geoserver.rest.RestException;
 import org.geoserver.rest.converters.XStreamJSONMessageConverter;
 import org.geoserver.rest.converters.XStreamMessageConverter;
 import org.geoserver.rest.converters.XStreamXMLMessageConverter;
@@ -41,12 +51,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.accept.ContentNegotiationStrategy;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.condition.PatternsRequestCondition;
 
 @RestController
@@ -108,42 +125,49 @@ public class ResourceController extends RestBaseController {
     /**
      * Extract expected media type from supplied resource
      *
-     * @param resource
-     * @param request
      * @return Content type requested
      */
     protected static MediaType getMediaType(Resource resource, HttpServletRequest request) {
-        if (resource.getType() == Resource.Type.DIRECTORY) {
-            return getFormat(request);
-        } else if (resource.getType() == Resource.Type.RESOURCE) {
-            String mimeType = URLConnection.guessContentTypeFromName(resource.name());
-            if (mimeType == null
-                    || MediaType.APPLICATION_OCTET_STREAM.toString().equals(mimeType)) {
-                // try guessing from data
-                try (InputStream is = new BufferedInputStream(resource.in())) {
-                    mimeType = URLConnection.guessContentTypeFromStream(is);
-                } catch (IOException e) {
-                    // do nothing, we'll just use application/octet-stream
-                }
-            }
-            return mimeType == null
-                    ? MediaType.APPLICATION_OCTET_STREAM
-                    : MediaType.valueOf(mimeType);
-        } else {
-            return null;
+        switch (resource.getType()) {
+            case DIRECTORY:
+                return getFormat(request);
+            case RESOURCE:
+                // set the mime if known by the servlet container, otherwise default to
+                // application/octet-stream to mitigate potential cross-site scripting
+                return Optional.ofNullable(request.getServletContext())
+                        .map(sc -> sc.getMimeType(resource.name()))
+                        .map(MediaType::valueOf)
+                        .orElse(MediaType.APPLICATION_OCTET_STREAM);
+            default:
+                throw new ResourceNotFoundException("Undefined resource path.");
         }
     }
 
     /**
      * Access resource requested, note this may be UNDEFINED
      *
-     * @param request
      * @return Resource requested, may be UNDEFINED if not found.
      */
     protected Resource resource(HttpServletRequest request) {
         String path = request.getPathInfo();
         // Strip off "/resource"
         path = path.substring(9);
+        if (path.startsWith("//")) {
+            // Be relaxed if there is a double separator between "/resource/" and "/path"
+            path = path.substring(2);
+        } else if (path.startsWith("/")) {
+            // strip off "/" separator between "/resource/" and "path"
+            path = path.substring(1);
+        } else if (path.isEmpty()) {
+            // separator not used for base path
+            path = Paths.BASE;
+        } else {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.fine("Undefined resource path: '" + path + "'");
+            }
+            throw new ResourceNotFoundException("Undefined resource path:");
+        }
+
         // handle special characters
         try {
             path = URLDecoder.decode(path, "UTF-8");
@@ -158,7 +182,6 @@ public class ResourceController extends RestBaseController {
     /**
      * Look up operation query string value, defaults to {@link Operation#DEFAULT} if not provided.
      *
-     * @param operation
      * @return operation defined by query string, or {@link Operation#DEFAULT} if not provided
      */
     protected static Operation operation(String operation) {
@@ -223,9 +246,8 @@ public class ResourceController extends RestBaseController {
      *     requested operation
      */
     @RequestMapping(
-        method = {RequestMethod.GET, RequestMethod.HEAD},
-        produces = {MediaType.ALL_VALUE}
-    )
+            method = {RequestMethod.GET, RequestMethod.HEAD},
+            produces = {MediaType.ALL_VALUE})
     public Object resourceGet(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -236,13 +258,13 @@ public class ResourceController extends RestBaseController {
         Resource resource = resource(request);
         Operation operation = operation(operationName);
         Object result;
-        response.setContentType(getFormat(format).toString());
 
         if (operation == Operation.METADATA) {
             result =
                     wrapObject(
                             new ResourceMetadataInfo(resource, request),
                             ResourceMetadataInfo.class);
+            response.setContentType(getFormat(format).toString());
         } else {
             if (resource.getType() == Resource.Type.UNDEFINED) {
                 throw new ResourceNotFoundException("Undefined resource path.");
@@ -250,17 +272,24 @@ public class ResourceController extends RestBaseController {
                 HttpHeaders responseHeaders = new HttpHeaders();
                 MediaType mediaType = getMediaType(resource, request);
                 responseHeaders.setContentType(mediaType);
-                response.setContentType(mediaType.toString());
+                if (resource.getType() == Resource.Type.RESOURCE) {
+                    // Use Content-Disposition: attachment to mitigate potential XSS issues
+                    responseHeaders.setContentDisposition(
+                            ContentDisposition.builder("attachment")
+                                    .filename(resource.name())
+                                    .build());
+                }
 
                 if (request.getMethod().equals("HEAD")) {
-                    result = new ResponseEntity("", responseHeaders, HttpStatus.OK);
+                    result = new ResponseEntity<>("", responseHeaders, HttpStatus.OK);
                 } else if (resource.getType() == Resource.Type.DIRECTORY) {
                     result =
                             wrapObject(
                                     new ResourceDirectoryInfo(resource, request),
                                     ResourceDirectoryInfo.class);
+                    response.setContentType(mediaType.toString());
                 } else {
-                    result = new ResponseEntity(resource.in(), responseHeaders, HttpStatus.OK);
+                    result = new ResponseEntity<>(resource.in(), responseHeaders, HttpStatus.OK);
                 }
                 response.setHeader("Location", href(resource.path()));
                 response.setHeader("Last-Modified", FORMAT_HEADER.format(resource.lastmodified()));
@@ -315,6 +344,10 @@ public class ResourceController extends RestBaseController {
                         "Unable to read content:" + e.getMessage(),
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         e);
+            }
+            if (path.startsWith("/")) {
+                // be-relaxed if resource starts with a slash
+                path = path.substring(1);
             }
             Resource source = resources.get(path);
             if (source.getType() == Type.UNDEFINED) {
@@ -375,14 +408,7 @@ public class ResourceController extends RestBaseController {
         }
     }
 
-    /**
-     * Verifies mime type and use {@link RESTUtils}
-     *
-     * @param directory
-     * @param filename
-     * @param request
-     * @return
-     */
+    /** Verifies mime type and use {@link RESTUtils} */
     protected Resource fileUpload(Resource directory, String filename, HttpServletRequest request) {
         if (LOGGER.isLoggable(Level.INFO)) {
             LOGGER.info(
@@ -409,7 +435,6 @@ public class ResourceController extends RestBaseController {
         xstream.alias("child", ResourceChildInfo.class);
         xstream.alias("ResourceDirectory", ResourceDirectoryInfo.class);
         xstream.alias("ResourceMetadata", ResourceMetadataInfo.class);
-
         if (converter instanceof XStreamXMLMessageConverter) {
             AtomLink.configureXML(xstream);
             xstream.aliasField("atom:link", ResourceParentInfo.class, "link");
@@ -517,7 +542,7 @@ public class ResourceController extends RestBaseController {
             if (!resource.path().isEmpty()) {
                 parent =
                         new ResourceParentInfo(
-                                "/" + resource.parent().path(),
+                                resource.parent().path(),
                                 new AtomLink(
                                         href(resource.parent().path()),
                                         "alternate",
@@ -557,7 +582,7 @@ public class ResourceController extends RestBaseController {
     @XStreamAlias("ResourceDirectory")
     protected static class ResourceDirectoryInfo extends ResourceMetadataInfo {
 
-        private List<ResourceChildInfo> children = new ArrayList<>();
+        private List<ResourceChildInfo> children = Collections.emptyList();
 
         public ResourceDirectoryInfo(
                 String name, ResourceParentInfo parent, Date lastModified, String type) {
@@ -570,19 +595,25 @@ public class ResourceController extends RestBaseController {
          */
         public ResourceDirectoryInfo(Resource resource, HttpServletRequest request) {
             super(resource, request, true);
-            for (Resource child : resource.list()) {
-                children.add(
-                        new ResourceChildInfo(
-                                child.name(),
-                                new AtomLink(
-                                        href(child.path()),
-                                        "alternate",
-                                        getMediaType(child, request).toString())));
-            }
+            children =
+                    resource.list().stream()
+                            .map(child -> asResourceDirectoryInfo(child, request))
+                            .sorted((c1, c2) -> c1.getName().compareTo(c2.getName()))
+                            .collect(Collectors.toList());
         }
 
         public List<ResourceChildInfo> getChildren() {
             return children;
+        }
+
+        private ResourceChildInfo asResourceDirectoryInfo(
+                Resource child, HttpServletRequest request) {
+            return new ResourceChildInfo(
+                    child.name(),
+                    new AtomLink(
+                            href(child.path()),
+                            "alternate",
+                            getMediaType(child, request).toString()));
         }
     }
 }

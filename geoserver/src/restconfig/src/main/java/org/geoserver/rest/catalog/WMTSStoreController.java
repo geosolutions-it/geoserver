@@ -8,7 +8,6 @@ import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import freemarker.template.ObjectWrapper;
 import freemarker.template.SimpleHash;
-import freemarker.template.TemplateModelException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -17,7 +16,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.catalog.CascadeDeleteVisitor;
 import org.geoserver.catalog.Catalog;
@@ -74,12 +72,11 @@ public class WMTSStoreController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<WMTSStoreInfo> getStores(@PathVariable String workspaceName) {
 
         List<WMTSStoreInfo> stores =
@@ -88,13 +85,12 @@ public class WMTSStoreController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        path = "/{storeName}",
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            path = "/{storeName}",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<WMTSStoreInfo> getStore(
             @PathVariable String workspaceName, @PathVariable String storeName) {
 
@@ -103,13 +99,12 @@ public class WMTSStoreController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public ResponseEntity<String> postStore(
             @RequestBody WMTSStoreInfo store,
             @PathVariable String workspaceName,
@@ -146,14 +141,13 @@ public class WMTSStoreController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = "/{storeName}",
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            value = "/{storeName}",
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public void putStore(
             @RequestBody WMTSStoreInfo info,
             @PathVariable String workspaceName,
@@ -239,7 +233,6 @@ public class WMTSStoreController extends AbstractCatalogController {
 
                     @Override
                     protected CatalogInfo getCatalogObject() {
-                        @SuppressWarnings("unchecked")
                         Map<String, String> uriTemplateVars = getURITemplateVariables();
                         String workspace = uriTemplateVars.get("workspaceName");
                         String store = uriTemplateVars.get("storeName");
@@ -281,13 +274,10 @@ public class WMTSStoreController extends AbstractCatalogController {
         return new ObjectToMapWrapper<WMTSStoreInfo>(WMTSStoreInfo.class) {
 
             @Override
-            protected void wrapInternal(Map properties, SimpleHash model, WMTSStoreInfo store) {
+            protected void wrapInternal(
+                    Map<String, Object> properties, SimpleHash model, WMTSStoreInfo store) {
                 if (properties == null) {
-                    try {
-                        properties = model.toMap();
-                    } catch (TemplateModelException e) {
-                        LOGGER.log(Level.SEVERE, e.getMessage(), e);
-                    }
+                    properties = hashToProperties(model);
                 }
                 List<Map<String, Map<String, String>>> dsProps = new ArrayList<>();
 
@@ -302,8 +292,7 @@ public class WMTSStoreController extends AbstractCatalogController {
             }
 
             @Override
-            protected void wrapInternal(
-                    SimpleHash model, @SuppressWarnings("rawtypes") Collection object) {
+            protected void wrapInternal(SimpleHash model, Collection object) {
                 for (Object w : object) {
                     WMTSStoreInfo wk = (WMTSStoreInfo) w;
                     wrapInternal(null, model, wk);

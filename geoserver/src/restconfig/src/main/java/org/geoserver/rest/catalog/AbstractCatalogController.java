@@ -10,7 +10,9 @@ import java.util.Arrays;
 import java.util.List;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
+import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.impl.FeatureTypeInfoImpl;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.rest.RestBaseController;
@@ -32,7 +34,7 @@ public abstract class AbstractCatalogController extends RestBaseController {
         super();
         this.catalog = catalog;
         this.dataDir = new GeoServerDataDirectory(catalog.getResourceLoader());
-        this.validImageFileExtensions = Arrays.asList("svg", "png", "jpg");
+        this.validImageFileExtensions = Arrays.asList("svg", "png", "jpg", "bmp", "gif");
     }
 
     /**
@@ -92,6 +94,21 @@ public abstract class AbstractCatalogController extends RestBaseController {
                 throw new RestException(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR, e);
             }
         }
+        if (fieldsToCalculate.contains("dimensions") && message instanceof CoverageInfo) {
+            CatalogBuilder cb = new CatalogBuilder(catalog);
+            try {
+                CoverageInfo ci = (CoverageInfo) message;
+                cb.reloadDimensions(ci);
+            } catch (Exception e) {
+                String errorMessage = "Error while calculating bands for coverage: " + message;
+                throw new RestException(errorMessage, HttpStatus.INTERNAL_SERVER_ERROR, e);
+            }
+        }
+        if (fieldsToCalculate.contains("attributes") && message instanceof FeatureTypeInfoImpl) {
+            FeatureTypeInfoImpl ft = (FeatureTypeInfoImpl) message;
+            catalog.getResourcePool().clear(ft);
+            ft.setAttributes(new ArrayList<>());
+        }
     }
 
     private CoordinateReferenceSystem resolveCRS(String srs) {
@@ -116,8 +133,6 @@ public abstract class AbstractCatalogController extends RestBaseController {
     /**
      * Validates the current user can edit the resource (full admin required if workspaceName is
      * null)
-     *
-     * @param workspaceName
      */
     protected void checkFullAdminRequired(String workspaceName) {
         // global workspaces/styles can only be edited by a full admin

@@ -8,7 +8,6 @@ package org.geoserver.web.data.resource;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.List;
-import org.apache.wicket.Component;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.markup.html.list.ListItem;
@@ -89,6 +88,11 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
         setupResource(info);
     }
 
+    @Override
+    protected void doSave(boolean doReturn) {
+        super.doSave(doReturn);
+    }
+
     public ResourceConfigurationPage(LayerInfo info, boolean isNew) {
         super(info, isNew);
         this.returnPageClass = LayerPage.class;
@@ -98,9 +102,15 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
                         : getCatalog().getResource(info.getResource().getId(), ResourceInfo.class));
     }
 
+    private void updateResourceInLayerModel(ResourceInfo resource) {
+        LayerInfo layer = getPublishedInfo();
+        layer.setResource(resource);
+        myModel.setObject(layer);
+    }
+
     private void setupResource(ResourceInfo resource) {
-        getPublishedInfo().setResource(resource);
-        myResourceModel = new CompoundPropertyModel<ResourceInfo>(new ResourceModel(resource));
+        updateResourceInLayerModel(resource);
+        myResourceModel = new CompoundPropertyModel<>(new ResourceModel(resource));
     }
 
     private List<ResourceConfigurationPanelInfo> filterResourcePanels(
@@ -122,6 +132,7 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
             super(id);
         }
 
+        @Override
         protected ListView<ResourceConfigurationPanelInfo> createList(String id) {
             List<ResourceConfigurationPanelInfo> dataPanels =
                     filterResourcePanels(
@@ -134,17 +145,15 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
 
                         @Override
                         protected void populateItem(ListItem<ResourceConfigurationPanelInfo> item) {
-                            ResourceConfigurationPanelInfo panelInfo =
-                                    (ResourceConfigurationPanelInfo) item.getModelObject();
+                            ResourceConfigurationPanelInfo panelInfo = item.getModelObject();
                             try {
                                 final Class<ResourceConfigurationPanel> componentClass =
                                         panelInfo.getComponentClass();
-                                final Constructor<ResourceConfigurationPanel> constructor;
-                                constructor =
+                                final Constructor<ResourceConfigurationPanel> constructor =
                                         componentClass.getConstructor(String.class, IModel.class);
                                 ResourceConfigurationPanel panel =
                                         constructor.newInstance("content", myResourceModel);
-                                item.add((Component) panel);
+                                item.add(panel);
                             } catch (Exception e) {
                                 throw new WicketRuntimeException(
                                         "Failed to add pluggable resource configuration panels", e);
@@ -157,15 +166,10 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
 
     /** Returns the {@link ResourceInfo} contained in this page */
     public ResourceInfo getResourceInfo() {
-        return (ResourceInfo) myResourceModel.getObject();
+        return myResourceModel.getObject();
     }
 
-    /**
-     * Allows collaborating pages to update the resource info object
-     *
-     * @param info
-     * @param target
-     */
+    /** Allows collaborating pages to update the resource info object */
     public void updateResource(ResourceInfo info) {
         updateResource(info, null);
     }
@@ -174,10 +178,10 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
      * Allows collaborating pages to update the resource info object
      *
      * @param info the resource info to update
-     * @param target
      */
     public void updateResource(ResourceInfo info, final AjaxRequestTarget target) {
         myResourceModel.setObject(info);
+        updateResourceInLayerModel(info);
         visitChildren(
                 (component, visit) -> {
                     if (component instanceof ResourceConfigurationPanel) {
@@ -197,6 +201,15 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
     protected void doSaveInternal() throws IOException {
         Catalog catalog = getCatalog();
         ResourceInfo resourceInfo = getResourceInfo();
+        validateByChildren(resourceInfo);
+        // allow panels to update the model in case they are not directly editing its properties
+        visitChildren(
+                (component, visit) -> {
+                    if (component instanceof ResourceConfigurationPanel) {
+                        ResourceConfigurationPanel rcp = (ResourceConfigurationPanel) component;
+                        rcp.onSave();
+                    }
+                });
         if (isNew) {
             // updating grid if is a coverage
             if (resourceInfo instanceof CoverageInfo) {
@@ -224,10 +237,11 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
             }
 
             catalog.validate(resourceInfo, true).throwIfInvalid();
+            LayerInfo publishedInfo = getPublishedInfo();
             catalog.add(resourceInfo);
             try {
-                catalog.add(getPublishedInfo());
-            } catch (IllegalArgumentException e) {
+                catalog.add(publishedInfo);
+            } catch (Exception e) {
                 catalog.remove(resourceInfo);
                 throw e;
             }
@@ -235,15 +249,26 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
             ResourceInfo oldState = catalog.getResource(resourceInfo.getId(), ResourceInfo.class);
 
             catalog.validate(resourceInfo, true).throwIfInvalid();
+            LayerInfo publishedInfo = getPublishedInfo();
             catalog.save(resourceInfo);
             try {
-                LayerInfo layer = getPublishedInfo();
+                LayerInfo layer = publishedInfo;
                 layer.setResource(resourceInfo);
                 catalog.save(layer);
-            } catch (IllegalArgumentException e) {
+            } catch (Exception e) {
                 catalog.save(oldState);
                 throw e;
             }
         }
+    }
+
+    private void validateByChildren(final ResourceInfo resourceInfo) {
+        if (resourceInfo == null || resourceInfo.getMetadata() == null) return;
+        visitChildren(
+                (component, visitor) -> {
+                    if (component instanceof MetadataMapValidator) {
+                        ((MetadataMapValidator) component).validate(resourceInfo.getMetadata());
+                    }
+                });
     }
 }

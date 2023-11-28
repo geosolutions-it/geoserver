@@ -11,7 +11,7 @@ Tomcat setup
 
 In order to setup a connection pool Tomcat needs a JDBC driver and the necessary pool configurations.
 
-First off, you need to find the JDBC driver for your database. Most often it is distributed on the web site of your DBMS provider, or available in the installed version of your database.
+First off, you need to find the JDBC driver for your database. Most often it is distributed on the website of your DBMS provider, or available in the installed version of your database.
 For example, a Oracle XE install on a Linux system provides the driver at  :file:`/usr/lib/oracle/xe/app/oracle/product/10.2.0/server/jdbc/lib/ojdbc14.jar`, and that file needs to be moved into Tomcat shared libs directory, :file:`{TOMCAT_HOME}/lib`
 
 .. note:: be careful to remove the jdbc driver from the GeoServer WEB-INF/lib folder when copied to the Tomcat shared libs, to avoid issues in JNDI DataStores usage.
@@ -46,7 +46,7 @@ Once that is done, the Tomcat configuration file :file:`{TOMCAT_HOME}/conf/conte
 
 
 The example sets up a connection pool connecting to the local Oracle XE instance. 
-The pool configuration shows is quite full fledged:
+The pool configuration shows is quite full-fledged:
 
 * at most 20 active connections (max number of connection that will ever be used in parallel)
 * at most 3 connections kept in the pool unused
@@ -60,7 +60,7 @@ Other parameters to setup connection pool:
 
 * timeBetweenEvictionRunsMillis	(default -1) The number of milliseconds to sleep between runs of the idle object evictor thread. When non-positive, no idle object evictor thread will be run.
 * numTestsPerEvictionRun	(default 3) The number of objects to examine during each run of the idle object evictor thread (if any).
-* minEvictableIdleTimeMillis	(default 1000 * 60 * 30) The minimum amount of time an object may sit idle in the pool before it is eligable for eviction by the idle object evictor (if any).
+* minEvictableIdleTimeMillis	(default 1000 * 60 * 30) The minimum amount of time an object may sit idle in the pool before it is eligible for eviction by the idle object evictor (if any).
 * removeAbandoned	(default false) Flag to remove abandoned connections if they exceed the removeAbandonedTimout. If set to true a connection is considered abandoned and eligible for removal if it has been idle longer than the removeAbandonedTimeout. Setting this to true can recover db connections from poorly written applications which fail to close a connection.
 * removeAbandonedTimeout	(default 300) Timeout in seconds before an abandoned connection can be removed.
 * logAbandoned	(default false) Flag to log stack traces for application code which abandoned a Statement or Connection.
@@ -99,10 +99,10 @@ Configuring a PostgreSQL connection pool
 
 In this example a PostgreSQL connection pool will be configured. 
 
-For configuring the JNDI pool you need to remove the Postgres JDBC driver (it should be named :file:`postgresql-X.X-XXX.jdbc3.jar`) from the GeoServer
+For configuring the JNDI pool you need to move the Postgres JDBC driver (it should be named :file:`postgresql-XX.X.X.jar`) from the GeoServer
 :file:`WEB-INF/lib` folder and put it into the :file:`{TOMCAT_HOME}/lib` folder.
 
-Then the following code must be written in the Tomcat configuration file :file:`{TOMCAT_HOME}/conf/context.xml`
+Then the following code must be added to the Tomcat configuration file :file:`{TOMCAT_HOME}/conf/context.xml` inside a Context tag.
 
 .. code-block:: xml
   
@@ -137,7 +137,7 @@ First, choose the *PostGIS (JNDI)* datastore and give it a name:
 .. figure:: postgis_start.png
    :align: center
 
-Then configure the associated params:
+Then configure the associated parameters. The value for jndiReferenceName corresponds to the Resource name given in :file:`{TOMCAT_HOME}/conf/context.xml`.  
 
 .. figure:: postgis_conf.png
    :align: center
@@ -170,7 +170,7 @@ Then the following code must be written in the Tomcat configuration file :file:`
         testWhileIdle="true"
         poolPreparedStatements="true"
         maxOpenPreparedStatements="100"
-        validationQuery="SELECT SYSDATE FROM DUAL"
+        validationQuery="SELECT 1"
         maxAge="600000"
         rollbackOnReturn="true"
         />

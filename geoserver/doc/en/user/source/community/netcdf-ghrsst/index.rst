@@ -13,8 +13,8 @@ Installation
 ------------
 
 As a community module, the package needs to be downloaded from the `nightly builds <https://build.geoserver.org/geoserver/>`_,
-picking the community folder of the corresponding GeoServer series (e.g. if working on GeoServer master nightly
-builds, pick the zip file form ``master/community-latest``).
+picking the community folder of the corresponding GeoServer series (e.g. if working on the GeoServer main development branch nightly
+builds, pick the zip file form ``main/community-latest``).
 
 To install the module, unpack the zip file contents into GeoServer own ``WEB-INF/lib`` directory and
 restart GeoServer.
@@ -25,7 +25,7 @@ Input preparation
 -----------------
 
 A GHRSST file contains multiple variables that are related with each other, and should be explored
-toghether in order to better understand the data. Thus, it is assumed that the source GHRSST file is published
+together in order to better understand the data. Thus, it is assumed that the source GHRSST file is published
 as a single coverage view holding all the variables as bands, retaining their native name (this is important for
 the plugin to work):
 

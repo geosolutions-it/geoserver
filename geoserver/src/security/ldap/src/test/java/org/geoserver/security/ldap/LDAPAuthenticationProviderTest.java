@@ -42,19 +42,11 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
 
     @RunWith(FrameworkRunner.class)
     @CreateLdapServer(
-        transports = {
-            @CreateTransport(
-                protocol = "LDAP",
-                address = "localhost",
-                port = LDAPTestUtils.LDAP_SERVER_PORT
-            )
-        },
-        allowAnonymousAccess = true
-    )
+            transports = {@CreateTransport(protocol = "LDAP", address = "localhost")},
+            allowAnonymousAccess = true)
     @CreateDS(
-        name = "myDS",
-        partitions = {@CreatePartition(name = "test", suffix = LDAPTestUtils.LDAP_BASE_PATH)}
-    )
+            name = "myDS",
+            partitions = {@CreatePartition(name = "test", suffix = LDAPTestUtils.LDAP_BASE_PATH)})
     @ApplyLdifFiles({"data.ldif"})
     public static class LDAPAuthenticationProviderDataTest extends LDAPAuthenticationProviderTest {
 
@@ -109,7 +101,7 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
         public void testUserFilterAndFormat() throws Exception {
             getService().setAllowAnonymousAccess(true);
             // filter to extract user data
-            ((LDAPSecurityServiceConfig) config).setUserFilter("(telephonenumber=1)");
+            config.setUserFilter("(telephonenumber=1)");
             // username to bind to
             ((LDAPSecurityServiceConfig) config)
                     .setUserFormat("uid={0},ou=People,dc=example,dc=com");
@@ -128,7 +120,7 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
         public void testUserFilterPlacemarks() throws Exception {
             getService().setAllowAnonymousAccess(true);
             // filter to extract user data
-            ((LDAPSecurityServiceConfig) config).setUserFilter("(givenName={1})");
+            config.setUserFilter("(givenName={1})");
             // username to bind to
             ((LDAPSecurityServiceConfig) config)
                     .setUserFormat("uid={0},ou=People,dc=example,dc=com");
@@ -139,7 +131,7 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
             assertEquals(3, result.getAuthorities().size());
 
             // filter to extract user data
-            ((LDAPSecurityServiceConfig) config).setUserFilter("(cn={0})");
+            config.setUserFilter("(cn={0})");
             // username to bind to
             ((LDAPSecurityServiceConfig) config)
                     .setUserFormat("uid={0},ou=People,dc=example,dc=com");
@@ -228,12 +220,10 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
             assertEquals("nestedUser", result.getName());
             assertEquals(3, result.getAuthorities().size());
             assertTrue(
-                    result.getAuthorities()
-                            .stream()
+                    result.getAuthorities().stream()
                             .anyMatch(x -> "ROLE_NESTED".equals(x.getAuthority())));
             assertTrue(
-                    result.getAuthorities()
-                            .stream()
+                    result.getAuthorities().stream()
                             .anyMatch(x -> "ROLE_EXTRA".equals(x.getAuthority())));
         }
 
@@ -254,12 +244,10 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
             assertEquals("nestedUser", result.getName());
             assertEquals(3, result.getAuthorities().size());
             assertTrue(
-                    result.getAuthorities()
-                            .stream()
+                    result.getAuthorities().stream()
                             .anyMatch(x -> "ROLE_NESTED".equals(x.getAuthority())));
             assertTrue(
-                    result.getAuthorities()
-                            .stream()
+                    result.getAuthorities().stream()
                             .anyMatch(x -> "ROLE_EXTRA".equals(x.getAuthority())));
         }
 
@@ -279,31 +267,21 @@ public class LDAPAuthenticationProviderTest extends LDAPBaseTest {
             assertEquals("nestedUser", result.getName());
             assertEquals(2, result.getAuthorities().size());
             assertTrue(
-                    result.getAuthorities()
-                            .stream()
+                    result.getAuthorities().stream()
                             .anyMatch(x -> "ROLE_NESTED".equals(x.getAuthority())));
             assertTrue(
-                    result.getAuthorities()
-                            .stream()
+                    result.getAuthorities().stream()
                             .noneMatch(x -> "ROLE_EXTRA".equals(x.getAuthority())));
         }
     }
 
     @RunWith(FrameworkRunner.class)
     @CreateLdapServer(
-        transports = {
-            @CreateTransport(
-                protocol = "LDAP",
-                address = "localhost",
-                port = LDAPTestUtils.LDAP_SERVER_PORT
-            )
-        },
-        allowAnonymousAccess = true
-    )
+            transports = {@CreateTransport(protocol = "LDAP", address = "localhost")},
+            allowAnonymousAccess = true)
     @CreateDS(
-        name = "myDS",
-        partitions = {@CreatePartition(name = "test", suffix = LDAPTestUtils.LDAP_BASE_PATH)}
-    )
+            name = "myDS",
+            partitions = {@CreatePartition(name = "test", suffix = LDAPTestUtils.LDAP_BASE_PATH)})
     @ApplyLdifFiles({"data3.ldif"})
     public static class LDAPAuthenticationProviderData3Test extends LDAPAuthenticationProviderTest {
 

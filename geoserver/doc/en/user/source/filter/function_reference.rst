@@ -7,7 +7,7 @@ This reference describes all filter functions that can be used in WFS/WMS filter
 
 The list of functions available on a GeoServer instance can be determined by 
 browsing to http://localhost:8080/geoserver/wfs?request=GetCapabilities 
-and searching for ``ogc:FunctionNames`` in the returned XML.  
+and searching for ``ogc:Function_Names`` (WFS 1.0.0), ``ogc:FunctionNames`` (WFS 1.1.0), or ``fes:Functions`` (WFS 2.0.0) in the returned XML.  
 If a function is described in the Capabilities document but is not in this reference, 
 then it might mean that the function cannot be used for filtering, 
 or that it is new and has not been documented.  Ask for details on the user mailing list.
@@ -83,7 +83,7 @@ Comparison functions
    * - not
      - ``bool``:Boolean
      - Returns the negation of ``bool``
-   * - notEqual
+   * - notEqualTo
      - ``x``:Object, ``y``:Object
      - Returns true if ``x`` and ``y`` are equal, false otherwise
      
@@ -107,9 +107,27 @@ Environment function
 
 This function returns the value of environment variables
 defined in various contexts.
-Contexts which define environment variables include
-:ref:`SLD rendering <sld_variable_substitution>`
-and the :ref:`tutorials_animreflector`.
+WMS GetMap automatically defines some variables :ref:`SLD rendering <sld_variable_substitution>`,
+while others can be provided using the ``env`` request parameter.
+Example usage in e.g. a dynamic symbolizer:
+
+``${env('size', 20)}``
+
+Example usage in a default Symbolizer:
+
+.. code-block:: xml
+
+  <PointSymbolizer uom="http://www.opengeospatial.org/se/units/metre">
+    <Graphic>
+    ...
+      <Size>
+        <ogc:Function name="env">
+          <ogc:Literal>size</ogc:Literal>
+          <ogc:Literal>20</ogc:Literal>
+        </ogc:Function>
+      </Size>
+    </Graphic>
+  </PointSymbolizer>
 
 .. list-table::
    :widths: 20 25 55
@@ -145,6 +163,9 @@ Feature functions
      - Returns the value of the property ``propertyName``.  
        Allows property names to be computed or specified by 
        :ref:`sld_variable_substitution`.
+   * - mapGet
+     - ``f``:Feature, ``map``:Map, ``key``:String
+     - Get the value of the map ``map`` related to the specified ``key``.
      
 Spatial Relationship functions
 ------------------------------
@@ -503,7 +524,7 @@ Non-string values will be converted into a string representation automatically.
      - Returns the upper case version of the string
    * - strTrim
      - ``string``:String
-     - Returns a copy of the string, with leading and trailing white space omitted
+     - Returns a copy of the string, with leading and trailing blank-space omitted
    
    
    
@@ -524,8 +545,10 @@ Parsing and formatting functions
      - ``format``:String, ``dateString``:String
      - Parses a date from a ``dateString`` formatted according to the ``format`` specification. The format syntax can be found in the `Java SimpleDateFormat javadocs <http://java.sun.com/javase/6/docs/api/java/text/SimpleDateFormat.html>`_
    * - numberFormat
-     - ``format``:String, ``number``:Double
-     - Formats the number according to the specified ``format``. The format syntax can be found in the `Java DecimalFormat javadocs <http://java.sun.com/javase/6/docs/api/java/text/DecimalFormat.html>`_
+     - ``format``:String, ``number``:Double, ``locale``:String
+     - Formats the number according to the specified ``format`` using the default locale or the one 
+       provided as an optional argument. The format syntax can be found in the `Java DecimalFormat 
+       javadocs <http://java.sun.com/javase/6/docs/api/java/text/DecimalFormat.html>`_
    * - parseBoolean
      - ``boolean``:String
      - Parses a string into a boolean. The empty string, ``f``, ``0.0`` and ``0`` are considered false, everything else is considered true.
@@ -538,7 +561,26 @@ Parsing and formatting functions
    * - parseLong
      - ``number``:String
      - Parses a string into a long integer
-     
+
+.. _temporal-functions:
+
+Temporal functions
+------------------
+
+.. list-table::
+   :widths: 20 25 55
+   
+   * - **Name**
+     - **Arguments**
+     - **Description**
+   * - dateDifference
+     - ``a``:Date, ``b``:Date, ``timeUnits``:String
+     - Computes the difference between two date (as a-b) and return a result in a specific time units. ``timeUnits`` is optional, representing the desired time units result. 
+       Default as milliseconds. Possible values are ``s`` (seconds), ``m`` (minutes), ``h`` (hours), ``d`` (days).
+   * - now
+     - None
+     - Returns the current time as a Date
+
 Transformation functions
 --------------------------------
 

@@ -19,7 +19,6 @@ import org.apache.wicket.markup.repeater.OddEvenItem;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.LoadableDetachableModel;
 import org.apache.wicket.model.Model;
-import org.geoserver.web.data.layergroup.LayerGroupEntry;
 import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 import org.geoserver.web.wicket.GeoServerDataProvider.PropertyPlaceholder;
 import wicketdnd.DragSource;
@@ -38,6 +37,7 @@ import wicketdnd.theme.WebTheme;
 public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
 
     private static final long serialVersionUID = -6732973402966999112L;
+    private final List<T> items;
 
     static class ReorderableDataProvider<T> extends GeoServerDataProvider<T> {
 
@@ -57,9 +57,9 @@ public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
 
                         @Override
                         protected List<Property<T>> load() {
-                            List result = new ArrayList<Property<T>>(properties.getObject());
-                            result.add(0, (Property<T>) POSITION);
-                            result.add(0, (Property<T>) RENDERING_ORDER);
+                            List result = new ArrayList<>(properties.getObject());
+                            result.add(0, POSITION);
+                            result.add(0, RENDERING_ORDER);
                             return result;
                         }
                     };
@@ -80,27 +80,35 @@ public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
      * Cannot declare these non static, because they would be initialized too late, and as static,
      * they cannot have the right type argument
      */
-    static Property<?> POSITION = new PropertyPlaceholder<Object>("position");
+    static Property<?> POSITION = new PropertyPlaceholder<>("position");
 
-    static Property<?> RENDERING_ORDER = new PropertyPlaceholder<Object>("order");
+    static Property<?> RENDERING_ORDER = new PropertyPlaceholder<>("order");
 
     @SuppressWarnings("serial")
-    public ReorderableTablePanel(String id, List<T> items, IModel<List<Property<T>>> properties) {
-        super(id, new ReorderableDataProvider<T>(items, properties));
+    public ReorderableTablePanel(
+            String id,
+            Class<T> contentsClass,
+            List<T> items,
+            IModel<List<Property<T>>> properties) {
+        super(id, new ReorderableDataProvider<>(items, properties));
+        this.items = items;
         this.setOutputMarkupId(true);
+        this.setSortable(false); // order is manually configured here
         this.add(new WebTheme());
         this.add(new DragSource(Operation.MOVE).drag("tr"));
         this.add(
                 new DropTarget(Operation.MOVE) {
 
+                    @Override
                     public void onDrop(
                             AjaxRequestTarget target, Transfer transfer, Location location) {
                         if (location == null
-                                || !(location.getComponent().getDefaultModel().getObject()
-                                        instanceof LayerGroupEntry)) {
+                                || !(contentsClass.isInstance(
+                                        location.getComponent().getDefaultModel().getObject()))) {
                             return;
                         }
                         T movedItem = transfer.getData();
+                        @SuppressWarnings("unchecked")
                         T targetItem = (T) location.getComponent().getDefaultModel().getObject();
                         if (movedItem.equals(targetItem)) {
                             return;
@@ -121,11 +129,11 @@ public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
     protected void buildRowListView(
             GeoServerDataProvider<T> dataProvider, Item<T> item, IModel<T> itemModel) {
         // create one component per viewable property
-        IModel propertyList =
-                new LoadableDetachableModel() {
+        IModel<List<Property<T>>> propertyList =
+                new LoadableDetachableModel<List<Property<T>>>() {
 
                     @Override
-                    protected Object load() {
+                    protected List<Property<T>> load() {
                         return dataProvider.getVisibleProperties();
                     }
                 };
@@ -144,9 +152,9 @@ public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
                             ParamResourceModel downTitle =
                                     new ParamResourceModel("moveToBottom", this);
                             component =
-                                    new UpDownPanel<T>(
+                                    new UpDownPanel<>(
                                             "component",
-                                            (T) itemModel.getObject(),
+                                            itemModel.getObject(),
                                             dataProvider.getItems(),
                                             ReorderableTablePanel.this,
                                             upTitle,
@@ -191,7 +199,7 @@ public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
             Label label = (Label) item.iterator().next();
             @SuppressWarnings("unchecked")
             OddEvenItem<T> rowContainer = (OddEvenItem<T>) item.getParent().getParent();
-            label.setDefaultModel(new Model<Integer>(rowContainer.getIndex() + 1));
+            label.setDefaultModel(new Model<>(rowContainer.getIndex() + 1));
             item.add(
                     new Behavior() {
 
@@ -203,5 +211,9 @@ public abstract class ReorderableTablePanel<T> extends GeoServerTablePanel<T> {
                         }
                     });
         }
-    };
+    }
+
+    public List<T> getItems() {
+        return items;
+    }
 }

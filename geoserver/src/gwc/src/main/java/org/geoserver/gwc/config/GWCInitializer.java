@@ -10,9 +10,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.geoserver.gwc.GWC.tileLayerName;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,7 +18,6 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
-import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInitializer;
 import org.geoserver.config.GeoServerReinitializer;
@@ -91,8 +88,9 @@ public class GWCInitializer implements GeoServerReinitializer {
     }
 
     /** @see org.geoserver.config.GeoServerInitializer#initialize(org.geoserver.config.GeoServer) */
+    @Override
     public void initialize(final GeoServer geoServer) throws Exception {
-        LOGGER.info(
+        LOGGER.config(
                 "Initializing GeoServer specific GWC configuration from "
                         + GWCConfigPersister.GWC_CONFIG_FILE);
 
@@ -145,7 +143,7 @@ public class GWCInitializer implements GeoServerReinitializer {
             if (LOGGER.isLoggable(Level.FINEST)) {
                 LOGGER.finest("Setting default CacheConfiguration");
             }
-            Map<String, CacheConfiguration> map = new HashMap<String, CacheConfiguration>();
+            Map<String, CacheConfiguration> map = new HashMap<>();
             map.put(GuavaCacheProvider.class.toString(), new CacheConfiguration());
             gwcConfig.setCacheConfigurations(map);
             configPersister.save(gwcConfig);
@@ -186,8 +184,7 @@ public class GWCInitializer implements GeoServerReinitializer {
                 continue;
             }
             try {
-                GeoServerTileLayerInfo tileLayerInfo;
-                tileLayerInfo = LegacyTileLayerInfoLoader.load(layer);
+                GeoServerTileLayerInfo tileLayerInfo = LegacyTileLayerInfoLoader.load(layer);
                 if (tileLayerInfo != null) {
                     tileLayerCatalog.save(tileLayerInfo);
                     MetadataMap metadata = layer.getMetadata();
@@ -206,8 +203,7 @@ public class GWCInitializer implements GeoServerReinitializer {
 
         for (LayerGroupInfo layer : rawCatalog.getLayerGroups()) {
             try {
-                GeoServerTileLayerInfo tileLayerInfo;
-                tileLayerInfo = LegacyTileLayerInfoLoader.load(layer);
+                GeoServerTileLayerInfo tileLayerInfo = LegacyTileLayerInfoLoader.load(layer);
                 if (tileLayerInfo != null) {
                     tileLayerCatalog.save(tileLayerInfo);
                     MetadataMap metadata = layer.getMetadata();
@@ -236,8 +232,8 @@ public class GWCInitializer implements GeoServerReinitializer {
                 continue;
             }
             try {
-                GeoServerTileLayerInfo tileLayerInfo;
-                tileLayerInfo = TileLayerInfoUtil.loadOrCreate(layer, defaultSettings);
+                GeoServerTileLayerInfo tileLayerInfo =
+                        TileLayerInfoUtil.loadOrCreate(layer, defaultSettings);
                 tileLayerCatalog.save(tileLayerInfo);
                 MetadataMap metadata = layer.getMetadata();
                 if (metadata.containsKey(LegacyTileLayerInfoLoader.CONFIG_KEY_ENABLED)) {
@@ -256,8 +252,8 @@ public class GWCInitializer implements GeoServerReinitializer {
 
         for (LayerGroupInfo layer : rawCatalog.getLayerGroups()) {
             try {
-                GeoServerTileLayerInfo tileLayerInfo;
-                tileLayerInfo = TileLayerInfoUtil.loadOrCreate(layer, defaultSettings);
+                GeoServerTileLayerInfo tileLayerInfo =
+                        TileLayerInfoUtil.loadOrCreate(layer, defaultSettings);
                 tileLayerCatalog.save(tileLayerInfo);
 
                 MetadataMap metadata = layer.getMetadata();
@@ -304,46 +300,34 @@ public class GWCInitializer implements GeoServerReinitializer {
     /**
      * Private method for adding all the Layer that must not be cached to the {@link CacheProvider}
      * instance.
-     *
-     * @param cache
-     * @param defaultSettings
      */
     private void addLayersToNotCache(CacheProvider cache, GWCConfig defaultSettings) {
         if (LOGGER.isLoggable(Level.FINEST)) {
             LOGGER.finest("Adding Layers to avoid In Memory Caching");
         }
-        List<PublishedInfo> publisheds = new ArrayList<>(rawCatalog.getLayers());
-        publisheds.addAll(rawCatalog.getLayerGroups());
-        publisheds
+        // it is ok to use the ForkJoinPool.commonPool() here, there's no I/O involved
+        tileLayerCatalog
+                .getLayerIds()
                 .parallelStream()
-                .forEach(
-                        layer -> {
-                            try {
-                                // Check if the Layer must not be cached
-                                GeoServerTileLayerInfo tileLayerInfo =
-                                        tileLayerCatalog.getLayerById(layer.getId());
-                                if (tileLayerInfo != null
-                                        && tileLayerInfo.isEnabled()
-                                        && !tileLayerInfo.isInMemoryCached()) {
-                                    // Add it to the cache
-                                    synchronized (cache) {
-                                        cache.addUncachedLayer(tileLayerInfo.getName());
-                                    }
-                                }
-                            } catch (RuntimeException e) {
-                                LOGGER.log(
-                                        Level.WARNING,
-                                        "Error occurred retrieving Layer '" + layer.getName() + "'",
-                                        e);
-                            }
-                        });
+                .forEach(id -> addLayerToNotCache(cache, id));
     }
 
-    /**
-     * Setter for the blobStore parameter
-     *
-     * @param blobStore
-     */
+    private void addLayerToNotCache(CacheProvider cache, String layerId) {
+        try {
+            // Check if the Layer must not be cached
+            GeoServerTileLayerInfo tileLayerInfo = tileLayerCatalog.getLayerById(layerId);
+            if (tileLayerInfo != null
+                    && tileLayerInfo.isEnabled()
+                    && !tileLayerInfo.isInMemoryCached()) {
+                // Add it to the cache
+                cache.addUncachedLayer(tileLayerInfo.getName());
+            }
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Error occurred retrieving Layer '" + layerId + "'", e);
+        }
+    }
+
+    /** Setter for the blobStore parameter */
     public void setBlobStore(ConfigurableBlobStore blobStore) {
         this.blobStore = blobStore;
     }

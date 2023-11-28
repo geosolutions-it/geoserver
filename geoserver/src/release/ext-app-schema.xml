@@ -17,6 +17,7 @@
             <outputDirectory></outputDirectory>
             <includes>
                 <!-- matches both gt-app-schema and gt-app-schema-resolver jars -->
+                <include>gs-app-schema-core*.jar</include>
                 <include>gt-app-schema-*.jar</include>
                 <include>gt-complex-*.jar</include>
                 <include>commons-digester-*.jar</include>
@@ -26,10 +27,11 @@
             </excludes>
         </fileSet>
         <fileSet>
-            <directory>release/extensions</directory>
+            <directory>release/target/html/licenses</directory>
             <outputDirectory></outputDirectory>
             <includes>
-                <include>LICENSE.txt</include>
+                <include>LGPL.html</include>
+                <include>GEOTOOLS_NOTICE.html</include>
             </includes>
         </fileSet>
         <fileSet>
@@ -46,5 +48,3 @@
         </fileSet>
     </fileSets>
 </assembly>
-
-

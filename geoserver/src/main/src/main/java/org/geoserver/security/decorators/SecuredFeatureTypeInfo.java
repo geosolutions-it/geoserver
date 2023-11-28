@@ -28,10 +28,12 @@ import org.geotools.data.Query;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.util.factory.Hints;
+import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.filter.Filter;
+import org.opengis.util.InternationalString;
 import org.opengis.util.ProgressListener;
 
 /**
@@ -70,8 +72,7 @@ public class SecuredFeatureTypeInfo extends DecoratingFeatureTypeInfo {
 
             if (ft instanceof SimpleFeatureType) {
                 SimpleFeatureType sft = (SimpleFeatureType) ft;
-                Set<String> properties =
-                        new HashSet<String>(Arrays.asList(query.getPropertyNames()));
+                Set<String> properties = new HashSet<>(Arrays.asList(query.getPropertyNames()));
                 SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
                 tb.init(sft);
                 for (AttributeDescriptor at : sft.getAttributeDescriptors()) {
@@ -103,15 +104,15 @@ public class SecuredFeatureTypeInfo extends DecoratingFeatureTypeInfo {
     // --------------------------------------------------------------------------
 
     @Override
-    public FeatureSource getFeatureSource(ProgressListener listener, Hints hints)
-            throws IOException {
-        final FeatureSource fs = delegate.getFeatureSource(listener, hints);
-
+    public FeatureSource<? extends FeatureType, ? extends Feature> getFeatureSource(
+            ProgressListener listener, Hints hints) throws IOException {
+        final FeatureSource<? extends FeatureType, ? extends Feature> fs =
+                delegate.getFeatureSource(listener, hints);
         Request request = Dispatcher.REQUEST.get();
         if (policy.level == AccessLevel.METADATA && !isGetCapabilities(request)) {
             throw SecureCatalogImpl.unauthorizedAccess(this.getName());
         } else {
-            return (FeatureSource) SecuredObjects.secure(fs, computeWrapperPolicy(request));
+            return SecuredObjects.secure(fs, computeWrapperPolicy(request));
         }
     }
 
@@ -123,13 +124,9 @@ public class SecuredFeatureTypeInfo extends DecoratingFeatureTypeInfo {
     private WrapperPolicy computeWrapperPolicy(Request request) {
         if (isGetCapabilities(request) && policy.getLimits() instanceof VectorAccessLimits) {
             VectorAccessLimits accessLimits = (VectorAccessLimits) policy.getLimits();
-            VectorAccessLimits newLimits =
-                    new VectorAccessLimits(
-                            accessLimits.getMode(),
-                            null,
-                            Filter.INCLUDE,
-                            accessLimits.getWriteAttributes(),
-                            accessLimits.getWriteFilter());
+            VectorAccessLimits newLimits = (VectorAccessLimits) accessLimits.clone();
+            newLimits.setReadAttributes(null);
+            newLimits.setReadFilter(Filter.INCLUDE);
             WrapperPolicy newPolicy = WrapperPolicy.readOnlyChallenge(newLimits);
             return newPolicy;
         }
@@ -144,12 +141,32 @@ public class SecuredFeatureTypeInfo extends DecoratingFeatureTypeInfo {
 
     @Override
     public DataStoreInfo getStore() {
-        return (DataStoreInfo) SecuredObjects.secure(delegate.getStore(), policy);
+        return SecuredObjects.secure(delegate.getStore(), policy);
     }
 
     @Override
     public void setStore(StoreInfo store) {
         // need to make sure the store isn't secured
         super.setStore((StoreInfo) SecureCatalogImpl.unwrap(store));
+    }
+
+    @Override
+    public InternationalString getInternationalTitle() {
+        return delegate.getInternationalTitle();
+    }
+
+    @Override
+    public void setInternationalTitle(InternationalString internationalTitle) {
+        delegate.setInternationalTitle(internationalTitle);
+    }
+
+    @Override
+    public InternationalString getInternationalAbstract() {
+        return delegate.getInternationalAbstract();
+    }
+
+    @Override
+    public void setInternationalAbstract(InternationalString internationalAbstract) {
+        delegate.setInternationalAbstract(internationalAbstract);
     }
 }

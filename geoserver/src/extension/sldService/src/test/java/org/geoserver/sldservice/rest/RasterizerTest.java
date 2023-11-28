@@ -61,7 +61,7 @@ public class RasterizerTest extends SLDServiceBaseTest {
         final String restPath =
                 RestBaseController.ROOT_PATH + "/sldservice//" + getServiceUrl() + ".xml";
         MockHttpServletResponse response = getAsServletResponse(restPath);
-        assertTrue(response.getStatus() == 404);
+        assertEquals(404, response.getStatus());
     }
 
     @Test
@@ -71,11 +71,27 @@ public class RasterizerTest extends SLDServiceBaseTest {
         final String restPath =
                 RestBaseController.ROOT_PATH + "/sldservice/wcs:World/" + getServiceUrl() + ".xml";
         MockHttpServletResponse response = getAsServletResponse(restPath);
-        assertTrue(response.getStatus() == 200);
+        assertEquals(200, response.getStatus());
         Document dom = getAsDOM(restPath, 200);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         print(dom, baos);
         assertTrue(baos.toString().indexOf("<sld:ColorMap>") > 0);
+        checkColorMap(baos.toString(), 100);
+    }
+
+    @Test
+    public void testRasterizeFeatureTypeName() throws Exception {
+        LayerInfo l = getCatalog().getLayerByName("wcs:World");
+        assertEquals("raster", l.getDefaultStyle().getName());
+        final String restPath =
+                RestBaseController.ROOT_PATH + "/sldservice/wcs:World/" + getServiceUrl() + ".xml";
+        MockHttpServletResponse response = getAsServletResponse(restPath);
+        assertEquals(200, response.getStatus());
+        Document dom = getAsDOM(restPath, 200);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        print(dom, baos);
+        assertTrue(
+                baos.toString().indexOf("<sld:FeatureTypeName>Feature</sld:FeatureTypeName>") > 0);
         checkColorMap(baos.toString(), 100);
     }
 
@@ -91,7 +107,7 @@ public class RasterizerTest extends SLDServiceBaseTest {
                         + ".xml?"
                         + "classes=5&min=10.0&max=50.0&digits=1&ramp=custom&startColor=0xFF0000&endColor=0x0000FF";
         MockHttpServletResponse response = getAsServletResponse(restPath);
-        assertTrue(response.getStatus() == 200);
+        assertEquals(200, response.getStatus());
         Document dom = getAsDOM(restPath, 200);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         print(dom, baos);
@@ -115,7 +131,7 @@ public class RasterizerTest extends SLDServiceBaseTest {
                         + ".xml?"
                         + "classes=5&min=10.0&max=50.0&digits=2&ramp=custom&startColor=0xFF0000&endColor=0x0000FF";
         MockHttpServletResponse response = getAsServletResponse(restPath);
-        assertTrue(response.getStatus() == 200);
+        assertEquals(200, response.getStatus());
         Document dom = getAsDOM(restPath, 200);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         print(dom, baos);

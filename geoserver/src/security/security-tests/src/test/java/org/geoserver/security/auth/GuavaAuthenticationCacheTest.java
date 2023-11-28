@@ -5,6 +5,11 @@
  */
 package org.geoserver.security.auth;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
+
+import org.junit.Test;
+
 /** Unit tests for Guava based AuthenticationCache implementation. */
 public class GuavaAuthenticationCacheTest extends BaseAuthenticationCacheTest {
     private static final int CONCURRENCY = 3;
@@ -17,9 +22,10 @@ public class GuavaAuthenticationCacheTest extends BaseAuthenticationCacheTest {
                 MAX_ENTRIES, TIME_IDLE, TIME_LIVE, TIME_CLEANUP, CONCURRENCY);
     }
 
+    @Test
     public void testCleanUp() throws InterruptedException {
         putAuthenticationInCache();
-        Thread.sleep((TIME_CLEANUP + 1) * 1000);
-        assertTrue(((GuavaAuthenticationCacheImpl) cache).isEmpty());
+        await().atMost(TIME_CLEANUP + 1, SECONDS)
+                .until(() -> ((GuavaAuthenticationCacheImpl) cache).isEmpty());
     }
 }

@@ -7,8 +7,12 @@ package org.geoserver.wms;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
@@ -17,13 +21,18 @@ import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.ResourcePool;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.data.InternationalContentHelper;
+import org.geoserver.util.GeoServerDefaultLocale;
 import org.geotools.data.FeatureSource;
 import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.data.wfs.WFSDataStoreFactory;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.referencing.CRS;
 import org.geotools.styling.FeatureTypeConstraint;
 import org.geotools.styling.Style;
 import org.geotools.util.factory.GeoTools;
 import org.geotools.util.factory.Hints;
+import org.geotools.util.logging.Logging;
 import org.opengis.coverage.grid.GridCoverageReader;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
@@ -38,6 +47,9 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
  * @author Gabriel Roldan
  */
 public final class MapLayerInfo {
+
+    private static final Logger LOGGER = Logging.getLogger(MapLayerInfo.class);
+
     public static int TYPE_VECTOR = PublishedType.VECTOR.getCode();
 
     public static int TYPE_RASTER = PublishedType.RASTER.getCode();
@@ -70,26 +82,77 @@ public final class MapLayerInfo {
     /** The extra constraints that can be set when an external SLD is used */
     private FeatureTypeConstraint[] layerFeatureConstraints;
 
+    private MetadataMap layerGroupMetadata;
+
     public MapLayerInfo(SimpleFeatureSource remoteSource) {
+        this(remoteSource, new MetadataMap());
+    }
+
+    /**
+     * @param remoteSource
+     * @param layerGroupMetadata override layerInfo metadata e.g. max-age
+     */
+    public MapLayerInfo(SimpleFeatureSource remoteSource, MetadataMap layerGroupMetadata) {
         this.remoteFeatureSource = remoteSource;
         this.layerInfo = null;
         name = remoteFeatureSource.getSchema().getTypeName();
         label = name;
         description = "Remote WFS";
         type = TYPE_REMOTE_VECTOR;
+        this.layerGroupMetadata = new MetadataMap(layerGroupMetadata);
     }
 
     public MapLayerInfo(LayerInfo layerInfo) {
+        this(layerInfo, new MetadataMap());
+    }
+
+    public MapLayerInfo(LayerInfo layerInfo, Locale locale) {
+        this(layerInfo, new MetadataMap(), locale);
+    }
+
+    public MapLayerInfo(LayerInfo layerInfo, MetadataMap layerGroupMetadata) {
+        this(layerInfo, layerGroupMetadata, GeoServerDefaultLocale.get());
+    }
+
+    /**
+     * @param layerInfo
+     * @param layerGroupMetadata override layerInfo metadata e.g. max-age
+     */
+    public MapLayerInfo(LayerInfo layerInfo, MetadataMap layerGroupMetadata, Locale locale) {
         this.layerInfo = layerInfo;
         this.remoteFeatureSource = null;
         ResourceInfo resource = layerInfo.getResource();
-
         // handle InlineFeatureStuff
         this.name = resource.prefixedName();
-        this.label = resource.getTitle();
-        this.description = resource.getAbstract();
+        this.label = getLabel(locale, resource);
+        this.description = getDescription(locale, resource);
 
         this.type = layerInfo.getType().getCode();
+        this.layerGroupMetadata = new MetadataMap(layerGroupMetadata);
+    }
+
+    private String getLabel(Locale locale, ResourceInfo resourceInfo) {
+        String label = resourceInfo.getTitle();
+        if (resourceInfo.getInternationalTitle() != null && locale != null) {
+            InternationalContentHelper internationalContentHelper =
+                    new InternationalContentHelper(locale);
+            String localized =
+                    internationalContentHelper.getString(
+                            resourceInfo.getInternationalTitle(), true);
+            if (localized != null) label = localized;
+        }
+        return label;
+    }
+
+    private String getDescription(Locale locale, ResourceInfo resourceInfo) {
+        String desc = resourceInfo.getAbstract();
+        if (resourceInfo.getInternationalAbstract() != null && locale != null) {
+            InternationalContentHelper internationalContentHelper =
+                    new InternationalContentHelper(locale);
+            String localized = internationalContentHelper.getAbstract(resourceInfo);
+            if (localized != null) desc = localized;
+        }
+        return desc;
     }
 
     public Style getStyle() {
@@ -207,7 +270,7 @@ public final class MapLayerInfo {
         if (layerInfo == null) {
             return Collections.emptyList();
         }
-        final List<String> styleNames = new ArrayList<String>();
+        final List<String> styleNames = new ArrayList<>();
 
         for (StyleInfo si : layerInfo.getStyles()) {
             styleNames.add(si.getName());
@@ -221,22 +284,29 @@ public final class MapLayerInfo {
      * @return true if we should, false if we should omit the header
      */
     public boolean isCachingEnabled() {
-        if (layerInfo == null) {
-            return false;
-        }
         if (type == TYPE_REMOTE_VECTOR) {
             // we just assume remote WFS is not cacheable since it's just used
             // in feature portrayal requests (which are one off and don't have a way to
             // tell us how often the remote WFS changes)
             return false;
         }
-        ResourceInfo resource = layerInfo.getResource();
-        MetadataMap metadata = resource.getMetadata();
-        Boolean cachingEnabled = null;
-        if (metadata != null) {
-            cachingEnabled = metadata.get(ResourceInfo.CACHING_ENABLED, Boolean.class);
+
+        if (this.isCachingEnabled(this.layerGroupMetadata)) {
+            return true;
         }
-        return cachingEnabled == null ? false : cachingEnabled.booleanValue();
+
+        if (layerInfo == null) {
+            return false;
+        }
+
+        ResourceInfo resource = layerInfo.getResource();
+        return this.isCachingEnabled(resource.getMetadata());
+    }
+
+    private boolean isCachingEnabled(MetadataMap metadata) {
+        Boolean value = metadata.get(ResourceInfo.CACHING_ENABLED, Boolean.class);
+
+        return value != null ? value : false;
     }
 
     /**
@@ -248,12 +318,24 @@ public final class MapLayerInfo {
      *     0} if not set
      */
     public int getCacheMaxAge() {
+        // maxAge may be defined in layer group metadata, but caching
+        // may be disabled
+        if (this.isCachingEnabled(this.layerGroupMetadata)) {
+            return getCacheMaxAge(this.layerGroupMetadata);
+        }
+
         if (layerInfo == null) {
             return 0;
         }
+
         ResourceInfo resource = layerInfo.getResource();
-        Integer val = resource.getMetadata().get(ResourceInfo.CACHE_AGE_MAX, Integer.class);
-        return val == null ? 0 : val;
+        return getCacheMaxAge(resource.getMetadata());
+    }
+
+    private int getCacheMaxAge(MetadataMap metadata) {
+        Integer value = metadata.get(ResourceInfo.CACHE_AGE_MAX, Integer.class);
+
+        return value != null ? value : 0;
     }
 
     /**
@@ -263,7 +345,7 @@ public final class MapLayerInfo {
      * avoid to reproject all of the original coordinates)
      */
     public FeatureSource<? extends FeatureType, ? extends Feature> getFeatureSource(
-            boolean skipReproject) throws IOException {
+            boolean skipReproject, CoordinateReferenceSystem requestedCRS) throws IOException {
         if (type != TYPE_VECTOR) {
             throw new IllegalArgumentException("Layer type is not vector");
         }
@@ -288,6 +370,12 @@ public final class MapLayerInfo {
         }
 
         Hints hints = new Hints(ResourcePool.REPROJECT, Boolean.valueOf(!skipReproject));
+
+        if (userMapCRSForWFSNG(resource, requestedCRS)) {
+            // a hint for wfs-ng featuresource to keep the crs in query
+            // to skip un-necessary re-projection
+            hints.put(ResourcePool.MAP_CRS, requestedCRS);
+        }
 
         return resource.getFeatureSource(null, hints);
     }
@@ -324,6 +412,11 @@ public final class MapLayerInfo {
         return layerFeatureConstraints;
     }
 
+    /**
+     * Get layer info.
+     *
+     * @return layer info
+     */
     public LayerInfo getLayerInfo() {
         return layerInfo;
     }
@@ -335,6 +428,41 @@ public final class MapLayerInfo {
         result = prime * result + ((name == null) ? 0 : name.hashCode());
         result = prime * result + type;
         return result;
+    }
+
+    private boolean userMapCRSForWFSNG(
+            FeatureTypeInfo resource, CoordinateReferenceSystem coordinateReferenceSystem)
+            throws IOException {
+        // check if map crs is part of other srs, if yes send put it sindie hend
+        String otherSRSListStr = (String) resource.getMetadata().get(FeatureTypeInfo.OTHER_SRS);
+        // verify the resource is WFS-NG and contains Other SRS in feature metadata
+        if (resource.getStore().getConnectionParameters().get(WFSDataStoreFactory.USEDEFAULTSRS.key)
+                        == null
+                || otherSRSListStr == null
+                || otherSRSListStr.isEmpty()) return false;
+        // do nothing if datastore is configure to stay with native remote srs
+        if (Boolean.valueOf(
+                resource.getStore()
+                        .getConnectionParameters()
+                        .get(WFSDataStoreFactory.USEDEFAULTSRS.key)
+                        .toString())) return false;
+
+        // create list of other srs
+        List<String> otherSRSList = Arrays.asList(otherSRSListStr.split(","));
+        // check if mapCRS is supported in remote wfs layer
+        for (String otherSRS : otherSRSList) {
+            try {
+                // if no transformation is required, we have a match
+                if (!CRS.isTransformationRequired(
+                        CRS.decode(otherSRS), coordinateReferenceSystem)) {
+                    LOGGER.fine(otherSRS + " SRS found in Other SRS");
+                    return true;
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, e.getMessage(), e);
+            }
+        }
+        return false;
     }
 
     @Override

@@ -5,6 +5,7 @@
 package org.geoserver.security;
 
 import org.geoserver.catalog.CatalogInfo;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.catalog.ResourceInfo;
@@ -45,6 +46,14 @@ public class DisabledResourceFilter extends AbstractCatalogFilter {
     public boolean hideLayer(LayerInfo layer) {
         if (shouldApplyFilter()) {
             return !layer.enabled();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hideLayerGroup(LayerGroupInfo layerGroup) {
+        if (shouldApplyFilter()) {
+            return !layerGroup.isEnabled();
         }
         return false;
     }

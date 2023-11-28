@@ -5,9 +5,13 @@
  */
 package org.geoserver.wms.legendgraphic;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
 import java.util.HashMap;
 import java.util.List;
 import javax.imageio.ImageIO;
@@ -35,7 +39,6 @@ import org.geotools.styling.Symbolizer;
  *
  * @author Simone Giannecchini, GeoSolutions SAS
  */
-@SuppressWarnings("deprecation")
 public class RasterLayerLegendHelper {
 
     /** The default legend is a simple image with an R within it which stands for Raster. */
@@ -87,7 +90,6 @@ public class RasterLayerLegendHelper {
         parseRequest(request, style, ruleName);
     }
 
-    @SuppressWarnings("unchecked")
     private void parseRequest(
             final GetLegendGraphicRequest request, Style gt2Style, String ruleName) {
         // get the requested layer
@@ -187,7 +189,7 @@ public class RasterLayerLegendHelper {
                 final ChannelSelection channelSelection = rasterSymbolizer.getChannelSelection();
                 cmapLegendBuilder.setBand(
                         channelSelection != null ? channelSelection.getGrayChannel() : null);
-
+                cmapLegendBuilder.setWrap(LegendUtils.isWrap(request));
                 // check the additional options before proceeding
                 cmapLegendBuilder.checkAdditionalOptions();
 
@@ -225,29 +227,26 @@ public class RasterLayerLegendHelper {
      *
      * @return a {@link BufferedImage} that represents the legend for the provided request.
      */
-    public BufferedImage getLegend() {
+    public BufferedImage getLegend(Tally tally) {
         if (rasterSymbolizer == null) {
             return null;
         }
-        return createResponse();
+        return createResponse(tally);
     }
 
-    private synchronized BufferedImage createResponse() {
+    private synchronized BufferedImage createResponse(Tally tally) {
 
         if (image == null) {
 
             if (cMapLegendCreator != null)
 
                 // creating a legend
-                image = cMapLegendCreator.getLegend();
+                image = cMapLegendCreator.getLegend(tally);
             else {
-                image = ImageUtils.createImage(width, height, (IndexColorModel) null, transparent);
+                image = ImageUtils.createImage(width, height, null, transparent);
                 final Graphics2D graphics =
                         ImageUtils.prepareTransparency(
-                                transparent,
-                                bgColor,
-                                image,
-                                new HashMap<RenderingHints.Key, Object>());
+                                transparent, bgColor, image, new HashMap<>());
                 if (defaultLegend == null) {
                     drawRasterIcon(graphics);
                 } else {

@@ -4,11 +4,19 @@ info:
   version: 1.0.0
   title: GeoServer StructuredCoverageStores
   description: A structured coverage store allows description of its "granules" and management of them.
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
+basePath: /geoserver/rest
 
 paths:
   /workspaces/{workspace}/coveragestores/{store}/coverages/{coverage}/index:
     get:
       operationId: getStructuredCoverageIndex
+      tags:
+       - "StructuredCoverages"
       summary: Get the information schema attached to the granules
       description: Displays a list of all the attributes associated to a particular coverage's granules. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/index.xml" for XML). Defaults to XML representation.
       produces:
@@ -116,6 +124,8 @@ paths:
 
     post:
       operationId: postStructuredCoverageIndex
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the index cannot be created or modified
       responses:
         401:
@@ -125,6 +135,8 @@ paths:
 
     put:
       operationId: putStructuredCoverageIndex
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the index cannot be created or modified
       responses:
         401:
@@ -134,6 +146,8 @@ paths:
 
     delete:
       operationId: deleteCoverageStores
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the index cannot be created or modified
       responses:
         401:
@@ -144,6 +158,8 @@ paths:
   /workspaces/{workspace}/coveragestores/{store}/coverages/{coverage}/index/granules:
     get:
       operationId: getStructuredCoverageGranules
+      tags:
+       - "StructuredCoverages"
       summary: Get the attributes associated to the granules
       description: |
         Displays a list of all the attributes associated to a particular coverage's granules. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/index.xml" for XML). Defaults to XML representation. The XML output is actually WFS 1.0 GML, while the JSON output is GeoJSON
@@ -345,6 +361,8 @@ paths:
 
     post:
       operationId: postStructuredCoverageGranules
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the granules cannot harvested here, use a POST request on /workspaces/{workspace}/coveragestores/{store}
       responses:
         401:
@@ -354,6 +372,8 @@ paths:
 
     put:
       operationId: putStructuredCoverageGranules
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the granules cannot harvested here, use a POST request on /workspaces/{workspace}/coveragestores/{store}
       responses:
         401:
@@ -363,6 +383,8 @@ paths:
 
     delete:
       operationId: deleteStructuredCoverageGranules
+      tags:
+       - "StructuredCoverages"
       description: Allows removing one or more granules from the index
       parameters:
         - name: workspace
@@ -396,6 +418,10 @@ paths:
           required: false
           type: string
           minimum: 0
+        - name: updateBBox
+          in: query
+          required: false
+          description: When set to "true", triggers re-calculation of the layer native bbox. Defaults to "false".
       responses:
         200:
           description: OK
@@ -405,6 +431,8 @@ paths:
   /workspaces/{workspace}/coveragestores/{store}/coverages/{coverage}/index/granules/{granuleId}:
     get:
       operationId: getStructuredCoverageGranule
+      tags:
+       - "StructuredCoverages"
       summary: Get the attributes of a particular granule
       description: Displays a list of all the attributes associated to a particular coverage's granule. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/index.xml" for XML). Defaults to XML representation. The XML output is actually WFS 1.0 GML, while the JSON output is GeoJSON
       produces:
@@ -533,6 +561,8 @@ paths:
 
     post:
       operationId: postStructuredCoverageGranule
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the granules cannot harvested here, use a POST request on /workspaces/{workspace}/coveragestores/{store}
       responses:
         401:
@@ -542,6 +572,8 @@ paths:
 
     put:
       operationId: putStructuredCoverageGranule
+      tags:
+       - "StructuredCoverages"
       description: Invalid, the granules cannot harvested here, use a POST request on /workspaces/{workspace}/coveragestores/{store}
       responses:
         401:
@@ -551,6 +583,8 @@ paths:
 
     delete:
       operationId: deleteStructuredCoverageGranule
+      tags:
+       - "StructuredCoverages"
       description: Allows removing the specified granule
       parameters:
         - name: workspace
@@ -583,7 +617,11 @@ paths:
             Finally, when set to "all" both data and auxiliary files are removed.
           required: false
           type: string
-          minimum: 0         
+          minimum: 0  
+        - name: updateBBox
+          in: query
+          required: false
+          description: When set to "true", triggers re-calculation of the layer native bbox. Defaults to "false".       
       responses:
         200:
           description: OK
@@ -652,10 +690,10 @@ definitions:
         description: Name of the attribute
       minOccurs:
         type: integer
-        description: Minimum number of occurences (0 for optional attribute)
+        description: Minimum number of occurrences (0 for optional attribute)
       maxOccurs:
         type: integer
-        description: Maximumn number of occurences (normally 1)
+        description: Maximumn number of occurrences (normally 1)
       nillable:
         type: boolean
         description: If the attribute can be missing

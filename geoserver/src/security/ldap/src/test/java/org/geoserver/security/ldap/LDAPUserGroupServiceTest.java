@@ -26,19 +26,11 @@ import org.junit.runner.RunWith;
 /** @author Niels Charlier */
 @RunWith(FrameworkRunner.class)
 @CreateLdapServer(
-    transports = {
-        @CreateTransport(
-            protocol = "LDAP",
-            address = "localhost",
-            port = LDAPTestUtils.LDAP_SERVER_PORT
-        )
-    },
-    allowAnonymousAccess = true
-)
+        transports = {@CreateTransport(protocol = "LDAP", address = "localhost")},
+        allowAnonymousAccess = true)
 @CreateDS(
-    name = "myDS",
-    partitions = {@CreatePartition(name = "test", suffix = LDAPTestUtils.LDAP_BASE_PATH)}
-)
+        name = "myDS",
+        partitions = {@CreatePartition(name = "test", suffix = LDAPTestUtils.LDAP_BASE_PATH)})
 @ApplyLdifFiles({"data4.ldif"})
 public class LDAPUserGroupServiceTest extends LDAPBaseTest {
     GeoServerUserGroupService service;
@@ -105,7 +97,7 @@ public class LDAPUserGroupServiceTest extends LDAPBaseTest {
 
     @Test
     public void testGroupCount() throws Exception {
-        assertEquals(4, service.getGroupCount());
+        assertEquals(8, service.getGroupCount());
     }
 
     @Test
@@ -171,7 +163,7 @@ public class LDAPUserGroupServiceTest extends LDAPBaseTest {
         SortedSet<GeoServerUserGroup> groups =
                 service.getGroupsForUser(service.getUserByUsername("nestedUser"));
         assertNotNull(groups);
-        assertEquals(2, groups.size());
+        assertEquals(6, groups.size());
         assertTrue(groups.stream().anyMatch(x -> "extra".equals(x.getGroupname())));
     }
 }

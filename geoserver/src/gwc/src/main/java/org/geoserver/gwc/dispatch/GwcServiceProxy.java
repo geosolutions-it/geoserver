@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
@@ -37,7 +38,13 @@ public class GwcServiceProxy {
     private final GeoWebCacheDispatcher gwcDispatcher;
 
     public GwcServiceProxy() {
-        serviceInfo = new ServiceInfoImpl();
+        serviceInfo =
+                new ServiceInfoImpl() {
+                    @Override
+                    public String getType() {
+                        return "WMTS";
+                    }
+                };
         serviceInfo.setId("gwc");
         serviceInfo.setName("gwc");
         serviceInfo.setEnabled(true);
@@ -67,8 +74,6 @@ public class GwcServiceProxy {
      * return a response object so that the GeoServer {@link Dispatcher} looks up a {@link Response}
      * that finally writes the result down to the client response stream.
      *
-     * @param rawRequest
-     * @param rawRespose
      * @see GwcOperationProxy
      * @see GwcResponseProxy
      */
@@ -92,7 +97,7 @@ public class GwcServiceProxy {
     private final class ResponseWrapper extends HttpServletResponseWrapper {
 
         final BufferedServletOutputStream out = new BufferedServletOutputStream();
-        Map<String, String> headers = new LinkedHashMap<String, String>();
+        Map<String, String> headers = new LinkedHashMap<>();
 
         private ResponseWrapper(HttpServletResponse response) {
             super(response);
@@ -123,12 +128,20 @@ public class GwcServiceProxy {
         }
 
         @Override
-        public void write(byte b[], int off, int len) throws IOException {
+        public void write(byte[] b, int off, int len) throws IOException {
             outputStream.write(b, off, len);
         }
 
         public byte[] getBytes() {
             return outputStream.toByteArray();
         }
+
+        @Override
+        public boolean isReady() {
+            return true;
+        }
+
+        @Override
+        public void setWriteListener(WriteListener writeListener) {}
     }
 }

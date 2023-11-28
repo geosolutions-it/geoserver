@@ -4,8 +4,8 @@
  */
 package org.geoserver.gwc.web.wmts;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.gwc.wmts.WMTSInfo;
@@ -29,9 +29,9 @@ public class WMTSAdminPageTest extends GeoServerWicketTestSupport {
         tester.startPage(WMTSAdminPage.class);
         // let's see if the page was properly filled
         tester.assertModelValue("form:enabled", wmts.isEnabled());
-        tester.assertModelValue("form:title", wmts.getTitle());
+        tester.assertModelValue("form:serviceTitleAndAbstract:title", wmts.getTitle());
         tester.assertModelValue("form:maintainer", wmts.getMaintainer());
-        tester.assertModelValue("form:abstract", wmts.getAbstract());
+        tester.assertModelValue("form:serviceTitleAndAbstract:abstract", wmts.getAbstract());
         tester.assertModelValue("form:accessConstraints", wmts.getAccessConstraints());
         tester.assertModelValue("form:fees", wmts.getFees());
         tester.assertModelValue("form:onlineResource", wmts.getOnlineResource());

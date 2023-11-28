@@ -4,11 +4,19 @@ info:
   version: 1.0.0
   title: GeoServer Workspace
   description: A workspace is a grouping of data stores. Similar to a namespace, it is used to group data that is related in some way.
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
+basePath: /geoserver/rest
 
 paths:
   /workspaces:
     get:
       operationId: getWorkspaces
+      tags:
+       - "Workspaces"
       summary: Get a list of workspaces
       description: Displays a list of all workspaces on the server. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/workspaces.xml" for XML)
       produces:
@@ -53,6 +61,8 @@ paths:
           
     post:
       operationId: postWorkspaces
+      tags:
+       - "Workspaces"
       summary: add a new workspace to GeoServer
       description: Adds a new workspace to the server
       parameters:
@@ -84,17 +94,21 @@ paths:
             Location:
               description: URL where the newly created workspace can be found
               type: string
-        401:
+        409:
           description: Unable to add workspace as it already exists
      
     put:
       operationId: putWorkspaces
+      tags:
+       - "Workspaces"
       responses:
         405:
           description: Not permitted
     
     delete:
       operationId: deleteWorkspaces
+      tags:
+       - "Workspaces"
       responses:
         405:
           description: Not permitted
@@ -102,6 +116,8 @@ paths:
   /workspaces/{workspaceName}:
     get:
       operationId: getWorkspace
+      tags:
+       - "Workspaces"
       summary: Retrieve a layer group
       description: Retrieves a single workspace definition. Use the "Accept:" header to specify format or 
         append an extension to the endpoint (example "/workspaces/{workspace}.xml" for XML).
@@ -115,6 +131,11 @@ paths:
           in: path
           required: true
           type: string
+        - name: quietOnNotFound
+          in: query
+          required: false
+          description: The quietOnNotFound parameter avoids logging an exception when the workspace is not present. Note that 404 status code will still be returned.
+          type: boolean
       responses:
         200:  
           description: OK
@@ -148,6 +169,8 @@ paths:
           description: workspace does not exist
     put:
       summary: Update a workspace
+      tags:
+       - "Workspaces"
       description: takes the body of the post and modifies the workspace from it.
       operationId: putWorkspace
       consumes:
@@ -174,12 +197,16 @@ paths:
             $ref: "#/definitions/Workspace"
     post:
       operationId: postWorkspace
+      tags:
+       - "Workspaces"
       responses:
         405:
           description: Forbidden to post to an existing workspace (use PUT)
           
     delete:
       operationId: deleteWorkspace
+      tags:
+       - "Workspaces"
       parameters:
         - name: workspaceName
           in: path
@@ -197,8 +224,6 @@ paths:
           description: Success workspace deleted 
         404:
           description: Workspace doesn't exist
-        405:
-          description: Can't delete default workspace
         403: 
           description: Workspace or related Namespace is not empty (and recurse not true) 
       

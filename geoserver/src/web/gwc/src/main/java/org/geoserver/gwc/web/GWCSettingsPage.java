@@ -24,6 +24,7 @@ import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.config.GWCConfig;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.web.GeoServerSecuredPage;
+import org.geoserver.web.GeoserverAjaxSubmitLink;
 import org.geoserver.web.wicket.GeoServerAjaxFormLink;
 import org.geotools.image.io.ImageIOExt;
 import org.geotools.util.logging.Logging;
@@ -39,9 +40,9 @@ public class GWCSettingsPage extends GeoServerSecuredPage {
         // use a detached copy of gwc config to support the tabbed pane
         final GWCConfig gwcConfig = gwc.getConfig().clone();
 
-        IModel<GWCConfig> formModel = new Model<GWCConfig>(gwcConfig);
+        IModel<GWCConfig> formModel = new Model<>(gwcConfig);
 
-        final Form<GWCConfig> form = new Form<GWCConfig>("form", formModel);
+        final Form<GWCConfig> form = new Form<>("form", formModel);
         add(form);
 
         final GWCServicesPanel gwcServicesPanel =
@@ -58,38 +59,64 @@ public class GWCSettingsPage extends GeoServerSecuredPage {
 
                     @Override
                     public void onSubmit() {
-                        GWC gwc = GWC.get();
-                        final IModel<GWCConfig> gwcConfigModel = form.getModel();
-                        GWCConfig gwcConfig = gwcConfigModel.getObject();
-                        try {
-                            gwc.saveConfig(gwcConfig);
-                        } catch (IOException e) {
-                            LOGGER.log(Level.WARNING, "Error saving GWC config", e);
-                            form.error("Error saving GWC config: " + e.getMessage());
-                            return;
-                        }
-                        // Update ConfigurableBlobStore
-                        ConfigurableBlobStore blobstore =
-                                GeoServerExtensions.bean(ConfigurableBlobStore.class);
-                        if (blobstore != null) {
-                            blobstore.setChanged(gwcConfig, false);
-                        }
-                        // Do return
-                        doReturn();
+                        save(form, true);
                     }
                 });
+        form.add(applyLink(form));
         form.add(
                 new GeoServerAjaxFormLink("cancel") {
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    protected void onClick(
-                            AjaxRequestTarget target, @SuppressWarnings("rawtypes") Form form) {
+                    protected void onClick(AjaxRequestTarget target, Form form) {
                         doReturn();
                     }
                 });
 
         checkWarnings();
+    }
+
+    public void save(Form<GWCConfig> form, boolean doReturn) {
+        GWC gwc = GWC.get();
+        final IModel<GWCConfig> gwcConfigModel = form.getModel();
+        GWCConfig gwcConfig = gwcConfigModel.getObject();
+        try {
+            gwc.saveConfig(gwcConfig);
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Error saving GWC config", e);
+            form.error("Error saving GWC config: " + e.getMessage());
+            return;
+        }
+        // Update ConfigurableBlobStore
+        ConfigurableBlobStore blobstore = GeoServerExtensions.bean(ConfigurableBlobStore.class);
+        if (blobstore != null) {
+            blobstore.setChanged(gwcConfig, false);
+        }
+        // Do return
+        if (doReturn) doReturn();
+    }
+
+    private GeoserverAjaxSubmitLink applyLink(Form form) {
+        return new GeoserverAjaxSubmitLink("apply", form, this) {
+
+            @Override
+            protected void onError(AjaxRequestTarget target, Form form) {
+                super.onError(target, form);
+                target.add(form);
+            }
+
+            @Override
+            protected void onSubmitInternal(AjaxRequestTarget target, Form<?> form) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Form<GWCConfig> cast = (Form<GWCConfig>) form;
+                    save(cast, false);
+                } catch (IllegalArgumentException e) {
+                    form.error(e.getMessage());
+                    target.add(form);
+                }
+            }
+        };
     }
 
     private void checkWarnings() {
@@ -110,8 +137,7 @@ public class GWCSettingsPage extends GeoServerSecuredPage {
         CheckBox checkBox = new CheckBox(id, model);
         if (null != titleKey) {
             AttributeModifier attributeModifier =
-                    new AttributeModifier(
-                            "title", new StringResourceModel(titleKey, (Component) null, null));
+                    new AttributeModifier("title", new StringResourceModel(titleKey, null, null));
             checkBox.add(attributeModifier);
         }
         return checkBox;

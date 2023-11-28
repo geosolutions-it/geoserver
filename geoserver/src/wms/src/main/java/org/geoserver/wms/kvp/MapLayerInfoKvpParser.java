@@ -5,12 +5,15 @@
  */
 package org.geoserver.wms.kvp;
 
+import static org.geoserver.catalog.LayerGroupHelper.isSingleOrOpaque;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.ows.FlatKvpParser;
 import org.geoserver.ows.KvpParser;
+import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMS;
@@ -25,11 +28,17 @@ public class MapLayerInfoKvpParser extends KvpParser {
     private FlatKvpParser rawNamesParser;
 
     private final WMS wms;
+    private List<String> styles;
 
     public MapLayerInfoKvpParser(final String key, final WMS wms) {
         super(key, MapLayerInfo.class);
         this.wms = wms;
         rawNamesParser = new FlatKvpParser(key, String.class);
+    }
+
+    public MapLayerInfoKvpParser(final String key, final WMS wms, String styles) {
+        this(key, wms);
+        this.styles = KvpUtils.readFlat(styles);
     }
 
     /**
@@ -45,12 +54,12 @@ public class MapLayerInfoKvpParser extends KvpParser {
 
         final List<String> layerNames = (List<String>) rawNamesParser.parse(paramValue);
 
-        List<MapLayerInfo> layers = new ArrayList<MapLayerInfo>(layerNames.size());
+        List<MapLayerInfo> layers = new ArrayList<>(layerNames.size());
 
         MapLayerInfo layer = null;
 
-        for (String layerName : layerNames) {
-
+        for (int i = 0; i < layerNames.size(); i++) {
+            String layerName = layerNames.get(i);
             LayerInfo layerInfo = wms.getLayerByName(layerName);
             if (layerInfo == null) {
                 LayerGroupInfo groupInfo = wms.getLayerGroupByName(layerName);
@@ -62,12 +71,22 @@ public class MapLayerInfoKvpParser extends KvpParser {
                             getClass().getSimpleName());
                 } else {
                     if (skipResource(groupInfo)) continue;
-
-                    for (LayerInfo li : groupInfo.layers()) {
+                    List<LayerInfo> groupLayers;
+                    if (styles != null && i < styles.size() && isSingleOrOpaque(groupInfo)) {
+                        String styleName = styles.get(i);
+                        if (styleName != null && !"".equals(styleName)) {
+                            groupLayers = groupInfo.layers(styleName);
+                        } else {
+                            groupLayers = groupInfo.layers();
+                        }
+                    } else {
+                        groupLayers = groupInfo.layers();
+                    }
+                    for (LayerInfo li : groupLayers) {
 
                         if (skipResource(li)) continue;
 
-                        layer = new MapLayerInfo(li);
+                        layer = new MapLayerInfo(li, groupInfo.getMetadata());
                         layers.add(layer);
                     }
                 }

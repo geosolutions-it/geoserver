@@ -7,21 +7,26 @@ package org.geoserver.rest.catalog;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
+import static org.geoserver.rest.RestBaseController.ROOT_PATH;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import it.geosolutions.imageio.utilities.ImageIOUtilities;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.util.List;
+import javax.xml.namespace.QName;
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.CoverageDimensionInfo;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
@@ -35,6 +40,7 @@ import org.geotools.util.URLs;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.coverage.grid.GridCoverageReader;
+import org.opengis.geometry.Envelope;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -70,6 +76,29 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
         assertEquals(
                 catalog.getCoveragesByNamespace(catalog.getNamespaceByPrefix("wcs")).size(),
                 coverages.size());
+    }
+
+    @Test
+    public void testGetAllByWorkspaceJSON_no_coverages() throws Exception {
+        JSONObject json =
+                (JSONObject)
+                        getAsJSON(RestBaseController.ROOT_PATH + "/workspaces/cite/coverages.json");
+        // returns {"coverages": ""}
+        assertEquals("", json.getString("coverages"));
+    }
+
+    @Test
+    public void testGetAllByWorkspaceJSON_single_element() throws Exception {
+        QName tazDem = new QName(SystemTestData.CDF_URI, "tazdem", SystemTestData.CDF_PREFIX);
+        getTestData().addRasterLayer(tazDem, "tazdem.tiff", null, getCatalog());
+
+        JSONObject json =
+                (JSONObject)
+                        getAsJSON(RestBaseController.ROOT_PATH + "/workspaces/cdf/coverages.json");
+
+        JSONArray coverages = json.getJSONObject("coverages").getJSONArray("coverage");
+        assertEquals(1, coverages.size());
+        assertEquals("tazdem", coverages.getJSONObject(0).getString("name"));
     }
 
     void addCoverageStore(boolean autoConfigureCoverage) throws Exception {
@@ -486,12 +515,7 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
             assertEquals(1000.0, range.getMaximum(), DELTA);
         } finally {
             if (coverage != null) {
-                try {
-                    ImageIOUtilities.disposeImage(coverage.getRenderedImage());
-                    coverage.dispose(true);
-                } catch (Throwable t) {
-                    // Does nothing;
-                }
+                dispose(coverage);
             }
             if (reader != null) {
                 try {
@@ -501,5 +525,85 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
                 }
             }
         }
+    }
+
+    @Test
+    public void testCoverageReset() throws Exception {
+        // force coverage initialization
+        // read the coverage, check basic properties
+        CoverageInfo ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
+        assertNotNull(ci);
+        GridCoverage2D gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
+        Envelope envelope = gridCoverage.getEnvelope();
+        dispose(gridCoverage);
+
+        // now go and clear
+        MockHttpServletResponse response =
+                postAsServletResponse(
+                        ROOT_PATH
+                                + "/workspaces/wcs/coveragestores/BlueMarble/coverages/BlueMarble/reset",
+                        "",
+                        null);
+        assertEquals(200, response.getStatus());
+
+        // copy over a different file, will change the bounds
+        try (InputStream is = SystemTestData.class.getResourceAsStream("world.tiff");
+                OutputStream os = getDataDirectory().get("BlueMarble/tazbm.tiff").out()) {
+            IOUtils.copy(is, os);
+        }
+
+        // checking the envelope changed. Cannot check the bands, unlike features, their definition
+        // is part of the configuration, in case of modification it requires an explicit PUT
+        gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
+        Envelope envelopeNew = gridCoverage.getEnvelope();
+        assertNotEquals(envelopeNew, envelope);
+        dispose(gridCoverage);
+    }
+
+    @Test
+    public void testCoverageResetReloadBands() throws Exception {
+        // force coverage initialization
+        // read the coverage, check basic properties
+        CoverageInfo ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
+        assertNotNull(ci);
+        GridCoverage2D gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
+        Envelope envelope = gridCoverage.getEnvelope();
+        assertEquals(3, ci.getDimensions().size());
+        dispose(gridCoverage);
+
+        // now go and clear
+        MockHttpServletResponse response =
+                postAsServletResponse(
+                        ROOT_PATH
+                                + "/workspaces/wcs/coveragestores/BlueMarble/coverages/BlueMarble/reset",
+                        "",
+                        null);
+        assertEquals(200, response.getStatus());
+
+        // copy over a different file, will change the coverage type structure enough (bands
+        // included)
+        try (InputStream is = SystemTestData.class.getResourceAsStream("tazdem.tiff");
+                OutputStream os = getDataDirectory().get("BlueMarble/tazbm.tiff").out()) {
+            IOUtils.copy(is, os);
+        }
+
+        // force reload of the bands too
+        response =
+                putAsServletResponse(
+                        ROOT_PATH
+                                + "/workspaces/wcs/coveragestores/BlueMarble/coverages/BlueMarble?calculate=dimensions",
+                        "<coverage/>",
+                        "text/xml");
+        assertEquals(200, response.getStatus());
+
+        // checking the envelope changed. Cannot check the bands, unlike features, their definition
+        // is part of the configuration, in case of modification it requires an explicit PUT
+
+        ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
+        gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
+        Envelope envelopeNew = gridCoverage.getEnvelope();
+        assertNotEquals(envelopeNew, envelope);
+        assertEquals(1, ci.getDimensions().size());
+        dispose(gridCoverage);
     }
 }

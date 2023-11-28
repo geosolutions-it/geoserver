@@ -54,17 +54,11 @@ public class KMLFeatureAccessor {
     static Logger LOGGER = org.geotools.util.logging.Logging.getLogger("org.geoserver.kml");
 
     /** Factory used to create filter objects */
-    private static FilterFactory filterFactory =
-            (FilterFactory) CommonFactoryFinder.getFilterFactory(null);
+    private static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory(null);
 
     /**
      * Loads the feature collection based on the current styling and the scale denominator. If no
      * feature is going to be returned a null feature collection will be returned instead
-     *
-     * @param layer
-     * @param mapContent
-     * @param wms
-     * @param scaleDenominator
      */
     public SimpleFeatureCollection loadFeatureCollection(
             Layer layer, WMSMapContent mapContent, WMS wms, double scaleDenominator)
@@ -90,14 +84,7 @@ public class KMLFeatureAccessor {
         return features;
     }
 
-    /**
-     * Counts how many features will be returned for the specified layer in the current request
-     *
-     * @param layer
-     * @param mapContent
-     * @param wms
-     * @param scaleDenominator
-     */
+    /** Counts how many features will be returned for the specified layer in the current request */
     public int getFeatureCount(
             Layer layer, WMSMapContent mapContent, WMS wms, double scaleDenominator)
             throws Exception {
@@ -115,14 +102,6 @@ public class KMLFeatureAccessor {
     /**
      * Builds the Query object that will return the features for the specified layer and scale
      * denominator, based also on the current WMS configuration
-     *
-     * @param layer
-     * @param mapContent
-     * @param wms
-     * @param scaleDenominator
-     * @param schema
-     * @throws TransformException
-     * @throws FactoryException
      */
     private Query getFeaturesQuery(
             Layer layer, WMSMapContent mapContent, WMS wms, double scaleDenominator)
@@ -224,12 +203,11 @@ public class KMLFeatureAccessor {
 
         // Google earth likes to make requests that go beyond 180 when zoomed out
         // fix them
-        List<ReferencedEnvelope> envelopes = new ArrayList<ReferencedEnvelope>();
+        List<ReferencedEnvelope> envelopes = new ArrayList<>();
         if (KmlEncodingContext.WORLD_BOUNDS_WGS84.contains((Envelope) aoi)) {
             envelopes.add(aoi);
         } else {
-            Envelope intersection =
-                    KmlEncodingContext.WORLD_BOUNDS_WGS84.intersection((Envelope) aoi);
+            Envelope intersection = KmlEncodingContext.WORLD_BOUNDS_WGS84.intersection(aoi);
             if (intersection.getWidth() > 0) {
                 envelopes.add(new ReferencedEnvelope(intersection, DefaultGeographicCRS.WGS84));
             }
@@ -248,7 +226,7 @@ public class KMLFeatureAccessor {
             }
         }
 
-        List<ReferencedEnvelope> sourceEnvelopes = new ArrayList<ReferencedEnvelope>();
+        List<ReferencedEnvelope> sourceEnvelopes = new ArrayList<>();
         CoordinateReferenceSystem sourceCrs = schema.getCoordinateReferenceSystem();
         if ((sourceCrs != null)
                 && !CRS.equalsIgnoreMetadata(aoi.getCoordinateReferenceSystem(), sourceCrs)) {
@@ -269,7 +247,7 @@ public class KMLFeatureAccessor {
         }
 
         GeometryDescriptor gd = schema.getGeometryDescriptor();
-        if (sourceEnvelopes.size() == 0) {
+        if (sourceEnvelopes.isEmpty()) {
             return Filter.INCLUDE;
         } else if (sourceEnvelopes.size() == 1) {
             ReferencedEnvelope se = sourceEnvelopes.get(0);
@@ -282,7 +260,7 @@ public class KMLFeatureAccessor {
                     null);
         } else {
             // we have to OR the multiple source envelopes
-            List<Filter> filters = new ArrayList<Filter>();
+            List<Filter> filters = new ArrayList<>();
             for (ReferencedEnvelope se : sourceEnvelopes) {
                 filters.add(
                         filterFactory.bbox(
@@ -297,11 +275,7 @@ public class KMLFeatureAccessor {
         }
     }
 
-    /**
-     * Joins the provided filters in a single one by and-ing them (and then, simplifying them)
-     *
-     * @param filters
-     */
+    /** Joins the provided filters in a single one by and-ing them (and then, simplifying them) */
     private Filter joinFilters(Filter... filters) {
         Filter result = null;
         if (filters == null || filters.length == 0) {

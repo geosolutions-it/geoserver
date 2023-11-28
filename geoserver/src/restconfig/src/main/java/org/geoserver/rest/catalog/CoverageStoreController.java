@@ -8,7 +8,6 @@ import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import freemarker.template.ObjectWrapper;
 import freemarker.template.SimpleHash;
-import freemarker.template.TemplateModelException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -52,6 +51,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponents;
@@ -71,12 +71,11 @@ public class CoverageStoreController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<CoverageStoreInfo> coverageStoresGet(@PathVariable String workspaceName) {
 
         WorkspaceInfo ws = catalog.getWorkspaceByName(workspaceName);
@@ -88,13 +87,12 @@ public class CoverageStoreController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        path = "{storeName}",
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            path = "{storeName}",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<CoverageStoreInfo> coverageStoreGet(
             @PathVariable String workspaceName, @PathVariable String storeName) {
 
@@ -103,13 +101,12 @@ public class CoverageStoreController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public ResponseEntity<String> coverageStorePost(
             @RequestBody CoverageStoreInfo coverageStore,
             @PathVariable String workspaceName,
@@ -130,14 +127,13 @@ public class CoverageStoreController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = "{storeName}",
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            value = "{storeName}",
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public void coverageStorePut(
             @RequestBody CoverageStoreInfo info,
             @PathVariable String workspaceName,
@@ -190,10 +186,6 @@ public class CoverageStoreController extends AbstractCatalogController {
     /**
      * Check the deleteType parameter in order to decide whether to delete some data too (all, or
      * just metadata).
-     *
-     * @param deleteType
-     * @param cs
-     * @throws IOException
      */
     private void delete(String deleteType, CoverageStoreInfo cs) throws IOException {
         if (!deleteType.equalsIgnoreCase("none")
@@ -206,6 +198,14 @@ public class CoverageStoreController extends AbstractCatalogController {
                 ((StructuredGridCoverage2DReader) reader).delete(deleteData);
             }
         }
+    }
+
+    @RequestMapping(
+            value = "{storeName}/reset",
+            method = {RequestMethod.POST, RequestMethod.PUT})
+    public void reset(@PathVariable String workspaceName, @PathVariable String storeName) {
+        CoverageStoreInfo cs = getExistingCoverageStore(workspaceName, storeName);
+        catalog.getResourcePool().clear(cs);
     }
 
     void clear(CoverageStoreInfo info) {
@@ -272,14 +272,11 @@ public class CoverageStoreController extends AbstractCatalogController {
 
             @Override
             protected void wrapInternal(
-                    Map properties, SimpleHash model, CoverageStoreInfo dataStoreInfo) {
+                    Map<String, Object> properties,
+                    SimpleHash model,
+                    CoverageStoreInfo dataStoreInfo) {
                 if (properties == null) {
-                    try {
-                        properties = model.toMap();
-                    } catch (TemplateModelException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
+                    properties = hashToProperties(model);
                 }
                 List<Map<String, Map<String, String>>> csProps = new ArrayList<>();
 
@@ -295,8 +292,7 @@ public class CoverageStoreController extends AbstractCatalogController {
             }
 
             @Override
-            protected void wrapInternal(
-                    SimpleHash model, @SuppressWarnings("rawtypes") Collection object) {
+            protected void wrapInternal(SimpleHash model, Collection object) {
                 for (Object w : object) {
                     CoverageStoreInfo wk = (CoverageStoreInfo) w;
                     wrapInternal(null, model, wk);

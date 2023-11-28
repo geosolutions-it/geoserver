@@ -6,12 +6,22 @@
 package org.geoserver.catalog.impl;
 
 import java.io.IOException;
-import org.geoserver.catalog.*;
+import java.util.Date;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogVisitor;
+import org.geoserver.catalog.LegendInfo;
+import org.geoserver.catalog.MetadataMap;
+import org.geoserver.catalog.SLDHandler;
+import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyledLayerDescriptor;
 import org.geotools.util.Version;
 
 public class StyleInfoImpl implements StyleInfo {
+
+    /** Marks a remote style, generated on the fly from a capabilites document */
+    public static final String IS_REMOTE = "isRemote";
 
     protected String id;
 
@@ -34,6 +44,10 @@ public class StyleInfoImpl implements StyleInfo {
 
     protected MetadataMap metadata = new MetadataMap();
 
+    protected Date dateCreated;
+
+    protected Date dateModified;
+
     protected StyleInfoImpl() {}
 
     public StyleInfoImpl(Catalog catalog) {
@@ -48,6 +62,7 @@ public class StyleInfoImpl implements StyleInfo {
         this.catalog = catalog;
     }
 
+    @Override
     public String getId() {
         return id;
     }
@@ -56,58 +71,77 @@ public class StyleInfoImpl implements StyleInfo {
         this.id = id;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public void setName(String name) {
         this.name = name;
     }
 
+    @Override
     public WorkspaceInfo getWorkspace() {
         return workspace;
     }
 
+    @Override
     public void setWorkspace(WorkspaceInfo workspace) {
         this.workspace = workspace;
     }
 
+    @Override
     public String getFormat() {
         return format;
     }
 
+    @Override
     public void setFormat(String language) {
         this.format = language;
     };
 
+    @Override
     public Version getFormatVersion() {
         return languageVersion;
     }
 
+    @Override
     public void setFormatVersion(Version version) {
         this.languageVersion = version;
     }
 
+    @Override
     public String getFilename() {
         return filename;
     }
 
+    @Override
     public void setFilename(String filename) {
         this.filename = filename;
     }
 
+    @Override
     public Style getStyle() throws IOException {
+        // for capability document request
+        // remote style does not exist in local catalog
+        // do not look for this style inside ResourcePool
+        if (metadata != null)
+            if (metadata.containsKey(IS_REMOTE)) return WMSLayerInfoImpl.getStyleInfo(this);
         return catalog.getResourcePool().getStyle(this);
     }
 
+    @Override
     public StyledLayerDescriptor getSLD() throws IOException {
         return catalog.getResourcePool().getSld(this);
     }
 
+    @Override
     public LegendInfo getLegend() {
         return legend;
     }
 
+    @Override
     public void setLegend(LegendInfo legend) {
         this.legend = legend;
     }
@@ -127,10 +161,12 @@ public class StyleInfoImpl implements StyleInfo {
         if (metadata == null) metadata = new MetadataMap();
     }
 
+    @Override
     public void accept(CatalogVisitor visitor) {
         visitor.visit(this);
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -143,6 +179,7 @@ public class StyleInfoImpl implements StyleInfo {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null) return false;
@@ -168,6 +205,7 @@ public class StyleInfoImpl implements StyleInfo {
         if (languageVersion == null) {
             if (other.getFormatVersion() != null) return false;
         } else if (!languageVersion.equals(other.getFormatVersion())) return false;
+
         return true;
     }
 
@@ -205,5 +243,25 @@ public class StyleInfoImpl implements StyleInfo {
         }
 
         return this;
+    }
+
+    @Override
+    public Date getDateModified() {
+        return this.dateModified;
+    }
+
+    @Override
+    public Date getDateCreated() {
+        return this.dateCreated;
+    }
+
+    @Override
+    public void setDateCreated(Date dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    @Override
+    public void setDateModified(Date dateModified) {
+        this.dateModified = dateModified;
     }
 }

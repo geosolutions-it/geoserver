@@ -10,9 +10,9 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
 import static org.custommonkey.xmlunit.XMLUnit.newXpathEngine;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -48,7 +48,6 @@ import org.geoserver.config.GeoServerInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wfs.json.JSONType;
-import org.geoserver.wms.ExtendedCapabilitiesProvider;
 import org.geoserver.wms.GetCapabilitiesRequest;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSInfo;
@@ -133,7 +132,7 @@ public class CapabilitiesTest extends WMSTestSupport {
         // using an invalid mime type should throw an exception
         response = getAsServletResponse("wms?request=getCapabilities&version=1.1.1&format=invalid");
         assertThat(response.getStatus(), is(200));
-        assertThat(response.getContentType(), is("application/vnd.ogc.se_xml"));
+        assertThat(getBaseMimeType(response.getContentType()), is("application/vnd.ogc.se_xml"));
         // using an empty mime type should fall back to the default mime type
         response = getAsServletResponse("wms?request=getCapabilities&version=1.1.1&format=");
         assertThat(response.getStatus(), is(200));
@@ -406,6 +405,16 @@ public class CapabilitiesTest extends WMSTestSupport {
         assertTrue(href.contains("GetLegendGraphic"));
         assertTrue(href.contains("layer=cdf%3AFifteen"));
         assertTrue(href.contains("style=point"));
+
+        // Default style set to point
+        layer.setDefaultStyle(pointStyle);
+        getCatalog().save(layer);
+        Document document = getAsDOM("wms?service=WMS&request=getCapabilities&version=1.1.1", true);
+        assertXpathEvaluatesTo("1", "count(//Layer[Name='cdf:Fifteen'])", document);
+        assertXpathEvaluatesTo("1", "count(//Layer[Name='cdf:Fifteen']/Style)", document);
+        // getStyles() has the default style, styles() doesnt have default style
+        assertTrue(layer.getStyles().contains(pointStyle));
+        assertFalse(layer.styles().contains(pointStyle));
     }
 
     @Test
@@ -525,26 +534,22 @@ public class CapabilitiesTest extends WMSTestSupport {
 
         XpathEngine xpath = XMLUnit.newXpathEngine();
 
-        assertTrue(
-                xpath.evaluate("//Exception/Format[1]", doc).equals("application/vnd.ogc.se_xml"));
-        assertTrue(
-                xpath.evaluate("//Exception/Format[2]", doc)
-                        .equals("application/vnd.ogc.se_inimage"));
-        assertTrue(
-                xpath.evaluate("//Exception/Format[3]", doc)
-                        .equals("application/vnd.ogc.se_blank"));
-        assertTrue(xpath.evaluate("//Exception/Format[4]", doc).equals("application/json"));
+        assertEquals("application/vnd.ogc.se_xml", xpath.evaluate("//Exception/Format[1]", doc));
+        assertEquals(
+                "application/vnd.ogc.se_inimage", xpath.evaluate("//Exception/Format[2]", doc));
+        assertEquals("application/vnd.ogc.se_blank", xpath.evaluate("//Exception/Format[3]", doc));
+        assertEquals("application/json", xpath.evaluate("//Exception/Format[4]", doc));
         assertTrue(xpath.getMatchingNodes("//Exception/Format", doc).getLength() >= 4);
 
         boolean jsonpOriginal = JSONType.isJsonpEnabled();
         try {
             JSONType.setJsonpEnabled(true);
             doc = getAsDOM("wms?service=WMS&request=getCapabilities&version=1.1.1", true);
-            assertTrue(xpath.evaluate("//Exception/Format[5]", doc).equals("text/javascript"));
-            assertTrue(xpath.getMatchingNodes("//Exception/Format", doc).getLength() == 5);
+            assertEquals("text/javascript", xpath.evaluate("//Exception/Format[5]", doc));
+            assertEquals(5, xpath.getMatchingNodes("//Exception/Format", doc).getLength());
             JSONType.setJsonpEnabled(false);
             doc = getAsDOM("wms?service=WMS&request=getCapabilities&version=1.1.1", true);
-            assertTrue(xpath.getMatchingNodes("//Exception/Format", doc).getLength() == 4);
+            assertEquals(4, xpath.getMatchingNodes("//Exception/Format", doc).getLength());
         } finally {
             JSONType.setJsonpEnabled(jsonpOriginal);
         }
@@ -713,7 +718,7 @@ public class CapabilitiesTest extends WMSTestSupport {
         Transformer transformer = tf.newTransformer();
         transformer.transform(domSource, result);
 
-        assertEquals(writer.toString().contains(info.getRootLayerTitle()), true);
+        assertTrue(writer.toString().contains(info.getRootLayerTitle()));
     }
 
     /**
@@ -734,10 +739,7 @@ public class CapabilitiesTest extends WMSTestSupport {
 
         Capabilities_1_3_0_Transformer tr =
                 new Capabilities_1_3_0_Transformer(
-                        wms,
-                        BASE_URL,
-                        wms.getAllowedMapFormats(),
-                        new HashSet<ExtendedCapabilitiesProvider>());
+                        wms, BASE_URL, wms.getAllowedMapFormats(), new HashSet<>());
         GetCapabilitiesRequest req = new GetCapabilitiesRequest();
         req.setBaseUrl(BASE_URL);
         req.setVersion(WMS.VERSION_1_3_0.toString());

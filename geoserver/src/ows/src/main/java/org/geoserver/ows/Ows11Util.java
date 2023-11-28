@@ -47,8 +47,9 @@ public class Ows11Util {
         return ls;
     }
 
+    @SuppressWarnings("unchecked") // due to KeywordsType using raw collections
     public static KeywordsType keywords(List<String> keywords) {
-        if (keywords == null || keywords.size() == 0) {
+        if (keywords == null || keywords.isEmpty()) {
             return null;
         }
         KeywordsType kw = f.createKeywordsType();
@@ -83,11 +84,7 @@ public class Ows11Util {
         }
     }
 
-    /**
-     * Turns a prefix:localName into a Name
-     *
-     * @param URI
-     */
+    /** Turns a prefix:localName into a Name */
     public static Name name(String URI) {
         String[] parsed = URI.trim().split(":");
         if (parsed.length == 1) {
@@ -113,6 +110,7 @@ public class Ows11Util {
         return exceptionReport(exception, verboseExceptions, null);
     }
 
+    @SuppressWarnings("unchecked") // due to ExceptionType using raw collections
     public static ExceptionReportType exceptionReport(
             ServiceException exception, boolean verboseExceptions, String version) {
 
@@ -151,15 +149,14 @@ public class Ows11Util {
         return report;
     }
 
+    @SuppressWarnings("unchecked") // due to DCPType using raw collections
     public static DCPType dcp(String service, EObject request) {
         String baseUrl = (String) EMFUtils.get(request, "baseUrl");
         if (baseUrl == null) {
             throw new IllegalArgumentException(
                     "Request object" + request + " has no 'baseUrl' property.");
         }
-        String href =
-                ResponseUtils.buildURL(
-                        baseUrl, service, new HashMap<String, String>(), URLType.SERVICE);
+        String href = ResponseUtils.buildURL(baseUrl, service, new HashMap<>(), URLType.SERVICE);
 
         DCPType dcp = f.createDCPType();
         dcp.setHTTP(f.createHTTPType());

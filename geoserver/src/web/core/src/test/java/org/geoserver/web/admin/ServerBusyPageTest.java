@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
+import org.awaitility.Awaitility;
 import org.geoserver.GeoServerConfigurationLock;
 import org.geoserver.GeoServerConfigurationLock.LockType;
 import org.geoserver.platform.GeoServerExtensions;
@@ -40,7 +41,7 @@ public class ServerBusyPageTest extends GeoServerWicketTestSupport {
     public void testStoreEditServerBusyPage() throws Exception {
         login();
 
-        List<GrantedAuthority> l = new ArrayList<GrantedAuthority>();
+        List<GrantedAuthority> l = new ArrayList<>();
         l.add(new SimpleGrantedAuthority("ROLE_ANONYMOUS"));
 
         final LockType type = LockType.WRITE;
@@ -55,17 +56,14 @@ public class ServerBusyPageTest extends GeoServerWicketTestSupport {
             Thread configWriter =
                     new Thread("Config-writer") {
 
+                        @Override
                         public void run() {
                             // Acquiring Configuration Lock as another user
                             locker.lock(type);
                             acquired.set(true);
 
                             try {
-                                while (!release.get()) {
-                                    Thread.sleep(50);
-                                }
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
+                                Awaitility.await().forever().until(() -> release.get());
                             } finally {
                                 locker.unlock();
                             }

@@ -5,7 +5,6 @@
  */
 package org.geoserver.ows.util;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,8 +12,10 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 import javax.servlet.http.HttpServletRequest;
+import org.geoserver.ows.Request;
 import org.geoserver.platform.ServiceException;
 import org.geotools.util.Version;
 
@@ -53,7 +54,7 @@ public class RequestUtils {
      */
     public static String getVersionPreOws(List<String> providedList, List<String> acceptedList) {
         // first figure out which versions are provided
-        TreeSet<Version> provided = new TreeSet<Version>();
+        TreeSet<Version> provided = new TreeSet<>();
         for (String v : providedList) {
             provided.add(new Version(v));
         }
@@ -62,7 +63,7 @@ public class RequestUtils {
         if (acceptedList == null || acceptedList.isEmpty()) return provided.last().toString();
 
         // next figure out what the client accepts (and check they are good version numbers)
-        TreeSet<Version> accepted = new TreeSet<Version>();
+        TreeSet<Version> accepted = new TreeSet<>();
         for (String v : acceptedList) {
             checkVersionNumber(v, null);
 
@@ -71,7 +72,7 @@ public class RequestUtils {
 
         // prune out those not provided
         for (Iterator<Version> v = accepted.iterator(); v.hasNext(); ) {
-            Version version = (Version) v.next();
+            Version version = v.next();
 
             if (!provided.contains(version)) {
                 v.remove();
@@ -82,7 +83,7 @@ public class RequestUtils {
         String version = null;
         if (!accepted.isEmpty()) {
             // return the highest version provided
-            version = ((Version) accepted.last()).toString();
+            version = accepted.last().toString();
         } else {
             for (String v : acceptedList) {
                 accepted.add(new Version(v));
@@ -132,7 +133,7 @@ public class RequestUtils {
      */
     public static String getVersionOws11(List<String> providedList, List<String> acceptedList) {
         // first figure out which versions are provided
-        TreeSet<Version> provided = new TreeSet<Version>();
+        TreeSet<Version> provided = new TreeSet<>();
         for (String v : providedList) {
             provided.add(new Version(v));
         }
@@ -141,7 +142,7 @@ public class RequestUtils {
         if (acceptedList == null || acceptedList.isEmpty()) return provided.last().toString();
 
         // next figure out what the client accepts (and check they are good version numbers)
-        List<Version> accepted = new ArrayList<Version>();
+        List<Version> accepted = new ArrayList<>();
         for (String v : acceptedList) {
             checkVersionNumber(v, "AcceptVersions");
 
@@ -151,9 +152,7 @@ public class RequestUtils {
         // from the specification "The server, upon receiving a GetCapabilities request, shall scan
         // through this list and find the first version number that it supports"
         Version negotiated = null;
-        for (Iterator<Version> v = accepted.iterator(); v.hasNext(); ) {
-            Version version = (Version) v.next();
-
+        for (Version version : accepted) {
             if (provided.contains(version)) {
                 negotiated = version;
                 break;
@@ -202,21 +201,8 @@ public class RequestUtils {
     public static BufferedReader getBufferedXMLReader(InputStream stream, int xmlLookahead)
             throws IOException {
 
-        // create a buffer so we can reset the input stream
-        BufferedInputStream input = new BufferedInputStream(stream);
-        input.mark(xmlLookahead);
-
-        // create object to hold encoding info
-        EncodingInfo encoding = new EncodingInfo();
-
-        // call this method to set the encoding info
-        XmlCharsetDetector.getCharsetAwareReader(input, encoding);
-
-        // call this method to create the reader
-        Reader reader = XmlCharsetDetector.createReader(input, encoding);
-
-        // rest the input
-        input.reset();
+        @SuppressWarnings("PMD.CloseResource")
+        Reader reader = XmlCharsetDetector.getCharsetAwareReader(stream);
 
         return getBufferedXMLReader(reader, xmlLookahead);
     }
@@ -235,12 +221,48 @@ public class RequestUtils {
         // ensure the reader is a buffered reader
 
         if (!(reader instanceof BufferedReader)) {
-            reader = new BufferedReader(reader);
+            reader = new BufferedReader(reader, xmlLookahead);
         }
 
         // mark the input stream
         reader.mark(xmlLookahead);
 
         return (BufferedReader) reader;
+    }
+
+    /**
+     * Retrieve a language parameter value from request query params.
+     *
+     * @param request the request object.
+     * @param languageParamName the language parameter.
+     * @return the value of the language parameter. Might be LANGUAGE or ACCEPTLANGUAGES.
+     */
+    public static String[] getLanguageValue(Request request, String languageParamName) {
+        String[] result = null;
+        if (request != null) result = getLanguageValue(request.getRawKvp(), languageParamName);
+        return result;
+    }
+
+    /**
+     * Retrieve a language parameter value from request query params.
+     *
+     * @param rawKvp the rawKvp holding the request parameters.
+     * @param languageParamName the name of the language parameter. Might be LANGUAGE or
+     *     ACCEPTLANGUAGES.
+     * @return
+     */
+    public static String[] getLanguageValue(Map<String, Object> rawKvp, String languageParamName) {
+        String[] result = null;
+        if (rawKvp != null && rawKvp.containsKey(languageParamName)) {
+            String acceptLanguages = rawKvp.get(languageParamName).toString();
+            if (acceptLanguages != null) {
+                String[] langAr = acceptLanguages.split(" ");
+                if (langAr.length == 1) {
+                    langAr = acceptLanguages.split(",");
+                }
+                result = langAr;
+            }
+        }
+        return result;
     }
 }

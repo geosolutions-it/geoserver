@@ -14,6 +14,7 @@ import org.geotools.data.Query;
 import org.geotools.data.Transaction;
 import org.geotools.feature.FeatureCollection;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.expression.PropertyName;
@@ -35,17 +36,14 @@ public interface CatalogStore {
      * Queries a specific record type using the GeoTools Query object (which contains type name,
      * attribute selection
      */
-    FeatureCollection getRecords(Query q, Transaction t, String outputSchema) throws IOException;
+    FeatureCollection<FeatureType, Feature> getRecords(
+            Query q, Transaction t, RecordDescriptor outputRd) throws IOException;
 
     /**
      * Returns the number of records that {@link #getRecords(Query, Transaction, String)} would
      * return given the same query and transaction
-     *
-     * @param q
-     * @param t
-     * @throws IOException
      */
-    int getRecordsCount(Query q, Transaction t) throws IOException;
+    int getRecordsCount(Query q, Transaction t, RecordDescriptor outputRd) throws IOException;
 
     /**
      * Returns the domain of an attribute in the specified record type.
@@ -54,7 +52,6 @@ public interface CatalogStore {
      * @param attributeName The attribute
      * @return An iteration of possible values, or null if domain extraction for this attribute is
      *     not supported
-     * @throws IOException
      * @see {@link CatalogStoreCapabilities#getDomainQueriables(Name)} to get a list of the
      *     properties which the store supports the domain extraction from
      */
@@ -63,33 +60,18 @@ public interface CatalogStore {
     /**
      * Adds a new record to the store. This method might not be supported, see {@link
      * CatalogStoreCapabilities#supportsTransactions()} to check if the store supports transactions
-     *
-     * @param f
-     * @param t
-     * @throws IOException
      */
     List<FeatureId> addRecord(Feature f, Transaction t) throws IOException;
 
     /**
      * Removes records from the store. This method might not be supported, see {@link
      * CatalogStoreCapabilities#supportsTransactions()} to check if the store supports transactions
-     *
-     * @param f
-     * @param t
-     * @throws IOException
      */
     void deleteRecord(Filter f, Transaction t) throws IOException;
 
     /**
      * Updates records in the store. This method might not be supported, see {@link
      * CatalogStoreCapabilities#supportsTransactions()} to check if the store supports transactions
-     *
-     * @param typeName
-     * @param attributeNames
-     * @param attributeValues
-     * @param filter
-     * @param t
-     * @throws IOException
      */
     void updateRecord(
             Name typeName,
@@ -102,8 +84,6 @@ public interface CatalogStore {
     /**
      * Returns the repository item for the specified record id, or null if the repository item is
      * not found, or the operation is not supported
-     *
-     * @param recordId
      */
     RepositoryItem getRepositoryItem(String recordId) throws IOException;
 

@@ -103,11 +103,11 @@ At the bottom of the Style Editor page is a number of options:
    * - Option
      - Description
    * - :guilabel:`Validate`
-     - Will test the current style for correctness according to the :guilabel:`Format` option selected
+     - Will test the current style for correctness according to the :guilabel:`Format` option selected. For SLD styles, it will check compliance against the SLD schema. Mind, the parser might be able to read and work with a formally incorrect style.
+   * - :guilabel:`Save`
+     - Makes the changes to the style and returns to the Styles page
    * - :guilabel:`Apply`
      - Makes the changes to the style and remain on the Style Editor page. This is useful to update the :ref:`Layer Preview <styling_webadmin_edit_preview>` tab.
-   * - :guilabel:`Submit`
-     - Makes the changes to the style and returns to the Styles page
    * - :guilabel:`Cancel`
      - Cancels all changes to the style and returns to the Styles page
 
@@ -140,6 +140,13 @@ The style editor supports line numbering, automatic indentation, and real-time s
      - Redo
    * - .. image:: img/styles_editor_goto.png
      - Go to line
+   * - .. image:: img/styles_editor_find.png
+     - Find in style text (CTRL-F)
+   * - .. image:: img/styles_editor_find_next.png
+     - Find next occurrence in style text (CTRL-G/Cmd-G)
+   * - .. image:: img/styles_editor_replace.png
+     - Find and replace in style text (CTRL-SHIFT-F/Cmd-Option-F). First enter the search term, press ENTER, then type the replace term and press ENTER again.
+       It is also possible to run "replace all" using CTRL-SHIFT-R/Cmd-Shift-Option-F.
    * - .. image:: img/styles_editor_reformat.png
      - Auto-format the editor contents
    * - .. image:: img/styles_editor_fontsize.png
@@ -148,7 +155,6 @@ The style editor supports line numbering, automatic indentation, and real-time s
      - Insert image into style (choose existing or upload)
    * - .. image:: img/styles_editor_height.png
      - Change height of style editor (disabled in full screen mode)
-
 
 During editing and especially after editing is complete, you will want to check validation of the syntax. This can be done by clicking the :guilabel:`Validate` button at the bottom.
 
@@ -234,11 +240,16 @@ The :guilabel:`Legend` area allows you to add, modify, or delete a custom style,
      - Will remove the settings for the custom legend graphic and will instead use the default generated legend.
    * - :guilabel:`Preview legend`
      - Previews the legend based on the current settings
+   * - :guilabel:`Choose Image`
+     - Insert image into style (choose existing or upload)
 
 .. figure:: img/styles_editor_data_legend.png
 
    Legend area
 
+.. figure:: img/styles_editor_data_chooseimage.png
+  
+   Choose Image Dialog
 
 .. _styling_webadmin_edit_publishing:
 

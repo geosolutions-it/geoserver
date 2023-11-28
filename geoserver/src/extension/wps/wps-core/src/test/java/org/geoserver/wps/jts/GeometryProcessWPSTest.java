@@ -5,10 +5,13 @@
  */
 package org.geoserver.wps.jts;
 
-import static org.custommonkey.xmlunit.XMLAssert.*;
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.geoserver.wps.WPSTestSupport;
-import org.geotools.geojson.geom.GeometryJSON;
+import org.geotools.data.geojson.GeoJSONReader;
 import org.junit.Test;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
@@ -159,7 +162,7 @@ public class GeometryProcessWPSTest extends WPSTestSupport {
         MockHttpServletResponse response = postAsServletResponse("wps", xml);
         // System.out.println(response.getOutputStreamContent());
         assertEquals("application/json", response.getContentType());
-        Geometry g = new GeometryJSON().read(response.getContentAsString());
+        Geometry g = GeoJSONReader.parseGeometry(response.getContentAsString());
         assertTrue(g instanceof Polygon);
     }
 }

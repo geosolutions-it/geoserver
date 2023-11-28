@@ -29,14 +29,13 @@ public abstract class AbstractMapResponse extends Response {
         this(responseBinding, new String[] {mime});
     }
 
-    @SuppressWarnings("unchecked")
     protected AbstractMapResponse(
             final Class<? extends WebMap> responseBinding, final String[] outputFormats) {
         this(
                 responseBinding,
                 outputFormats == null
-                        ? Collections.EMPTY_SET
-                        : new HashSet<String>(Arrays.asList(outputFormats)));
+                        ? Collections.emptySet()
+                        : new HashSet<>(Arrays.asList(outputFormats)));
     }
 
     protected AbstractMapResponse(
@@ -50,7 +49,7 @@ public abstract class AbstractMapResponse extends Response {
         if (outputFormats == null) {
             return Collections.emptySet();
         }
-        Set<String> caseInsensitiveFormats = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        Set<String> caseInsensitiveFormats = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         caseInsensitiveFormats.addAll(outputFormats);
         return caseInsensitiveFormats;
     }
@@ -98,14 +97,13 @@ public abstract class AbstractMapResponse extends Response {
      */
     @Override
     public boolean canHandle(final Operation operation) {
-        GetMapRequest request;
         Object[] parameters = operation.getParameters();
-        request = (GetMapRequest) OwsUtils.parameter(parameters, GetMapRequest.class);
+        GetMapRequest request = OwsUtils.parameter(parameters, GetMapRequest.class);
         if (request == null) {
             return false;
         }
         Set<String> outputFormats = getOutputFormats();
-        if (outputFormats.size() == 0) {
+        if (outputFormats.isEmpty()) {
             // rely only on response binding
             return true;
         }

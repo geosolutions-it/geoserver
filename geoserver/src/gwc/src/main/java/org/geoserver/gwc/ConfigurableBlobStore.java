@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
@@ -18,6 +20,7 @@ import org.geoserver.gwc.config.GWCConfig;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geotools.util.logging.Logging;
+import org.geowebcache.layer.TileLayer;
 import org.geowebcache.storage.BlobStore;
 import org.geowebcache.storage.BlobStoreListener;
 import org.geowebcache.storage.BlobStoreListenerList;
@@ -31,8 +34,6 @@ import org.geowebcache.storage.blobstore.memory.CacheStatistics;
 import org.geowebcache.storage.blobstore.memory.MemoryBlobStore;
 import org.geowebcache.storage.blobstore.memory.NullBlobStore;
 import org.geowebcache.storage.blobstore.memory.guava.GuavaCacheProvider;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
 
 /**
  * {@link MemoryBlobStore} implementation used for changing {@link CacheProvider} and wrapped {@link
@@ -41,7 +42,7 @@ import org.springframework.context.ApplicationContext;
  *
  * @author Nicola Lagomarsini Geosolutions
  */
-public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore {
+public class ConfigurableBlobStore implements BlobStore {
 
     /** Logger instance for the class */
     private static final Logger LOGGER = Logging.getLogger(ConfigurableBlobStore.class);
@@ -93,8 +94,8 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
         // 2 containing a mapping key-cacheProvider description
         // 3 containing a mapping key-cacheConfiguration
         // where key is the cacheProvider classname
-        HashMap<String, CacheProvider> cacheProviders = new HashMap<String, CacheProvider>();
-        HashMap<String, String> cacheProvidersNames = new HashMap<String, String>();
+        HashMap<String, CacheProvider> cacheProviders = new HashMap<>();
+        HashMap<String, String> cacheProvidersNames = new HashMap<>();
         List<CacheProvider> extensions = GeoServerExtensions.extensions(CacheProvider.class);
         for (CacheProvider provider : extensions) {
             if (provider.isAvailable()) {
@@ -105,7 +106,7 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
 
         this.cacheProviders = Collections.unmodifiableMap(cacheProviders);
         this.cacheProvidersNames = Collections.unmodifiableMap(cacheProvidersNames);
-        this.internalCacheConfigs = new HashMap<String, CacheConfiguration>();
+        this.internalCacheConfigs = new HashMap<>();
     }
 
     @Override
@@ -259,8 +260,8 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
             // Wait until all the operations are finished
             while (actualOperations.get() > 0) {}
             // Destroy all
-            super.destroy();
-            delegate.destroy();
+            defaultStore.destroy();
+            memoryStore.destroy();
             cache.reset();
         }
     }
@@ -368,6 +369,45 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
     }
 
     @Override
+    public boolean layerExists(String layerName) {
+        // Check if the blobstore has already been configured
+        if (configured.get()) {
+            // Increment the number of current operations
+            // This behavior is used in order to wait
+            // the end of all the operations after setting
+            // the configured parameter to false
+            actualOperations.incrementAndGet();
+            try {
+                // Get a TileObject
+                return delegate.layerExists(layerName);
+            } finally {
+                // Decrement the number of current operations.
+                actualOperations.decrementAndGet();
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Map<String, Optional<Map<String, String>>> getParametersMapping(String layerName) {
+        // Check if the blobstore has already been configured
+        if (configured.get()) {
+            // Increment the number of current operations
+            // This behavior is used in order to wait
+            // the end of all the operations after setting
+            // the configured parameter to false
+            actualOperations.incrementAndGet();
+            try {
+                // Get a TileObject
+                return delegate.getParametersMapping(layerName);
+            } finally {
+                // Decrement the number of current operations.
+                actualOperations.decrementAndGet();
+            }
+        }
+        return Collections.emptyMap();
+    }
+
     public CacheStatistics getCacheStatistics() {
         // Check if the blobstore has already been configured
         if (configured.get()) {
@@ -448,8 +488,6 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
     /**
      * This method changes the {@link ConfigurableBlobStore} configuration. It can be used for
      * changing cache configuration or the blobstore used.
-     *
-     * @param gwcConfig
      */
     public synchronized void setChanged(GWCConfig gwcConfig, boolean initialization) {
         // Change the blobstore configuration
@@ -570,14 +608,10 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
         return delegate;
     }
 
-    /**
-     * Setter for the Tests
-     *
-     * @param cache
-     */
+    /** Setter for the Tests */
     void setCache(CacheProvider cache) {
         // Setting cache provider
-        Map<String, CacheProvider> provs = new HashMap<String, CacheProvider>(cacheProviders);
+        Map<String, CacheProvider> provs = new HashMap<>(cacheProviders);
         provs.put(cache.getClass().toString(), cache);
         cacheProviders = provs;
         this.cache = cache;
@@ -585,12 +619,84 @@ public class ConfigurableBlobStore extends MemoryBlobStore implements BlobStore 
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        // Do nothing
+    public boolean deleteByParameters(String layerName, Map<String, String> parameters)
+            throws StorageException {
+        // Check if the blobstore has already been configured
+        if (configured.get()) {
+            // Increment the number of current operations
+            // This behavior is used in order to wait
+            // the end of all the operations after setting
+            // the configured parameter to false
+            actualOperations.incrementAndGet();
+            try {
+                // Get a TileObject
+                return delegate.deleteByParameters(layerName, parameters);
+            } finally {
+                // Decrement the number of current operations.
+                actualOperations.decrementAndGet();
+            }
+        }
+        return false;
     }
 
     @Override
-    public void setCacheProvider(CacheProvider cache) {
-        throw new UnsupportedOperationException("Operation not supported");
+    public boolean deleteByParametersId(String layerName, String parametersId)
+            throws StorageException {
+        // Check if the blobstore has already been configured
+        if (configured.get()) {
+            // Increment the number of current operations
+            // This behavior is used in order to wait
+            // the end of all the operations after setting
+            // the configured parameter to false
+            actualOperations.incrementAndGet();
+            try {
+                // Get a TileObject
+                return delegate.deleteByParametersId(layerName, parametersId);
+            } finally {
+                // Decrement the number of current operations.
+                actualOperations.decrementAndGet();
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Set<String> getParameterIds(String layerName) throws StorageException {
+        // Check if the blobstore has already been configured
+        if (configured.get()) {
+            // Increment the number of current operations
+            // This behavior is used in order to wait
+            // the end of all the operations after setting
+            // the configured parameter to false
+            actualOperations.incrementAndGet();
+            try {
+                // Get a TileObject
+                return delegate.getParameterIds(layerName);
+            } finally {
+                // Decrement the number of current operations.
+                actualOperations.decrementAndGet();
+            }
+        }
+        return Collections.emptySet();
+    }
+
+    @Override
+    public boolean purgeOrphans(TileLayer layer) throws StorageException {
+        // Check if the blobstore has already been configured
+        if (configured.get()) {
+            // Increment the number of current operations
+            // This behavior is used in order to wait
+            // the end of all the operations after setting
+            // the configured parameter to false
+            actualOperations.incrementAndGet();
+            try {
+                // Get a TileObject
+                return delegate.purgeOrphans(layer);
+            } finally {
+                // Decrement the number of current operations.
+                actualOperations.decrementAndGet();
+            }
+        }
+        return false;
     }
 }

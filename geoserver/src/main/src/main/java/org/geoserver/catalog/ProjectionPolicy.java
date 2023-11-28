@@ -9,6 +9,7 @@ public enum ProjectionPolicy {
 
     /** Force the declared projection, ignoring the native one. */
     FORCE_DECLARED {
+        @Override
         public Integer getCode() {
             return 0;
         }
@@ -16,12 +17,14 @@ public enum ProjectionPolicy {
 
     /** Reproject from the native projection to the declared one. */
     REPROJECT_TO_DECLARED {
+        @Override
         public Integer getCode() {
             return 1;
         }
     },
     /** Do nothing. */
     NONE {
+        @Override
         public Integer getCode() {
             return 2;
         }
@@ -32,8 +35,6 @@ public enum ProjectionPolicy {
     /**
      * Looks up the projection policy by code, if the lookup fails the default, {@link
      * #FORCE_DECLARED}, is returned.
-     *
-     * @param code
      */
     public static ProjectionPolicy get(Integer code) {
         if (code == null) return FORCE_DECLARED;

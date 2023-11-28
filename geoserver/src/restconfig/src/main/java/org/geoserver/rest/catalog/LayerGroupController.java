@@ -9,7 +9,6 @@ import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import freemarker.template.ObjectWrapper;
 import freemarker.template.SimpleHash;
-import freemarker.template.TemplateModelException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +16,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -45,7 +43,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -53,16 +59,15 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RestController
 @ControllerAdvice
 @RequestMapping(
-    path = {
-        RestBaseController.ROOT_PATH + "/layergroups",
-        RestBaseController.ROOT_PATH + "/workspaces/{workspaceName}/layergroups"
-    },
-    produces = {
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE,
-        MediaType.TEXT_HTML_VALUE
-    }
-)
+        path = {
+            RestBaseController.ROOT_PATH + "/layergroups",
+            RestBaseController.ROOT_PATH + "/workspaces/{workspaceName}/layergroups"
+        },
+        produces = {
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE,
+            MediaType.TEXT_HTML_VALUE
+        })
 public class LayerGroupController extends AbstractCatalogController {
     private static final Logger LOGGER = Logging.getLogger(LayerGroupController.class);
 
@@ -108,13 +113,12 @@ public class LayerGroupController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public ResponseEntity<String> layerGroupPost(
             @RequestBody LayerGroupInfo lg,
             @PathVariable(required = false) String workspaceName,
@@ -163,14 +167,13 @@ public class LayerGroupController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = "{layerGroupName}",
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            value = "{layerGroupName}",
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public void layerGroupPut(
             @RequestBody LayerGroupInfo lg,
             @PathVariable(required = false) String workspaceName,
@@ -300,12 +303,7 @@ public class LayerGroupController extends AbstractCatalogController {
             protected void wrapInternal(
                     Map<String, Object> properties, SimpleHash model, LayerGroupInfo layerGroup) {
                 if (properties == null) {
-                    try {
-                        properties = model.toMap();
-                    } catch (TemplateModelException e) {
-                        LOGGER.log(Level.SEVERE, e.getMessage(), e);
-                        return;
-                    }
+                    properties = hashToProperties(model);
                 }
                 List<Map<String, Map<String, String>>> layerProps = new ArrayList<>();
                 for (PublishedInfo info : layerGroup.getLayers()) {
@@ -333,8 +331,7 @@ public class LayerGroupController extends AbstractCatalogController {
             }
 
             @Override
-            protected void wrapInternal(
-                    SimpleHash model, @SuppressWarnings("rawtypes") Collection object) {
+            protected void wrapInternal(SimpleHash model, Collection object) {
                 for (Object l : object) {
                     LayerGroupInfo lg = (LayerGroupInfo) l;
                     wrapInternal(null, model, lg);

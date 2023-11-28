@@ -19,11 +19,11 @@ Filter functions are widely supported in GeoServer, so cross-layer filtering can
 Installing the querylayer module
 ----------------------------------
 
-#. Download the **querylayer** extension corresponding to your version of GeoServer.
+* Visit the :website:`website download <download>` page, locate your release, and download:  :download_extension:`querylayer`
 
    .. warning:: The version of the extension **must** match the version of the GeoServer instance
 
-#. Extract the contents of the extension archive into the ``WEB-INF/lib`` directory of the GeoServer installation.
+#. Extract the contents of the extension archive into the :file:`WEB-INF/lib` directory of the GeoServer installation.
 #. To check the module is properly installed request the WFS 1.1 capabilities from the GeoServer home page.
    The ``Filter_Capabilities`` section should contain a reference to a function named ``queryCollection``.
 
@@ -102,7 +102,7 @@ To prevent impacting server stability there are built-in limits to how much data
 * at most 1000 features are collected by ``queryCollection``
 * at most 37000 coordinates (1MB worth of Coordinate objects) are collected by ``collectGeometries``
 
-These limits can be overridden by setting alternate values for the following parameters (this can be done using JVM system variables, servlet context variables, or enviroment variables):
+These limits can be overridden by setting alternate values for the following parameters (this can be done using JVM system variables, servlet context variables, or environment variables):
 
 * ``QUERY_LAYER_MAX_FEATURES`` controls the maximum number of features collected by ``queryCollection``
 * ``GEOMETRY_COLLECT_MAX_COORDINATES`` controls the maximum number of coordinates collected by ``collectGeometries``

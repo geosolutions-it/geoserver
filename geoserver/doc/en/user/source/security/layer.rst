@@ -153,16 +153,18 @@ The mapping of roles to permissions is as follows:
      - r
      - r
      - r
-   * - ``STATE_LEGISLATURES``
+   * - ``STATE_LEGISLATORS``
      - (none)
      - r
      - r/w
      - r
    * - (All other users)
+     - (none)
      - r
      - r
      - r
-     - r
+
+.. note:: Specific workspace rule ``private.*.r=TRUSTED_ROLE`` will take precedence over the more generic rule ``*.*.r=*``. When a request is made to read a layer ``private:vulnerable_infrastructure`` the most specific rule available is used to control access. In this case the workspace rule ``private.*.r=TRUSTED_ROLE`` is the most specific and only users that have TRUSTED_ROLE will be granted ``r`` access and be able to read the ``private:vulnerable_infrastructure`` layer.  Other users that do not have the TRUSTED_ROLE will not be granted ``r`` access and will be unable to access the ``private:vulnerable_infrastructure`` layer.
 
 Locking down GeoServer
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -352,7 +354,7 @@ Here are a few examples of how the structure changes based on different security
         |   ws1:layerA
         └   ws2:layerB
 
-* Denying access to ``nameTreeA`` and ``namedTreeGroupB`` but explicitly allowing access to ``ws1:layerA``::
+* Denying access to ``nameTreeGroupA`` and ``namedTreeGroupB`` but explicitly allowing access to ``ws1:layerA``::
 
     namedTreeGroupA.r=ROLE_PRIVATE
     namedTreeGroupB.r=ROLE_PRIVATE
@@ -364,8 +366,8 @@ Here are a few examples of how the structure changes based on different security
     +- ws1:layerA
     +- layerD
 
-* Denying access to ``nameTreeA`` and ``namedTreeGroupB`` but explicitly allowing all layers in ws2
-  (a workspace rules overrides global groups ones)::
+* Denying access to ``nameTreeGroupA`` and ``namedTreeGroupB`` but explicitly allowing all layers in ws2
+  (a workspace rule overrides global groups ones)::
 
     namedTreeGroupA.r=ROLE_PRIVATE
     namedTreeGroupB.r=ROLE_PRIVATE

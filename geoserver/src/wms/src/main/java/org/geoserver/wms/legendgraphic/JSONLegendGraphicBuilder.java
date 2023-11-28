@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 import javax.measure.Unit;
 import javax.measure.quantity.Length;
 import javax.swing.Icon;
@@ -22,6 +23,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.platform.ServiceException;
+import org.geoserver.wms.CascadedLegendRequest;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.GetLegendGraphicRequest.LegendRequest;
 import org.geoserver.wms.WMS;
@@ -231,7 +233,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
 
     public static final String GRAPHIC = "graphic";
 
-    static Map<Class, String> symbolizerNames = new HashMap<>();
+    static Map<Class<?>, String> symbolizerNames = new HashMap<>();
 
     static {
         symbolizerNames.put(PolygonSymbolizer.class, POLYGON);
@@ -256,20 +258,18 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
     private String ruleName;
     private int symbolizerCount;
 
-    /**
-     * @param request
-     * @return
-     */
+    /** */
     @Override
     public JSONObject buildLegendGraphic(GetLegendGraphicRequest request) {
         setup(request);
         wms = request.getWms();
         Locale locale = request.getLocale();
         JSONObject response = new JSONObject();
+
         for (LegendRequest legend : layers) {
             FeatureType layer = legend.getFeatureType();
-
             Style gt2Style = legend.getStyle();
+            gt2Style = applyRenderingSelection(gt2Style);
             if (gt2Style == null) {
                 throw new NullPointerException("request.getStyle()");
             }
@@ -306,6 +306,24 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
             }
 
             ArrayList<JSONObject> jRules = new ArrayList<>();
+            if (legend instanceof CascadedLegendRequest) {
+                CascadedLegendRequest cascadedLegend = (CascadedLegendRequest) legend;
+
+                JSONArray cascadedRules = cascadedLegend.getCascadedJSONRules();
+
+                // if null or empty..go back to default behavior
+                if (cascadedRules != null) {
+                    if (!cascadedRules.isEmpty()) {
+                        for (int i = 0; i < cascadedRules.size(); i++)
+                            jRules.add(cascadedRules.getJSONObject(i));
+                        // we have all the rules from cascaded JSON request
+                        // no need to loop
+                        layerName = cascadedLegend.getLayer();
+                        // erase rules to skip the next for loop
+                        applicableRules = new Rule[] {};
+                    }
+                }
+            }
             for (Rule rule : applicableRules) {
                 ruleName = rule.getName();
                 JSONObject jRule = new JSONObject();
@@ -387,10 +405,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return in.element(TITLE, title);
     }
 
-    /**
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private String toJSONValue(Expression exp, Class<?> type) {
         FilterAttributeExtractor extractor = new FilterAttributeExtractor();
         exp.accept(extractor, null);
@@ -413,11 +428,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return "'[" + ECQL.toCQL(exp) + "]'";
     }
 
-    /**
-     * @param colorMap
-     * @param ret
-     * @return
-     */
+    /** */
     private JSONObject processColorMap(ColorMap colorMap, JSONObject ret) {
         boolean first = true;
         JSONArray entries = new JSONArray();
@@ -463,11 +474,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param fill
-     * @return
-     */
+    /** */
     private JSONObject processFill(JSONObject ret, Fill fill) {
         if (fill == null) {
             return ret;
@@ -487,11 +494,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param graphic
-     * @return
-     */
+    /** */
     private JSONObject processGraphic(JSONObject ret, Graphic graphic) {
         if (graphic == null) {
             return ret;
@@ -530,16 +533,15 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         if (index >= 0) {
             String base = iconUrl.substring(0, index + 1);
             String[] refs = iconUrl.substring(index + 1).split("&");
-            for (int i = 0; i < refs.length; i++) {
-                if (refs[i].matches("(\\d\\.)\\d(\\.\\d[\\.\\w+]*=[\\d.]*)")) {
+            for (String s : refs) {
+                if (s.matches("(\\d\\.)\\d(\\.\\d[\\.\\w+]*=[\\d.]*)")) {
                     String ref =
-                            refs[i].replaceAll(
-                                    "(\\d\\.)\\d(\\.\\d=)", "$1" + origRuleNo.get(0) + "$2");
-                    String[] split = refs[i].split("\\.");
+                            s.replaceAll("(\\d\\.)\\d(\\.\\d=)", "$1" + origRuleNo.get(0) + "$2");
+                    String[] split = s.split("\\.");
                     int symCount = Integer.parseInt(split[2].replaceAll("=", ""));
                     if (symbolizerCount == symCount) base += ref + "&";
                 } else {
-                    base += refs[i] + "&";
+                    base += s + "&";
                 }
             }
             if (base.endsWith("&")) {
@@ -590,11 +592,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param g
-     * @param iconUrl
-     * @return
-     */
+    /** */
     private JSONObject processGraphicalSymbol(GraphicalSymbol g, String iconUrl) {
         JSONObject jGraphic = new JSONObject();
 
@@ -619,7 +617,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
                             jGraphic.element(EXTERNAL_GRAPHIC_URL, url.toString());
                         }
                     } catch (MalformedURLException e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.WARNING, "", e);
                     }
                 }
                 Icon icon = em.getInlineContent();
@@ -640,18 +638,14 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
                 }
 
             } catch (MalformedURLException e) {
-                e.printStackTrace();
+                LOGGER.log(Level.WARNING, "", e);
             }
             jGraphic.element(EXTERNAL_GRAPHIC_TYPE, eg.getFormat());
         }
         return jGraphic;
     }
 
-    /**
-     * @param ret
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private JSONObject processLineSymbolizer(JSONObject ret, LineSymbolizer symbolizer) {
         ret = processStroke(ret, symbolizer.getStroke());
         if (symbolizer.getPerpendicularOffset() != null) {
@@ -662,30 +656,18 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private JSONObject processPointSymbolizer(JSONObject ret, PointSymbolizer symbolizer) {
         ret = processGraphic(ret, symbolizer.getGraphic());
         return ret;
     }
-    /**
-     * @param ret
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private JSONObject processPolygonSymbolizer(JSONObject ret, PolygonSymbolizer symbolizer) {
         ret = processStroke(ret, symbolizer.getStroke());
         ret = processFill(ret, symbolizer.getFill());
         return ret;
     }
-    /**
-     * @param ret
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private JSONObject processRasterSymbolizer(JSONObject ret, RasterSymbolizer symbolizer) {
         ret = processColorMap(symbolizer.getColorMap(), ret);
         Expression op = symbolizer.getOpacity();
@@ -696,11 +678,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         ret = processContrastEnhancement(ret, symbolizer.getContrastEnhancement());
         return ret;
     }
-    /**
-     * @param ret
-     * @param contrastEnhancement
-     * @return
-     */
+    /** */
     private JSONObject processContrastEnhancement(
             JSONObject ret, ContrastEnhancement contrastEnhancement) {
         if (contrastEnhancement != null) {
@@ -725,11 +703,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param channelSelection
-     * @return
-     */
+    /** */
     private JSONObject processChannelSelection(JSONObject ret, ChannelSelection channelSelection) {
         if (channelSelection != null) {
             JSONObject chs = new JSONObject();
@@ -751,11 +725,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param stroke
-     * @return
-     */
+    /** */
     private JSONObject processStroke(JSONObject ret, Stroke stroke) {
         if (stroke == null) {
             return ret;
@@ -801,10 +771,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private JSONObject processSymbolizer(Symbolizer symbolizer) {
         JSONObject ret = new JSONObject();
         String name = symbolizer.getName();
@@ -849,10 +816,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param map
-     */
+    /** */
     private JSONObject processVendorOptions(JSONObject ret, Map<String, ?> map) {
         if (!map.isEmpty()) {
             JSONObject vendorOpts = new JSONObject();
@@ -870,11 +834,7 @@ public class JSONLegendGraphicBuilder extends LegendGraphicBuilder {
         return ret;
     }
 
-    /**
-     * @param ret
-     * @param symbolizer
-     * @return
-     */
+    /** */
     private JSONObject processTextSymbolizer(JSONObject ret, TextSymbolizer symbolizer) {
         ret.element(LABEL, toJSONValue(symbolizer.getLabel(), String.class));
         JSONArray fonts = new JSONArray();

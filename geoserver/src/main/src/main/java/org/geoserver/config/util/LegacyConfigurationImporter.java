@@ -163,7 +163,7 @@ public class LegacyConfigurationImporter {
 
                 ServiceInfo service = sl.load(geoServer);
                 if (service != null) {
-                    LOGGER.info("Loading service '" + service.getId() + "'");
+                    LOGGER.config("Loading service '" + service.getId() + "'");
                     geoServer.add(service);
                 }
             } catch (Exception e) {
@@ -179,6 +179,7 @@ public class LegacyConfigurationImporter {
         return value != null ? value : def;
     }
 
+    @SuppressWarnings("unchecked")
     protected <T extends Object> T get(Map map, String key, Class<T> clazz, T def) {
         Object o = map.get(key);
         if (o == null) {

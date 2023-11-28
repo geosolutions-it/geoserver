@@ -10,8 +10,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import org.apache.wicket.Component;
@@ -43,12 +43,23 @@ public class DataAccessEditPageTest extends GeoServerWicketTestSupport {
     public void init() {
         login();
 
+        DataStoreInfo dataStore = getCatalog().getDataStoreByName(MockData.CITE_PREFIX);
+        if (dataStore == null) {
+            // revert the cdf modified change
+            Catalog cat = getCatalog();
+            DataStoreInfo ds = cat.getDataStoreByName("citeModified");
+            if (ds != null) {
+                ds.setName(MockData.CITE_PREFIX);
+                cat.save(ds);
+            }
+        }
+
         store = getCatalog().getStoreByName(MockData.CITE_PREFIX, DataStoreInfo.class);
         tester.startPage(new DataAccessEditPage(store.getId()));
     }
 
     @Test
-    public void testLoad() {
+    public void testLoad() throws IOException {
         tester.assertRenderedPage(DataAccessEditPage.class);
         tester.assertNoErrorMessage();
         print(tester.getLastRenderedPage(), true, true);
@@ -56,26 +67,40 @@ public class DataAccessEditPageTest extends GeoServerWicketTestSupport {
         tester.assertLabel("dataStoreForm:storeType", "Properties");
         tester.assertModelValue(
                 "dataStoreForm:dataStoreNamePanel:border:border_body:paramValue", "cite");
-        String expectedPath = new File(getTestData().getDataDirectoryRoot(), "cite").getPath();
+        String expectedPath =
+                new File(getTestData().getDataDirectoryRoot(), "cite").getCanonicalPath();
         tester.assertModelValue(
                 "dataStoreForm:parametersPanel:parameters:0:parameterPanel:fileInput:border:border_body:paramValue",
                 expectedPath);
     }
 
-    // This is disabled due to bad interactions between the submit link and the form submit
-    // I need to reproduce ina stand alone test case and report to the Wicket devs
-    // public void testEditName() {
-    //
-    // FormTester form = tester.newFormTester("dataStoreForm");
-    // prefillForm(form);
-    // form.setValue("dataStoreNamePanel:border:border_body:paramValue", "citeModified");
-    // form.submit();
-    // tester.assertNoErrorMessage();
-    // tester.clickLink("dataStoreForm:save");
-    // tester.assertNoErrorMessage();
-    //
-    // tester.assertRenderedPage(StorePage.class);
-    // }
+    @Test
+    public void testEditName() {
+        FormTester form = tester.newFormTester("dataStoreForm");
+        form.setValue("dataStoreNamePanel:border:border_body:paramValue", "citeModified");
+        form.submit();
+        tester.assertNoErrorMessage();
+        tester.clickLink("dataStoreForm:save");
+        tester.assertNoErrorMessage();
+
+        tester.assertRenderedPage(StorePage.class);
+
+        assertNotNull(getCatalog().getDataStoreByName("citeModified"));
+    }
+
+    @Test
+    public void testEditNameApply() {
+        FormTester form = tester.newFormTester("dataStoreForm");
+        form.setValue("dataStoreNamePanel:border:border_body:paramValue", "citeModified");
+        form.submit();
+        tester.assertNoErrorMessage();
+        tester.clickLink("dataStoreForm:apply");
+        tester.assertNoErrorMessage();
+
+        tester.assertRenderedPage(DataAccessEditPage.class);
+
+        assertNotNull(getCatalog().getDataStoreByName("citeModified"));
+    }
 
     @Test
     public void testNameRequired() {
@@ -91,13 +116,7 @@ public class DataAccessEditPageTest extends GeoServerWicketTestSupport {
 
         List<String> l =
                 Lists.transform(
-                        tester.getMessages(FeedbackMessage.ERROR),
-                        new Function<Serializable, String>() {
-                            @Override
-                            public String apply(Serializable input) {
-                                return input.toString();
-                            }
-                        });
+                        tester.getMessages(FeedbackMessage.ERROR), input -> input.toString());
         assertTrue(l.contains("Field 'Data Source Name' is required."));
         // tester.assertErrorMessages(new String[] { "Field 'Data Source Name' is required." });
     }
@@ -266,10 +285,9 @@ public class DataAccessEditPageTest extends GeoServerWicketTestSupport {
         DropDownChoiceParamPanel dropDown = null;
         for (Component component : container) {
             if (component instanceof ListItem
-                    && ((ListItem) component).get("parameterPanel")
-                            instanceof DropDownChoiceParamPanel) {
+                    && component.get("parameterPanel") instanceof DropDownChoiceParamPanel) {
                 DropDownChoiceParamPanel panel =
-                        (DropDownChoiceParamPanel) ((ListItem) component).get("parameterPanel");
+                        (DropDownChoiceParamPanel) component.get("parameterPanel");
                 if (panel.getDefaultModelObject() == SslMode.DISABLE) {
                     dropDown = panel;
                 }
