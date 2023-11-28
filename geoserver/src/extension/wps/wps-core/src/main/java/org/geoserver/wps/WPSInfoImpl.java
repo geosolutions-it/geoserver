@@ -16,7 +16,6 @@ import org.geoserver.security.CatalogMode;
  *
  * @author Lucas Reed, Refractions Research Inc
  */
-@SuppressWarnings("unchecked")
 public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
 
     static final String KEY_CONNECTION_TIMEOUT = "connectionTimeout";
@@ -51,10 +50,17 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
     Integer maxAsynchronousProcesses = DEFAULT_MAX_ASYNCH;
 
     /** List of process groups/factories. */
-    List<ProcessGroupInfo> processGroups = new ArrayList<ProcessGroupInfo>();
+    List<ProcessGroupInfo> processGroups = new ArrayList<>();
 
     /** Where to store the WPS artifacts (inputs, outputs, and so on) */
     String storageDirectory;
+
+    /**
+     * The directory where processes are allowed to store outputs outside of the WPS resource
+     * storage so that the files will not be automatically removed based on the resource expiration
+     * timeout.
+     */
+    String externalOutputDirectory;
 
     /**
      * How to handle requests for processes that have been secured, and should not be reached
@@ -94,8 +100,9 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
     /** The flag indicating whether remote inputs are enabled. */
     boolean remoteInputDisabled;
 
-    public WPSInfoImpl() {
-        title = "Prototype GeoServer WPS";
+    @Override
+    public String getType() {
+        return "WPS";
     }
 
     /**
@@ -104,6 +111,7 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
      *
      * @return the timeout, or -1 if infinite timeout.
      */
+    @Override
     public double getConnectionTimeout() {
         if (connectionTimeout == null) {
             // check the metadata map for backwards compatibility with 2.1.x series
@@ -125,10 +133,12 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
      * Sets the connection timeout (in seconds) to be used in WPS execute requests. -1 for infinite
      * timeout
      */
+    @Override
     public void setConnectionTimeout(double connectionTimeout) {
         this.connectionTimeout = connectionTimeout;
     }
 
+    @Override
     public int getResourceExpirationTimeout() {
         if (resourceExpirationTimeout == null) {
             // check the metadata map for backwards compatibility with 2.1.x series
@@ -146,10 +156,12 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
         return resourceExpirationTimeout;
     }
 
+    @Override
     public void setResourceExpirationTimeout(int resourceExpirationTimeout) {
         this.resourceExpirationTimeout = resourceExpirationTimeout;
     }
 
+    @Override
     public int getMaxSynchronousProcesses() {
         if (maxSynchronousProcesses == null) {
             // check the metadata map for backwards compatibility with 2.1.x series
@@ -167,10 +179,12 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
         return maxSynchronousProcesses;
     }
 
+    @Override
     public void setMaxSynchronousProcesses(int maxSynchronousProcesses) {
         this.maxSynchronousProcesses = maxSynchronousProcesses;
     }
 
+    @Override
     public int getMaxAsynchronousProcesses() {
         if (maxAsynchronousProcesses == null) {
             // check the metadata map for backwards compatibility with 2.1.x series
@@ -188,6 +202,7 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
         return maxAsynchronousProcesses;
     }
 
+    @Override
     public void setMaxAsynchronousProcesses(int maxAsynchronousProcesses) {
         this.maxAsynchronousProcesses = maxAsynchronousProcesses;
     }
@@ -212,6 +227,16 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
     }
 
     @Override
+    public String getExternalOutputDirectory() {
+        return externalOutputDirectory;
+    }
+
+    @Override
+    public void setExternalOutputDirectory(String externalOutputDirectory) {
+        this.externalOutputDirectory = externalOutputDirectory;
+    }
+
+    @Override
     public CatalogMode getCatalogMode() {
         if (catalogMode == null) {
             catalogMode = CatalogMode.HIDE;
@@ -224,10 +249,12 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
         this.catalogMode = catalogMode;
     }
 
+    @Override
     public int getMaxComplexInputSize() {
         return maxComplexInputSize;
     }
 
+    @Override
     public void setMaxComplexInputSize(int maxComplexInputSize) {
         this.maxComplexInputSize = maxComplexInputSize;
     }

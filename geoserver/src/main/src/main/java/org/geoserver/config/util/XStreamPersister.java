@@ -42,6 +42,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,13 +51,16 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.collections.map.MultiValueMap;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.mapped.MappedXMLStreamWriter;
 import org.codehaus.jettison.util.FastStack;
@@ -106,6 +110,8 @@ import org.geoserver.catalog.impl.DefaultCatalogFacade;
 import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.catalog.impl.FeatureTypeInfoImpl;
 import org.geoserver.catalog.impl.LayerGroupInfoImpl;
+import org.geoserver.catalog.impl.LayerGroupStyle;
+import org.geoserver.catalog.impl.LayerGroupStyleImpl;
 import org.geoserver.catalog.impl.LayerIdentifier;
 import org.geoserver.catalog.impl.LayerInfoImpl;
 import org.geoserver.catalog.impl.LegendInfoImpl;
@@ -159,6 +165,7 @@ import org.geotools.referencing.crs.DefaultProjectedCRS;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.referencing.wkt.Formattable;
 import org.geotools.util.Converters;
+import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
@@ -166,6 +173,7 @@ import org.opengis.coverage.grid.GridGeometry;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
+import org.opengis.util.InternationalString;
 
 /**
  * Utility class which loads and saves catalog and configuration objects to and from an xstream.
@@ -174,6 +182,7 @@ import org.opengis.referencing.operation.MathTransform;
  */
 public class XStreamPersister {
 
+    private static final String DEFAULT_LOCALE = "default";
     private boolean unwrapNulls = true;
 
     /** Callback interface or xstream persister. */
@@ -256,9 +265,9 @@ public class XStreamPersister {
     boolean referenceByName = false;
 
     /** The type map used in {@link BreifMapConverter} to handle complex objects */
-    Map<String, Class<?>> forwardBreifMap = new HashMap<String, Class<?>>();
+    Map<String, Class<?>> forwardBreifMap = new HashMap<>();
 
-    Map<Class<?>, String> backwardBreifMap = new HashMap<Class<?>, String>();
+    Map<Class<?>, String> backwardBreifMap = new HashMap<>();
 
     private Level forceLevel = LOGGER.getLevel() == null ? Level.INFO : LOGGER.getLevel();
 
@@ -297,8 +306,6 @@ public class XStreamPersister {
     /**
      * Sets null handling in proxy objects. Defaults to unwrap. If set to false, proxy object are
      * not transformed to nulls.
-     *
-     * @param unwrapNulls
      */
     public void setUnwrapNulls(boolean unwrapNulls) {
         this.unwrapNulls = unwrapNulls;
@@ -308,7 +315,7 @@ public class XStreamPersister {
         // Default implementations
         initImplementationDefaults(xs);
 
-        // ignore unkonwn fields, this should help using data dirs that has new config elements
+        // ignore unknown fields, this should help using data dirs that has new config elements
         // with older versions of GeoServer
         xs.ignoreUnknownElements();
 
@@ -462,6 +469,8 @@ public class XStreamPersister {
         // AttributeTypeInfo
         xs.omitField(impl(AttributeTypeInfo.class), "featureType");
         xs.omitField(impl(AttributeTypeInfo.class), "attribute");
+        xs.registerLocalConverter(
+                impl(AttributeTypeInfo.class), "description", new InternationalStringConverter());
 
         // LayerInfo
         // xs.omitField( LayerInfo.class), "resource");
@@ -498,14 +507,55 @@ public class XStreamPersister {
                 "styles",
                 new ReferenceCollectionConverter(StyleInfo.class));
         xs.registerLocalConverter(
+                impl(LayerGroupInfo.class),
+                "layerGroupStyles",
+                new LayerGroupStyleCollectionConverter());
+        xs.registerLocalConverter(
                 impl(LayerGroupInfo.class), "metadata", new MetadataMapConverter());
         xs.registerLocalConverter(
                 impl(LayerGroupInfo.class), "keywords", new KeywordListConverter());
+        xs.registerLocalConverter(
+                impl(LayerGroupInfo.class),
+                "styles",
+                new ReferenceCollectionConverter(StyleInfo.class));
 
         // ReferencedEnvelope
         xs.registerLocalConverter(ReferencedEnvelope.class, "crs", new SRSConverter());
         xs.registerLocalConverter(GeneralEnvelope.class, "crs", new SRSConverter());
 
+        xs.registerLocalConverter(
+                impl(ResourceInfo.class), "internationalTitle", new InternationalStringConverter());
+        xs.registerLocalConverter(
+                impl(ResourceInfo.class),
+                "internationalAbstract",
+                new InternationalStringConverter());
+
+        xs.registerLocalConverter(
+                impl(ServiceInfo.class), "internationalTitle", new InternationalStringConverter());
+        xs.registerLocalConverter(
+                impl(ServiceInfo.class),
+                "internationalAbstract",
+                new InternationalStringConverter());
+
+        xs.registerLocalConverter(
+                impl(LayerGroupInfo.class),
+                "internationalTitle",
+                new InternationalStringConverter());
+        xs.registerLocalConverter(
+                impl(LayerGroupInfo.class),
+                "internationalAbstract",
+                new InternationalStringConverter());
+        xs.registerLocalConverter(
+                impl(LayerGroupStyle.class),
+                "layers",
+                new ReferenceCollectionConverter(
+                        PublishedInfo.class, LayerInfo.class, LayerGroupInfo.class));
+        xs.registerLocalConverter(
+                impl(LayerGroupStyle.class),
+                "styles",
+                new ReferenceCollectionConverter(StyleInfo.class));
+        xs.registerLocalConverter(
+                impl(LayerGroupStyle.class), "name", new OnlyStyleNameConverter());
         // ServiceInfo
         xs.registerConverter(new ServiceInfoConverter());
         xs.omitField(impl(ServiceInfo.class), "geoServer");
@@ -523,6 +573,10 @@ public class XStreamPersister {
         xs.registerConverter(new VirtualTableConverter());
         xs.registerConverter(new KeywordInfoConverter());
         xs.registerConverter(new SettingsInfoConverter());
+        xs.registerConverter(new GeoServerInfoConverter());
+        xs.registerConverter(new WMSLayerInfoConverter());
+        xs.registerConverter(new InternationalStringConverter());
+        xs.registerConverter(new LayerGroupStyleConverter());
         // this should have been a metadata map too, but was not registered as such and got a plain
         // map converter. Switched to SettingsTolerantMapConverter to make it work when plugins get
         // removed and leave configuration that cannot be parsed anymore in there
@@ -532,7 +586,6 @@ public class XStreamPersister {
                 new SettingsTolerantMapConverter(xs.getMapper(), MetadataMap.class));
         xs.registerConverter(new MeasureConverter());
         xs.registerConverter(new MultimapConverter(xs.getMapper()));
-
         // register Virtual structure handling
         registerBreifMapComplexType("virtualTable", VirtualTable.class);
         registerBreifMapComplexType("coverageView", CoverageView.class);
@@ -544,6 +597,8 @@ public class XStreamPersister {
         xs.allowTypeHierarchy(Info.class);
         xs.allowTypeHierarchy(Multimap.class);
         xs.allowTypeHierarchy(JAIInfo.class);
+        xs.allowTypeHierarchy(JAIEXTInfo.class);
+        xs.allowTypeHierarchy(CoverageAccessInfo.class);
         xs.allowTypes(new Class[] {DynamicProxyMapper.DynamicProxy.class});
         xs.allowTypes(new String[] {"java.util.Collections$SingletonList"});
         xs.allowTypesByWildcard(new String[] {"org.geoserver.catalog.**"});
@@ -554,11 +609,8 @@ public class XStreamPersister {
      * Use this method to register complex types that cannot be simply represented as a string in a
      * {@link BreifMapConverter}. The {@code typeId} will be used as a type discriminator in the
      * brief map, as well as the element root for the complex object to be converted.
-     *
-     * @param typeId
-     * @param clazz
      */
-    public void registerBreifMapComplexType(String typeId, Class clazz) {
+    public void registerBreifMapComplexType(String typeId, Class<?> clazz) {
         forwardBreifMap.put(typeId, clazz);
         backwardBreifMap.put(clazz, typeId);
         xs.allowTypes(new Class[] {clazz});
@@ -639,12 +691,11 @@ public class XStreamPersister {
      *
      * @param obj The object to save.
      * @param out The stream to save the object to.
-     * @throws IOException
      */
     public void save(Object obj, OutputStream out) throws IOException {
         // unwrap dynamic proxies
         Object unwrapped = unwrapProxies(obj);
-        xs.toXML(unwrapped, new OutputStreamWriter(out, "UTF-8"));
+        xs.toXML(unwrapped, new OutputStreamWriter(out, StandardCharsets.UTF_8));
     }
 
     /**
@@ -664,7 +715,6 @@ public class XStreamPersister {
      *
      * @param in The input stream to read the object from.
      * @param clazz The class of the expected object.
-     * @throws IOException
      */
     public <T> T load(InputStream in, Class<T> clazz) throws IOException {
         T obj = clazz.cast(xs.fromXML(in));
@@ -682,19 +732,15 @@ public class XStreamPersister {
     /**
      * Builds a converter that will marshal/unmarshal the target class by reference, that is, by
      * storing the object id as opposed to fully serializing it
-     *
-     * @param clazz
      */
-    public ReferenceConverter buildReferenceConverter(Class clazz) {
+    public ReferenceConverter buildReferenceConverter(Class<?> clazz) {
         return new ReferenceConverter(clazz);
     }
 
     /**
      * Same as {@link #buildReferenceConverter(Class)}, but works against a collection of objects
-     *
-     * @param clazz
      */
-    public ReferenceCollectionConverter buildReferenceCollectionConverter(Class clazz) {
+    public ReferenceCollectionConverter buildReferenceCollectionConverter(Class<?> clazz) {
         return new ReferenceCollectionConverter(clazz);
     }
 
@@ -741,7 +787,7 @@ public class XStreamPersister {
         xs.addDefaultImplementation(ArrayListMultimap.class, Multimap.class);
     }
 
-    protected Class impl(Class interfce) {
+    protected Class<?> impl(Class<?> interfce) {
         // special case case classes, they don't get registered as default implementations
         // only concrete classes do
         if (interfce == ServiceInfo.class) {
@@ -753,8 +799,13 @@ public class XStreamPersister {
         if (interfce == ResourceInfo.class) {
             return ResourceInfoImpl.class;
         }
+        if (interfce == AttributeTypeInfo.class) {
+            return AttributeTypeInfoImpl.class;
+        }
 
-        Class clazz = getXStream().getMapper().defaultImplementationOf(interfce);
+        if (interfce == LayerGroupStyle.class) return LayerGroupStyleImpl.class;
+
+        Class<?> clazz = getXStream().getMapper().defaultImplementationOf(interfce);
         if (clazz == null) {
             throw new RuntimeException("No default mapping for " + interfce);
         }
@@ -781,6 +832,7 @@ public class XStreamPersister {
                 this.wrapped = wrapped;
             }
 
+            @Override
             public void visit(String name, Class type, Class definedIn, Object value) {
 
                 // skip empty collections + maps
@@ -822,6 +874,7 @@ public class XStreamPersister {
         public void marshal(
                 Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
 
+            @SuppressWarnings("unchecked")
             Set<String> encryptionFields = (Set<String>) context.get(ENCRYPTED_FIELDS_KEY);
             if (encryptionFields == null) {
                 encryptionFields = Collections.emptySet();
@@ -829,8 +882,8 @@ public class XStreamPersister {
 
             GeoServerSecurityManager secMgr = encryptPasswordFields ? getSecurityManager() : null;
             Map map = (Map) source;
-            for (Iterator iterator = map.entrySet().iterator(); iterator.hasNext(); ) {
-                Map.Entry entry = (Map.Entry) iterator.next();
+            for (Object o : map.entrySet()) {
+                Map.Entry entry = (Map.Entry) o;
 
                 if (entry.getValue() == null) {
                     continue;
@@ -862,6 +915,7 @@ public class XStreamPersister {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected void populateMap(
                 HierarchicalStreamReader reader, UnmarshallingContext context, Map map) {
 
@@ -932,38 +986,36 @@ public class XStreamPersister {
             return reader.getValue();
         }
 
-        private Class getComplexTypeClass(String typeId) {
+        private Class<?> getComplexTypeClass(String typeId) {
             return forwardBreifMap.get(typeId);
         }
 
-        protected String getComplexTypeId(Class clazz) {
+        protected String getComplexTypeId(Class<?> clazz) {
             String typeId = backwardBreifMap.get(clazz);
             if (typeId == null) {
-                List<Class> matches = new ArrayList<Class>();
+                List<Class<?>> matches = new ArrayList<>();
                 collectSuperclasses(clazz, matches);
-                for (Iterator it = matches.iterator(); it.hasNext(); ) {
-                    Class sper = (Class) it.next();
+                for (Iterator<Class<?>> it = matches.iterator(); it.hasNext(); ) {
+                    Class<?> sper = (Class<?>) it.next();
                     if (backwardBreifMap.get(sper) == null) {
                         it.remove();
                     }
                 }
 
                 if (matches.size() > 1) {
-                    Comparator comparator =
-                            new Comparator<Class>() {
-                                public int compare(Class c1, Class c2) {
-                                    if (c2.isAssignableFrom(c1)) {
-                                        return -1;
-                                    } else {
-                                        return 1;
-                                    }
+                    Comparator<Class<?>> comparator =
+                            (c1, c2) -> {
+                                if (c2.isAssignableFrom(c1)) {
+                                    return -1;
+                                } else {
+                                    return 1;
                                 }
                             };
 
                     Collections.sort(matches, comparator);
                 }
 
-                if (matches.size() > 0) {
+                if (!matches.isEmpty()) {
                     typeId = backwardBreifMap.get(matches.get(0));
                 }
             }
@@ -971,7 +1023,7 @@ public class XStreamPersister {
             return typeId;
         }
 
-        void collectSuperclasses(Class clazz, List<Class> matches) {
+        void collectSuperclasses(Class<?> clazz, List<Class<?>> matches) {
             matches.add(clazz);
             if (clazz.getSuperclass() == null && clazz.getInterfaces().length == 0) {
                 return;
@@ -980,7 +1032,7 @@ public class XStreamPersister {
             if (clazz.getSuperclass() != null) {
                 collectSuperclasses(clazz.getSuperclass(), matches);
             }
-            for (Class iface : clazz.getInterfaces()) {
+            for (Class<?> iface : clazz.getInterfaces()) {
                 collectSuperclasses(iface, matches);
             }
         }
@@ -992,7 +1044,7 @@ public class XStreamPersister {
             super(mapper);
         }
 
-        public SettingsTolerantMapConverter(Mapper mapper, Class type) {
+        public SettingsTolerantMapConverter(Mapper mapper, Class<?> type) {
             super(mapper, type);
         }
 
@@ -1023,6 +1075,8 @@ public class XStreamPersister {
             writer.endNode();
         }
 
+        @Override
+        @SuppressWarnings("unchecked")
         protected void putCurrentEntryIntoMap(
                 HierarchicalStreamReader reader,
                 UnmarshallingContext context,
@@ -1072,6 +1126,7 @@ public class XStreamPersister {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
             Map map = (Map) super.unmarshal(reader, context);
             if (!(map instanceof MetadataMap)) {
@@ -1088,10 +1143,13 @@ public class XStreamPersister {
             super(mapper);
         }
 
+        @Override
         public boolean canConvert(Class clazz) {
             return Multimap.class.isAssignableFrom(clazz);
         }
 
+        @Override
+        @SuppressWarnings("unchecked")
         public void marshal(
                 Object value, HierarchicalStreamWriter writer, MarshallingContext context) {
             Multimap map = (Multimap) value;
@@ -1108,6 +1166,7 @@ public class XStreamPersister {
             }
         }
 
+        @Override
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
             ArrayListMultimap<Object, Object> map = ArrayListMultimap.create();
             while (reader.hasMoreChildren()) {
@@ -1134,16 +1193,18 @@ public class XStreamPersister {
     /** Converters which encodes an object by a reference, or its id. */
     // class ReferenceConverter extends AbstractSingleValueConverter {
     class ReferenceConverter implements Converter {
-        Class clazz;
+        Class<?> clazz;
 
-        public ReferenceConverter(Class clazz) {
+        public ReferenceConverter(Class<?> clazz) {
             this.clazz = clazz;
         }
 
+        @Override
         public boolean canConvert(Class type) {
             return clazz.isAssignableFrom(type);
         }
 
+        @Override
         public void marshal(
                 Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
             // could be a proxy, unwrap it
@@ -1174,7 +1235,12 @@ public class XStreamPersister {
                 if (wsName == null && OwsUtils.has(source, "prefixedName")) {
                     prefixedName = (String) OwsUtils.get(source, "prefixedName");
                     if (prefixedName != null && prefixedName.indexOf(":") > 0) {
-                        wsName = prefixedName.substring(0, prefixedName.indexOf(":"));
+                        WorkspaceInfo ws =
+                                catalog.getWorkspaceByName(
+                                        prefixedName.substring(0, prefixedName.indexOf(":")));
+                        if (ws != null) {
+                            wsName = prefixedName.substring(0, prefixedName.indexOf(":"));
+                        }
                     }
                 }
 
@@ -1195,6 +1261,7 @@ public class XStreamPersister {
             }
         }
 
+        @Override
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
 
             String ref = null;
@@ -1240,15 +1307,15 @@ public class XStreamPersister {
     }
 
     class ReferenceCollectionConverter extends LaxCollectionConverter {
-        Class clazz;
-        Class[] subclasses;
+        Class<?> clazz;
+        Class<?>[] subclasses;
 
-        public ReferenceCollectionConverter(Class clazz) {
+        public ReferenceCollectionConverter(Class<?> clazz) {
             super(getXStream().getMapper());
             this.clazz = clazz;
         }
 
-        public ReferenceCollectionConverter(Class clazz, Class... subclasses) {
+        public ReferenceCollectionConverter(Class<?> clazz, Class<?>... subclasses) {
             super(getXStream().getMapper());
             this.clazz = clazz;
             this.subclasses = subclasses;
@@ -1267,8 +1334,8 @@ public class XStreamPersister {
             writer.startNode(elementName);
             if (item != null) {
                 if (subclasses != null) {
-                    Class theClass = null;
-                    for (Class clazz : subclasses) {
+                    Class<?> theClass = null;
+                    for (Class<?> clazz : subclasses) {
                         if (clazz.isInstance(item)) {
                             theClass = clazz;
                             break;
@@ -1288,8 +1355,8 @@ public class XStreamPersister {
             } else if (writer instanceof JettisonStaxWriter) {
                 /*
                  * GEOS-7771 / GEOS-7873
-                 * Workaround for an array serialization bug in jettison 1.0.1
-                 * Can be removed when we upgrade to jettison 1.2
+                 * Required even with Jettinson 1.4.1
+                 * (at some point we thought an upgrade to 1.2 would have solved it)
                  */
                 writer.setValue("null");
                 try {
@@ -1313,7 +1380,7 @@ public class XStreamPersister {
         @Override
         protected Object readBareItem(
                 HierarchicalStreamReader reader, UnmarshallingContext context, Object current) {
-            Class theClass = clazz;
+            Class<?> theClass = clazz;
             if (subclasses != null) {
                 String attribute = reader.getAttribute("type");
                 if (attribute != null) {
@@ -1341,6 +1408,7 @@ public class XStreamPersister {
     /** Converter for coordinate reference system objects that converts by SRS code. */
     public static class SRSConverter extends AbstractSingleValueConverter {
 
+        @Override
         public boolean canConvert(Class type) {
             return CoordinateReferenceSystem.class.isAssignableFrom(type);
         }
@@ -1603,13 +1671,13 @@ public class XStreamPersister {
     // catalog object converters
     /** Base class for all custom reflection based converters. */
     protected class AbstractReflectionConverter extends ReflectionConverter {
-        Class clazz;
+        Class<?> clazz;
 
         public AbstractReflectionConverter() {
             this(Object.class);
         }
 
-        public AbstractReflectionConverter(Class clazz) {
+        public AbstractReflectionConverter(Class<?> clazz) {
             super(getXStream().getMapper(), getXStream().getReflectionProvider());
             this.clazz = clazz;
         }
@@ -1660,10 +1728,11 @@ public class XStreamPersister {
      * AbstractCatalogResource.configurePersister(XStreamPersister, DataFormat)}
      */
     protected class AbstractCatalogInfoConverter extends AbstractReflectionConverter {
-        public AbstractCatalogInfoConverter(Class clazz) {
+        public AbstractCatalogInfoConverter(Class<?> clazz) {
             super(clazz);
         }
 
+        @SuppressWarnings("unchecked")
         private <T> void unsafeCopy(Object source, Object target, Class<T> clazz) {
             OwsUtils.copy((T) source, (T) target, clazz);
         }
@@ -1677,7 +1746,7 @@ public class XStreamPersister {
             Object catalogObject = callback.getCatalogObject();
 
             if (catalogObject != null) {
-                Class i = callback.getObjectClass();
+                Class<?> i = callback.getObjectClass();
 
                 if (i != null) {
                     unsafeCopy(catalogObject, emptyObject, i);
@@ -1813,13 +1882,15 @@ public class XStreamPersister {
 
     /** Converter for multi hash maps containing coverage stores and data stores. */
     static class StoreMultiValueMapConverter implements Converter {
+        @Override
         public boolean canConvert(Class type) {
-            return MultiValueMap.class.equals(type);
+            return MultiValuedMap.class.equals(type);
         }
 
+        @Override
         public void marshal(
                 Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
-            MultiValueMap map = (MultiValueMap) source;
+            MultiValuedMap map = (MultiValuedMap) source;
             for (Object v : map.values()) {
                 if (v instanceof DataStoreInfo) {
                     writer.startNode("dataStore");
@@ -1834,8 +1905,9 @@ public class XStreamPersister {
             }
         }
 
+        @Override
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
-            MultiValueMap map = new MultiValueMap();
+            MultiValuedMap<Class<?>, Object> map = new HashSetValuedHashMap<>();
 
             while (reader.hasMoreChildren()) {
                 reader.moveDown();
@@ -1864,10 +1936,12 @@ public class XStreamPersister {
             this.name = name;
         }
 
+        @Override
         public boolean canConvert(Class type) {
             return Map.class.isAssignableFrom(type);
         }
 
+        @Override
         public void marshal(
                 Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
 
@@ -1888,8 +1962,9 @@ public class XStreamPersister {
             }
         }
 
+        @Override
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
-            Map map = new HashMap();
+            Map<String, CatalogInfo> map = new HashMap<>();
 
             while (reader.hasMoreChildren()) {
                 reader.moveDown();
@@ -1931,10 +2006,11 @@ public class XStreamPersister {
             this(ResourceInfo.class);
         }
 
-        public ResourceInfoConverter(Class clazz) {
+        public ResourceInfoConverter(Class<?> clazz) {
             super(clazz);
         }
 
+        @Override
         public Object doUnmarshal(
                 Object result, HierarchicalStreamReader reader, UnmarshallingContext context) {
             ResourceInfo obj = (ResourceInfo) super.doUnmarshal(result, reader, context);
@@ -1956,10 +2032,10 @@ public class XStreamPersister {
 
             // ensure null list does not result
             if (featureType.getAttributes() == null) {
-                featureType.setAttributes(new ArrayList());
+                featureType.setAttributes(new ArrayList<>());
             }
             if (featureType.getResponseSRS() == null) {
-                featureType.setResponseSRS(new ArrayList());
+                featureType.setResponseSRS(new ArrayList<>());
             }
             if (featureType.getMetadata() == null) {
                 featureType.setMetadata(new MetadataMap());
@@ -2044,7 +2120,7 @@ public class XStreamPersister {
                 String serialized = metadata.get("authorityURLs", String.class);
                 List<AuthorityURLInfo> authorities;
                 if (serialized == null) {
-                    authorities = new ArrayList<AuthorityURLInfo>(1);
+                    authorities = new ArrayList<>(1);
                 } else {
                     authorities = AuthorityURLInfoInfoListConverter.fromString(serialized);
                 }
@@ -2054,7 +2130,7 @@ public class XStreamPersister {
                 String serialized = metadata.get("identifiers", String.class);
                 List<LayerIdentifierInfo> identifiers;
                 if (serialized == null) {
-                    identifiers = new ArrayList<LayerIdentifierInfo>(1);
+                    identifiers = new ArrayList<>(1);
                 } else {
                     identifiers = LayerIdentifierInfoListConverter.fromString(serialized);
                 }
@@ -2090,6 +2166,8 @@ public class XStreamPersister {
 
             lgi.convertLegacyLayers();
 
+            resolveLayerGroupStyleName(lgi);
+
             MetadataMap metadata = lgi.getMetadata();
 
             /**
@@ -2119,7 +2197,7 @@ public class XStreamPersister {
                 String serialized = metadata.get("authorityURLs", String.class);
                 List<AuthorityURLInfo> authorities;
                 if (serialized == null) {
-                    authorities = new ArrayList<AuthorityURLInfo>(1);
+                    authorities = new ArrayList<>(1);
                 } else {
                     authorities = AuthorityURLInfoInfoListConverter.fromString(serialized);
                 }
@@ -2129,13 +2207,51 @@ public class XStreamPersister {
                 String serialized = metadata.get("identifiers", String.class);
                 List<LayerIdentifierInfo> identifiers;
                 if (serialized == null) {
-                    identifiers = new ArrayList<LayerIdentifierInfo>(1);
+                    identifiers = new ArrayList<>(1);
                 } else {
                     identifiers = LayerIdentifierInfoListConverter.fromString(serialized);
                 }
                 lgi.setIdentifiers(identifiers);
             }
             return lgi;
+        }
+
+        private void resolveLayerGroupStyleName(LayerGroupInfo groupInfo) {
+            List<PublishedInfo> layers = groupInfo.getLayers();
+            List<StyleInfo> styles = groupInfo.getStyles();
+            resolveLayerGroupStyleName(layers, styles);
+            List<LayerGroupStyle> groupStyles = groupInfo.getLayerGroupStyles();
+            if (groupStyles != null) {
+                for (LayerGroupStyle lgStyle : groupStyles) {
+                    resolveLayerGroupStyleName(lgStyle.getLayers(), lgStyle.getStyles());
+                }
+            } else {
+                groupInfo.setLayerGroupStyles(new ArrayList<>());
+            }
+        }
+
+        private void resolveLayerGroupStyleName(
+                List<PublishedInfo> assignedInfos, List<StyleInfo> styles) {
+            if (assignedInfos != null) {
+                for (int i = 0; i < assignedInfos.size(); i++) {
+                    PublishedInfo publishedInfo = assignedInfos.get(i);
+                    if (publishedInfo instanceof LayerGroupInfo
+                            && CollectionUtils.isNotEmpty(styles)) {
+                        // if the styles is not null then this is
+                        // a StyleInfo simply holding the style name
+                        // of a LayerGroupStyle. We do not resolve it
+                        // as usual siWnce is not present in the catalog but
+                        // get the ref and create a new StyleInfo object.
+                        StyleInfo styleInfo = styles.get(i);
+                        String ref = ResolvingProxy.getRef(styleInfo);
+                        if (ref != null) {
+                            StyleInfo lgStyleName = new StyleInfoImpl(catalog);
+                            lgStyleName.setName(ref);
+                            styles.set(i, lgStyleName);
+                        }
+                    }
+                }
+            }
         }
 
         @Override
@@ -2168,6 +2284,7 @@ public class XStreamPersister {
 
     class VirtualTableConverter implements Converter {
 
+        @Override
         public void marshal(
                 Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
             VirtualTable vt = (VirtualTable) source;
@@ -2234,15 +2351,15 @@ public class XStreamPersister {
             }
         }
 
-        @SuppressWarnings("rawtypes")
+        @Override
         public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
             String name = null;
             String sql = null;
-            List<String> primaryKeys = new ArrayList<String>();
-            List<VirtualTableParameter> params = new ArrayList<VirtualTableParameter>();
-            List<String> geomNames = new ArrayList<String>();
-            List<Class> types = new ArrayList<Class>();
-            List<Integer> srids = new ArrayList<Integer>();
+            List<String> primaryKeys = new ArrayList<>();
+            List<VirtualTableParameter> params = new ArrayList<>();
+            List<String> geomNames = new ArrayList<>();
+            List<Class<? extends Geometry>> types = new ArrayList<>();
+            List<Integer> srids = new ArrayList<>();
 
             Boolean escapeSql = false;
             while (reader.hasMoreChildren()) {
@@ -2251,7 +2368,7 @@ public class XStreamPersister {
                     primaryKeys.add(reader.getValue());
                 } else if (reader.getNodeName().equals("geometry")) {
                     String geomName = null;
-                    Class type = null;
+                    Class<? extends Geometry> type = null;
                     int srid = -1;
                     while (reader.hasMoreChildren()) {
                         reader.moveDown();
@@ -2317,6 +2434,7 @@ public class XStreamPersister {
             return vt;
         }
 
+        @Override
         public boolean canConvert(Class type) {
             return VirtualTable.class.isAssignableFrom(type);
         }
@@ -2426,6 +2544,7 @@ public class XStreamPersister {
             super(SettingsInfo.class);
         }
 
+        @Override
         public Object doUnmarshal(
                 Object result, HierarchicalStreamReader reader, UnmarshallingContext context) {
             SettingsInfoImpl obj = (SettingsInfoImpl) super.doUnmarshal(result, reader, context);
@@ -2436,9 +2555,47 @@ public class XStreamPersister {
                 obj.setContact(new ContactInfoImpl());
             }
             if (obj.getClientProperties() == null) {
-                obj.setClientProperties(new HashMap<Object, Object>());
+                obj.setClientProperties(new HashMap<>());
             }
             return obj;
+        }
+    }
+
+    /** Converter for GeoServerInfo class */
+    class GeoServerInfoConverter extends AbstractReflectionConverter {
+
+        public GeoServerInfoConverter() {
+            super(GeoServerInfo.class);
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        protected void doMarshal(
+                Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
+            GeoServerInfo geoServerInfo = (GeoServerInfo) source;
+            SettingsInfo settings = geoServerInfo.getSettings();
+            if (settings != null && settings.isUseHeadersProxyURL() == null) {
+                settings.setUseHeadersProxyURL(geoServerInfo.isUseHeadersProxyURL());
+                if (geoServerInfo instanceof GeoServerInfoImpl)
+                    ((GeoServerInfoImpl) geoServerInfo).setUseHeadersProxyURLRaw(null);
+            }
+            super.doMarshal(source, writer, context);
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public Object doUnmarshal(
+                Object result, HierarchicalStreamReader reader, UnmarshallingContext context) {
+            // migrate proxy headers to settings if needed
+            GeoServerInfoImpl info = (GeoServerInfoImpl) super.doUnmarshal(result, reader, context);
+            SettingsInfo settings = info.getSettings();
+            if (settings != null
+                    && settings.isUseHeadersProxyURL() == null
+                    && info.isUseHeadersProxyURL() != null) {
+                settings.setUseHeadersProxyURL(info.isUseHeadersProxyURL());
+                info.setUseHeadersProxyURLRaw(null);
+            }
+            return info;
         }
     }
 
@@ -2463,6 +2620,7 @@ public class XStreamPersister {
             super(clazz);
         }
 
+        @Override
         public Object doUnmarshal(
                 Object result, HierarchicalStreamReader reader, UnmarshallingContext context) {
             ServiceInfoImpl obj = (ServiceInfoImpl) super.doUnmarshal(result, reader, context);
@@ -2479,7 +2637,7 @@ public class XStreamPersister {
             Object serviceObject = callback.getServiceObject();
 
             if (serviceObject != null) {
-                Class i = callback.getObjectClass();
+                Class<? extends Object> i = callback.getObjectClass();
 
                 if (i != null) {
                     OwsUtils.copy(serviceObject, emptyObject, i);
@@ -2527,6 +2685,202 @@ public class XStreamPersister {
                 }
             }
             return obj.toString();
+        }
+    }
+
+    /**
+     * Converter for WMSLayerInfoImpl class ensure backwards compatibility with <= 2.16.2 data
+     * directories
+     */
+    class WMSLayerInfoConverter extends AbstractCatalogInfoConverter {
+
+        public WMSLayerInfoConverter() {
+            super(WMSLayerInfoImpl.class);
+        }
+
+        @Override
+        public Object doUnmarshal(
+                Object result, HierarchicalStreamReader reader, UnmarshallingContext context) {
+            WMSLayerInfoImpl obj = (WMSLayerInfoImpl) super.doUnmarshal(result, reader, context);
+            // setting the minimal defaults and clean object with no NULL values
+            if (obj.getPreferredFormat() == null) {
+                obj.setPreferredFormat(WMSLayerInfoImpl.DEFAULT_FORMAT);
+                obj.setSelectedRemoteFormats(new ArrayList<>());
+            }
+            if (obj.getForcedRemoteStyle() == null) {
+                obj.setForcedRemoteStyle(WMSLayerInfoImpl.DEFAULT_ON_REMOTE.getName());
+                obj.setSelectedRemoteStyles(new ArrayList<>());
+            }
+            return obj;
+        }
+    }
+
+    class InternationalStringConverter extends AbstractReflectionConverter {
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean canConvert(Class aClass) {
+            // REST config actually tries to de-serialize based on InternationalString only
+            return InternationalString.class.isAssignableFrom(aClass);
+        }
+
+        private void writeInternationalString(
+                HierarchicalStreamWriter writer, String elementName, String internationalString) {
+            writer.startNode(elementName);
+            writer.setValue(internationalString);
+            writer.endNode();
+        }
+
+        @Override
+        protected void doMarshal(
+                Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
+            boolean isGrowable = source instanceof GrowableInternationalString;
+            if (isGrowable) {
+                GrowableInternationalString internationalString =
+                        (GrowableInternationalString) source;
+                Set<Locale> locales = internationalString.getLocales();
+                int size = locales.size();
+                for (Locale l : locales) {
+                    if (l != null) {
+                        String elementName = l.toLanguageTag();
+                        if (elementName.contains(" "))
+                            elementName = elementName.replaceAll(" ", "__");
+                        writeInternationalString(
+                                writer, elementName, internationalString.toString(l));
+                    } else if (size > 1) {
+                        writeInternationalString(
+                                writer, DEFAULT_LOCALE, internationalString.toString(l));
+                    }
+                }
+            } else {
+                String defaultValue = source.toString();
+                writer.setValue(defaultValue);
+            }
+        }
+
+        @Override
+        public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
+            GrowableInternationalString growableInternationalString =
+                    new GrowableInternationalString();
+            if (!reader.hasMoreChildren()) return null;
+            while (reader.hasMoreChildren()) {
+                reader.moveDown();
+                String nodeName = reader.getNodeName();
+                Locale locale = null;
+                if (nodeName.contains("__")) {
+                    nodeName = nodeName.replaceAll("__", " ");
+                }
+
+                if (!nodeName.equals(DEFAULT_LOCALE)) {
+                    locale = Locale.forLanguageTag(nodeName);
+                }
+
+                String value = reader.getValue();
+                growableInternationalString.add(locale, value);
+                reader.moveUp();
+            }
+            return growableInternationalString;
+        }
+    }
+
+    class LayerGroupStyleCollectionConverter extends LaxCollectionConverter {
+
+        public LayerGroupStyleCollectionConverter() {
+            super(getXStream().getMapper());
+        }
+
+        @Override
+        public void marshal(
+                Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
+            @SuppressWarnings("unchecked")
+            Collection<LayerGroupStyle> styles = (Collection<LayerGroupStyle>) source;
+            for (LayerGroupStyle gs : styles) {
+                writer.startNode("LayerGroupStyle");
+                context.convertAnother(gs, new LayerGroupStyleConverter());
+                writer.endNode();
+            }
+        }
+
+        @Override
+        protected Object readBareItem(
+                HierarchicalStreamReader reader, UnmarshallingContext context, Object current) {
+            return context.convertAnother(current, LayerGroupStyle.class);
+        }
+    }
+
+    class LayerGroupStyleConverter extends AbstractReflectionConverter {
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean canConvert(Class type) {
+            return LayerGroupStyle.class.isAssignableFrom(type);
+        }
+
+        @Override
+        protected Object instantiateNewInstance(
+                HierarchicalStreamReader reader, UnmarshallingContext context) {
+            Object object = context.currentObject();
+            if (object == null) {
+                object = new LayerGroupStyleImpl();
+            }
+            return object;
+        }
+
+        @Override
+        protected void doMarshal(
+                Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
+            super.doMarshal(source, writer, context);
+        }
+
+        @Override
+        public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
+            LayerGroupStyle result = (LayerGroupStyle) super.unmarshal(reader, context);
+            // resolve the internal lists of PublishedInfo and StyleInfo.
+            List<PublishedInfo> publishedInfos = result.getLayers();
+            List<StyleInfo> styles = result.getStyles();
+            if (publishedInfos != null) {
+                for (int i = 0; i < publishedInfos.size(); i++) {
+                    PublishedInfo publishedInfo = publishedInfos.get(i);
+                    PublishedInfo unproxied = null;
+                    if (catalog != null) {
+                        unproxied = ResolvingProxy.resolve(catalog, publishedInfo);
+                    }
+                    if (unproxied != null || ResolvingProxy.getRef(publishedInfo) == null)
+                        publishedInfos.set(i, unproxied);
+                }
+            }
+
+            if (styles != null)
+                for (int i = 0; i < styles.size(); i++) {
+                    StyleInfo styleInfo = styles.get(i);
+                    StyleInfo unproxied = null;
+                    if (catalog != null) unproxied = ResolvingProxy.resolve(catalog, styleInfo);
+                    if (unproxied != null || ResolvingProxy.getRef(styleInfo) == null)
+                        styles.set(i, unproxied);
+                }
+            return result;
+        }
+    }
+
+    /** Converter used locally only for the style name of a LayerGroupStyle. */
+    class OnlyStyleNameConverter extends AbstractReflectionConverter {
+        @Override
+        public boolean canConvert(Class type) {
+            return super.canConvert(StyleInfo.class);
+        }
+
+        @Override
+        protected void doMarshal(
+                Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
+            StyleInfo styleInfo = (StyleInfo) source;
+            writer.setValue(styleInfo.getName());
+        }
+
+        @Override
+        public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
+            StyleInfo groupStyleName = new StyleInfoImpl(catalog);
+
+            groupStyleName.setName(reader.getValue());
+            return groupStyleName;
         }
     }
 }

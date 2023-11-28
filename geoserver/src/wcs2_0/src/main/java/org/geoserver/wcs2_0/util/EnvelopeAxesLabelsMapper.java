@@ -26,6 +26,10 @@ public class EnvelopeAxesLabelsMapper {
     public List<String> getAxesNames(Envelope envelope, boolean swapAxes) {
         Utilities.ensureNonNull("envelope", envelope);
         final CoordinateReferenceSystem crs = envelope.getCoordinateReferenceSystem();
+        if (crs == null) {
+            throw new IllegalStateException(
+                    "Unable to determine axes names as envelope does not include srs");
+        }
 
         // handle axes switch for geographic crs
         final boolean axesSwitch = crs instanceof GeographicCRS && swapAxes;
@@ -35,7 +39,7 @@ public class EnvelopeAxesLabelsMapper {
 
         final int dimension = cs.getDimension();
         // loop through dimensions
-        final ArrayList<String> retValue = new ArrayList<String>();
+        final ArrayList<String> retValue = new ArrayList<>();
         if (!axesSwitch) {
             for (int i = 0; i < dimension; i++) {
                 CoordinateSystemAxis axis = cs.getAxis(i);
@@ -68,7 +72,7 @@ public class EnvelopeAxesLabelsMapper {
         return retValue;
     }
 
-    private String getAxisLabel(CoordinateSystemAxis axis) {
+    public String getAxisLabel(CoordinateSystemAxis axis) {
         // some default axis have weird abbreviations (greek letters), handle them separately
         String label = axis.getAbbreviation();
         // in EPSG 9.6 axis label can be also be Long and Lon

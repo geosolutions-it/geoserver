@@ -4,7 +4,7 @@
  */
 package org.geoserver.csw.store.internal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.List;
@@ -61,7 +61,7 @@ public class ResourceAccessManagerCSWTest extends CSWTestSupport {
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
         testData.addStyle("raster", "raster.sld", SystemTestData.class, getCatalog());
-        Map properties = new HashMap();
+        Map<LayerProperty, Object> properties = new HashMap<>();
         properties.put(LayerProperty.STYLE, "raster");
         testData.addRasterLayer(
                 new QName(MockData.SF_URI, "mosaic", MockData.SF_PREFIX),
@@ -143,7 +143,7 @@ public class ResourceAccessManagerCSWTest extends CSWTestSupport {
         String request =
                 "csw?service=CSW&version=2.0.2&request=GetRecords&typeNames=csw:Record&resultType=results&maxRecords=100";
         Document d = getAsDOM(request);
-        // print(d);
+        print(d);
         // expected number
         assertEquals(
                 citeResources.size(), xpath.getMatchingNodes("//csw:SummaryRecord", d).getLength());

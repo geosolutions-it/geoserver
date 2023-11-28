@@ -57,7 +57,7 @@ To add a new XML user/group service, click the :guilabel:`Add new` link. XML is 
 Add new JDBC user/group service
 -------------------------------
 
-To add a new XML user/group service, click the :guilabel:`Add new` link, and then the :guilabel:`JDBC` option at the top of the following form. The following figure shows the configuration options for a JDBC user/group service.
+To add a new JDBC user/group service, click the :guilabel:`Add new` link, and then the :guilabel:`JDBC` option at the top of the following form. The following figure shows the configuration options for a JDBC user/group service.
 
 .. figure:: images/ugr_ugjdbcsettings.png
    :align: center
@@ -238,6 +238,20 @@ The Groups tab provides configuration options for groups in this user/group serv
 
 .. _security_webadmin_groups:
 
+Remove User
+~~~~~~~~~~~
+
+There are two related buttons that are responsible for removing users: :guilabel:`Remove Selected`, and :guilabel:`Remove Selected and remove role associations`. 
+
+* :guilabel:`Remove Selected` removes user from `users.xml <https://github.com/geoserver/geoserver/blob/main/data/release/security/usergroup/default/users.xml>`_ and leave untouched `roles.xml <https://github.com/geoserver/geoserver/blob/main/data/release/security/role/default/roles.xml>`_.
+* :guilabel:`Remove Selected and remove role associations` removes user from `users.xml <https://github.com/geoserver/geoserver/blob/main/data/release/security/usergroup/default/users.xml>`_ and also removes user and associated role to user from `roles.xml <https://github.com/geoserver/geoserver/blob/main/data/release/security/role/default/roles.xml>`_.
+
+
+.. figure:: images/ugr_ugusers.png
+   :align: center
+
+   *Users tab*
+
 Add group
 ~~~~~~~~~
 
@@ -400,6 +414,10 @@ To add a new LDAP role service, click the :guilabel:`Add new` link, and then the
    * - Filter used to lookup user. 
      - optional filter used to extract a user dn, to be used together with *Group user membership search filter* when the {1} placeholder is specified. This may contain a placeholder value:
        ``{0}``, the ``username`` of the user, for example ``bob``.
+   * - Role prefix 
+     - Prefix appended in front of role names extracted from the LDAP. If left blank, no prefix will be inserted.
+   * - Convert Role To Upper Case 
+     - If selected all role names extracted from the LDAP will be converted to upper case.              
      
    * - Authenticate to extract roles
      - When checked all LDAP searches will be done in authenticated mode, using the credentials given with the *Username* and *Password* options

@@ -58,7 +58,7 @@ public class TurboImageWorkerTest extends Assert {
         try {
             new TurboJpegImageWorker(ImageIO.read(input))
                     .writeTurboJPEG(new FileOutputStream(output), 1.5f);
-            assertFalse("We should not be allowed to specify compression ratios > 1", true);
+            fail("We should not be allowed to specify compression ratios > 1");
         } catch (Exception e) {
             // TODO: handle exception
         }
@@ -66,7 +66,7 @@ public class TurboImageWorkerTest extends Assert {
         try {
             new TurboJpegImageWorker(ImageIO.read(input))
                     .writeTurboJPEG(new FileOutputStream(output), -.5f);
-            assertFalse("We should not be allowed to specify compression ratios > 1", true);
+            fail("We should not be allowed to specify compression ratios > 1");
         } catch (Exception e) {
             // TODO: handle exception
         }
@@ -80,7 +80,7 @@ public class TurboImageWorkerTest extends Assert {
         }
 
         // Create paletted image
-        final byte bb[] = new byte[256];
+        final byte[] bb = new byte[256];
         for (int i = 0; i < 200; i++) {
             bb[i] = (byte) i;
         }

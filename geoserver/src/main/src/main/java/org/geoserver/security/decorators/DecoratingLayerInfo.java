@@ -5,6 +5,7 @@
  */
 package org.geoserver.security.decorators;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import org.geoserver.catalog.AttributionInfo;
@@ -18,6 +19,7 @@ import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geotools.util.decorate.AbstractDecorator;
+import org.opengis.util.InternationalString;
 
 /**
  * Delegates every method to the wrapped {@link LayerInfo}. Subclasses will override selected
@@ -31,90 +33,112 @@ public class DecoratingLayerInfo extends AbstractDecorator<LayerInfo> implements
         super(delegate);
     }
 
+    @Override
     public StyleInfo getDefaultStyle() {
         return delegate.getDefaultStyle();
     }
 
+    @Override
     public String getId() {
         return delegate.getId();
     }
 
+    @Override
     public LegendInfo getLegend() {
         return delegate.getLegend();
     }
 
+    @Override
     public MetadataMap getMetadata() {
         return delegate.getMetadata();
     }
 
+    @Override
     public String getName() {
         return delegate.getName();
     }
 
+    @Override
     public String prefixedName() {
         return delegate.prefixedName();
     }
 
+    @Override
     public String getPath() {
         return delegate.getPath();
     }
 
+    @Override
     public ResourceInfo getResource() {
         return delegate.getResource();
     }
 
+    @Override
     public Set<StyleInfo> getStyles() {
         return delegate.getStyles();
     }
 
+    @Override
     public PublishedType getType() {
         return delegate.getType();
     }
 
+    @Override
     public AttributionInfo getAttribution() {
         return delegate.getAttribution();
     }
 
+    @Override
     public boolean isEnabled() {
         return delegate.isEnabled();
     }
 
+    @Override
     public boolean enabled() {
         return delegate.enabled();
     }
 
+    @Override
     public void setDefaultStyle(StyleInfo defaultStyle) {
         delegate.setDefaultStyle(defaultStyle);
     }
 
+    @Override
     public void setEnabled(boolean enabled) {
         delegate.setEnabled(enabled);
     }
 
+    @Override
     public void setLegend(LegendInfo legend) {
         delegate.setLegend(legend);
     }
 
+    @Override
     public void setName(String name) {
         delegate.setName(name);
     }
 
+    @Override
     public void setPath(String path) {
         delegate.setPath(path);
     }
 
+    @Override
     public void setResource(ResourceInfo resource) {
         delegate.setResource(resource);
     }
 
+    @Override
     public void setType(PublishedType type) {
         delegate.setType(type);
     }
 
+    @Override
     public void setAttribution(AttributionInfo attr) {
         delegate.setAttribution(attr);
     }
 
+    @Override
     public void accept(CatalogVisitor visitor) {
         delegate.accept(visitor);
     }
@@ -128,18 +152,22 @@ public class DecoratingLayerInfo extends AbstractDecorator<LayerInfo> implements
                 .toString();
     }
 
+    @Override
     public void setQueryable(boolean _queryableEnabled) {
         delegate.setQueryable(_queryableEnabled);
     }
 
+    @Override
     public boolean isQueryable() {
         return delegate.isQueryable();
     }
 
+    @Override
     public void setOpaque(boolean _opaqueEnabled) {
         delegate.setOpaque(_opaqueEnabled);
     }
 
+    @Override
     public boolean isOpaque() {
         return delegate.isOpaque();
     }
@@ -192,5 +220,45 @@ public class DecoratingLayerInfo extends AbstractDecorator<LayerInfo> implements
     @Override
     public void setDefaultWMSInterpolationMethod(WMSInterpolation interpolationMethod) {
         delegate.setDefaultWMSInterpolationMethod(interpolationMethod);
+    }
+
+    @Override
+    public Date getDateModified() {
+        return delegate.getDateModified();
+    }
+
+    @Override
+    public Date getDateCreated() {
+        return delegate.getDateCreated();
+    }
+
+    @Override
+    public void setDateCreated(Date dateCreated) {
+        delegate.setDateCreated(dateCreated);
+    }
+
+    @Override
+    public void setDateModified(Date dateModified) {
+        delegate.setDateModified(dateModified);
+    }
+
+    @Override
+    public InternationalString getInternationalTitle() {
+        return delegate.getInternationalTitle();
+    }
+
+    @Override
+    public void setInternationalTitle(InternationalString internationalTitle) {
+        delegate.setInternationalTitle(internationalTitle);
+    }
+
+    @Override
+    public InternationalString getInternationalAbstract() {
+        return delegate.getInternationalAbstract();
+    }
+
+    @Override
+    public void setInternationalAbstract(InternationalString internationalAbstract) {
+        delegate.setInternationalAbstract(internationalAbstract);
     }
 }

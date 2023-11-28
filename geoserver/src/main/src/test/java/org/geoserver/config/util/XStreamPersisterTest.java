@@ -5,29 +5,33 @@
  */
 package org.geoserver.config.util;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.converters.Converter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
@@ -73,8 +77,10 @@ import org.geoserver.config.LoggingInfo;
 import org.geoserver.config.SettingsInfo;
 import org.geoserver.config.impl.GeoServerImpl;
 import org.geoserver.config.impl.ServiceInfoImpl;
+import org.geoserver.config.impl.SettingsInfoImpl;
 import org.geoserver.config.util.XStreamPersister.CRSConverter;
 import org.geoserver.config.util.XStreamPersister.SRSConverter;
+import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geotools.jdbc.RegexpValidator;
 import org.geotools.jdbc.VirtualTable;
 import org.geotools.jdbc.VirtualTableParameter;
@@ -83,7 +89,9 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.referencing.wkt.Formattable;
 import org.geotools.referencing.wkt.UnformattableObjectException;
+import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.NumberRange;
+import org.geotools.util.SimpleInternationalString;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -119,6 +127,7 @@ public class XStreamPersisterTest {
         ContactInfo contact = factory.createContact();
         g1.getSettings().setContact(contact);
         contact.setAddress("123");
+        contact.setAddressDeliveryPoint("123"); // synomym with above
         contact.setAddressCity("Victoria");
         contact.setAddressCountry("Canada");
         contact.setAddressPostalCode("V1T3T8");
@@ -130,6 +139,8 @@ public class XStreamPersisterTest {
         contact.setContactPerson("Bob");
         contact.setContactPosition("hacker");
         contact.setContactVoice("+1 250 765 4321");
+        contact.setOnlineResource("https://acme.org/");
+        contact.setWelcome("Welcome to ACME mapping services");
 
         g1.getSettings().setNumDecimals(2);
         g1.getSettings().setOnlineResource("http://acme.org");
@@ -173,6 +184,7 @@ public class XStreamPersisterTest {
     }
 
     @Test
+    @SuppressWarnings("PMD.CloseResource")
     public void testGobalContactDefault() throws Exception {
         GeoServerInfo g1 = factory.createGlobal();
         ContactInfo contact = factory.createContact();
@@ -196,6 +208,11 @@ public class XStreamPersisterTest {
 
         String foo;
 
+        @Override
+        public String getType() {
+            return "My";
+        }
+
         String getFoo() {
             return foo;
         }
@@ -204,6 +221,7 @@ public class XStreamPersisterTest {
             this.foo = foo;
         }
 
+        @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof MyServiceInfo)) {
                 return false;
@@ -221,6 +239,11 @@ public class XStreamPersisterTest {
             }
 
             return super.equals(other);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), foo);
         }
     }
 
@@ -533,7 +556,9 @@ public class XStreamPersisterTest {
                         + "</style>";
 
         StyleInfo style =
-                persister.load(new ByteArrayInputStream(xml.getBytes("UTF-8")), StyleInfo.class);
+                persister.load(
+                        new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)),
+                        StyleInfo.class);
         assertEquals(SLDHandler.FORMAT, style.getFormat());
         assertEquals(SLDHandler.VERSION_10, style.getFormatVersion());
     }
@@ -1106,12 +1131,13 @@ public class XStreamPersisterTest {
 
         assertEquals("EPSG:4901", c.toString(crs));
         // definition with odd UOM that won't be matched to the EPSG one
-        assertFalse(
-                "EPSG:4901"
-                        .equals(
-                                c.toString(
-                                        CRS.parseWKT(
-                                                "GEOGCS[\"GCS_ATF_Paris\",DATUM[\"D_ATF\",SPHEROID[\"Plessis_1817\",6376523.0,308.64]],PRIMEM[\"Paris\",2.337229166666667],UNIT[\"Grad\",0.01570796326794897]]"))));
+        assertNotEquals(
+                "EPSG:4901",
+                c.toString(
+                        CRS.parseWKT(
+                                "GEOGCS[\"GCS_ATF_Paris\",DATUM[\"D_ATF\",SPHEROID[\"Plessis_1817\","
+                                        + "6376523.0,308.64]],PRIMEM[\"Paris\",2.337229166666667],"
+                                        + "UNIT[\"Grad\",0.01570796326794897]]")));
     }
 
     @Test
@@ -1137,14 +1163,10 @@ public class XStreamPersisterTest {
 
     @Test
     public void testMultimapConverter() throws Exception {
-        XStreamPersisterFactory factory = new XStreamPersisterFactory();
-        XStreamPersister xmlPersister = factory.createXMLPersister();
-        XStream xs = xmlPersister.getXStream();
-
         Multimap<String, Object> mmap = ArrayListMultimap.create();
         mmap.put("one", "abc");
         mmap.put("one", Integer.valueOf(2));
-        mmap.put("two", new NumberRange<Integer>(Integer.class, 10, 20));
+        mmap.put("two", new NumberRange<>(Integer.class, 10, 20));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         persister.save(mmap, out);
@@ -1157,6 +1179,7 @@ public class XStreamPersisterTest {
 
     @Test
     public void testPersisterCustomization() throws Exception {
+        GeoServerExtensionsHelper.setIsSpringContext(false);
         Catalog catalog = new CatalogImpl();
         CatalogFactory cFactory = catalog.getFactory();
 
@@ -1166,16 +1189,12 @@ public class XStreamPersisterTest {
 
         XStreamPersisterFactory factory = new XStreamPersisterFactory();
         factory.addInitializer(
-                new XStreamPersisterInitializer() {
-
-                    @Override
-                    public void init(XStreamPersister persister) {
-                        persister.getXStream().alias("sweetBanana", SweetBanana.class);
-                        persister
-                                .getXStream()
-                                .aliasAttribute(SweetBanana.class, "scientificName", "name");
-                        persister.registerBreifMapComplexType("sweetBanana", SweetBanana.class);
-                    }
+                persister -> {
+                    persister.getXStream().alias("sweetBanana", SweetBanana.class);
+                    persister
+                            .getXStream()
+                            .aliasAttribute(SweetBanana.class, "scientificName", "name");
+                    persister.registerBreifMapComplexType("sweetBanana", SweetBanana.class);
                 });
         XStreamPersister persister = factory.createXMLPersister();
 
@@ -1232,7 +1251,7 @@ public class XStreamPersisterTest {
                         "v-component_of_current_surface@0",
                         1,
                         CompositionType.BAND_SELECT);
-        final List<CoverageBand> coverageBands = new ArrayList<CoverageBand>(2);
+        final List<CoverageBand> coverageBands = new ArrayList<>(2);
         coverageBands.add(outputBand_u);
         coverageBands.add(outputBand_v);
         CoverageView coverageView = new CoverageView("regional_currents", coverageBands);
@@ -1309,10 +1328,9 @@ public class XStreamPersisterTest {
     /**
      * Test for GEOS-7444. Check GridGeometry is correctly unmarshaled when XML elements are
      * provided on an different order than the marshaling one
-     *
-     * @throws Exception
      */
     @Test
+    @SuppressWarnings("PMD.CloseResource")
     public void testGridGeometry2DConverterUnmarshalling() throws Exception {
         Catalog catalog = new CatalogImpl();
         CatalogFactory cFactory = catalog.getFactory();
@@ -1463,6 +1481,15 @@ public class XStreamPersisterTest {
     }
 
     @Test
+    public void readSettingsMetadataMissingElement() throws Exception {
+        String xml = "<global/>";
+        GeoServerInfo gs =
+                persister.load(new ByteArrayInputStream(xml.getBytes()), GeoServerInfo.class);
+
+        XMLAssert.assertEquals(gs.getSettings(), new SettingsInfoImpl());
+    }
+
+    @Test
     public void readCoverageMetadataInvalidEntry() throws Exception {
         String xml =
                 "<coverage>\n"
@@ -1487,6 +1514,111 @@ public class XStreamPersisterTest {
         assertThat(metadata, hasEntry("key1", "value1"));
         assertThat(metadata, hasEntry("key2", "value2"));
         assertThat(metadata, hasEntry("netcdf", null));
+    }
+
+    @Test
+    public void testLegacyWMSLayerInfo() throws Exception {
+        // this test asserts that when expecting a legacy wmsLayer xml tag
+        // the converter kicks and sets the default values to ensure integrity
+        // and avoid mannually re-saving the layer from GUI
+        String xml =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        + "<wmsLayer>\n"
+                        + "   <id>WMSLayerInfoImpl-622caab0:16ff63f5f7a:-7ffc</id>\n"
+                        + "   <name>states</name>\n"
+                        + "   <nativeName>topp:states</nativeName>\n"
+                        + "   <namespace>\n"
+                        + "      <id>NamespaceInfoImpl--570ae188:124761b8d78:-7ffc</id>\n"
+                        + "   </namespace>\n"
+                        + "   <title>USA Population</title>\n"
+                        + "   <description>This is some census data on the states.</description>\n"
+                        + "   <abstract>This is some census data on the states.</abstract>\n"
+                        + "   <keywords>\n"
+                        + "      <string>census</string>\n"
+                        + "      <string>united</string>\n"
+                        + "      <string>boundaries</string>\n"
+                        + "      <string>state</string>\n"
+                        + "      <string>states</string>\n"
+                        + "   </keywords>\n"
+                        + "   <nativeCRS>GEOGCS[\"WGS 84\", &#xD;\n"
+                        + "  DATUM[\"World Geodetic System 1984\", &#xD;\n"
+                        + "    SPHEROID[\"WGS 84\", 6378137.0, 298.257223563, AUTHORITY[\"EPSG\",\"7030\"]], &#xD;\n"
+                        + "    AUTHORITY[\"EPSG\",\"6326\"]], &#xD;\n"
+                        + "  PRIMEM[\"Greenwich\", 0.0, AUTHORITY[\"EPSG\",\"8901\"]], &#xD;\n"
+                        + "  UNIT[\"degree\", 0.017453292519943295], &#xD;\n"
+                        + "  AXIS[\"Geodetic longitude\", EAST], &#xD;\n"
+                        + "  AXIS[\"Geodetic latitude\", NORTH], &#xD;\n"
+                        + "  AUTHORITY[\"EPSG\",\"4326\"]]</nativeCRS>\n"
+                        + "   <srs>EPSG:4326</srs>\n"
+                        + "   <nativeBoundingBox>\n"
+                        + "      <minx>-124.73142200000001</minx>\n"
+                        + "      <maxx>-66.969849</maxx>\n"
+                        + "      <miny>24.955967</miny>\n"
+                        + "      <maxy>49.371735</maxy>\n"
+                        + "      <crs>EPSG:4326</crs>\n"
+                        + "   </nativeBoundingBox>\n"
+                        + "   <latLonBoundingBox>\n"
+                        + "      <minx>-124.731422</minx>\n"
+                        + "      <maxx>-66.969849</maxx>\n"
+                        + "      <miny>24.955967</miny>\n"
+                        + "      <maxy>49.371735</maxy>\n"
+                        + "      <crs>EPSG:4326</crs>\n"
+                        + "   </latLonBoundingBox>\n"
+                        + "   <projectionPolicy>FORCE_DECLARED</projectionPolicy>\n"
+                        + "   <enabled>true</enabled>\n"
+                        + "   <store class=\"wmsStore\">\n"
+                        + "      <id>WMSStoreInfoImpl-622caab0:16ff63f5f7a:-7fff</id>\n"
+                        + "   </store>\n"
+                        + "   <serviceConfiguration>false</serviceConfiguration>\n"
+                        + "</wmsLayer>";
+
+        WMSLayerInfo wmsLayerInfo =
+                persister.load(new ByteArrayInputStream(xml.getBytes()), WMSLayerInfo.class);
+
+        assertTrue(wmsLayerInfo.getPreferredFormat().equalsIgnoreCase("image/png"));
+        assertTrue(wmsLayerInfo.getForcedRemoteStyle().isEmpty());
+    }
+
+    @Test
+    public void testGrowableInternationalStringConverter() {
+        Converter candidate =
+                persister
+                        .getXStream()
+                        .getConverterLookup()
+                        .lookupConverterForType(GrowableInternationalString.class);
+        XStreamPersister.InternationalStringConverter converter =
+                (XStreamPersister.InternationalStringConverter) candidate;
+
+        // the class
+        assertTrue(converter.canConvert(GrowableInternationalString.class));
+        // a subclass
+        GrowableInternationalString anonymous =
+                new GrowableInternationalString() {
+                    @Override
+                    public synchronized String toString(Locale locale) {
+                        return "foobar";
+                    }
+                };
+        assertTrue(converter.canConvert(anonymous.getClass()));
+        // wont' try to convert object though
+        assertFalse(converter.canConvert(Object.class));
+    }
+
+    @Test
+    public void testInternationalStringConverter() throws IOException, ClassNotFoundException {
+        final String message = "This is an unlocalized message";
+        final SimpleInternationalString toTest = new SimpleInternationalString(message);
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        XStreamPersister persister = new XStreamPersisterFactory().createXMLPersister();
+        Converter candidate =
+                persister
+                        .getXStream()
+                        .getConverterLookup()
+                        .lookupConverterForType(SimpleInternationalString.class);
+        assertTrue(candidate instanceof XStreamPersister.InternationalStringConverter);
+        persister.save(toTest, out);
+        String result = new String(out.toByteArray());
+        assertTrue(result.contains(message));
     }
 
     ByteArrayOutputStream out() {

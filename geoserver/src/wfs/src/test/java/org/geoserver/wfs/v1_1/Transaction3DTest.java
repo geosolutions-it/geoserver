@@ -4,7 +4,10 @@
  */
 package org.geoserver.wfs.v1_1;
 
-import static org.junit.Assert.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -212,7 +215,7 @@ public class Transaction3DTest extends WFSTestSupport {
 
     private Document postRequest(String requestFile, String... variableMap)
             throws IOException, Exception {
-        String xml = IOUtils.toString(getClass().getResourceAsStream(requestFile), "UTF-8");
+        String xml = IOUtils.toString(getClass().getResourceAsStream(requestFile), UTF_8);
         if (variableMap != null) {
             for (int i = 0; i < variableMap.length; i += 2) {
                 String key = variableMap[i];

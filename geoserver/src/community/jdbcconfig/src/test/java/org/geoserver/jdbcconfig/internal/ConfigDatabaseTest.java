@@ -16,23 +16,43 @@
  */
 package org.geoserver.jdbcconfig.internal;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.IAnswer;
 import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.CatalogException;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.Info;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WMTSLayerInfo;
+import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.event.CatalogAddEvent;
 import org.geoserver.catalog.event.CatalogListener;
@@ -43,18 +63,27 @@ import org.geoserver.catalog.impl.DataStoreInfoImpl;
 import org.geoserver.catalog.impl.FeatureTypeInfoImpl;
 import org.geoserver.catalog.impl.LayerInfoImpl;
 import org.geoserver.catalog.impl.ModificationProxy;
+import org.geoserver.catalog.impl.NamespaceInfoImpl;
+import org.geoserver.catalog.impl.StyleInfoImpl;
+import org.geoserver.catalog.impl.WMSLayerInfoImpl;
+import org.geoserver.catalog.impl.WMSStoreInfoImpl;
 import org.geoserver.catalog.impl.WorkspaceInfoImpl;
 import org.geoserver.config.ConfigurationListener;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.jdbcconfig.JDBCConfigTestSupport;
+import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSInfoImpl;
+import org.geotools.ows.wmts.WebMapTileServer;
+import org.geotools.ows.wmts.model.WMTSCapabilities;
+import org.geotools.ows.wmts.model.WMTSLayer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.opengis.util.ProgressListener;
 
 /** @author groldan */
 @RunWith(Parameterized.class)
@@ -167,6 +196,8 @@ public class ConfigDatabaseTest {
         ws.setName("ws1");
         database.add(ws);
 
+        NamespaceInfo ns = addNamespace();
+
         Catalog catalog = database.getCatalog();
         DataStoreInfoImpl ds = new DataStoreInfoImpl(catalog);
         ds.setWorkspace(ws);
@@ -181,6 +212,7 @@ public class ConfigDatabaseTest {
 
         ResourceInfo ri = new FeatureTypeInfoImpl(catalog);
         ((FeatureTypeInfoImpl) ri).setId("resourceid");
+        ri.setNamespace(ns);
         ri.setName("ri1");
         ri.setStore(ds);
         ri = database.add(ri);
@@ -191,6 +223,16 @@ public class ConfigDatabaseTest {
         li = database.add(li);
 
         return li;
+    }
+
+    private NamespaceInfo addNamespace() {
+        NamespaceInfoImpl ns = new NamespaceInfoImpl();
+        ns.setId("nsid");
+        ns.setPrefix("ws1");
+        database.add(ns);
+        NamespaceInfo byId = database.getById(ns.getId(), NamespaceInfo.class);
+        assertEquals(ns, byId);
+        return byId;
     }
 
     /** @param info */
@@ -410,5 +452,137 @@ public class ConfigDatabaseTest {
 
         service = database.getAll(WMSInfo.class).iterator().next();
         assertNotNull(service.getGeoServer());
+    }
+
+    @Test
+    public void testWMSCascadingInfos() throws Exception {
+        WorkspaceInfo ws = addWorkspace();
+
+        WMSStoreInfoImpl wmsStore = new WMSStoreInfoImpl(database.getCatalog());
+        wmsStore.setCapabilitiesURL(
+                ConfigDatabaseTest.class.getResource("/wms_capabilities.xml").toString());
+        wmsStore.setId("theWmsStore");
+        wmsStore.setName("fakeGeoServer");
+        wmsStore.setWorkspace(ws);
+        wmsStore.setUseConnectionPooling(false); // allows to hit the file system
+        database.add(wmsStore);
+
+        CatalogBuilder cb = new CatalogBuilder(database.getCatalog());
+        cb.setStore(wmsStore);
+        WMSLayerInfoImpl wmsLayer = (WMSLayerInfoImpl) cb.buildWMSLayer("states");
+        wmsLayer.reset();
+        wmsLayer.setId("theWmsLayer");
+        wmsLayer.setForcedRemoteStyle("population");
+        wmsLayer.setSelectedRemoteStyles(new ArrayList<>(Arrays.asList("pophatch", "polygon")));
+        database.add(wmsLayer);
+        LayerInfoImpl layer = (LayerInfoImpl) cb.buildLayer(wmsLayer);
+        layer.setId("theLayer");
+        // used to fail here, as the styles are generated on the fly
+        database.add(layer);
+
+        StyleInfo defaultStyle = layer.getDefaultStyle();
+        assertRemoteStyle(defaultStyle);
+
+        Set<StyleInfo> styles = layer.getStyles();
+        assertEquals(2, styles.size());
+        styles.forEach(this::assertRemoteStyle);
+    }
+
+    @Test
+    public void testWMTSStore() throws Exception {
+        final WMTSStoreInfo store = addWMTSStore();
+
+        database.clearCache(store);
+
+        StoreInfo byId = database.getById(store.getId(), StoreInfo.class);
+        assertEquals(store, byId);
+        byId = database.getById(store.getId(), WMTSStoreInfo.class);
+        assertEquals(store, byId);
+
+        database.clearCache(store);
+        StoreInfo storeByName =
+                database.getByIdentity(
+                        StoreInfo.class,
+                        "workspace.id",
+                        store.getWorkspace().getId(),
+                        "name",
+                        store.getName());
+        assertEquals(store, storeByName);
+
+        WebMapTileServer wmts = store.getWebMapTileServer((ProgressListener) null);
+        assertNotNull(wmts);
+        WMTSCapabilities capabilities = wmts.getCapabilities();
+        assertNotNull(capabilities);
+        List<WMTSLayer> layerList = capabilities.getLayerList();
+        assertEquals(2, layerList.size());
+    }
+
+    @Test
+    public void testWMTSLayer() throws Exception {
+        final WMTSLayerInfo added = addWMTSLayer();
+
+        database.clearCache(added);
+        ResourceInfo resourceById = database.getById(added.getId(), ResourceInfo.class);
+        assertEquals(added, resourceById);
+
+        database.clearCache(added);
+        WMTSLayerInfo wmtsLayerById = database.getById(added.getId(), WMTSLayerInfo.class);
+        assertEquals(added, wmtsLayerById);
+
+        NamespaceInfo ns = added.getNamespace();
+        String name = added.getName();
+
+        database.clearCache(added);
+        ResourceInfo resourceByName =
+                database.getByIdentity(
+                        ResourceInfo.class, "namespace.id", ns.getId(), "name", name);
+        assertEquals(added, resourceByName);
+    }
+
+    private WMTSLayerInfo addWMTSLayer() throws IOException {
+        final WMTSStoreInfo store = addWMTSStore();
+        final NamespaceInfo ns = addNamespace();
+        final Catalog catalog = database.getCatalog();
+        WMTSLayerInfo wmtsResource = catalog.getFactory().createWMTSLayer();
+
+        WMTSLayer layer =
+                store.getWebMapTileServer((ProgressListener) null)
+                        .getCapabilities()
+                        .getLayer("topp:tasmania_cities");
+        assertNotNull(layer);
+
+        OwsUtils.set(wmtsResource, "id", "wmtsResource");
+        wmtsResource.setStore(store);
+        wmtsResource.setNamespace(ns);
+        wmtsResource.setEnabled(true);
+        wmtsResource.setName(layer.getName());
+
+        final WMTSLayerInfo added = database.add(wmtsResource);
+        assertNotNull(added);
+        assertNotSame(wmtsResource, added);
+        assertEquals(wmtsResource, added);
+        return added;
+    }
+
+    private WMTSStoreInfo addWMTSStore() {
+        final WorkspaceInfo ws = addWorkspace();
+        final Catalog catalog = database.getCatalog();
+        WMTSStoreInfo wmtsStore = catalog.getFactory().createWebMapTileServer();
+        wmtsStore.setCapabilitiesURL(
+                ConfigDatabaseTest.class.getResource("/wmts_capabilities.xml").toString());
+        OwsUtils.set(wmtsStore, "id", "theMmtsStore");
+        wmtsStore.setName("fakeWMTSStore");
+        wmtsStore.setWorkspace(ws);
+        wmtsStore.setUseConnectionPooling(false); // allows to hit the file system
+        database.add(wmtsStore);
+
+        WMTSStoreInfo info = database.getById(wmtsStore.getId(), WMTSStoreInfo.class);
+        assertEquals(wmtsStore, info);
+        return info;
+    }
+
+    private void assertRemoteStyle(StyleInfo defaultStyle) {
+        assertNull(defaultStyle.getId());
+        assertEquals(true, defaultStyle.getMetadata().get(StyleInfoImpl.IS_REMOTE, Boolean.class));
     }
 }

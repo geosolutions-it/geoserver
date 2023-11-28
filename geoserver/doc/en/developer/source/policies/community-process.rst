@@ -12,7 +12,7 @@ The GeoServer community process adheres to the following guidelines to ensure
 that it retains open development practices:
 
 * **Transparency** 
-  Project decisions are made in an open and transparent way. Key decisions are presented *GeoServer Improvement Proposals* (:ref:`GSIP <gsip>`), discussed in public. When a decision is made it is clear as to why it was made.
+  Project decisions are made in an open and transparent way. Key decisions are presented in *GeoServer Improvement Proposals* (:ref:`GSIP <gsip>`), discussed in public. When a decision is made it is clear as to why it was made.
 
 * **Open**
   Proposals are presented on the `GeoServer wiki <https://github.com/geoserver/geoserver/wiki>`__ - and anyone can write a proposal (no commit access required).
@@ -22,7 +22,7 @@ that it retains open development practices:
   are discussed in public by the community as a whole. Decisions are made by a project steering committee and not subject to the whims of any single developer or organizations.
   
 * **Responsibility**
-  The Project Steering Committee is responsible the strategic direction of the GeoServer project. Central to this responsibility is evaluating proposals and providing a clear decision through a public voting process.
+  The Project Steering Committee is responsible for the strategic direction of the GeoServer project. Central to this responsibility is evaluating proposals and providing a clear decision through a public voting process.
 
 Adding features
 ^^^^^^^^^^^^^^^
@@ -33,13 +33,13 @@ new feature:
 
 #. The feature has a sponsor. This means either a developer willing to carry out
    the work or a customer who is paying for it.
-#. The feature has has gone through the :ref:`GSIP <gsip>` process 
+#. The feature has gone through the :ref:`GSIP <gsip>` process 
    **if necessary**. Whether a feature requires a GSIP is decided by the 
    community when the feature is proposed.
 
 The determining factor for what release a feature should be included in is based on the estimate of the time to implement the feature, and the current :ref:`release_cycle`.
 
-New features may be back-ported to the stable series (if technically feasible) after being tried out on master for a month.
+New features may be backported to the stable series (if technically feasible) after being tried out on the main development branch for a month.
 
 Adding fixes
 ^^^^^^^^^^^^
@@ -47,10 +47,21 @@ Adding fixes
 During the release cycle community members contribute fixes to be included, and backported, to be included in subsequent releases. 
 
 #. Each fix requires an issue tracker entry, to be included in the release notes
-#. Each fix must be applied to the master branch, and then back ported.
+#. Each fix must be applied to the main development branch, and then backported.
 #. While a release may be held for a "blocking" issue this is determined by discussion on the developer email list.
 
 Please respect our release volunteers. We stop back porting fixes the day before release so CITE tests can verify the release includes all the changes needed.
+
+Upgrading dependencies
+^^^^^^^^^^^^^^^^^^^^^^
+
+During both the development and release cycle, dependencies may be upgraded, either as part of a new feature or fix, or as a standalone change during general maintenance.
+
+When backporting changes that include dependency upgrades, keep in mind the guidelings for backporting fixes and features, as they apply to the dependency that changed:
+
+#. Upgrades for bug fixes or security issues can be backported immediately like any other fix. 
+#. Upgrades for new features that do not require an API change (either in the upgraded library or in GeoServer) can be backported after one month. Additive-only API changes may also be backported where technically feasible.
+#. In some cases, upgrading a dependency to fix a bug may also bring with it API changes in the dependency. Consider whether a backport is really necessary in such cases. Security fixes may need to force an api change.
 
 .. _release_cycle:
 
@@ -61,17 +72,17 @@ GeoServer follows a time-boxed release model, this allows new features to be dev
 
 The community maintains three active branches:
 
-* master: available for development of new functionality, documentation improvements and bug fixes
-* stable: bug fixes and back-port of new functionality that do not affect the GeoServer API or significantly affect stability.
+* main development branch (main): available for development of new functionality, documentation improvements and bug fixes
+* stable: bug fixes and backport of new functionality that do not affect the GeoServer API or significantly affect stability.
 * maintenance: bug fixes
 
-For each GeoServer release we spend six month "prerelease" in a development cycle on the master branch, followed by six months as the stable release, followed by six months as the maintenance release.
+For each GeoServer release, we spend six month "prerelease" in a development cycle on the main development branch, followed by six months as the stable release, followed by six months as the maintenance release.
 
-..note:: The former beta release has been replaced with an earlier release candidate. There is no longer a "feature freeze" on master after this release. Instead, the new branch is created at this time, freeing up master for new features.
+.. note:: The former beta release has been replaced with an earlier release candidate. There is no longer a "feature freeze" on the main development branch after this release. Instead, the new branch is created at this time, freeing up the main development branch for new features.
 
 **Prerelease**
 
-  * Month -6: master open for development
+  * Month -6: main development branch open for development
   * Month -1: month:  release candidate is made on new branch
   * Month 1: (start of month): second release candidate is made, if there are sufficient changes to warrant it.
 
@@ -104,7 +115,7 @@ Here is what that looks like:
   * Month 10: (next branch N+1 issues a stable release)
   * Month 11: Release N.5 maintenance
 
-For more information, or to volunteer, please check the `release schedule <https://github.com/geoserver/geoserver/wiki/Release-Schedule>`__ in the wiki.
+For more information, or to volunteer, please check the :wiki:`Release-Schedule` in the wiki.
 
 **Unscheduled Releases**
 

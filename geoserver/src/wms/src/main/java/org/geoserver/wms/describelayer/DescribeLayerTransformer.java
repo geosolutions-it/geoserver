@@ -9,11 +9,11 @@ import static org.geoserver.ows.util.ResponseUtils.appendQueryString;
 import static org.geoserver.ows.util.ResponseUtils.buildSchemaURL;
 import static org.geoserver.ows.util.ResponseUtils.buildURL;
 
-import java.util.Iterator;
 import java.util.List;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.wms.DescribeLayerRequest;
 import org.geoserver.wms.MapLayerInfo;
@@ -52,6 +52,7 @@ public class DescribeLayerTransformer extends TransformerBase {
      * @param handler the content handler to send sax events to.
      * @return a new <code>DescribeLayerTranslator</code>
      */
+    @Override
     public Translator createTranslator(ContentHandler handler) {
         return new DescribeLayerTranslator(handler);
     }
@@ -66,6 +67,7 @@ public class DescribeLayerTransformer extends TransformerBase {
      * @return a Transformer propoerly configured to produce DescribeLayer responses.
      * @throws TransformerException if it is thrown by <code>super.createTransformer()</code>
      */
+    @Override
     public Transformer createTransformer() throws TransformerException {
         Transformer transformer = super.createTransformer();
         String dtdUrl = buildSchemaURL(baseURL, "wms/1.1.1/WMS_DescribeLayerResponse.dtd");
@@ -92,6 +94,7 @@ public class DescribeLayerTransformer extends TransformerBase {
          * @param o The {@link DescribeLayerRequest} to encode a DescribeLayer response for
          * @throws IllegalArgumentException if the Object is not encodeable.
          */
+        @Override
         public void encode(Object o) throws IllegalArgumentException {
             if (!(o instanceof DescribeLayerRequest)) {
                 throw new IllegalArgumentException();
@@ -117,25 +120,25 @@ public class DescribeLayerTransformer extends TransformerBase {
         /**
          * As currently GeoServer does not have support for nested layers, this method declares a
          * <code>LayerDescription</code> element for each featuretype requested.
-         *
-         * @param req
          */
         private void handleLayers(DescribeLayerRequest req) {
-            MapLayerInfo layer;
-
-            final List layers = req.getLayers();
+            final List<MapLayerInfo> layers = req.getLayers();
 
             AttributesImpl queryAtts = new AttributesImpl();
             queryAtts.addAttribute("", "typeName", "typeName", "", "");
 
-            for (Iterator it = layers.iterator(); it.hasNext(); ) {
-                layer = (MapLayerInfo) it.next();
+            for (MapLayerInfo layer : layers) {
 
                 AttributesImpl layerAtts = new AttributesImpl();
                 layerAtts.addAttribute("", "name", "name", "", "");
                 String owsUrl;
                 String owsType;
+                String workspaceName = "";
                 if (MapLayerInfo.TYPE_VECTOR == layer.getType()) {
+                    if (layer.getResource() instanceof FeatureTypeInfo) {
+                        FeatureTypeInfo typeInfo = (FeatureTypeInfo) (layer.getResource());
+                        workspaceName = typeInfo.getStore().getWorkspace().getName();
+                    }
                     owsUrl = buildURL(baseURL, "wfs", null, URLType.SERVICE);
                     owsUrl = appendQueryString(owsUrl, "");
                     owsType = "WFS";
@@ -162,7 +165,13 @@ public class DescribeLayerTransformer extends TransformerBase {
                         0, "", "name", "name", "", layer.getLayerInfo().prefixedName());
                 start("LayerDescription", layerAtts);
 
-                queryAtts.setAttribute(0, "", "typeName", "typeName", "", layer.getName());
+                // add workspace name to typename when not already present and not empty
+                String qAttsLyrName = layer.getName();
+                if (workspaceName.length() > 0
+                        && !layer.getName().startsWith(workspaceName + ":")) {
+                    qAttsLyrName = workspaceName + ":" + layer.getName();
+                }
+                queryAtts.setAttribute(0, "", "typeName", "typeName", "", qAttsLyrName);
                 element("Query", null, queryAtts);
 
                 end("LayerDescription");

@@ -26,7 +26,8 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
     protected enum UploadMethod {
         file(true),
         external(false),
-        url(true);
+        url(true),
+        remote(false); // Remote upload being only supported by structuredGridCoverage2DReader
 
         boolean inline;
 
@@ -43,11 +44,7 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
         super(catalog);
     }
 
-    /**
-     * @param store
-     * @param format
-     * @param directory
-     */
+    /** */
     protected List<Resource> handleFileUpload(
             String store,
             String workspace,
@@ -117,8 +114,7 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
             // unzip the file
             try {
                 // Unzipping of the file and, if it is a POST request, filling of the File List
-                RESTUtils.unzipFile(
-                        uploadedFile, directory, workspace, store, request, files, external);
+                RESTUtils.unzipFile(uploadedFile, directory, workspace, store, files, external);
 
                 // look for the "primary" file
                 // TODO: do a better check
@@ -157,10 +153,7 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
         }
     }
 
-    /**
-     * @param directory
-     * @param format
-     */
+    /** */
     protected Resource findPrimaryFile(Resource directory, String format) {
         for (Resource f :
                 Resources.list(

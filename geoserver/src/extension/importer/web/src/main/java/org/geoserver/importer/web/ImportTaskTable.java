@@ -89,7 +89,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
 
     @Override
     protected Component getComponentForProperty(
-            String id, final IModel itemModel, Property property) {
+            String id, final IModel<ImportTask> itemModel, Property<ImportTask> property) {
         if (property == ImportTaskProvider.NAME) {
             return new LayerLinkPanel(id, itemModel);
         }
@@ -134,7 +134,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
                 case READY:
                     // return advanced option link
                     // for now disable if this is not a vector layer
-                    ImportTask task = (ImportTask) itemModel.getObject();
+                    ImportTask task = itemModel.getObject();
                     if (task.getLayer() != null
                             && task.getLayer().getResource() instanceof FeatureTypeInfo) {
                         return new AdvancedOptionPanel(id, itemModel);
@@ -192,16 +192,20 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             this.chained = model;
         }
 
+        @Override
         public void setObject(T object) {}
 
+        @Override
         public void detach() {
             chained.detach();
         }
 
+        @Override
         public void setChainedModel(IModel<?> model) {
             this.chained = model;
         }
 
+        @Override
         public IModel<?> getChainedModel() {
             return chained;
         }
@@ -213,6 +217,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             super(model);
         }
 
+        @Override
         public PackageResourceReference getObject() {
             ImportTask.State state = (ImportTask.State) chained.getObject();
             switch (state) {
@@ -267,6 +272,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             super(model);
         }
 
+        @Override
         public String getObject() {
             ImportTask.State state = (ImportTask.State) chained.getObject();
             return new StringResourceModel(state.name().toLowerCase(), ImportTaskTable.this, null)
@@ -351,7 +357,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             form.add(
                     new CRSPanel(
                             "crs",
-                            new SRSToCRSModel(new PropertyModel(model, "layer.resource.sRS"))) {
+                            new SRSToCRSModel(new PropertyModel<>(model, "layer.resource.sRS"))) {
                         @Override
                         protected CoordinateReferenceSystem fromSRS(String srs) {
                             try {
@@ -403,8 +409,9 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
 
                             setResponsePage(
                                     new LayerPage(task.getLayer(), pp) {
-                                        protected void onSuccessfulSave() {
-                                            super.onSuccessfulSave();
+                                        @Override
+                                        protected void onSuccessfulSave(boolean doReturn) {
+                                            super.onSuccessfulSave(doReturn);
 
                                             // update the item
                                             try {
@@ -428,7 +435,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             LayerInfo layer = model.getObject().getLayer();
             PreviewLayer preview = new PreviewLayer(layer);
 
-            List<PreviewLink> links = new ArrayList<PreviewLink>();
+            List<PreviewLink> links = new ArrayList<>();
             links.add(
                     new PreviewLink(
                             "layerPreview",
@@ -437,37 +444,19 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             links.add(new PreviewLink("googleearth", "../wms/kml?layers=" + layer.getName()));
 
             add(
-                    new DropDownChoice<PreviewLink>(
+                    new DropDownChoice<>(
                                     "links",
-                                    new Model(links.get(0)),
+                                    new Model<>(links.get(0)),
                                     links,
-                                    new ChoiceRenderer<PreviewLink>() {
-                                        @Override
-                                        public Object getDisplayValue(PreviewLink object) {
-                                            return new ParamResourceModel(
-                                                            object.id,
-                                                            ImportTaskTable.this,
-                                                            object.id)
-                                                    .getString();
-                                        }
-
-                                        @Override
-                                        public String getIdValue(PreviewLink object, int index) {
-                                            return object.href;
-                                        }
-                                    })
+                                    new PreviewLinkChoiceRenderer())
                             .setNullValid(false)
                             .setOutputMarkupId(true));
 
+            String javascript =
+                    "go(document.getElementById('" + get("links").getMarkupId() + "'));";
             add(
                     new ExternalLink("go", "#")
-                            .add(
-                                    new AttributeModifier(
-                                            "onclick",
-                                            new Model(
-                                                    "go(document.getElementById('"
-                                                            + get("links").getMarkupId()
-                                                            + "'));"))));
+                            .add(new AttributeModifier("onclick", new Model<>(javascript))));
         }
 
         class PreviewLink implements Serializable {
@@ -477,6 +466,19 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
             PreviewLink(String id, String href) {
                 this.id = id;
                 this.href = href;
+            }
+        }
+
+        private class PreviewLinkChoiceRenderer extends ChoiceRenderer<PreviewLink> {
+            @Override
+            public Object getDisplayValue(PreviewLink object) {
+                return new ParamResourceModel(object.id, ImportTaskTable.this, object.id)
+                        .getString();
+            }
+
+            @Override
+            public String getIdValue(PreviewLink object, int index) {
+                return object.href;
             }
         }
     }
@@ -521,7 +523,7 @@ public class ImportTaskTable extends GeoServerTablePanel<ImportTask> {
         public ExceptionPanel(String id, final Exception ex) {
             super(id);
             add(new Label("message", ex.getLocalizedMessage()));
-            add(new TextArea("stackTrace", new Model(handleStackTrace(ex))));
+            add(new TextArea<>("stackTrace", new Model<>(handleStackTrace(ex))));
             add(
                     new AjaxLink("copy") {
                         @Override

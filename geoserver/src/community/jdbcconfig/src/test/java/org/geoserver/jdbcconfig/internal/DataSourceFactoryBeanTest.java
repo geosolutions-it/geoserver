@@ -4,19 +4,25 @@
  */
 package org.geoserver.jdbcconfig.internal;
 
-import static org.easymock.EasyMock.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.reset;
+import static org.easymock.EasyMock.verify;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.google.common.base.Optional;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import javax.naming.Context;
+import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.easymock.EasyMock;
 import org.geoserver.jdbcloader.DataSourceFactoryBean;
+import org.geotools.util.factory.GeoTools;
 import org.junit.Test;
 
 /** @author Kevin Smith, OpenGeo */
@@ -26,7 +32,6 @@ public class DataSourceFactoryBeanTest {
     public void testBasic() throws Exception {
         final BasicDataSource ds = EasyMock.createMock(BasicDataSource.class);
         JDBCConfigProperties config = EasyMock.createMock(JDBCConfigProperties.class);
-        Context jndi = EasyMock.createMock(Context.class);
 
         expect(config.isEnabled()).andReturn(true);
         expectJndi(config, null);
@@ -43,6 +48,8 @@ public class DataSourceFactoryBeanTest {
         expect(config.getProperty("password")).andStubReturn("swordfish");
         ds.setPassword("swordfish");
 
+        expect(config.getProperty("pool.testWhileIdle")).andStubReturn(null);
+        expect(config.getProperty("pool.timeBetweenEvictionRunsMillis")).andStubReturn(null);
         expect(config.getProperty("pool.minIdle")).andStubReturn(null);
         expect(config.getProperty("pool.maxActive")).andStubReturn(null);
         expect(config.getProperty("pool.poolPreparedStatements")).andStubReturn(null);
@@ -52,6 +59,10 @@ public class DataSourceFactoryBeanTest {
         config.setDatasourceId("jdbc:test");
         expectLastCall();
 
+        ds.setTestWhileIdle(false);
+        expectLastCall();
+        ds.setTimeBetweenEvictionRunsMillis(-1L);
+        expectLastCall();
         ds.setMinIdle(1);
         expectLastCall();
         ds.setMaxActive(10);
@@ -62,10 +73,10 @@ public class DataSourceFactoryBeanTest {
         expectLastCall();
 
         expectVerifyConnect(ds);
-        replay(ds, config, jndi);
+        replay(ds, config);
 
         DataSourceFactoryBean fact =
-                new DataSourceFactoryBean(config, jndi) {
+                new DataSourceFactoryBean(config) {
 
                     @Override
                     protected BasicDataSource createBasicDataSource() {
@@ -81,7 +92,7 @@ public class DataSourceFactoryBeanTest {
 
         // Check that the same DataSource is returned on subsequent calls without any changes
         assertThat(fact.getObject(), is((DataSource) ds));
-        verify(ds, config, jndi);
+        verify(ds, config);
 
         // Check that destruction properly closes the DataSource
         reset(ds);
@@ -96,7 +107,8 @@ public class DataSourceFactoryBeanTest {
     public void testJNDI() throws Exception {
         DataSource ds = EasyMock.createMock(DataSource.class);
         JDBCConfigProperties config = EasyMock.createMock(JDBCConfigProperties.class);
-        Context jndi = EasyMock.createMock(Context.class);
+        InitialContext jndi = EasyMock.createMock(InitialContext.class);
+        GeoTools.init(jndi);
 
         expect(config.isEnabled()).andReturn(true);
         expectJndi(config, "java:comp/env/jdbc/test");
@@ -107,7 +119,7 @@ public class DataSourceFactoryBeanTest {
         expectVerifyConnect(ds);
         replay(ds, config, jndi);
 
-        DataSourceFactoryBean fact = new DataSourceFactoryBean(config, jndi);
+        DataSourceFactoryBean fact = new DataSourceFactoryBean(config);
 
         // Check that we get the DataSource
         assertThat(fact.getObject(), is((DataSource) ds));
@@ -132,7 +144,8 @@ public class DataSourceFactoryBeanTest {
     public void testJNDIFail() throws Exception {
         final BasicDataSource ds = EasyMock.createMock(BasicDataSource.class);
         JDBCConfigProperties config = EasyMock.createMock(JDBCConfigProperties.class);
-        Context jndi = EasyMock.createMock(Context.class);
+        InitialContext jndi = EasyMock.createMock(InitialContext.class);
+        GeoTools.init(jndi);
 
         expect(config.isEnabled()).andReturn(true);
         expectJndi(config, "java:comp/env/jdbc/test");
@@ -150,6 +163,8 @@ public class DataSourceFactoryBeanTest {
         expect(config.getProperty("password")).andStubReturn("swordfish");
         ds.setPassword("swordfish");
 
+        expect(config.getProperty("pool.testWhileIdle")).andStubReturn(null);
+        expect(config.getProperty("pool.timeBetweenEvictionRunsMillis")).andStubReturn(null);
         expect(config.getProperty("pool.minIdle")).andStubReturn(null);
         expect(config.getProperty("pool.maxActive")).andStubReturn(null);
         expect(config.getProperty("pool.poolPreparedStatements")).andStubReturn(null);
@@ -159,6 +174,10 @@ public class DataSourceFactoryBeanTest {
         config.setDatasourceId("jdbc:test");
         expectLastCall();
 
+        ds.setTestWhileIdle(false);
+        expectLastCall();
+        ds.setTimeBetweenEvictionRunsMillis(-1L);
+        expectLastCall();
         ds.setMinIdle(1);
         expectLastCall();
         ds.setMaxActive(10);
@@ -173,7 +192,7 @@ public class DataSourceFactoryBeanTest {
         replay(ds, config, jndi);
 
         DataSourceFactoryBean fact =
-                new DataSourceFactoryBean(config, jndi) {
+                new DataSourceFactoryBean(config) {
 
                     @Override
                     protected BasicDataSource createBasicDataSource() {

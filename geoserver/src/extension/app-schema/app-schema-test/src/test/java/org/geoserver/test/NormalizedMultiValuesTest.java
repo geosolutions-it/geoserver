@@ -18,9 +18,21 @@ package org.geoserver.test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geotools.data.DataAccess;
@@ -31,6 +43,7 @@ import org.geotools.jdbc.JDBCFeatureStore;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.feature.type.Name;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
 /** Contains tests related with JDBC multiple values support. */
@@ -99,7 +112,9 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
                     "/test-data/stations/multiValues/measurements.xml",
                     "/test-data/stations/multiValues/measurements.xsd",
                     "/test-data/stations/multiValues/measurements.properties",
-                    "/test-data/stations/multiValues/tags.properties");
+                    "/test-data/stations/multiValues/tags.properties",
+                    "/test-data/stations/multiValues/info.properties",
+                    "/test-data/stations/multiValues/use.properties");
             // add GML 3.2 feature types
             Map<String, String> gml32Parameters = new HashMap<>();
             gml32Parameters.put("GML_PREFIX", "gml32");
@@ -117,7 +132,9 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
                     "/test-data/stations/multiValues/measurements.xml",
                     "/test-data/stations/multiValues/measurements.xsd",
                     "/test-data/stations/multiValues/measurements.properties",
-                    "/test-data/stations/multiValues/tags.properties");
+                    "/test-data/stations/multiValues/tags.properties",
+                    "/test-data/stations/multiValues/info.properties",
+                    "/test-data/stations/multiValues/use.properties");
         }
     }
 
@@ -135,11 +152,90 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
         checkCount(
                 WFS11_XPATH_ENGINE,
                 document,
-                2,
+                3,
                 "/wfs:FeatureCollection/gml:featureMember/st_gml31:Station_gml31");
         // check that the expected stations and measurements are present
         checkStation1Gml31(document);
         checkStation2Gml31(document);
+        checkStation3Gml31(document);
+    }
+
+    @Test
+    public void testGetAllNormalizedMultiValuesWfsJson11() throws Exception {
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        // execute the WFS 1.1.0 request
+        String request =
+                "wfs?request=GetFeature&version=1.1.0&typename=st_gml31:Station_gml31"
+                        + "&outputFormat=application/json";
+        JSONObject json = (JSONObject) getAsJSON(request);
+        JSONArray features = json.getJSONArray("features");
+        assertEquals(3, features.size());
+        // check stations json content
+        JSONObject station = getStationById(features, "st.1");
+        assertNotNull(station);
+        checkStationJson1(station);
+        station = getStationById(features, "st.2");
+        assertNotNull(station);
+        checkStationJson2(station);
+        station = getStationById(features, "st.3");
+        assertNotNull(station);
+        checkStationJson3(station);
+    }
+
+    private void checkStationJson1(JSONObject station) {
+        JSONArray tags = station.getJSONObject("properties").getJSONArray("tag");
+        assertEquals(3, tags.size());
+        assertTagsArrayHasTagContent(tags, "st_1_tag_a", 1);
+        assertTagsArrayHasTagContent(tags, "st_1_tag_b", 2);
+        assertTagsArrayHasTagContent(tags, "europe", 3);
+    }
+
+    private void checkStationJson2(JSONObject station) {
+        JSONArray tags = station.getJSONObject("properties").getJSONArray("tag");
+        assertEquals(3, tags.size());
+        assertTagsArrayHasTagContent(tags, "st_2_tag_a", 4);
+        assertTagsArrayHasTagContent(tags, "st_2_tag_b", 5);
+        assertTagsArrayHasTagContent(tags, "europe", 6);
+    }
+
+    private void checkStationJson3(JSONObject station) {
+        assertFalse(station.has("tag"));
+    }
+
+    private void assertTagsArrayHasTagContent(JSONArray tags, String value, int code) {
+        assertTrue(
+                "Tag value=" + value + ", code=" + code + " not found",
+                toJsonObjectStream(tags).anyMatch(tag -> isTagContent(tag, value, code)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Stream<JSONObject> toJsonObjectStream(JSONArray array) {
+        return array.stream().filter(obj -> obj instanceof JSONObject).map(obj -> (JSONObject) obj);
+    }
+
+    private boolean isTagContent(JSONObject tag, String value, int code) {
+        try {
+            String valueJson = tag.getString("value");
+            int codeJson = tag.getInt("@code");
+            return (Objects.equals(value, valueJson) && Objects.equals(code, codeJson));
+        } catch (JSONException ex) {
+            // a required key not found
+        }
+        return false;
+    }
+
+    private JSONObject getStationById(JSONArray features, String id) {
+        for (Object obj : features) {
+            if (!(obj instanceof JSONObject)) continue;
+            JSONObject station = (JSONObject) obj;
+            if (Objects.equals(station.getString("id"), id)) return station;
+        }
+        // well, not found station json feature
+        return null;
     }
 
     @Test
@@ -156,12 +252,66 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
         checkCount(
                 WFS20_XPATH_ENGINE,
                 document,
-                2,
+                3,
                 "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32");
 
         // check that the expected stations and measurements are present
         checkStation1Gml32(document);
         checkStation2Gml32(document);
+        checkStation3Gml32(document);
+    }
+
+    @Test
+    public void testGetAllNormalizedMultiValuesWfsJson20() throws Exception {
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        // execute the WFS 2.0 request
+        String request =
+                "wfs?request=GetFeature&version=2.0&typename=st_gml32:Station_gml32"
+                        + "&outputFormat=application/json";
+        JSONObject json = (JSONObject) getAsJSON(request);
+        JSONArray features = json.getJSONArray("features");
+        assertEquals(3, features.size());
+        // check stations json content
+        JSONObject station = getStationById(features, "st.1");
+        assertNotNull(station);
+        checkStationJson1(station);
+        station = getStationById(features, "st.2");
+        assertNotNull(station);
+        checkStationJson2(station);
+        station = getStationById(features, "st.3");
+        assertNotNull(station);
+        checkStationJson3(station);
+    }
+
+    @Test
+    public void testGetAllNormalizedMultiValuesWfsJsonFormat20() throws Exception {
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        // execute the WFS 2.0 request
+        String request =
+                "wfs?request=GetFeature&version=2.0&typename=st_gml32:Station_gml32"
+                        + "&outputFormat=application/json";
+        MockHttpServletResponse response = getAsServletResponse(request);
+
+        String content = response.getContentAsString();
+        validateJsonOutput(content);
+    }
+
+    private void validateJsonOutput(String jsonString) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        try {
+            objectMapper.readTree(jsonString);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Json format is not valid", e);
+        }
     }
 
     @Test
@@ -198,6 +348,42 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
                                 "/test-data/stations/multiValues/requests/station_tag_filter_wfs20_1.xml"));
         // check that we got he correct station
         checkStation1Gml32(document);
+    }
+
+    @Test
+    public void testGetFilteredAttributeMultiValuesWfs20() throws Exception {
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        // execute the WFS 2.0 request
+        String request = "wfs";
+        Document document =
+                postAsDOM(
+                        request,
+                        readResource(
+                                "/test-data/stations/multiValues/requests/station_tag_code_filter_wfs20.xml"));
+        // check that we got he correct station
+        checkStation1Gml32(document);
+    }
+
+    @Test
+    public void testGetFilteredAttributeMultiValuesWfs11() throws Exception {
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        // execute the WFS 1.1.0 request
+        String request = "wfs";
+        Document document =
+                postAsDOM(
+                        request,
+                        readResource(
+                                "/test-data/stations/multiValues/requests/station_tag_code_filter_wfs11.xml"));
+        // check that we got he correct station
+        checkStation1Gml31(document);
     }
 
     /** Helper method that checks that station 1 is present in the provided document. */
@@ -294,6 +480,31 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
                         + "[ms_gml31:tag='pressure_tag']");
     }
 
+    /** Helper method that checks that station 3 is present in the provided document. */
+    private void checkStation3Gml31(Document document) {
+        String stationPath =
+                "/wfs:FeatureCollection/gml:featureMember/st_gml31:Station_gml31[@gml:id='st.3']";
+        // check station exists
+        checkCount(WFS11_XPATH_ENGINE, document, 1, stationPath);
+        // check stations tags
+        checkCount(WFS11_XPATH_ENGINE, document, 0, stationPath + "/st_gml31:tag");
+        // check measurements
+        checkCount(
+                WFS11_XPATH_ENGINE,
+                document,
+                1,
+                stationPath
+                        + "/st_gml31:measurements/ms_gml31:Measurement_gml31"
+                        + "[@gml:id='ms.4']");
+        checkCount(
+                WFS11_XPATH_ENGINE,
+                document,
+                0,
+                stationPath
+                        + "/st_gml31:measurements/ms_gml31:Measurement_gml31"
+                        + "[@gml:id='ms.4']/ms_gml31:tag");
+    }
+
     /** Helper method that checks that station 1 is present in the provided document. */
     private void checkStation1Gml32(Document document) {
         // check station exists
@@ -335,6 +546,15 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
                         + "[@gml:id='ms.1']"
                         + "[ms_gml32:tag='temperature_tag']"
                         + "[ms_gml32:tag='desert_tag']");
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32"
+                        + "[@gml:id='st.1']"
+                        + "/st_gml32:measurements/ms_gml32:Measurement_gml32"
+                        + "[@gml:id='ms.1']"
+                        + "/ms_gml32:tag[@ms_gml32:code='8']");
         checkCount(
                 WFS20_XPATH_ENGINE,
                 document,
@@ -388,6 +608,31 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
                         + "[ms_gml32:tag='pressure_tag']");
     }
 
+    /** Helper method that checks that station 3 is present in the provided document. */
+    private void checkStation3Gml32(Document document) {
+        final String stationPath =
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32[@gml:id='st.3']";
+        // check station exists
+        checkCount(WFS20_XPATH_ENGINE, document, 1, stationPath);
+        // check stations tags
+        checkCount(WFS20_XPATH_ENGINE, document, 0, stationPath + "/st_gml32:tag");
+        // check measurements
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                stationPath
+                        + "/st_gml32:measurements/ms_gml32:Measurement_gml32"
+                        + "[@gml:id='ms.4']");
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                0,
+                stationPath
+                        + "/st_gml32:measurements/ms_gml32:Measurement_gml32"
+                        + "[@gml:id='ms.4']/ms_gml32:tag");
+    }
+
     /**
      * Helper method that evaluates a xpath and checks if the number of nodes found correspond to
      * the expected number,
@@ -417,5 +662,112 @@ public final class NormalizedMultiValuesTest extends AbstractAppSchemaTestSuppor
         Name name = new NameImpl("http://www.stations_gml31.org/1.0", "Station_gml31");
         FeatureSource featureSource = appSchemaDataAccess.getMappingByName(name).getSource();
         return !(featureSource instanceof JDBCFeatureStore);
+    }
+
+    @Test
+    public void testJDBCMultipleValueWithClientProps() throws Exception {
+        // tests that when having a void targetValue for JDBCMultipleValue
+        // and multiple ClientProperties, on of which with xlink:href,
+        // in the same AttributeMapping, the client properties are properly encoded
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        String request = "wfs?request=GetFeature&version=2.0&typename=st_gml32:Station_gml32";
+        Document document = getAsDOM(request);
+        // check that we have two complex features
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                3,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32");
+        // check that the expected stations and measurements are present
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:info"
+                        + "[@xlink:href='http://www.stations.org/1.0/st1' and @xlink:title='ST1']");
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:info"
+                        + "[@xlink:href='http://www.stations.org/1.0/st2' and @xlink:title='ST2']");
+
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:info[@xlink:href='http://www.stations.org/1.0/st3' and @xlink:title='ST3']");
+    }
+
+    @Test
+    public void testJDBCMultipleValueWithClientPropsFilter() throws Exception {
+        // tests that the request not fails because the generation of
+        // an ambiguous query when different table
+        // have a column with the same name, and one of the column is mapped
+        // to a ClientProperty with JDBCMultipleValue directive.
+        // in this case the info table and the tag table have both a CODE column
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        String request =
+                "wfs?request=GetFeature&version=2.0&typename=st_gml32:Station_gml32"
+                        + "&cql_filter=st_gml32:info.\"@xlink:title\"='ST2'";
+        Document document = getAsDOM(request);
+        // check that we have two complex features
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32");
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:info"
+                        + "[@xlink:title='ST2']");
+    }
+
+    @Test
+    public void testJDBCMultipleValueWithPKInTargetColumn() throws Exception {
+        // tests that when having a void targetValue for JDBCMultipleValue
+        // and multiple ClientProperties, on of which with xlink:href,
+        // in the same AttributeMapping, the client properties are properly encoded
+        // check if this is an online test with a JDBC based data store
+        if (notJdbcBased()) {
+            // not a JDBC online test
+            return;
+        }
+        String request = "wfs?request=GetFeature&version=2.0&typename=st_gml32:Station_gml32";
+        Document document = getAsDOM(request);
+        // check that we have two complex features
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                3,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32");
+        // check that the expected stations and measurements are present
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:use"
+                        + "[@xlink:href='http://link/use1' and @xlink:title='use1']");
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:use"
+                        + "[@xlink:href='http://link/use2' and @xlink:title='use2']");
+
+        checkCount(
+                WFS20_XPATH_ENGINE,
+                document,
+                1,
+                "/wfs:FeatureCollection/wfs:member/st_gml32:Station_gml32/st_gml32:use[@xlink:href='http://link/use3' and @xlink:title='use3']");
     }
 }

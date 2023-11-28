@@ -8,7 +8,9 @@ package org.geoserver.rest.service;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import net.sf.json.JSON;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
@@ -175,7 +177,7 @@ public class LocalWCSSettingsControllerTest extends CatalogRESTTestSupport {
         String xml =
                 IOUtils.toString(
                         LocalWCSSettingsControllerTest.class.getResourceAsStream("wcs.xml"),
-                        "UTF-8");
+                        StandardCharsets.UTF_8);
         MockHttpServletResponse response =
                 putAsServletResponse(
                         RestBaseController.ROOT_PATH + "/services/wcs/workspaces/sf/settings",
@@ -197,11 +199,11 @@ public class LocalWCSSettingsControllerTest extends CatalogRESTTestSupport {
                         .getStatus());
         boolean thrown = false;
         try {
-            JSON json = getAsJSON(RestBaseController.ROOT_PATH + "/services/wcs/sf/settings.json");
+            getAsJSON(RestBaseController.ROOT_PATH + "/services/wcs/sf/settings.json");
         } catch (JSONException e) {
             thrown = true;
         }
-        assertEquals(true, thrown);
+        assertTrue(thrown);
     }
 
     private void removeLocalWorkspace() {

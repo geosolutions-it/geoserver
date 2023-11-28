@@ -39,7 +39,7 @@ public abstract class Update extends TransactionElement {
 
         @Override
         public List<Property> getUpdateProperties() {
-            List<Property> list = new ArrayList();
+            List<Property> list = new ArrayList<>();
             for (Object o : eGet(adaptee, "property", List.class)) {
                 list.add(new Property.WFS11((EObject) o));
             }
@@ -47,6 +47,7 @@ public abstract class Update extends TransactionElement {
         }
 
         @Override
+        @SuppressWarnings("unchecked") // EMF model without generics
         public void setUpdateProperties(List<Property> properties) {
             UpdateElementType update = (UpdateElementType) adaptee;
             update.getProperty().clear();
@@ -59,6 +60,7 @@ public abstract class Update extends TransactionElement {
             return new Property.WFS11(property);
         }
 
+        @SuppressWarnings("unchecked") // EMF model without generics
         public static UpdateElementType unadapt(Update update) {
             if (update instanceof WFS11) {
                 return (UpdateElementType) update.getAdaptee();
@@ -83,7 +85,7 @@ public abstract class Update extends TransactionElement {
 
         @Override
         public List<Property> getUpdateProperties() {
-            List<Property> list = new ArrayList();
+            List<Property> list = new ArrayList<>();
             for (Object o : eGet(adaptee, "property", List.class)) {
                 list.add(new Property.WFS20((EObject) o));
             }
@@ -94,8 +96,7 @@ public abstract class Update extends TransactionElement {
         public void setUpdateProperties(List<Property> properties) {
             UpdateType update = (UpdateType) adaptee;
             update.getProperty().clear();
-            properties
-                    .stream()
+            properties.stream()
                     .map(p -> (net.opengis.wfs20.PropertyType) p.getAdaptee())
                     .forEach(p -> update.getProperty().add(p));
         }

@@ -38,13 +38,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH + "/about",
-    produces = {
-        MediaType.TEXT_HTML_VALUE,
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE
-    }
-)
+        path = RestBaseController.ROOT_PATH + "/about",
+        produces = {
+            MediaType.TEXT_HTML_VALUE,
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE
+        })
 @ControllerAdvice
 public class AboutController extends RestBaseController {
 
@@ -142,7 +141,8 @@ public class AboutController extends RestBaseController {
         if (AboutModel.class.isAssignableFrom(clazz)) {
             return new ObjectToMapWrapper<AboutModel>(AboutModel.class) {
                 @Override
-                protected void wrapInternal(Map properties, SimpleHash model, AboutModel object) {
+                protected void wrapInternal(
+                        Map<String, Object> properties, SimpleHash model, AboutModel object) {
                     final List<Map<String, Object>> manifests = new ArrayList<>();
                     for (ManifestModel manifest : object.getManifests()) {
                         final Map<String, Object> map = new HashMap<>();
@@ -169,6 +169,7 @@ public class AboutController extends RestBaseController {
         }
     }
 
+    @Override
     public void configurePersister(XStreamPersister persister, XStreamMessageConverter converter) {
         XStream xs = persister.getXStream();
 

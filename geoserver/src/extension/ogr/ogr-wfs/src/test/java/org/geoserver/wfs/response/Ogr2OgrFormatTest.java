@@ -5,7 +5,8 @@
  */
 package org.geoserver.wfs.response;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -46,6 +48,7 @@ import org.opengis.filter.Filter;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
+@SuppressWarnings("unchecked") // WFS EMF model having no generics
 public class Ogr2OgrFormatTest {
 
     DataStore dataStore;
@@ -150,10 +153,9 @@ public class Ogr2OgrFormatTest {
 
         // unzip the result
         ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bos.toByteArray()));
-        Document dom = null;
         ZipEntry entry = zis.getNextEntry();
         assertEquals("Buildings.kml", entry.getName());
-        dom = dom(zis);
+        Document dom = dom(zis);
 
         // some very light assumptions on the contents, since we
         // cannot control how ogr encodes the kml... let's just assess
@@ -220,7 +222,7 @@ public class Ogr2OgrFormatTest {
         ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(bos.toByteArray()));
 
         // we should get two files at least, a .mif and a .mid
-        Set<String> fileNames = new HashSet<String>();
+        Set<String> fileNames = new HashSet<>();
         ZipEntry entry = null;
         while ((entry = zis.getNextEntry()) != null) {
             fileNames.add(entry.getName());
@@ -288,7 +290,8 @@ public class Ogr2OgrFormatTest {
         tx.setOutputProperty(OutputKeys.INDENT, "yes");
 
         tx.transform(
-                new DOMSource(dom), new StreamResult(new OutputStreamWriter(System.out, "utf-8")));
+                new DOMSource(dom),
+                new StreamResult(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
     }
 
     protected String read(InputStream is) throws IOException {
@@ -305,7 +308,6 @@ public class Ogr2OgrFormatTest {
     /**
      * Parses a stream into a dom.
      *
-     * @param input
      * @param skipDTD If true, will skip loading and validating against the associated DTD
      */
     protected Document dom(InputStream input)

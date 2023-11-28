@@ -39,7 +39,7 @@ public class CSVOutputFormatTest extends AbstractAppSchemaTestSupport {
                         "wfs?service=WFS&version=1.1.0&request=GetFeature&typename=gsmlp:BoreholeView&outputFormat=csv");
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals("text/csv", getBaseMimeType(resp.getContentType()));
 
         // check the content disposition
         assertEquals(
@@ -52,24 +52,23 @@ public class CSVOutputFormatTest extends AbstractAppSchemaTestSupport {
         assertEquals(3, lines.size());
 
         // check the header
-        String[] header =
-                new String[] {
-                    "gml:id",
-                    "gsmlp:identifier",
-                    "gsmlp:name",
-                    "gsmlp:drillingMethod",
-                    "gsmlp:driller",
-                    "gsmlp:drillStartDate",
-                    "gsmlp:startPoint",
-                    "gsmlp:inclinationType",
-                    "gsmlp:boreholeMaterialCustodian",
-                    "gsmlp:boreholeLength_m",
-                    "gsmlp:elevation_m",
-                    "gsmlp:elevation_srs",
-                    "gsmlp:specification_uri",
-                    "gsmlp:metadata_uri",
-                    "gsmlp:shape"
-                };
+        String[] header = {
+            "gml:id",
+            "gsmlp:identifier",
+            "gsmlp:name",
+            "gsmlp:drillingMethod",
+            "gsmlp:driller",
+            "gsmlp:drillStartDate",
+            "gsmlp:startPoint",
+            "gsmlp:inclinationType",
+            "gsmlp:boreholeMaterialCustodian",
+            "gsmlp:boreholeLength_m",
+            "gsmlp:elevation_m",
+            "gsmlp:elevation_srs",
+            "gsmlp:specification_uri",
+            "gsmlp:metadata_uri",
+            "gsmlp:shape"
+        };
 
         assertTrue(Arrays.asList(lines.get(0)).containsAll(Arrays.asList(header)));
 
@@ -107,7 +106,7 @@ public class CSVOutputFormatTest extends AbstractAppSchemaTestSupport {
                         xml,
                         "text/csv");
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals("text/csv", getBaseMimeType(resp.getContentType()));
         // check the content disposition
         assertEquals(
                 "attachment; filename=BoreholeView.csv", resp.getHeader("Content-Disposition"));
@@ -122,24 +121,23 @@ public class CSVOutputFormatTest extends AbstractAppSchemaTestSupport {
         assertEquals(IDENTIFIER, lines.get(1)[identifierIndex]);
 
         // check the header
-        String[] header =
-                new String[] {
-                    "gml:id",
-                    "gsmlp:identifier",
-                    "gsmlp:name",
-                    "gsmlp:drillingMethod",
-                    "gsmlp:driller",
-                    "gsmlp:drillStartDate",
-                    "gsmlp:startPoint",
-                    "gsmlp:inclinationType",
-                    "gsmlp:boreholeMaterialCustodian",
-                    "gsmlp:boreholeLength_m",
-                    "gsmlp:elevation_m",
-                    "gsmlp:elevation_srs",
-                    "gsmlp:specification_uri",
-                    "gsmlp:metadata_uri",
-                    "gsmlp:shape"
-                };
+        String[] header = {
+            "gml:id",
+            "gsmlp:identifier",
+            "gsmlp:name",
+            "gsmlp:drillingMethod",
+            "gsmlp:driller",
+            "gsmlp:drillStartDate",
+            "gsmlp:startPoint",
+            "gsmlp:inclinationType",
+            "gsmlp:boreholeMaterialCustodian",
+            "gsmlp:boreholeLength_m",
+            "gsmlp:elevation_m",
+            "gsmlp:elevation_srs",
+            "gsmlp:specification_uri",
+            "gsmlp:metadata_uri",
+            "gsmlp:shape"
+        };
 
         assertTrue(Arrays.asList(lines.get(0)).containsAll(Arrays.asList(header)));
 
@@ -185,14 +183,11 @@ public class CSVOutputFormatTest extends AbstractAppSchemaTestSupport {
     /**
      * Convenience to read the csv content . Copied from {@link
      * org.geoserver.wfs.response.CSVOutputFormatTest}
-     *
-     * @param csvContent
-     * @throws IOException
      */
     static List<String[]> readLines(String csvContent) throws IOException {
         CSVReader reader = new CSVReader(new StringReader(csvContent));
 
-        List<String[]> result = new ArrayList<String[]>();
+        List<String[]> result = new ArrayList<>();
         String[] nextLine;
         while ((nextLine = reader.readNext()) != null) {
             result.add(nextLine);

@@ -67,6 +67,7 @@ public class KeyStoreProviderImpl implements BeanNameAware, KeyStoreProvider {
         return name;
     }
 
+    @Override
     public void setSecurityManager(GeoServerSecurityManager securityManager) {
         this.securityManager = securityManager;
     }
@@ -212,8 +213,6 @@ public class KeyStoreProviderImpl implements BeanNameAware, KeyStoreProvider {
      * Opens or creates a {@link KeyStore} using the file {@link #DEFAULT_FILE_NAME}
      *
      * <p>Throws an exception for an invalid master key
-     *
-     * @throws IOException
      */
     protected void assertActivatedKeyStore() throws IOException {
         if (ks != null) return;
@@ -328,11 +327,7 @@ public class KeyStoreProviderImpl implements BeanNameAware, KeyStoreProvider {
         }
     }
 
-    /**
-     * Creates initial key entries auto generated keys {@link #CONFIGPASSWORDKEY}
-     *
-     * @throws IOException
-     */
+    /** Creates initial key entries auto generated keys {@link #CONFIGPASSWORDKEY} */
     protected void addInitialKeys() throws IOException {
         // TODO:scramble
         RandomPasswordProvider randPasswdProvider =
@@ -420,20 +415,20 @@ public class KeyStoreProviderImpl implements BeanNameAware, KeyStoreProvider {
         }
 
         // Try to open with new password
-        InputStream fin = newKSFile.in();
+
         char[] passwd = securityManager.getMasterPassword();
-
         try {
-            KeyStore newKS = KeyStore.getInstance(KEYSTORETYPE);
-            newKS.load(fin, passwd);
+            try (InputStream fin = newKSFile.in()) {
+                KeyStore newKS = KeyStore.getInstance(KEYSTORETYPE);
+                newKS.load(fin, passwd);
 
-            // to be sure, decrypt all keys
-            Enumeration<String> enumeration = newKS.aliases();
-            while (enumeration.hasMoreElements()) {
-                newKS.getKey(enumeration.nextElement(), passwd);
+                // to be sure, decrypt all keys
+                Enumeration<String> enumeration = newKS.aliases();
+                while (enumeration.hasMoreElements()) {
+                    newKS.getKey(enumeration.nextElement(), passwd);
+                }
             }
-            fin.close();
-            fin = null;
+
             if (oldKSFile.delete() == false) {
                 LOGGER.severe("cannot delete " + oldKSFile.path());
                 return;
@@ -456,13 +451,6 @@ public class KeyStoreProviderImpl implements BeanNameAware, KeyStoreProvider {
             throw new RuntimeException(ex);
         } finally {
             securityManager.disposePassword(passwd);
-            if (fin != null) {
-                try {
-                    fin.close();
-                } catch (IOException ex) {
-                    // give up
-                }
-            }
         }
     }
 }

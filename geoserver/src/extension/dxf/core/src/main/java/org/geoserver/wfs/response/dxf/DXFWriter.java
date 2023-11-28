@@ -8,6 +8,7 @@ package org.geoserver.wfs.response.dxf;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
+import org.geotools.data.simple.SimpleFeatureCollection;
 
 /**
  * Interface for a DXF Writer implementation. DXF exists in many different versions, so we can
@@ -17,35 +18,16 @@ import java.util.List;
  * @author Mauro Bartolomeoli, mbarto@infosia.it
  */
 public interface DXFWriter {
-    /**
-     * Creates a new instance of the writer, using the given writer as output.
-     *
-     * @param writer
-     */
+    /** Creates a new instance of the writer, using the given writer as output. */
     public DXFWriter newInstance(Writer writer);
 
-    /**
-     * Checks if the writer supports the requested dxf version.
-     *
-     * @param version
-     */
+    /** Checks if the writer supports the requested dxf version. */
     public boolean supportsVersion(String version);
 
-    /**
-     * Performs the actual writing.
-     *
-     * @param featureList
-     * @param version
-     * @throws IOException
-     */
-    public void write(List featureList, String version) throws IOException;
+    /** Performs the actual writing. */
+    public void write(List<SimpleFeatureCollection> featureList, String version) throws IOException;
 
-    /**
-     * Configure a writer option.
-     *
-     * @param optionName
-     * @param optionValue
-     */
+    /** Configure a writer option. */
     public void setOption(String optionName, Object optionValue);
 
     /** Gets the writer description. */

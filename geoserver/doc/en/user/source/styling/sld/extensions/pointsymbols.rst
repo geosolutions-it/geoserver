@@ -57,81 +57,98 @@ The SLD specification mandates the support of the following symbols:
 Shape symbols
 ~~~~~~~~~~~~~
 
-The shape symbols set adds extra symbols that are not part of the basic set.  
-Their names are prefixed by ``shape://``
+The shape symbols set adds extra symbols that are not part of the basic set.
 
-.. list-table::
-   :widths: 20 80
-   
-   * - **Name**
-     - **Description**
-   * - ``shape://vertline``
-     - A vertical line (suitable for hatch fills or to make railroad symbols)
-   * - ``shape://horline``
-     - A horizontal line (suitable for hatch fills)
-   * - ``shape://slash`` 
-     - A diagonal line leaning forwards like the "slash" keyboard symbol (suitable for diagonal hatches)
-   * - ``shape://backslash``
-     - Same as ``shape://slash``, but oriented in the opposite direction
-   * - ``shape://dot``
-     - A very small circle with space around
-   * - ``shape://plus``
-     - A + symbol, without space around (suitable for cross-hatch fills)
-   * - ``shape://times``
-     - A "X" symbol, without space around (suitable for cross-hatch fills)
-   * - ``shape://oarrow``
-     - An open arrow symbol (triangle without one side, suitable for placing arrows at the end of lines)
-   * - ``shape://carrow``
-     - A closed arrow symbol (closed triangle, suitable for placing arrows at the end of lines)
+1. To enable ensure that the WMS Settings :guilabel:``Mark Factory Precedence`` has ``ShapeMarkFactory`` selected.
+
+2. The shape symbols are prefixed by ``shape://``
+
+   .. list-table::
+      :widths: 20 80
+      
+      * - **Name**
+        - **Description**
+      * - ``shape://vertline``
+        - A vertical line (suitable for hatch fills or to make railroad symbols)
+      * - ``shape://horline``
+        - A horizontal line (suitable for hatch fills)
+      * - ``shape://slash`` 
+        - A diagonal line leaning forwards like the "slash" keyboard symbol (suitable for diagonal hatches)
+      * - ``shape://backslash``
+        - Same as ``shape://slash``, but oriented in the opposite direction
+      * - ``shape://dot``
+        - A very small circle with space around
+      * - ``shape://plus``
+        - A + symbol, without space around (suitable for cross-hatch fills)
+      * - ``shape://times``
+        - A "X" symbol, without space around (suitable for cross-hatch fills)
+      * - ``shape://oarrow``
+        - An open arrow symbol (triangle without one side, suitable for placing arrows at the end of lines)
+      * - ``shape://carrow``
+        - A closed arrow symbol (closed triangle, suitable for placing arrows at the end of lines)
+
+Weather Symbols
+~~~~~~~~~~~~~~~
 
 The weather symbols are prefixed by the ``extshape://`` protocol in the SLD:
 
-.. list-table::
-   :widths: 20 20 60
-   
-   * - **Name**
-     - **Description**
-     - **Produces**
-   * - ``extshape://triangle``
-     - cold front
-     - |triangle|
-   * - ``extshape://emicircle``
-     - warm front
-     - |emicircle|
-   * - ``extshape://triangleemicircle``
-     - stationary front
-     - |triangleemicircle|
+1. To enable ensure that the WMS Settings :guilabel:``Mark Factory Precedence`` has ``MeteoMarkFactory`` selected.
+
+2. These symbols are:
+
+   .. list-table::
+      :widths: 20 20 60
+      
+      * - **Name**
+        - **Description**
+        - **Produces**
+      * - ``extshape://triangle``
+        - cold front
+        - |triangle|
+      * - ``extshape://emicircle``
+        - warm front
+        - |emicircle|
+      * - ``extshape://triangleemicircle``
+        - stationary front
+        - |triangleemicircle|
      
+3. You can use ``extshape://`` for a few additional built-in shapes:
+
+   .. list-table::
+      :widths: 20 80
+      
+      * - ``extshape://narrow``
+        - North Arrow
+      * - ``extshape://sarrow``
+        - South Arrow
+
 .. |triangle| image:: images/triangle.png
 .. |emicircle| image:: images/emicircle.png
 .. |triangleemicircle| image:: images/triangleemicircle.png
 
-You can use ``extshape://`` for a few additional built-in shapes:
 
-.. list-table::
-   :widths: 20 80
-   
-   * - ``extshape://narrow``
-     - North Arrow
-   * - ``extshape://sarrow``
-     - South Arrow
+More complex symbols like Wind Barbs can be created with the ``windbarbs://`` prefix. 
 
-More complex symbols like Wind Barbs can be created with the ``windbarbs://`` prefix. There are some examples:
+1. To enable ensure that the WMS Settings :guilabel:``Mark Factory Precedence`` has ``WindBarbsmFactory`` selected.
 
-.. list-table::
-   :widths: 50 50
-   
-   * - **Name**
-     - **Description**
-   * - ``windbarbs://default(15)[kts]``
-     - *15* wind intensity with *[kts]* unit of measure
-   * - ``windbarbs://default(9)[m/s]?hemisphere=s``
-     - *9* wind intensity with *[m/s]* unit of measure, in the south hemisphere
+2. There are some examples:
+
+   .. list-table::
+      :widths: 50 50
+      
+      * - **Name**
+        - **Description**
+      * - ``windbarbs://default(15)[kts]``
+        - *15* wind intensity with *[kts]* unit of measure
+      * - ``windbarbs://default(9)[m/s]?hemisphere=s``
+        - *9* wind intensity with *[m/s]* unit of measure, in the south hemisphere
    
 Custom WKT Shapes
 ~~~~~~~~~~~~~~~~~
 
-Custom shapes can be defined using your own Geometry. Geometry is defined using the same well-known-text format used for CQL_FILTER.
+Custom shapes can be defined using your own Geometry, to enable use WMS Settings :guilabel:``Mark Factory Precedence`` to select ``WKTMarkFactory``.
+
+Geometry is defined using the same well-known-text format used for CQL_FILTER.
 
 .. code-block:: xml
 
@@ -190,7 +207,8 @@ Producing an "emi circle" line:
 Bulk TTF marks
 ~~~~~~~~~~~~~~
 
-It is possible to create a mark using glyphs from any decorative or symbolic True Type Font, such as Wingdings, WebDings, or the many symbol fonts available on the internet.
+It is possible to create a mark using glyphs from any decorative or symbolic True Type Font, such as Wingdings, WebDings, or the many symbol fonts available on the internet. To enable use WMS Settings :guilabel:``Mark Factory Precedence`` to select ``TTFMarkFactory``.
+
 The syntax for specifying this is::
    
    ttf://<fontname>#<hexcode>
@@ -230,18 +248,18 @@ This results in the following map display:
 
    *Shield symbols rendered on the map*
 
-Extending the Mark subsytem using Java
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Extending the Mark subsystem using Java
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Mark subsystem is user-extensible.  
 To do this using Java code, implement the ``MarkFactory`` interface and declare the implementation in the ``META-INF/services/org.geotools.renderer.style.MarkFactory`` file.
 
-For further information see the Javadoc of the GeoTools `MarkFactory <http://svn.osgeo.org/geotools/trunk/modules/library/render/src/main/java/org/geotools/renderer/style/MarkFactory.java>`_, 
+For further information see the Javadoc of the GeoTools `MarkFactory <https://github.com/geotools/geotools/blob/main/modules/library/render/src/main/java/org/geotools/renderer/style/MarkFactory.java>`_, 
 along with the following example code:
    
-   * The `factory SPI registration file <http://svn.osgeo.org/geotools/trunk/modules/library/render/src/main/resources/META-INF/services/org.geotools.renderer.style.MarkFactory>`_
-   * The `TTFMarkFactory <http://svn.osgeo.org/geotools/trunk/modules/library/render/src/main/java/org/geotools/renderer/style/TTFMarkFactory.java>`_ implementation
-   * The `ShapeMarkFactory <http://svn.osgeo.org/geotools/trunk/modules/library/render/src/main/java/org/geotools/renderer/style/ShapeMarkFactory.java>`_ implementation  
+   * The `factory SPI registration file <https://github.com/geotools/geotools/blob/main/modules/library/render/src/main/resources/META-INF/services/org.geotools.renderer.style.MarkFactory>`_
+   * The `TTFMarkFactory <https://github.com/geotools/geotools/blob/main/modules/library/render/src/main/java/org/geotools/renderer/style/TTFMarkFactory.java>`_ implementation
+   * The `ShapeMarkFactory <https://github.com/geotools/geotools/blob/main/modules/library/render/src/main/java/org/geotools/renderer/style/ShapeMarkFactory.java>`_ implementation  
    
 External Graphics
 -----------------
@@ -286,7 +304,98 @@ For example:
       </Graphic>
     </PointSymbolizer>
 
-In this example an SVG graphic is being used, so the size is specified explicitly. 
+In this example an SVG graphic is being used, so the size is specified explicitly.
+
+SVG Parameters
+~~~~~~~~~~~~~~
+
+GeoServer can handle SVG images in which parts of the SVG-attributes are 
+named parameters, as outlined the `SVG Parameters 1.0 specification <https://www.w3.org/TR/SVGParamPrimer/>`__. This capability is also supported by `QGIS <http://qgis.org>`__.
+
+SVG Parameters are represented in a file like: `poi_peak.svg <https://github.com/qgis/QGIS/blob/master/images/svg/symbol/poi_peak.svg>`__ as:
+
+.. code-block:: xml
+
+   <svg enable-background="new 0 0 580 580" height="580" viewBox="0 0 580 580" width="580" xmlns="http://www.w3.org/2000/svg">
+   <path d="m290.565 67.281l-255.498 442.534-1.087 1.885 511.229.393 2.18.002z" fill="param(fill)" 
+    fill-opacity="param(fill-opacity)" stroke="param(outline)" stroke-opacity="param(outline-opacity)" stroke-width="param(outline-width)"/>
+   </svg>
+
+The 'param'-constructs mean that you can define the parameters: `fill`, `fill-opacity`, `outline`, `outline-opacity` and `outline-width` as part of an SVG URL reference, where a reference to this image with red fill would be: ``poi_peak.svg?fill=#FF0000``.
+
+Note: When editng :file:`SVG` files (e.g. in Inkscape) save using 'simple svg' format.
+
+Default behaviour:
+
+* OnlineResource `href` URI without any parameters.
+
+  .. code-block:: xml
+
+     <se:OnlineResource xlink:href="poi_peak.svg" xlink:type="simple"/>
+
+*  Displays :file:`poi_peak.svg` with the default black `fill`. 
+
+   .. figure::  images/peak_black.png
+      
+      SVG image with default black fill
+
+Using `#ff000` red parameter:
+
+* OnlineResource `href` URI with parameter:
+
+  .. code-block:: xml
+
+     <se:OnlineResource xlink:href="poi_peak.svg?fill=#ff0000" xlink:type="simple"/>
+
+* Displays :file:`poi_peak.svg` with supplied red `fill`.
+
+  .. figure:: images/peak_redfill.png
+     
+     SVG image with fill provided by parameter
+
+To define several parameters, the query-parameters should be url-encoded.
+
+* A green peak with 25% opacity: `?fill=#00ff00&opacity=0.25`, requires encoding both the '#' ( ``%23`` ) and the '&' ( ``&amp;`` ) signs:
+
+  .. code-block:: xml
+
+     <se:OnlineResource xlink:href="poi_peak.svg?fill=%2300ff00&amp;opacity=0.25" xlink:type="simple"/>
+
+* Displayed with white fill, red outlined peaks:
+
+  .. figure:: images/peak_green25opacity.png
+     
+     SVG image with fill and outline provided by parameters
+
+Parameters names are defined by the SVG file:
+
+* The parameter 'stroke' above is called 'outline' in the original :file:`svg` file:
+  
+  .. code-block:: xml
+  
+     stroke="param(outline)"
+  
+* OnlineResource `href` URI referencing parameters `fill`, `outline` and `outline-width`:
+   
+  .. code-block:: xml
+
+     <se:OnlineResource xlink:href="poi_peak.svg?fill=%23ffffff&amp;outline=%23ff0000&amp;outline-width=5" xlink:type="simple"/>
+
+* Displayed as:
+
+  .. figure:: images/peak_whitered.png
+     
+     SVG image with fill
+
+The use of SVG parameters can be combinded with dynamic symbolizers (covered below) to supply SVG parameter values based on feature attribute data and expressions.
+
+* OnlineResource `href` URI referencing SVG Parameter with dynamic CQL expression:
+   
+  .. code-block:: xml
+
+     <se:OnlineResource xlink:href="poi_peak.svg?fill=${COLOR}" xlink:type="simple"/>
+
+* Display depends on the feature attribute `COLOR`.
 
 Bulk WKT Shapes
 ~~~~~~~~~~~~~~~

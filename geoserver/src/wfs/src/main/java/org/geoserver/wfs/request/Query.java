@@ -9,6 +9,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
 import net.opengis.wfs.QueryType;
 import net.opengis.wfs.XlinkPropertyNameType;
@@ -40,21 +41,31 @@ public abstract class Query extends RequestObject {
         return eGet(adaptee, "srsName", URI.class);
     }
 
+    public void setSrsName(URI srs) {
+        eSet(adaptee, "srsName", srs);
+    }
+
     public String getFeatureVersion() {
         return eGet(adaptee, "featureVersion", String.class);
     }
 
     // public abstract boolean isTypeNamesUnset(List queries);
 
+    @Override
     public abstract List<QName> getTypeNames();
 
     public abstract List<String> getAliases();
 
     public abstract List<String> getPropertyNames();
 
+    public abstract void setPropertyNames(List<String> names);
+
+    @Override
     public abstract Filter getFilter();
 
     public abstract List<SortBy> getSortBy();
+
+    public abstract void setSortBy(List<SortBy> sortBy);
 
     public abstract List<XlinkPropertyNameType> getXlinkPropertyNames();
 
@@ -65,18 +76,25 @@ public abstract class Query extends RequestObject {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public List<QName> getTypeNames() {
             return eGet(adaptee, "typeName", List.class);
         }
 
         @Override
         public List<String> getAliases() {
-            return new ArrayList();
+            return new ArrayList<>();
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public List<String> getPropertyNames() {
             return eGet(adaptee, "propertyName", List.class);
+        }
+
+        @Override
+        public void setPropertyNames(List<String> names) {
+            eSet(adaptee, "propertyNames", names);
         }
 
         @Override
@@ -85,11 +103,18 @@ public abstract class Query extends RequestObject {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public List<SortBy> getSortBy() {
             return eGet(adaptee, "sortBy", List.class);
         }
 
         @Override
+        public void setSortBy(List<SortBy> sortBy) {
+            eSet(adaptee, "sortBy", sortBy);
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
         public List<XlinkPropertyNameType> getXlinkPropertyNames() {
             return eGet(adaptee, "xlinkPropertyName", List.class);
         }
@@ -102,17 +127,21 @@ public abstract class Query extends RequestObject {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public List<QName> getTypeNames() {
             return eGet(adaptee, "typeNames", List.class);
         }
 
+        @Override
         public void setTypeNames(List<QName> typeNames) {
-            List l = eGet(adaptee, "typeNames", List.class);
+            @SuppressWarnings("unchecked")
+            List<QName> l = eGet(adaptee, "typeNames", List.class);
             l.clear();
             l.addAll(typeNames);
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public List<String> getAliases() {
             return eGet(adaptee, "aliases", List.class);
         }
@@ -120,12 +149,19 @@ public abstract class Query extends RequestObject {
         @Override
         public List<String> getPropertyNames() {
             // WFS 2.0 has this as a list of QNAme, drop the qualified part
+            @SuppressWarnings("unchecked")
             List<QName> propertyNames = eGet(adaptee, "abstractProjectionClause", List.class);
-            List<String> l = new ArrayList();
+            List<String> l = new ArrayList<>();
             for (QName name : propertyNames) {
                 l.add(name.getLocalPart());
             }
             return l;
+        }
+
+        @Override
+        public void setPropertyNames(List<String> names) {
+            List<QName> qnames = names.stream().map(n -> new QName(n)).collect(Collectors.toList());
+            eSet(adaptee, "abstractProjectionClause", qnames);
         }
 
         @Override
@@ -134,14 +170,20 @@ public abstract class Query extends RequestObject {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public List<SortBy> getSortBy() {
             return eGet(adaptee, "abstractSortingClause", List.class);
         }
 
         @Override
+        public void setSortBy(List<SortBy> sortBy) {
+            eSet(adaptee, "abstractSortingClause", sortBy);
+        }
+
+        @Override
         public List<XlinkPropertyNameType> getXlinkPropertyNames() {
             // no equivalent in wfs 2.0
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
     }
 }

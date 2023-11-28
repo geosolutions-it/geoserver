@@ -4,6 +4,10 @@ info:
   version: 1.0.0
   title: GeoServer Feature Types
   description: A feature type is a vector based spatial resource or data set that originates from a data store. In some cases, such as with a shapefile, a feature type has a one-to-one relationship with its data store. In other cases, such as PostGIS, the relationship of feature type to data store is many-to-one, feature types corresponding to a table in the database.
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
 host: localhost:8080
 basePath: /geoserver/rest
 schemes:
@@ -20,6 +24,8 @@ paths:
   /workspaces/{workspaceName}/datastores/{storeName}/featuretypes:
     get:           
       operationId: getFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: |
         Get a list of feature types for the workspace and datastore. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/featuretypes.xml" for XML)
       parameters:
@@ -108,9 +114,10 @@ paths:
                     ]
                   }
                 }
-
     post:
       operationId: postFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: |
         Create a new feature type. Note -  when creating a new feature type via POST, if no underlying dataset with the specified name exists an attempt will be made to create it. This will work only in cases where the underlying data format supports the creation of new types (such as a database). When creating a feature type in this manner the client should include all attribute information in the feature type representation.
       parameters:
@@ -142,12 +149,16 @@ paths:
               type: string        
     put:
       operationId: putFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: Invalid. Use POST for adding a new feature type, or PUT on an individual feature type to edit that type.  
       responses:
         405:
           description: Method not allowed.
     delete:
       operationId: deleteFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: Invalid.
       responses:
         405:
@@ -155,8 +166,10 @@ paths:
   /workspaces/{workspaceName}/featuretypes:
     get:           
       operationId: getFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: |
-        Get a list of all feature types for all datastors in the workspace. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/featuretypes.xml" for XML)
+        Get a list of all feature types for all datastores in the workspace. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/featuretypes.xml" for XML)
       parameters:
         - name: workspaceName
           in: path
@@ -238,9 +251,10 @@ paths:
                     ]
                   }
                 }
-
     post:
       operationId: postFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: |
         Create a new feature type, the feature type definition needs to reference a store. Note -  when creating a new feature type via POST, if no underlying dataset with the specified name exists an attempt will be made to create it. This will work only in cases where the underlying data format supports the creation of new types (such as a database). When creating a feature type in this manner the client should include all attribute information in the feature type representation.
       parameters:
@@ -267,19 +281,26 @@ paths:
               type: string        
     put:
       operationId: putFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: Invalid. Use POST for adding a new feature type, or PUT on an individual feature type to edit that type.  
       responses:
         405:
           description: Method not allowed.
     delete:
       operationId: deleteFeatureTypes
+      tags:
+       - "FeatureTypes"
       description: Invalid.
       responses:
         405:
           description: Method not allowed.
+          
   /workspaces/{workspaceName}/datastores/{storeName}/featuretypes/{featureTypeName}:
     get:    
       operationId: getFeatureType
+      tags:
+       - "FeatureTypes"
       description:  Get an individual feature type
       produces:
         - text/html
@@ -400,6 +421,16 @@ paths:
                       {
                         "@key": "dirName",
                         "$": "DS_poi_poi"
+                      },
+                      {
+                        "@key": "time",
+                        "dimensionInfo": {
+                          "enabled": true,
+                          "attribute": "time",
+                          "presentation": "DISCRETE_INTERVAL",
+                          "startValue": "2020-05-01T00:00:00Z",
+                          "endValue": "2021-06-01T00:00:00Z"
+                        }
                       }
                     ]
                   },
@@ -517,8 +548,11 @@ paths:
                             <entry key="cacheAgeMax">3000</entry>
                             <entry key="time">
                                   <dimensionInfo>
-                                          <enabled>false</enabled>
-                                          <defaultValue/>
+                                          <enabled>true</enabled>
+                                          <attribute>time</attribute>
+                                          <presentation>DISCRETE_INTERVAL</presentation>
+                                          <startValue>2020-05-01T00:00:00Z</startValue>
+                                          <endValue>2021-06-01T00:00:00Z</endValue>
                                   </dimensionInfo>
                             </entry>
                             <entry key="cachingEnabled">true</entry>
@@ -577,12 +611,16 @@ paths:
     
     post:
       operationId: postFeatureType
+      tags:
+       - "FeatureTypes"
       description: Invalid. Use POST on the /featuretypes endpoint to add a new feature type, or PUT on an individual feature type to edit that type.
       responses:
         405:
           description: Method not allowed.
     put:
       operationId: putFeatureType
+      tags:
+       - "FeatureTypes"
       description: Update an individual feature type
       consumes:        
         - application/xml
@@ -607,7 +645,7 @@ paths:
           type: string
         - name: recalculate
           in: query
-          description: Specifies whether to recalculate any bounding boxes for a feature type. Some properties of feature types are automatically recalculated when necessary. In particular, the native bounding box is recalculated when the projection or projection policy are changed, and the lat/lon bounding box is recalculated when the native bounding box is recalculated, or when a new native bounding box is explicitly provided in the request. (The native and lat/lon bounding boxes are not automatically recalculated when they are explicitly included in the request.) In addition, the client may explicitly request a fixed set of fields to calculate, by including a comma-separated list of their names in the recalculate parameter.  The empty parameter 'recalculate=' is useful avoid slow recalculation when operating against large datasets as 'recalculate=' avoids calculating any fields, regardless of any changes to projection, projection policy, etc. The nativebbox parameter 'recalculate=nativebbox' is used recalculates the native bounding box, while avoiding recalculating the lat/lon bounding box. Recalculate parameters can be used in together - 'recalculate=nativebbox,latlonbbox' can be used after a bulk import to  to recalculates both the native bounding box and the lat/lon bounding box.
+          description: Specifies whether to recalculate properties for a feature type. Some properties of feature types are automatically recalculated when necessary. In particular, the native bounding box is recalculated when the projection or projection policy are changed, and the lat/lon bounding box is recalculated when the native bounding box is recalculated, or when a new native bounding box is explicitly provided in the request. (The native and lat/lon bounding boxes are not automatically recalculated when they are explicitly included in the request.) In addition, the client may explicitly request a fixed set of fields to calculate, by including a comma-separated list of their names in the recalculate parameter.  The empty parameter 'recalculate=' is useful avoid slow recalculation when operating against large datasets as 'recalculate=' avoids calculating any fields, regardless of any changes to projection, projection policy, etc. The nativebbox parameter 'recalculate=nativebbox' is used recalculates the native bounding box, while avoiding recalculating the lat/lon bounding box. Recalculate parameters can be used in together - 'recalculate=nativebbox,latlonbbox' can be used after a bulk import to recalculate both the native bounding box and the lat/lon bounding box. Finally, 'recalculate=attributes' can be  used to reset the attributes and reload them from the original vector source. Pay attention to its usage, if attributes were explicity configured to perform attribute selection, renaming, and other transformations, such configuration will be lost, resetting the feature type to the list of attributes found in the vector data source. 
           required: false
           type: array
           collectionFormat: csv
@@ -627,6 +665,8 @@ paths:
           description: The feature type was successfully updated.
     delete:
       operationId: deleteFeatureType
+      tags:
+       - "FeatureTypes"
       description: Delete a feature type (optionally recursively deleting layers).
       parameters:
         - name: workspaceName
@@ -657,6 +697,8 @@ paths:
   /workspaces/{workspaceName}/featuretypes/{featureTypeName}:
     get:    
       operationId: getFeatureType
+      tags:
+       - "FeatureTypes"
       description:  Get an individual feature type in the default data store for the workspace
       produces:
         - text/html
@@ -949,12 +991,16 @@ paths:
     
     post:
       operationId: postFeatureType
+      tags:
+       - "FeatureTypes"
       description: Invalid. Use POST on the /featuretypes endpoint to add a new feature type, or PUT on an individual feature type to edit that type.
       responses:
         405:
           description: Method not allowed.
     put:
       operationId: putFeatureType
+      tags:
+       - "FeatureTypes"
       description: Update an individual feature type in the default data store for the workspace
       consumes:        
         - application/xml
@@ -974,7 +1020,7 @@ paths:
           type: string
         - name: recalculate
           in: query
-          description: Specifies whether to recalculate any bounding boxes for a feature type. Some properties of feature types are automatically recalculated when necessary. In particular, the native bounding box is recalculated when the projection or projection policy are changed, and the lat/lon bounding box is recalculated when the native bounding box is recalculated, or when a new native bounding box is explicitly provided in the request. (The native and lat/lon bounding boxes are not automatically recalculated when they are explicitly included in the request.) In addition, the client may explicitly request a fixed set of fields to calculate, by including a comma-separated list of their names in the recalculate parameter.  The empty parameter 'recalculate=' is useful avoid slow recalculation when operating against large datasets as 'recalculate=' avoids calculating any fields, regardless of any changes to projection, projection policy, etc. The nativebbox parameter 'recalculate=nativebbox' is used recalculates the native bounding box, while avoiding recalculating the lat/lon bounding box. Recalculate parameters can be used in together - 'recalculate=nativebbox,latlonbbox' can be used after a bulk import to  to recalculates both the native bounding box and the lat/lon bounding box.
+          description: Specifies whether to recalculate any bounding boxes for a feature type. Some properties of feature types are automatically recalculated when necessary. In particular, the native bounding box is recalculated when the projection or projection policy are changed, and the lat/lon bounding box is recalculated when the native bounding box is recalculated, or when a new native bounding box is explicitly provided in the request. (The native and lat/lon bounding boxes are not automatically recalculated when they are explicitly included in the request.) In addition, the client may explicitly request a fixed set of fields to calculate, by including a comma-separated list of their names in the recalculate parameter.  The empty parameter 'recalculate=' is useful avoid slow recalculation when operating against large datasets as 'recalculate=' avoids calculating any fields, regardless of any changes to projection, projection policy, etc. The nativebbox parameter 'recalculate=nativebbox' is used recalculates the native bounding box, while avoiding recalculating the lat/lon bounding box. Recalculate parameters can be used in together - 'recalculate=nativebbox,latlonbbox' can be used after a bulk import to recalculate both the native bounding box and the lat/lon bounding box.
           required: false
           type: array
           collectionFormat: csv
@@ -994,6 +1040,8 @@ paths:
           description: The feature type was successfully updated.
     delete:
       operationId: deleteFeatureType
+      tags:
+       - "FeatureTypes"
       description: Delete a feature type in the default data store for the workspace (optionally recursively deleting layers).
       parameters:
         - name: workspaceName
@@ -1015,6 +1063,101 @@ paths:
       responses:
         200:
           description: The feature type was successfully deleted.
+          
+  /workspaces/{workspaceName}/datastores/{storeName}/featuretypes/{featureTypeName}/reset:
+    put:
+      operationId: putFeatureTypeReset
+      tags:
+        - "FeatureTypes"
+      summary: Reset the caches related to this specific feature type.
+      description: Resets caches for this feature type. This operation is used to force GeoServer to drop cached feature type structures, and eventually re-compute them the next time it is needed by a request. This is useful as both GeoServer and the underlying data store can keep state information about a feature type attributes. Warning, if an explicit list of attributes is configured in the feature type, to support attribute selection, renaming, data type conversion and calculation of new attributes, the reset itself won't change such configuration, an explicit PUT on the feature type resource is required.
+      parameters:
+        - name: workspaceName
+          in: path
+          type: string
+          required: true
+          description: The name of the workspace containing the data store.
+        - name: storeName
+          in: path
+          required: true
+          description: The name of the data store.
+          type: string
+        - name: featureTypeName
+          in: path
+          description: The name of the feature type
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+    post:
+      operationId: postFeatureTypeReset
+      tags:
+        - "FeatureTypes"
+      summary: Reset the caches related to this specific feature type
+      description: Resets caches for this feature type. This operation is used to force GeoServer to drop cached feature type structures, and eventually re-compute them the next time it is needed by a request. This is useful as both GeoServer and the underlying data store can keep state information about a feature type attributes. Warning, if an explicit list of attributes is configured in the feature type, to support attribute selection, renaming, data type conversion and calculation of new attributes, the reset itself won't change such configuration, an explicit PUT on the feature type resource is required.
+      parameters:
+        - name: workspaceName
+          in: path
+          type: string
+          required: true
+          description: The name of the workspace containing the data store.
+        - name: storeName
+          in: path
+          required: true
+          description: The name of the data store.
+          type: string
+        - name: featureTypeName
+          in: path
+          description: The name of the feature type
+          required: true
+          type: string          
+      responses:
+        200:
+          description: OK
+
+
+  /workspaces/{workspaceName}/featuretypes/{featureTypeName}/reset:
+    put:
+      operationId: putFeatureTypeReset
+      tags:
+        - "FeatureTypes"
+      summary: Reset the caches related to this specific feature type.
+      description: Resets caches for this feature type. This operation is used to force GeoServer to drop cached feature type structures, and eventually re-compute them the next time it is needed by a request. This is useful as both GeoServer and the underlying data store can keep state information about a feature type attributes. Warning, if an explicit list of attributes is configured in the feature type, to support attribute selection, renaming, data type conversion and calculation of new attributes, the reset itself won't change such configuration, an explicit PUT on the feature type resource is required.
+      parameters:
+        - name: workspaceName
+          in: path
+          type: string
+          required: true
+          description: The name of the workspace containing the data store.
+        - name: featureTypeName
+          in: path
+          description: The name of the feature type
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+    post:
+      operationId: postFeatureTypeReset
+      tags:
+        - "FeatureTypes"
+      summary: Reset the caches related to this specific feature type
+      description: Resets caches for this feature type. This operation is used to force GeoServer to drop cached feature type structures, and eventually re-compute them the next time it is needed by a request. This is useful as both GeoServer and the underlying data store can keep state information about a feature type attributes. Warning, if an explicit list of attributes is configured in the feature type, to support attribute selection, renaming, data type conversion and calculation of new attributes, the reset itself won't change such configuration, an explicit PUT on the feature type resource is required.
+      parameters:
+        - name: workspaceName
+          in: path
+          type: string
+          required: true
+          description: The name of the workspace containing the data store.
+        - name: featureTypeName
+          in: path
+          description: The name of the feature type
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
 
 definitions:
   FeatureTypeInfo:
@@ -1161,7 +1304,7 @@ definitions:
         description: The number of decimal places to use when encoding floating point numbers from data of this feature type.
       responseSRS:
         type: object
-        description: The srs's that the WFS service will advertise in the capabilities document for this feature type (overriding the global WFS settings).
+        description: The SRSs that the WFS service will advertise in the capabilities document for this feature type (overriding the global WFS settings).
         properties:
           string:
             type: string

@@ -7,7 +7,6 @@ package org.geoserver.web.wicket;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
@@ -38,6 +37,7 @@ import org.apache.wicket.model.LoadableDetachableModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.ResourceModel;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 
 /**
@@ -55,6 +55,13 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     private static final long serialVersionUID = -5275268446479549108L;
 
     private static final int DEFAULT_ITEMS_PER_PAGE = 25;
+
+    public static final String FILTER_PARAM = "filter";
+
+    /** METADATA MAP inside user session that remembers the filters user input inside the form */
+    public static final String FILTER_INPUTS = "userInput";
+
+    public static final String SORT_INPUTS = "userSort";
 
     // filter form components
     TextField<String> filter;
@@ -77,6 +84,8 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     CheckBox selectAll;
 
     AjaxButton hiddenSubmit;
+
+    AjaxLink clearFilter;
 
     boolean sortable = true;
 
@@ -103,6 +112,36 @@ public abstract class GeoServerTablePanel<T> extends Panel {
             final boolean selectable) {
         super(id);
         this.dataProvider = dataProvider;
+        // check if the request came from left menu link
+        // if so reset any previously used filter and treat it as a REST
+        // if param not found, treat as keep the filter intact
+        Boolean keepFilter =
+                getRequest().getRequestParameters().getParameterValue(FILTER_PARAM).toBoolean(true);
+
+        String previousInput = loadPreviousInput();
+        if (previousInput != null && keepFilter) {
+            // setting the previous filter UP FRONT
+            if (!previousInput.isEmpty()) {
+                dataProvider.setKeywords(loadPreviousInput().split("\\s+"));
+            }
+        } else if (!keepFilter) {
+            // panel was invoke from Left Grid menu
+            // clear the filter from session
+            // previousInput to null to hide clear button
+            clearFilterFromSession();
+            previousInput = null;
+        }
+
+        SortParam<Object> previousSort = loadPreviousSort();
+
+        if (previousSort != null && keepFilter) dataProvider.setSort(previousSort);
+        else if (!keepFilter) {
+            // panel was invoke from Left Grid menu
+            // clear the filter from session
+            // previousInput to null to hide clear button
+            clearSortFromSession();
+            previousInput = null;
+        }
 
         // prepare the selection array
         selection = new boolean[DEFAULT_ITEMS_PER_PAGE];
@@ -115,7 +154,7 @@ public abstract class GeoServerTablePanel<T> extends Panel {
         filterForm.setOutputMarkupId(true);
         add(filterForm);
         filter =
-                new TextField<String>("filter", new Model<String>()) {
+                new TextField<String>("filter", new Model<>()) {
                     private static final long serialVersionUID = -1252520208030081584L;
 
                     @Override
@@ -126,6 +165,18 @@ public abstract class GeoServerTablePanel<T> extends Panel {
                                 "if(event.keyCode == 13) {document.getElementById('"
                                         + hiddenSubmit.getMarkupId()
                                         + "').click();return false;}");
+                    }
+
+                    @Override
+                    protected void onBeforeRender() {
+                        super.onBeforeRender();
+
+                        String previousInput = loadPreviousInput();
+                        if (previousInput != null)
+                            if (!previousInput.isEmpty()) {
+                                this.setModelObject(previousInput);
+                                // dataProvider.setKeywords(previousInput.split("\\s+"));
+                            }
                     }
                 };
         filterForm.add(filter);
@@ -138,6 +189,9 @@ public abstract class GeoServerTablePanel<T> extends Panel {
         filterForm.add(hiddenSubmit = hiddenSubmit());
         filterForm.setDefaultButton(hiddenSubmit);
 
+        clearFilter = getClearFilterLink(previousInput);
+        filterForm.add(clearFilter);
+
         // setup the table
         listContainer.setOutputMarkupId(true);
         add(listContainer);
@@ -147,7 +201,7 @@ public abstract class GeoServerTablePanel<T> extends Panel {
 
                     @Override
                     protected Item<T> newItem(String id, int index, IModel<T> model) {
-                        OddEvenItem<T> item = new OddEvenItem<T>(id, index, model);
+                        OddEvenItem<T> item = new OddEvenItem<>(id, index, model);
                         item.setOutputMarkupId(true);
                         return item;
                     }
@@ -195,7 +249,7 @@ public abstract class GeoServerTablePanel<T> extends Panel {
 
             @Override
             protected void populateItem(ListItem<Property<T>> item) {
-                Property<T> property = (Property<T>) item.getModelObject();
+                Property<T> property = item.getModelObject();
 
                 // build a sortable link if the property is sortable, a label otherwise
                 IModel<String> titleModel = getPropertyTitle(property);
@@ -216,11 +270,11 @@ public abstract class GeoServerTablePanel<T> extends Panel {
             final GeoServerDataProvider<T> dataProvider, Item<T> item, final IModel<T> itemModel) {
         // make sure we don't serialize the list, but get it fresh from the dataProvider,
         // to avoid serialization issues seen in GEOS-8273
-        IModel propertyList =
-                new LoadableDetachableModel() {
+        IModel<List<Property<T>>> propertyList =
+                new LoadableDetachableModel<List<Property<T>>>() {
 
                     @Override
-                    protected Object load() {
+                    protected List<Property<T>> load() {
                         return dataProvider.getVisibleProperties();
                     }
                 };
@@ -270,11 +324,7 @@ public abstract class GeoServerTablePanel<T> extends Panel {
         dataView.setItemReuseStrategy(strategy);
     }
 
-    /**
-     * Whether this table will have sortable headers, or not
-     *
-     * @param sortable
-     */
+    /** Whether this table will have sortable headers, or not */
     public void setSortable(boolean sortable) {
         this.sortable = sortable;
     }
@@ -297,8 +347,6 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     /**
      * Called each time selection checkbox changes state due to a user action. By default it does
      * nothing, subclasses can implement this to provide extra behavior
-     *
-     * @param target
      */
     protected void onSelectionUpdate(AjaxRequestTarget target) {
         // by default do nothing
@@ -307,8 +355,6 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     /**
      * Returns a model for this property title. Default behaviour is to lookup for a resource name
      * <page>.th.<propertyName>
-     *
-     * @param property
      */
     protected IModel<String> getPropertyTitle(Property<T> property) {
         ResourceModel resMod = new ResourceModel("th." + property.getName(), property.getName());
@@ -329,10 +375,9 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     /** Returns the items that have been selected by the user */
     @SuppressWarnings("unchecked")
     public List<T> getSelection() {
-        List<T> result = new ArrayList<T>();
+        List<T> result = new ArrayList<>();
         int i = 0;
-        for (Iterator<Component> it = dataView.iterator(); it.hasNext(); ) {
-            Component item = it.next();
+        for (Component item : dataView) {
             if (selection[i]) {
                 result.add((T) item.getDefaultModelObject());
             }
@@ -342,7 +387,7 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     }
 
     CheckBox selectAllCheckbox() {
-        CheckBox sa = new CheckBox("selectAll", new PropertyModel<Boolean>(this, "selectAllValue"));
+        CheckBox sa = new CheckBox("selectAll", new PropertyModel<>(this, "selectAllValue"));
         sa.setOutputMarkupId(true);
         sa.add(
                 new AjaxFormComponentUpdatingBehavior("click") {
@@ -386,11 +431,7 @@ public abstract class GeoServerTablePanel<T> extends Panel {
         return cb;
     }
 
-    /**
-     * When set to false, will prevent the selection checkboxes from showing up
-     *
-     * @param selectable
-     */
+    /** When set to false, will prevent the selection checkboxes from showing up */
     public void setSelectable(boolean selectable) {
         this.selectable = selectable;
         selectAll.setVisible(selectable);
@@ -416,9 +457,9 @@ public abstract class GeoServerTablePanel<T> extends Panel {
     /** Selects a single item by object. */
     public void selectObject(T object) {
         int i = 0;
-        for (Iterator<Component> it = dataView.iterator(); it.hasNext(); ) {
+        for (Component component : dataView) {
             @SuppressWarnings("unchecked")
-            Item<T> item = (Item<T>) it.next();
+            Item<T> item = (Item<T>) component;
             if (object.equals(item.getModelObject())) {
                 selection[i] = true;
                 return;
@@ -462,15 +503,39 @@ public abstract class GeoServerTablePanel<T> extends Panel {
             @Override
             protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
                 updateFilter(target, filter.getDefaultModelObjectAsString());
+                rememeberFilter();
             }
         };
+    }
+
+    /** The hidden button that will submit the form when the user presses enter in the text field */
+    AjaxLink getClearFilterLink(String previousInput) {
+        AjaxLink clearButton =
+                new AjaxLink("clear") {
+
+                    static final long serialVersionUID = 5334592790005438960L;
+
+                    @Override
+                    public void onClick(AjaxRequestTarget target) {
+                        updateFilter(target, "");
+                        filter.setModelObject("");
+                        rememeberFilter();
+                        clearFilter.setVisible(false);
+                        target.add(filterForm);
+                    }
+                };
+        // decide if it should be visible
+        // null and empty checks
+        boolean visible = false;
+        if (previousInput != null) visible = !previousInput.isEmpty();
+
+        clearButton.setVisible(visible);
+        return clearButton;
     }
 
     /**
      * Number of visible items per page, should the default {@link #DEFAULT_ITEMS_PER_PAGE} not
      * satisfy the programmer needs. Calling this will wipe out the selection
-     *
-     * @param items
      */
     public void setItemsPerPage(int items) {
         dataView.setItemsPerPage(items);
@@ -501,13 +566,14 @@ public abstract class GeoServerTablePanel<T> extends Panel {
                 @SuppressWarnings("unchecked")
                 Property<T> property = (Property<T>) getModelObject();
                 if (currSort == null || !property.getName().equals(currSort.getProperty())) {
-                    dataProvider.setSort(new SortParam<Object>(property.getName(), true));
+                    dataProvider.setSort(new SortParam<>(property.getName(), true));
                 } else {
                     dataProvider.setSort(
-                            new SortParam<Object>(property.getName(), !currSort.isAscending()));
+                            new SortParam<>(property.getName(), !currSort.isAscending()));
                 }
                 setSelection(false);
                 target.add(listContainer);
+                rememeberSort();
             }
         };
     }
@@ -530,10 +596,12 @@ public abstract class GeoServerTablePanel<T> extends Panel {
         navigatorTop.updateMatched();
         navigatorBottom.updateMatched();
         setSelection(false);
+        clearFilter.setVisible(true);
 
         target.add(listContainer);
         target.add(navigatorTop);
         target.add(navigatorBottom);
+        target.add(filterForm);
     }
 
     /** Sets back to the first page, clears the selection and */
@@ -561,9 +629,6 @@ public abstract class GeoServerTablePanel<T> extends Panel {
      * Returns the component that will represent a property of a table item. Usually it should be a
      * label, or a link, but you can return pretty much everything. The subclass can also return
      * null, in that case a label will be created
-     *
-     * @param itemModel
-     * @param property
      */
     protected abstract Component getComponentForProperty(
             String id, IModel<T> itemModel, Property<T> property);
@@ -702,14 +767,17 @@ public abstract class GeoServerTablePanel<T> extends Panel {
             validateSelectionIndex(index);
         }
 
+        @Override
         public Boolean getObject() {
             return selection[index];
         }
 
+        @Override
         public void setObject(Boolean object) {
             selection[index] = object.booleanValue();
         }
 
+        @Override
         public void detach() {
             // nothing to do
         }
@@ -719,8 +787,6 @@ public abstract class GeoServerTablePanel<T> extends Panel {
      * Sets the table into pageable/non pageable mode. The default is pageable, in non pageable mode
      * both pagers will be hidden and the number of items per page is set to the DataView default
      * (Integer.MAX_VALUE)
-     *
-     * @param pageable
      */
     public void setPageable(boolean pageable) {
         if (!pageable) {
@@ -734,5 +800,69 @@ public abstract class GeoServerTablePanel<T> extends Panel {
             dataView.setItemsPerPage(DEFAULT_ITEMS_PER_PAGE);
             selection = new boolean[DEFAULT_ITEMS_PER_PAGE];
         }
+    }
+
+    private void rememeberFilter() {
+        MetadataMap filters = getMetaDataMapFromSession(FILTER_INPUTS);
+        // if empty ignore and clear any previously saved filter against this dataprovider
+        if (filter.getDefaultModelObjectAsString().isEmpty() && filters != null) {
+            // clear
+            filters.put(dataProvider.getClass().getName(), null);
+            return;
+        }
+        // create and populate user session
+        if (filters == null) {
+            filters = new MetadataMap();
+            getSession().setAttribute(FILTER_INPUTS, filters);
+        }
+
+        filters.put(dataProvider.getClass().getName(), filter.getDefaultModelObjectAsString());
+    }
+
+    private void rememeberSort() {
+        MetadataMap sorts = getMetaDataMapFromSession(SORT_INPUTS);
+
+        // create and populate user session
+        if (sorts == null) {
+            sorts = new MetadataMap();
+            getSession().setAttribute(SORT_INPUTS, sorts);
+        }
+
+        sorts.put(dataProvider.getClass().getName(), dataProvider.getSort());
+    }
+
+    private String loadPreviousInput() {
+        MetadataMap filters = getMetaDataMapFromSession(FILTER_INPUTS);
+        if (filters == null) return null;
+        else if (filters.get(dataProvider.getClass().getName(), String.class) == null) return null;
+        return filters.get(dataProvider.getClass().getName(), String.class);
+    }
+
+    private SortParam<Object> loadPreviousSort() {
+        MetadataMap filters = getMetaDataMapFromSession(SORT_INPUTS);
+        if (filters == null) return null;
+        else if (filters.get(dataProvider.getClass().getName(), SortParam.class) == null)
+            return null;
+        @SuppressWarnings("unchecked")
+        SortParam<Object> result = filters.get(dataProvider.getClass().getName(), SortParam.class);
+        return result;
+    }
+
+    private void clearFilterFromSession() {
+        MetadataMap filters = getMetaDataMapFromSession(FILTER_INPUTS);
+        // if empty ignore and clear any previously saved filter against this dataprovider
+        if (filters != null) filters.put(dataProvider.getClass().getName(), null);
+        dataProvider.setKeywords(null);
+    }
+
+    private void clearSortFromSession() {
+        MetadataMap sorts = getMetaDataMapFromSession(SORT_INPUTS);
+        // if empty ignore and clear any previously saved filter against this dataprovider
+        if (sorts != null) sorts.put(dataProvider.getClass().getName(), null);
+        dataProvider.setKeywords(null);
+    }
+
+    private MetadataMap getMetaDataMapFromSession(String key) {
+        return (MetadataMap) getSession().getAttribute(key);
     }
 }

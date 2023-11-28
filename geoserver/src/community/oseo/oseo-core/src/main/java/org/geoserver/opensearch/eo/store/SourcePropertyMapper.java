@@ -5,6 +5,7 @@
 package org.geoserver.opensearch.eo.store;
 
 import org.opengis.feature.type.FeatureType;
+import org.opengis.feature.type.Name;
 import org.opengis.feature.type.PropertyDescriptor;
 
 /**
@@ -23,9 +24,21 @@ class SourcePropertyMapper {
     }
 
     PropertyDescriptor getDescriptor(String name) {
-        for (PropertyDescriptor pd : schema.getDescriptors()) {
-            if (name.equals(pd.getName().getLocalPart())) {
-                return pd;
+        if (name.contains(":")) {
+            String[] split = name.split(":");
+            // TODO: find a way to make use of the prefix, or just get a full namespace...
+            String prefix = split[0];
+            String localName = split[1];
+            for (PropertyDescriptor pd : schema.getDescriptors()) {
+                if (localName.equals(pd.getName().getLocalPart())) {
+                    return pd;
+                }
+            }
+        } else {
+            for (PropertyDescriptor pd : schema.getDescriptors()) {
+                if (name.equals(pd.getName().getLocalPart())) {
+                    return pd;
+                }
             }
         }
 
@@ -33,6 +46,22 @@ class SourcePropertyMapper {
     }
 
     String getSourceName(String name) {
+        PropertyDescriptor pd = getDescriptor(name);
+        if (pd == null) {
+            return null;
+        } else {
+            return (String) pd.getUserData().get(JDBCOpenSearchAccess.SOURCE_ATTRIBUTE);
+        }
+    }
+
+    PropertyDescriptor getDescriptor(Name name) {
+        for (PropertyDescriptor pd : schema.getDescriptors()) {
+            if (name.equals(pd.getName())) return pd;
+        }
+        return null;
+    }
+
+    String getSourceName(Name name) {
         PropertyDescriptor pd = getDescriptor(name);
         if (pd == null) {
             return null;

@@ -9,14 +9,12 @@ The JDBC store uses a conventional relational structure, depicted in the followi
 
 So a ``collection`` has its own primary search attributes, as well as:
 
-* A ISO metadata document as large associated text
 * Zero or more OGC links pointing to where the collection is published
 * Layer publishing information (for auto-generation of mosaic, layer and eventual coverage view in case the actual data resides locally)
 * One or more products
 
 A ``product`` in turn is associated to:
 
-* A O&M metadata document as large associated text
 * A thumbnail image, in PNG or JPEG format
 * Zero or more OGC links pointing to where the product is published
 
@@ -55,7 +53,9 @@ a more up to date version of it):
       "eoWavelength" int,
       "eoSecurityConstraints" boolean,
       "eoDissemination" varchar,
-      "eoAcquisitionStation" varchar
+      "eoAcquisitionStation" varchar,
+      "queryables" varchar[],
+      "workspaces" varchar[]
     );
 
 Most of the attributes should be rather self-explanatory to those familiar with OGC Earth Observation terminology.
@@ -66,16 +66,16 @@ Specific attributes notes:
 
 * A ``primary`` collection is normally linked to a particular satellite/sensor and contains its own products.
   Setting "primary" to false makes the collection "virtual" and the ``productCQLFilter`` field should be filled with
-  a CQL filter that will collect all the products in the collection (warning, virtual collections are largerly
+  a CQL filter that will collect all the products in the collection (warning, virtual collections are largely
   untested at the moment)
 * The ``footprint`` field is used for spatial searches, while ``timeStart`` and ``timeEnd`` are used for
   temporal ones
 * The ``htmlDescription`` drives the generation of the visible part of the Atom OpenSearch response, see the
   dedicated section later to learn more about filling it
-
-The ``collection_metadata`` table contains the ISO metadata for the given collection.
-The OpenSearch module has no understanding of its contents, it will simply return it as is, allowing for
-extra flexibility but also moving the responsibility for correctness checks completely to the author.
+* The ``workspaces`` field is an array used to specify the GeoServer workspaces that the collection is associated with.
+  If the field is left empty or null, or if the array contains a null value, the collection will be associated with all
+  workspaces.  If the field is populated, the collection will only be associated with the specified workspaces and will
+  be hidden from workspace specific STAC calls.
 
 The ``collection_ogclink`` table contains the OGC links towards the services providing visualization and
 download access to the collection contents. See the "OGC links" section to gather more information about it.
@@ -153,27 +153,11 @@ Notes on the attributes:
   Synthesis and Systematic Product. New attributes can be added based on the above prefixes (at the time
   of writing only optical and sar attributes have been tested)
 
-The ``product_metadata`` table contains the O&M metadata for the given product.
-The OpenSearch module has no understanding of its contents, it will simply return it as is, allowing for
-extra flexibility but also moving the responsibility for correctness checks completely to the author.
-
 The ``product_thumb`` table contains the product thumbnail, in PNG or JPEG format, for display
 in the OpenSearch Atom output.
 
 The ``product_ogclink`` table contains the OGC links towards the services providing visualization and
 download access to the collection contents. See the "OGC links" section to gather more information about it.
-
-The ``htmlDescription`` field
-------------------------------
-
-The ``htmlDescription`` is used to fill the user visible part of a OpenSearch ATOM response.
-The contents are completely freeform, but some variable can be put in the HTML that GeoServer will replace:
-
-* ``${QUICKLOOK_URL}`` points to the product quicklook (at the time of writing, same as the thumbnail)
-* ``${THUMB_URL}`` points to the product thumbnail
-* ``${ATOM_URL}`` points to the specific Atom record at hand (either the collection or product one)
-* ``${OM_METADATA_URL}`` points to the product O&M metadata
-* ``${ISO_METADATA_LINK}`` points to the ISO metadata link
 
 OGC links
 ---------
@@ -246,7 +230,7 @@ The granules associated to a product can have different topologies:
 
 * A single raster file containing all the information about the product
 * Multiple raster files splitting the products spatially in regular tiles
-* Multiple raster files splitting the product wavelenght wise
+* Multiple raster files splitting the product wavelength wise
 * A mix of the two above
 
 Notes about the columns:

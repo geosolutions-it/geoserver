@@ -86,9 +86,8 @@ public class GeoServerTemplateLoader implements TemplateLoader {
      * @param caller The "calling" class, used to look up templates based with {@link
      *     Class#getResource(String)}, may be <code>null</code>
      * @param rl The geoserver resource loader
-     * @throws IOException
      */
-    public GeoServerTemplateLoader(Class caller, GeoServerResourceLoader rl) throws IOException {
+    public GeoServerTemplateLoader(Class<?> caller, GeoServerResourceLoader rl) throws IOException {
         this(
                 caller,
                 rl == null
@@ -97,7 +96,7 @@ public class GeoServerTemplateLoader implements TemplateLoader {
                         : new GeoServerDataDirectory(rl));
     }
 
-    public GeoServerTemplateLoader(Class caller, GeoServerDataDirectory dd) throws IOException {
+    public GeoServerTemplateLoader(Class<?> caller, GeoServerDataDirectory dd) throws IOException {
         this.dd = dd;
 
         // create a file template loader to delegate to
@@ -133,6 +132,7 @@ public class GeoServerTemplateLoader implements TemplateLoader {
         this.workspace = workspace;
     }
 
+    @Override
     public Object findTemplateSource(String path) throws IOException {
         File template = null;
 
@@ -244,6 +244,7 @@ public class GeoServerTemplateLoader implements TemplateLoader {
         return null;
     }
 
+    @Override
     public long getLastModified(Object source) {
         if (source instanceof File) {
             // loaded from file
@@ -256,6 +257,7 @@ public class GeoServerTemplateLoader implements TemplateLoader {
         }
     }
 
+    @Override
     public Reader getReader(Object source, String encoding) throws IOException {
         if (source instanceof File) {
             // loaded from file
@@ -268,6 +270,7 @@ public class GeoServerTemplateLoader implements TemplateLoader {
         }
     }
 
+    @Override
     public void closeTemplateSource(Object source) throws IOException {
         if (source instanceof File) {
             fileTemplateLoader.closeTemplateSource(source);

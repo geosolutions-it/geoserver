@@ -47,13 +47,7 @@ public class IOUtils {
         // singleton
     }
 
-    /**
-     * Copies the provided input stream onto a file
-     *
-     * @param from
-     * @param to
-     * @throws IOException
-     */
+    /** Copies the provided input stream onto a file */
     public static void copy(InputStream from, File to) throws IOException {
         copy(from, new FileOutputStream(to), DEFAULT_BUFFER_SIZE);
     }
@@ -62,10 +56,6 @@ public class IOUtils {
      * Copies the provided input stream onto an outputstream.
      *
      * <p>Please note that both from input stream and out output stream will be closed.
-     *
-     * @param in
-     * @param to
-     * @throws IOException
      */
     public static void copy(InputStream in, OutputStream out) throws IOException {
         copy(in, out, DEFAULT_BUFFER_SIZE);
@@ -98,11 +88,6 @@ public class IOUtils {
      * Copies from a file to another by performing a filtering on certain specified tokens. In
      * particular, each key in the filters map will be looked up in the reader as ${key} and
      * replaced with the associated value.
-     *
-     * @param to
-     * @param filters
-     * @param reader
-     * @throws IOException
      */
     public static void filteredCopy(File from, File to, Map<String, String> filters)
             throws IOException {
@@ -133,18 +118,13 @@ public class IOUtils {
      * Copies from a reader to a file by performing a filtering on certain specified tokens. In
      * particular, each key in the filters map will be looked up in the reader as ${key} and
      * replaced with the associated value.
-     *
-     * @param to
-     * @param filters
-     * @param reader
-     * @throws IOException
      */
     public static void filteredCopy(BufferedReader from, File to, Map<String, String> filters)
             throws IOException {
         // prepare the escaped ${key} keys so that it won't be necessary to do
         // it over and over
         // while parsing the file
-        Map<String, String> escapedMap = new HashMap<String, String>();
+        Map<String, String> escapedMap = new HashMap<>();
         for (Map.Entry<String, String> entry : filters.entrySet()) {
             escapedMap.put("${" + entry.getKey() + "}", entry.getValue());
         }
@@ -163,24 +143,12 @@ public class IOUtils {
         }
     }
 
-    /**
-     * Copies the provided file onto the specified destination file
-     *
-     * @param from
-     * @param to
-     * @throws IOException
-     */
+    /** Copies the provided file onto the specified destination file */
     public static void copy(File from, File to) throws IOException {
         copy(new FileInputStream(from), to);
     }
 
-    /**
-     * Copy the contents of fromDir into toDir (if the latter is missing it will be created)
-     *
-     * @param fromDir
-     * @param toDir
-     * @throws IOException
-     */
+    /** Copy the contents of fromDir into toDir (if the latter is missing it will be created) */
     public static void deepCopy(File fromDir, File toDir) throws IOException {
         if (!fromDir.isDirectory() || !fromDir.exists())
             throw new IllegalArgumentException(
@@ -206,10 +174,6 @@ public class IOUtils {
     /**
      * Creates a directory as a child of baseDir. The directory name will be preceded by prefix and
      * followed by suffix
-     *
-     * @param basePath
-     * @param prefix
-     * @throws IOException
      */
     public static File createRandomDirectory(String baseDir, String prefix, String suffix)
             throws IOException {
@@ -241,7 +205,6 @@ public class IOUtils {
      * directory itself. For each file that cannot be deleted a warning log will be issued.
      *
      * @param directory Directory to delete
-     * @throws IOException
      * @returns true if the directory could be deleted, false otherwise
      */
     public static boolean delete(File directory) throws IOException {
@@ -347,8 +310,6 @@ public class IOUtils {
      * @param zipout The {@link ZipOutputStream} that will be populated by the files found
      * @param filter An optional filter that can be used to select only certain files. Can be null,
      *     in that case all files in the directory will be zipped
-     * @throws IOException
-     * @throws FileNotFoundException
      */
     public static void zipDirectory(
             File directory, ZipOutputStream zipout, final FilenameFilter filter)
@@ -378,15 +339,12 @@ public class IOUtils {
                         ZipEntry entry = new ZipEntry(prefix + file.getName());
                         zipout.putNextEntry(entry);
 
-                        InputStream in = new FileInputStream(file);
-                        int c;
-                        try {
+                        try (InputStream in = new FileInputStream(file)) {
+                            int c;
                             while (-1 != (c = in.read(buffer))) {
                                 zipout.write(buffer, 0, c);
                             }
                             zipout.closeEntry();
-                        } finally {
-                            in.close();
                         }
                     }
                 }
@@ -426,15 +384,14 @@ public class IOUtils {
                 continue;
             }
 
-            BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f));
+            try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(f))) {
+                int n = -1;
+                while ((n = zin.read(buffer)) != -1) {
+                    out.write(buffer, 0, n);
+                }
 
-            int n = -1;
-            while ((n = zin.read(buffer)) != -1) {
-                out.write(buffer, 0, n);
+                out.flush();
             }
-
-            out.flush();
-            out.close();
         }
     }
 
@@ -451,34 +408,23 @@ public class IOUtils {
                     continue;
                 }
 
-                InputStream stream = zipFile.getInputStream(entry);
-                FileOutputStream fos = new FileOutputStream(newFile);
-                try {
+                try (InputStream stream = zipFile.getInputStream(entry);
+                        FileOutputStream fos = new FileOutputStream(newFile)) {
                     byte[] buf = new byte[1024];
                     int len;
 
                     while ((len = stream.read(buf)) >= 0) saveCompressedStream(buf, fos, len);
-
+                    fos.flush();
                 } catch (IOException e) {
                     IOException ioe = new IOException("Not valid archive file type.");
                     ioe.initCause(e);
                     throw ioe;
-                } finally {
-                    fos.flush();
-                    fos.close();
-
-                    stream.close();
                 }
             }
         }
     }
 
-    /**
-     * @param len
-     * @param stream
-     * @param fos
-     * @throws IOException
-     */
+    /** */
     public static void saveCompressedStream(
             final byte[] buffer, final OutputStream out, final int len) throws IOException {
         try {
@@ -550,8 +496,6 @@ public class IOUtils {
      * Replacement for the now deprecated {@link
      * org.apache.commons.io.IOUtils#closeQuietly(Closeable)}, to be used only when then "quiet"
      * behavior bit is really rneeded
-     *
-     * @param closeable
      */
     public static void closeQuietly(final Closeable closeable) {
         try {

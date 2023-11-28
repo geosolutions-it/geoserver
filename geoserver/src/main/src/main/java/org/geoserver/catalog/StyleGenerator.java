@@ -36,11 +36,7 @@ public class StyleGenerator {
     /** Workspace to create styles relative to */
     private WorkspaceInfo workspace;
 
-    /**
-     * Builds a style generator with the default color ramp
-     *
-     * @param catalog
-     */
+    /** Builds a style generator with the default color ramp */
     public StyleGenerator(Catalog catalog) {
         this.catalog = catalog;
         ramp = new ColorRamp();
@@ -68,11 +64,7 @@ public class StyleGenerator {
         this.catalog = catalog;
     }
 
-    /**
-     * Set the workspace to generate styles in.
-     *
-     * @param workspace
-     */
+    /** Set the workspace to generate styles in. */
     public void setWorkspace(WorkspaceInfo workspace) {
         this.workspace = workspace;
     }
@@ -84,7 +76,6 @@ public class StyleGenerator {
      * @param featureType The FeatureType to generate the style for. Determines the style type and
      *     style name
      * @return The StyleInfo referencing the generated style
-     * @throws IOException
      */
     public StyleInfo createStyle(StyleHandler handler, FeatureTypeInfo featureType)
             throws IOException {
@@ -100,7 +91,6 @@ public class StyleGenerator {
      * @param nativeFeatureType The geotools feature type, required in cases where featureType is
      *     missing content
      * @return The StyleInfo referencing the generated style
-     * @throws IOException
      */
     public StyleInfo createStyle(
             StyleHandler handler, FeatureTypeInfo featureType, FeatureType nativeFeatureType)
@@ -110,7 +100,7 @@ public class StyleGenerator {
         GeometryDescriptor gd = nativeFeatureType.getGeometryDescriptor();
         if (gd == null) return catalog.getStyleByName(StyleInfo.DEFAULT_POINT);
 
-        Class gtype = gd.getType().getBinding();
+        Class<?> gtype = gd.getType().getBinding();
         StyleType st;
         if (LineString.class.isAssignableFrom(gtype)
                 || MultiLineString.class.isAssignableFrom(gtype)) {
@@ -135,7 +125,6 @@ public class StyleGenerator {
      * @param coverage The CoverageInfo to generate the style for. Determines the style type and
      *     style name
      * @return The StyleInfo referencing the generated style
-     * @throws IOException
      */
     public StyleInfo createStyle(StyleHandler handler, CoverageInfo coverage) throws IOException {
         return doCreateStyle(handler, StyleType.RASTER, coverage);
@@ -148,7 +137,6 @@ public class StyleGenerator {
      * @param styleType The type of template, see {@link org.geoserver.catalog.StyleType}.
      * @param layerName The name of the style/layer; used in comments.
      * @return The generated style, as a String.
-     * @throws IOException
      */
     public String generateStyle(StyleHandler handler, StyleType styleType, String layerName)
             throws IOException {
@@ -250,7 +238,7 @@ public class StyleGenerator {
             }
         }
 
-        List<Entry> entries = new ArrayList<Entry>();
+        List<Entry> entries = new ArrayList<>();
         int position;
 
         /**
@@ -259,12 +247,7 @@ public class StyleGenerator {
          */
         public ColorRamp() {}
 
-        /**
-         * Adds a name/color combination
-         *
-         * @param name
-         * @param color
-         */
+        /** Adds a name/color combination */
         public void add(String name, Color color) {
             entries.add(new Entry(name, color));
         }

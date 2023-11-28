@@ -8,7 +8,6 @@ import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import freemarker.template.ObjectWrapper;
 import freemarker.template.SimpleHash;
-import freemarker.template.TemplateModelException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,7 +15,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.catalog.CascadeDeleteVisitor;
 import org.geoserver.catalog.Catalog;
@@ -61,13 +59,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH + "/workspaces",
-    produces = {
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE,
-        MediaType.TEXT_HTML_VALUE
-    }
-)
+        path = RestBaseController.ROOT_PATH + "/workspaces",
+        produces = {
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE,
+            MediaType.TEXT_HTML_VALUE
+        })
 public class WorkspaceController extends AbstractCatalogController {
 
     private static final Logger LOGGER = Logging.getLogger(WorkspaceController.class);
@@ -99,13 +96,12 @@ public class WorkspaceController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        consumes = {
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_JSON_VALUE
-        }
-    )
+            consumes = {
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_JSON_VALUE
+            })
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<String> workspacePost(
             @RequestBody WorkspaceInfo workspace,
@@ -114,8 +110,7 @@ public class WorkspaceController extends AbstractCatalogController {
 
         if (catalog.getWorkspaceByName(workspace.getName()) != null) {
             throw new RestException(
-                    "Workspace '" + workspace.getName() + "' already exists",
-                    HttpStatus.UNAUTHORIZED);
+                    "Workspace '" + workspace.getName() + "' already exists", HttpStatus.CONFLICT);
         }
         catalog.add(workspace);
         String name = workspace.getName();
@@ -148,14 +143,13 @@ public class WorkspaceController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = "/{workspaceName}",
-        consumes = {
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_JSON_VALUE
-        }
-    )
+            value = "/{workspaceName}",
+            consumes = {
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_JSON_VALUE
+            })
     public void workspacePut(
             @RequestBody WorkspaceInfo workspace,
             @PathVariable String workspaceName,
@@ -217,9 +211,8 @@ public class WorkspaceController extends AbstractCatalogController {
     }
 
     private UriComponents getUriComponents(String name, UriComponentsBuilder builder) {
-        UriComponents uriComponents;
 
-        uriComponents = builder.path("/workspaces/{id}").buildAndExpand(name);
+        UriComponents uriComponents = builder.path("/workspaces/{id}").buildAndExpand(name);
 
         return uriComponents;
     }
@@ -231,11 +224,7 @@ public class WorkspaceController extends AbstractCatalogController {
             protected void wrapInternal(
                     Map<String, Object> properties, SimpleHash model, WorkspaceInfo wkspace) {
                 if (properties == null) {
-                    try {
-                        properties = model.toMap();
-                    } catch (TemplateModelException e) {
-                        LOGGER.log(Level.SEVERE, e.getMessage(), e);
-                    }
+                    properties = hashToProperties(model);
                 }
 
                 collectSources(DataStoreInfo.class, "dataStores", properties, wkspace);
@@ -269,8 +258,7 @@ public class WorkspaceController extends AbstractCatalogController {
             }
 
             @Override
-            protected void wrapInternal(
-                    SimpleHash model, @SuppressWarnings("rawtypes") Collection object) {
+            protected void wrapInternal(SimpleHash model, Collection object) {
                 for (Object w : object) {
                     WorkspaceInfo wk = (WorkspaceInfo) w;
                     wrapInternal(null, model, wk);

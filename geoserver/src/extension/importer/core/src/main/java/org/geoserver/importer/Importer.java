@@ -12,10 +12,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -60,6 +61,8 @@ import org.geoserver.importer.transform.RasterTransformChain;
 import org.geoserver.importer.transform.ReprojectTransform;
 import org.geoserver.importer.transform.TransformChain;
 import org.geoserver.importer.transform.VectorTransformChain;
+import org.geoserver.logging.LoggingUtils;
+import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.platform.ContextLoadedEvent;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -68,17 +71,24 @@ import org.geoserver.platform.resource.Resources;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.util.EntityResolverProvider;
 import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.HarvestedSource;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
+import org.geotools.data.CloseableIterator;
 import org.geotools.data.DataStore;
+import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultTransaction;
 import org.geotools.data.FeatureReader;
 import org.geotools.data.FeatureSource;
 import org.geotools.data.FeatureStore;
 import org.geotools.data.FeatureWriter;
+import org.geotools.data.FileGroupProvider;
+import org.geotools.data.FileServiceInfo;
+import org.geotools.data.ServiceInfo;
 import org.geotools.data.Transaction;
 import org.geotools.data.directory.DirectoryDataStore;
 import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geometry.GeneralEnvelope;
@@ -136,8 +146,7 @@ public class Importer implements DisposableBean, ApplicationListener {
 
     JobQueue synchronousJobs = new JobQueue();
 
-    ConcurrentHashMap<Long, ImportTask> currentlyProcessing =
-            new ConcurrentHashMap<Long, ImportTask>();
+    ConcurrentHashMap<Long, ImportTask> currentlyProcessing = new ConcurrentHashMap<>();
 
     ImporterInfo configuration;
 
@@ -153,6 +162,7 @@ public class Importer implements DisposableBean, ApplicationListener {
             this.configuration = new ImporterInfoImpl();
 
             // first load
+            LOGGER.log(Level.CONFIG, "Initial importer configuration");
             this.configuration = configDAO.read(configFile);
             asynchronousJobs.setMaximumPoolSize(configuration.getMaxAsynchronousImports());
             synchronousJobs.setMaximumPoolSize(configuration.getMaxSynchronousImports());
@@ -171,6 +181,7 @@ public class Importer implements DisposableBean, ApplicationListener {
 
     public void reloadConfiguration() {
         try {
+            LOGGER.log(Level.CONFIG, "Reload importer configuration");
             configDAO.read(configFile, configuration);
             asynchronousJobs.setMaximumPoolSize(configuration.getMaxAsynchronousImports());
             synchronousJobs.setMaximumPoolSize(configuration.getMaxSynchronousImports());
@@ -179,19 +190,34 @@ public class Importer implements DisposableBean, ApplicationListener {
         }
     }
 
-    /** Returns the style generator. */
+    /**
+     * Style generator.
+     *
+     * @return style generator for creation of new styles
+     */
     public StyleGenerator getStyleGenerator() {
         return styleGen;
     }
 
+    /**
+     * Preferred style language for generation.
+     *
+     * @return preferred style language
+     */
     public StyleHandler getStyleHandler() {
         return styleHandler;
     }
 
+    /** Configure importer with preferred style format. */
     public void setStyleHandler(StyleHandler handler) {
         styleHandler = handler;
     }
 
+    /**
+     * Importer state persistence, define via {@link #IMPORTER_STORE_KEY}.
+     *
+     * @return importer state persistence.
+     */
     ImportStore createContextStore() {
         // check the spring context for an import store
         ImportStore store = null;
@@ -238,10 +264,21 @@ public class Importer implements DisposableBean, ApplicationListener {
         return currentlyProcessing.get(Long.valueOf(contextId));
     }
 
+    /**
+     * Used to setup importer with {@link #createContextStore()} on startup.
+     *
+     * <p>Also sets up {@code IMPORTER_LOGGING} logging profile, updating if required.
+     *
+     * @param event
+     */
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
         // load the context store here to avoid circular dependency on creation of the importer
         if (event instanceof ContextLoadedEvent) {
+            // provide a helpful logging config for this extension
+            GeoServerResourceLoader loader = getCatalog().getResourceLoader();
+            LoggingUtils.checkBuiltInLoggingConfiguration(loader, "IMPORTER_LOGGING.xml");
+
             contextStore = createContextStore();
             contextStore.init();
         }
@@ -306,15 +343,12 @@ public class Importer implements DisposableBean, ApplicationListener {
             return contextStore.iterator("updated");
         } catch (UnsupportedOperationException e) {
             // fallback
-            TreeSet sorted =
-                    new TreeSet<ImportContext>(
-                            new Comparator<ImportContext>() {
-                                @Override
-                                public int compare(ImportContext o1, ImportContext o2) {
-                                    Date d1 = o1.getUpdated();
-                                    Date d2 = o2.getUpdated();
-                                    return -1 * d1.compareTo(d2);
-                                }
+            TreeSet<ImportContext> sorted =
+                    new TreeSet<>(
+                            (o1, o2) -> {
+                                Date d1 = o1.getUpdated();
+                                Date d2 = o2.getUpdated();
+                                return -1 * d1.compareTo(d2);
                             });
             Iterators.addAll(sorted, contextStore.iterator());
             return sorted.iterator();
@@ -346,7 +380,6 @@ public class Importer implements DisposableBean, ApplicationListener {
      *
      * @param id optional id to use
      * @return Created ImportContext
-     * @throws IOException
      * @throws IllegalArgumentException if the provided id is invalid
      */
     public ImportContext createContext(Long id) throws IOException, IllegalArgumentException {
@@ -418,9 +451,6 @@ public class Importer implements DisposableBean, ApplicationListener {
     /**
      * Performs an asynchronous initialization of tasks in the specified context, and eventually
      * saves the result in the {@link ImportStore}
-     *
-     * @param context
-     * @param prepData
      */
     public Long initAsync(final ImportContext context, final boolean prepData) {
         LOGGER.log(Level.FINE, "Asynchronous context initialization scheduled");
@@ -537,7 +567,7 @@ public class Importer implements DisposableBean, ApplicationListener {
     }
 
     List<ImportTask> initForDirectory(ImportContext context, Directory data) throws IOException {
-        List<ImportTask> tasks = new ArrayList<ImportTask>();
+        List<ImportTask> tasks = new ArrayList<>();
 
         // flatten out the directory into itself and all sub directories and process in order
         for (Directory dir : data.flatten()) {
@@ -547,19 +577,19 @@ public class Importer implements DisposableBean, ApplicationListener {
             if (dir.getFiles().isEmpty()) continue;
 
             // group the contents of the directory by format
-            Map<DataFormat, List<FileData>> map = new HashMap<DataFormat, List<FileData>>();
+            Map<DataFormat, List<FileData>> map = new HashMap<>();
             for (FileData f : dir.getFiles()) {
                 DataFormat format = f.getFormat();
                 List<FileData> files = map.get(format);
                 if (files == null) {
-                    files = new ArrayList<FileData>();
+                    files = new ArrayList<>();
                     map.put(format, files);
                 }
                 files.add(f);
             }
 
             // handle case of importing a single file that we don't know the format of, in this
-            // case rather than ignore it we wnat to rpocess it and ssets its state to "NO_FORMAT"
+            // case rather than ignore it we want to process it and sets its state to "NO_FORMAT"
             boolean skipNoFormat = !(map.size() == 1 && map.containsKey(null));
 
             // if no target store specified group the directory into pieces that can be
@@ -568,7 +598,7 @@ public class Importer implements DisposableBean, ApplicationListener {
             if (targetStore == null) {
 
                 // create a task for each "format" if that format can handle a directory
-                for (DataFormat format : new ArrayList<DataFormat>(map.keySet())) {
+                for (DataFormat format : new ArrayList<>(map.keySet())) {
                     if (format != null && format.canRead(dir)) {
                         List<FileData> files = map.get(format);
                         if (files.size() == 1) {
@@ -991,7 +1021,6 @@ public class Importer implements DisposableBean, ApplicationListener {
                     try {
                         directory.archive(getArchiveFile(context));
                     } catch (Exception ioe) {
-                        ioe.printStackTrace();
                         // this is not a critical operation, so don't make the whole thing fail
                         LOGGER.log(Level.WARNING, "Error archiving", ioe);
                     }
@@ -1106,10 +1135,12 @@ public class Importer implements DisposableBean, ApplicationListener {
         protected abstract T callInternal(ProgressMonitor monitor) throws Exception;
     }
 
+    @SuppressWarnings("unchecked")
     public Task<ImportContext> getTask(Long job) {
         return (Task<ImportContext>) asynchronousJobs.getTask(job);
     }
 
+    @SuppressWarnings("unchecked")
     public List<Task<ImportContext>> getTasks() {
         return (List) asynchronousJobs.getTasks();
     }
@@ -1180,7 +1211,7 @@ public class Importer implements DisposableBean, ApplicationListener {
     }
 
     /*
-     * an import that involves reading from the datastore and writing into a specified target store
+     * an import that involves reading from the store and writing into a specified target store
      */
     void doIndirectImport(ImportTask task) throws IOException {
         if (!task.getStore().isEnabled()) {
@@ -1217,13 +1248,26 @@ public class Importer implements DisposableBean, ApplicationListener {
                 featureType.getAttributes().clear();
 
                 if (!canceled) {
-                    if (task.getUpdateMode() == UpdateMode.CREATE) {
-                        addToCatalog(task);
-                    }
+                    // check if resource is already present
                     FeatureTypeInfo resource =
                             getCatalog()
                                     .getResourceByName(
                                             featureType.getQualifiedName(), FeatureTypeInfo.class);
+
+                    if (resource == null
+                            && (task.getUpdateMode() == UpdateMode.CREATE
+                                    || task.getUpdateMode() == UpdateMode.REPLACE)) {
+                        // Create if needed (for create or replace mode)
+                        // Replace mode can be used to update table contents in place
+                        // and publish the results as a new layer
+                        addToCatalog(task);
+                        resource =
+                                getCatalog()
+                                        .getResourceByName(
+                                                featureType.getQualifiedName(),
+                                                FeatureTypeInfo.class);
+                    }
+
                     if (resource != null) {
                         calculateBounds(resource);
                     }
@@ -1238,32 +1282,19 @@ public class Importer implements DisposableBean, ApplicationListener {
                 currentlyProcessing.remove(task.getContext().getId());
             }
         } else {
-            // see if the store exposes a structured grid coverage reader
             StoreInfo store = task.getStore();
-            final String errorMessage =
-                    "Indirect raster import can only work against a structured grid coverage store (e.g., mosaic), this one is not: ";
             if (!(store instanceof CoverageStoreInfo)) {
-                throw new IllegalArgumentException(errorMessage + store);
+                throw new IllegalArgumentException(
+                        "Indirect raster import can only work against "
+                                + " CoverageStores, this one is not: "
+                                + store);
             }
 
-            // this is a ResourcePool reader, we should not close it
-            CoverageStoreInfo cs = (CoverageStoreInfo) store;
-            GridCoverageReader reader = cs.getGridCoverageReader(null, null);
-
-            if (!(reader instanceof StructuredGridCoverage2DReader)) {
-                throw new IllegalArgumentException(errorMessage + store);
-            }
-
-            StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
-            ImportData data = task.getData();
-            harvestImportData(sr, data);
-
-            // check we have a target resource, if not, create it
-            if (task.getUpdateMode() == UpdateMode.CREATE) {
-                if (task.getLayer() != null && task.getLayer().getId() == null) {
-                    addToCatalog(task);
-                }
-            }
+            loadIntoCoverageStore(
+                    task,
+                    (CoverageStoreInfo) store,
+                    (GridFormat) format,
+                    (RasterTransformChain) tx);
         }
 
         if (!canceled && !doPostTransform(task, task.getData(), tx)) {
@@ -1386,34 +1417,36 @@ public class Importer implements DisposableBean, ApplicationListener {
             ImportTask task, DataStoreInfo store, VectorFormat format, VectorTransformChain tx)
             throws Throwable {
         ImportData data = task.getData();
+        @SuppressWarnings("PMD.CloseResource") // conditionally created, then closed
         FeatureReader reader = null;
 
         // using this exception to throw at the end
         Throwable error = null;
         Transaction transaction = new DefaultTransaction();
-        try {
+        try { // NOPMD - Want to catch error handling transaction closing
 
             SimpleFeatureType featureType = task.getFeatureType();
             task.setOriginalLayerName(featureType.getTypeName());
             String nativeName = task.getLayer().getResource().getNativeName();
+
             if (!featureType.getTypeName().equals(nativeName)) {
                 LOGGER.log(
                         Level.INFO,
                         "Feature Type name has been changed from "
-                                + nativeName
-                                + " to "
                                 + (featureType.getTypeName() != null
-                                        ? featureType.getTypeName()
-                                        : "null name"));
+                                        ? "'" + featureType.getTypeName() + "'"
+                                        : "null name")
+                                + " to '"
+                                + nativeName
+                                + "'");
                 SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
                 tb.init(featureType);
                 tb.setName(nativeName);
                 featureType = tb.buildFeatureType();
             }
 
-            final String featureTypeName = featureType.getName().getLocalPart();
-
             DataStore dataStore = (DataStore) store.getDataStore(null);
+
             FeatureDataConverter featureDataConverter = FeatureDataConverter.DEFAULT;
             if (isShapefileDataStore(dataStore)) {
                 featureDataConverter = FeatureDataConverter.TO_SHAPEFILE;
@@ -1422,26 +1455,48 @@ public class Importer implements DisposableBean, ApplicationListener {
             } else if (isPostGISDataStore(dataStore)) {
                 featureDataConverter = FeatureDataConverter.TO_POSTGIS;
             }
-
+            // conversion may adjust feature type name and attribute names and data types
+            // to match the abilities of the data store format being used
             featureType = featureDataConverter.convertType(featureType, format, data, task);
             UpdateMode updateMode = task.getUpdateMode();
-            final String uniquifiedFeatureTypeName;
-            if (updateMode == UpdateMode.CREATE) {
-                // find a unique type name in the target store
-                uniquifiedFeatureTypeName = findUniqueNativeFeatureTypeName(featureType, store);
 
-                if (!uniquifiedFeatureTypeName.equals(featureTypeName)) {
-                    // update the metadata
-                    task.getLayer().getResource().setName(uniquifiedFeatureTypeName);
-                    task.getLayer().getResource().setNativeName(uniquifiedFeatureTypeName);
+            // created native type name in target datastore, will be dropped if import fails
+            String createdNativeTypeName = null;
+
+            if (updateMode == UpdateMode.CREATE) {
+                // find a unique native name in the target store (to avoid replacing existing
+                // content)
+                nativeName = findUniqueNativeFeatureTypeName(featureType, store);
+
+                if (!nativeName.equals(featureType.getName().getLocalPart())) {
+                    // update the layer name to be unique within target workspace
+                    task.getLayer().getResource().setName(nativeName);
+                    // update the metadata native name to reflect the data storage
+                    task.getLayer().getResource().setNativeName(nativeName);
 
                     // retype
                     SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
-                    typeBuilder.setName(uniquifiedFeatureTypeName);
-                    typeBuilder.addAll(featureType.getAttributeDescriptors());
+                    // use of init to preserve as many details as possible
+                    typeBuilder.init(featureType);
+                    typeBuilder.setName(nativeName);
+
                     featureType = typeBuilder.buildFeatureType();
                 }
+            } else {
+                // @todo what to do if featureType transform is present?
 
+                // @todo implement me - need to specify attribute used for id
+                if (updateMode == UpdateMode.UPDATE) {
+                    FeatureStore fs =
+                            (FeatureStore) dataStore.getFeatureSource(featureType.getTypeName());
+                    fs.setTransaction(transaction);
+
+                    throw new UnsupportedOperationException(
+                            "updateMode UPDATE is not supported yet");
+                }
+            }
+
+            if (updateMode == UpdateMode.CREATE || updateMode == UpdateMode.REPLACE) {
                 // @todo HACK remove this at some point when timezone issues are fixed
                 // this will force postgis to create timezone w/ timestamp fields
                 if (dataStore instanceof JDBCDataStore) {
@@ -1452,27 +1507,66 @@ public class Importer implements DisposableBean, ApplicationListener {
                                 .put(java.sql.Types.TIMESTAMP, "timestamptz");
                     }
                 }
+            }
+            // apply the feature type transform
+            featureType = tx.inline(task, dataStore, featureType);
 
-                // apply the feature type transform
-                featureType = tx.inline(task, dataStore, featureType);
+            if (updateMode == UpdateMode.CREATE) {
+                LOGGER.info(
+                        "Create layer '"
+                                + task.getLayer().getResource().getName()
+                                + "' "
+                                + "with new native schema '"
+                                + featureType.getTypeName()
+                                + "'");
 
                 dataStore.createSchema(featureType);
-            } else {
-                // @todo what to do if featureType transform is present?
+                createdNativeTypeName = featureType.getTypeName();
 
-                // @todo implement me - need to specify attribute used for id
-                if (updateMode == UpdateMode.UPDATE) {
-                    throw new UnsupportedOperationException(
-                            "updateMode UPDATE is not supported yet");
+            } else if (updateMode == UpdateMode.REPLACE) {
+                if (Arrays.asList(dataStore.getTypeNames()).contains(featureType.getTypeName())) {
+                    SimpleFeatureStore fs =
+                            (SimpleFeatureStore)
+                                    dataStore.getFeatureSource(featureType.getTypeName());
+
+                    if (schemaEqualsIgnoreNamespace(fs.getSchema(), featureType)) {
+                        LOGGER.info(
+                                "Replace layer '"
+                                        + task.getLayer().getResource().getName()
+                                        + "' "
+                                        + "used to replace contents of '"
+                                        + featureType.getTypeName()
+                                        + "' native schema");
+                        fs.setTransaction(transaction);
+                        fs.removeFeatures(Filter.INCLUDE);
+                    } else {
+                        LOGGER.info(
+                                "Replace layer '"
+                                        + task.getLayer().getResource().getName()
+                                        + "' "
+                                        + "used to replace contents of '"
+                                        + featureType.getTypeName()
+                                        + "' with a new native schema.");
+
+                        dataStore.removeSchema(featureType.getTypeName());
+                        dataStore.createSchema(featureType);
+
+                        createdNativeTypeName = featureType.getTypeName();
+                    }
+                } else {
+                    // replace is being used here to update an existing layer
+                    // with a new native name
+                    LOGGER.info(
+                            "Replace layer '"
+                                    + task.getLayer().getResource().getName()
+                                    + "' "
+                                    + "used with new native schema '"
+                                    + featureType.getTypeName()
+                                    + "'");
+                    dataStore.createSchema(featureType);
+
+                    createdNativeTypeName = featureType.getTypeName();
                 }
-                uniquifiedFeatureTypeName = featureTypeName;
-            }
-
-            if (updateMode == UpdateMode.REPLACE) {
-
-                FeatureStore fs = (FeatureStore) dataStore.getFeatureSource(featureTypeName);
-                fs.setTransaction(transaction);
-                fs.removeFeatures(Filter.INCLUDE);
             }
 
             // Move features
@@ -1484,8 +1578,8 @@ public class Importer implements DisposableBean, ApplicationListener {
                                 (DataStoreFormat) format,
                                 dataStore,
                                 transaction,
-                                featureTypeName,
-                                uniquifiedFeatureTypeName,
+                                createdNativeTypeName,
+                                featureType.getTypeName(),
                                 featureDataConverter,
                                 tx);
             } else {
@@ -1497,8 +1591,8 @@ public class Importer implements DisposableBean, ApplicationListener {
                                 format,
                                 dataStore,
                                 transaction,
-                                featureTypeName,
-                                uniquifiedFeatureTypeName,
+                                createdNativeTypeName,
+                                featureType.getTypeName(),
                                 featureDataConverter,
                                 tx);
             }
@@ -1534,89 +1628,322 @@ public class Importer implements DisposableBean, ApplicationListener {
         }
     }
 
+    /**
+     * This is a quick way to double check if the two schemas have the same typeName, and and
+     * attribute names / bindings.
+     *
+     * @param type1
+     * @param type2
+     * @return true if the two schemas are approximately equal (ignore user maps and namespace)
+     */
+    boolean schemaEqualsIgnoreNamespace(SimpleFeatureType type1, SimpleFeatureType type2) {
+        String spec1 = DataUtilities.encodeType(type1);
+        String spec2 = DataUtilities.encodeType(type2);
+
+        return spec1.equals(spec2);
+    }
+
+    void loadIntoCoverageStore(
+            ImportTask task, CoverageStoreInfo store, GridFormat format, RasterTransformChain tx)
+            throws IOException {
+        @SuppressWarnings("PMD.CloseResource") // conditionally created, then closed
+
+        // see if the store exposes a structured grid coverage reader
+        // this is a ResourcePool reader, we should not close it
+        GridCoverageReader reader = store.getGridCoverageReader(null, null);
+        boolean isStructured = reader instanceof StructuredGridCoverage2DReader;
+
+        if (task.getUpdateMode() == UpdateMode.REPLACE && !isStructured) {
+            // Replacing the coverage
+            replaceCoverage(format, reader, store, task);
+        } else {
+            harvestCoverage(task, store, reader, isStructured);
+        }
+    }
+
+    private void harvestCoverage(
+            ImportTask task,
+            CoverageStoreInfo store,
+            GridCoverageReader reader,
+            boolean isStructured)
+            throws IOException {
+        final String errorMessage =
+                "Indirect raster import can only work against a structured grid coverage store (e.g., mosaic), this one is not: ";
+        if (!(isStructured)) {
+            throw new IllegalArgumentException(errorMessage + store);
+        }
+        StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
+        ImportData data = task.getData();
+        harvestImportData(sr, data);
+
+        // check we have a target resource, if not, create it
+        if (task.getUpdateMode() == UpdateMode.CREATE) {
+            if (task.getLayer() != null && task.getLayer().getId() == null) {
+                addToCatalog(task);
+            }
+        }
+    }
+
+    private void replaceCoverage(
+            GridFormat format, GridCoverageReader reader, CoverageStoreInfo store, ImportTask task)
+            throws IOException {
+        // Get the imported data
+        ImportData data = task.getData();
+        if (!(data instanceof SpatialFile)) {
+            throw new IllegalArgumentException(
+                    "Only FileData are supported for replace. This is " + data);
+        }
+
+        SpatialFile fileData = (SpatialFile) data;
+        File file = fileData.getFile();
+        Directory directory = Directory.createNew(getUploadRoot());
+        try (FileInputStream fis = new FileInputStream(file)) {
+            String name = file.getName();
+            directory.accept(name, fis);
+            file = directory.child(name);
+        }
+
+        String newFile = file.toURI().toURL().getFile();
+
+        // When replacing, we need to make sure that the provided layer and store matches what we
+        // have in the catalog.
+        CoverageStoreInfo originalStore =
+                catalog.getCoverageStoreByName(store.getWorkspace().getName(), store.getName());
+        LayerInfo inputLayer = task.getLayer();
+        LayerInfo originalLayer = checkResourceExists(store, originalStore, inputLayer);
+        CoverageInfo originalCoverage = (CoverageInfo) originalLayer.getResource();
+
+        // Marking original names for restore
+        String name = originalCoverage.getName();
+        String nativeName = originalCoverage.getNativeName();
+
+        // Marking previous file for eventual delete
+        GridCoverage2DReader oldReader = ((GridCoverage2DReader) reader);
+        List<File> oldFiles = getFiles(oldReader);
+
+        // Setting up the new coverage
+        GridCoverage2DReader newReader = (format.gridFormat()).getReader(file, null);
+        store.setURL(newFile);
+        CatalogBuilder builder = new CatalogBuilder(catalog);
+        builder.setStore(store);
+        builder.setWorkspace(store.getWorkspace());
+        CoverageInfo coverage;
+        try {
+            coverage = builder.buildCoverage(newReader, Collections.emptyMap());
+        } catch (Exception e) {
+            throw new IOException(
+                    "Exception occurred while configuring the coverage during the replace: ", e);
+        }
+
+        // Updating the old coverage in the catalog with the properties of the imported one
+        OwsUtils.copy(coverage, originalCoverage, CoverageInfo.class);
+        List<File> newFiles = getFiles(newReader);
+
+        // Restore original names
+        originalCoverage.setName(name);
+        originalCoverage.setNativeName(nativeName);
+        catalog.save(originalCoverage);
+        catalog.save(store);
+
+        // Clean up the oldFiles when not overwriting it
+        // Removing oldFiles missing from the new list
+        oldFiles.removeAll(newFiles);
+        for (File oldFile : oldFiles) {
+            FileUtils.deleteQuietly(oldFile);
+        }
+    }
+
+    private List<File> getFiles(GridCoverage2DReader reader) throws IOException {
+        ServiceInfo info = reader.getInfo();
+        List<File> files = new ArrayList<>();
+        if (info instanceof FileServiceInfo) {
+            FileServiceInfo filesInfo = (FileServiceInfo) info;
+            // We are dealing with singleFile store so we can store the files in a list
+            try (CloseableIterator<FileGroupProvider.FileGroup> fileIterator =
+                    filesInfo.getFiles(null)) {
+                FileGroupProvider.FileGroup fileGroup = fileIterator.next();
+                File mainFile = fileGroup.getMainFile();
+                files.add(mainFile);
+                files.addAll(fileGroup.getSupportFiles());
+            }
+        } else {
+            URL url = info.getSource().toURL();
+            if ("file".equalsIgnoreCase(url.getProtocol())) {
+                files.add(new File(url.getFile()));
+            }
+        }
+        return files;
+    }
+
+    /**
+     * Lookup origional layer in the cartalog, will raise an {@link IllegalArgumentException} if
+     * resource does not exist.
+     *
+     * @param store
+     * @param originalStore
+     * @param inputLayer
+     * @return origional layer found in catalog
+     * @throws IllegalArgumentException
+     */
+    private LayerInfo checkResourceExists(
+            CoverageStoreInfo store, CoverageStoreInfo originalStore, LayerInfo inputLayer)
+            throws IllegalArgumentException {
+        String errorMessage =
+                "UpdateMode:REPLACE only works against existing resources in the catalog.";
+        LayerInfo originalLayer = catalog.getLayerByName(inputLayer.getName());
+        if (originalLayer == null) {
+            // the layer has been created before the REPLACE updatemode has been set,
+            // so it might have a different native name assigned.
+            // Let's try with the filename which is used by default to set the layer name
+            String url = store.getURL();
+            String baseName = FilenameUtils.getBaseName(url);
+            originalLayer = catalog.getLayerByName(baseName);
+        }
+        if (originalStore == null) {
+            errorMessage += "\nStore: " + store.getName() + " doesn't exist in the catalog";
+        }
+        if (originalLayer == null) {
+            errorMessage += "\nLayer: " + inputLayer.getName() + " doesn't exist in the catalog";
+        }
+        if (originalLayer == null || originalStore == null) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        return originalLayer;
+    }
+
+    /**
+     * Copy content from import data, used to feature source.
+     *
+     * @param data Import data used to obtain feature source
+     * @param task
+     * @param format
+     * @param dataStoreDestination
+     * @param transaction
+     * @param createdFeatureTypeName Created table name, or null if re-loading into an existing
+     *     table.
+     * @param nativeFeatureTypeName Native feature type name (example a table)
+     * @param featureDataConverter
+     * @param tx
+     * @return {@code null} if successful, or error condition throwable
+     */
+    @SuppressWarnings("unchecked") // vague about feature types
     private Throwable copyFromFeatureSource(
             ImportData data,
             ImportTask task,
             DataStoreFormat format,
             DataStore dataStoreDestination,
             Transaction transaction,
-            String featureTypeName,
-            String uniquifiedFeatureTypeName,
+            String createdFeatureTypeName,
+            String nativeFeatureTypeName,
             FeatureDataConverter featureDataConverter,
-            VectorTransformChain tx)
-            throws IOException {
+            VectorTransformChain tx) {
         Throwable error = null;
         ProgressMonitor monitor = task.progress();
         try {
             task.clearMessages();
 
             task.setTotalToProcess(format.getFeatureCount(task.getData(), task));
-            LOGGER.fine("begining import - highlevel api");
+            LOGGER.fine("beginning import - high level api");
 
             FeatureSource fs = format.getFeatureSource(data, task);
-            FeatureCollection fc = fs.getFeatures();
 
             FeatureStore featureStore =
-                    (FeatureStore) dataStoreDestination.getFeatureSource(uniquifiedFeatureTypeName);
+                    (FeatureStore) dataStoreDestination.getFeatureSource(nativeFeatureTypeName);
             featureStore.setTransaction(transaction);
 
-            fc =
-                    new ImportTransformFeatureCollection(
-                            fc,
+            FeatureCollection fc =
+                    new ImportTransformFeatureCollection<>(
+                            fs.getFeatures(),
                             featureDataConverter,
                             featureStore.getSchema(),
                             tx,
                             task,
                             dataStoreDestination);
-
             featureStore.addFeatures(fc);
 
         } catch (Throwable e) {
             error = e;
+            LOGGER.fine("Load from source in to target error:" + error);
         }
 
         if (error != null || monitor.isCanceled()) {
             // all sub exceptions in this catch block should be logged, not thrown
             // as the triggering exception will be thrown
-
-            // failure, rollback transaction
+            if (monitor.isCanceled()) {
+                LOGGER.log(
+                        Level.INFO,
+                        "Import from source canceled, data insert into '"
+                                + nativeFeatureTypeName
+                                + "' rolling back");
+            } else if (error != null) {
+                LOGGER.log(
+                        Level.INFO,
+                        "Import from source error, data insert into '"
+                                + nativeFeatureTypeName
+                                + "' rolling back due to error:"
+                                + error);
+            }
+            // cancel or failure, rollback transaction
             try {
                 transaction.rollback();
             } catch (Exception e1) {
                 LOGGER.log(
                         Level.WARNING,
-                        "Unable to load data into "
-                                + uniquifiedFeatureTypeName
-                                + ", rolling back data insert:"
+                        "Unable to load data into '"
+                                + nativeFeatureTypeName
+                                + "', rolling back data insert failed:"
                                 + e1,
                         e1);
             }
 
             // drop the type that was created as well, only if it was created to start with
-            if (task.getUpdateMode() == UpdateMode.CREATE) {
+            if (createdFeatureTypeName != null) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to load data, removing created schema '"
+                                + createdFeatureTypeName
+                                + "'");
                 try {
-                    dropSchema(dataStoreDestination, featureTypeName);
+                    dropSchema(dataStoreDestination, createdFeatureTypeName);
                 } catch (Exception e1) {
-                    LOGGER.log(Level.WARNING, "Error dropping schema in rollback", e1);
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Error dropping schema '" + createdFeatureTypeName + "' after rollback",
+                            e1);
                 }
             }
         }
-
         return error;
     }
 
+    /**
+     * Copy content from single use FeatureReader, used to obtain content from csv and geojsoon
+     * files where no general purpose datastore is available.
+     *
+     * @param reader
+     * @param task
+     * @param format
+     * @param dataStoreDestination
+     * @param transaction
+     * @param createdFeatureTypeName Created table name, or null if re-loading into an existing
+     *     table.
+     * @param nativeFeatureTypeName Native feature type name (example a table)
+     * @param featureDataConverter
+     * @param tx
+     * @return {@code null} if successful, or error condition throwable
+     */
     Throwable copyFromFeatureReader(
             FeatureReader reader,
             ImportTask task,
             VectorFormat format,
             DataStore dataStoreDestination,
             Transaction transaction,
-            String featureTypeName,
-            String uniquifiedFeatureTypeName,
+            String createdFeatureTypeName,
+            String nativeFeatureTypeName,
             FeatureDataConverter featureDataConverter,
-            VectorTransformChain tx)
-            throws IOException {
-        FeatureWriter writer = null;
+            VectorTransformChain tx) {
+        LOGGER.fine("begining import - lowlevel api");
+
         Throwable error = null;
         ProgressMonitor monitor = task.progress();
 
@@ -1625,59 +1952,84 @@ public class Importer implements DisposableBean, ApplicationListener {
         int cnt = 0;
         // metrics
         long startTime = System.currentTimeMillis();
-        task.clearMessages();
 
-        task.setTotalToProcess(format.getFeatureCount(task.getData(), task));
-
-        LOGGER.fine("begining import - lowlevel api");
         try {
-            writer =
+            task.clearMessages();
+            int numberOfFeatures = format.getFeatureCount(task.getData(), task);
+            task.setTotalToProcess(numberOfFeatures);
+        } catch (IOException noCountAvailable) {
+            LOGGER.log(
+                    Level.FINE,
+                    "Unable to determine number of features to import: " + noCountAvailable,
+                    noCountAvailable);
+            error = noCountAvailable;
+        }
+
+        if (error == null) {
+            try (FeatureWriter writer =
                     dataStoreDestination.getFeatureWriterAppend(
-                            uniquifiedFeatureTypeName, transaction);
+                            nativeFeatureTypeName, transaction)) {
 
-            while (reader.hasNext()) {
-                if (monitor.isCanceled()) {
-                    break;
+                while (reader.hasNext()) {
+                    if (monitor.isCanceled()) {
+                        break;
+                    }
+                    SimpleFeature feature = (SimpleFeature) reader.next();
+                    SimpleFeature next = (SimpleFeature) writer.next();
+
+                    // (JD) TODO: some formats will rearrange the geometry type (like shapefile)
+                    // which
+                    // makes the geometry the first attribute regardless, so blindly copying over
+                    // attributes won't work unless the source type also has the geometry as the
+                    // first attribute in the schema
+                    featureDataConverter.convert(feature, next);
+
+                    // @hack #45678 - mask empty geometry or postgis will complain
+                    Geometry geom = (Geometry) next.getDefaultGeometry();
+                    if (geom != null && geom.isEmpty()) {
+                        next.setDefaultGeometry(null);
+                    }
+
+                    // apply the feature transform
+                    next = tx.inline(task, dataStoreDestination, feature, next);
+
+                    if (next == null) {
+                        skipped++;
+                    } else {
+                        writer.write();
+                    }
+                    task.setNumberProcessed(++cnt);
                 }
-                SimpleFeature feature = (SimpleFeature) reader.next();
-                SimpleFeature next = (SimpleFeature) writer.next();
-
-                // (JD) TODO: some formats will rearrange the geometry type (like shapefile) which
-                // makes the geometry the first attribute regardless, so blindly copying over
-                // attributes won't work unless the source type also has the geometry as the
-                // first attribute in the schema
-                featureDataConverter.convert(feature, next);
-
-                // @hack #45678 - mask empty geometry or postgis will complain
-                Geometry geom = (Geometry) next.getDefaultGeometry();
-                if (geom != null && geom.isEmpty()) {
-                    next.setDefaultGeometry(null);
+                if (skipped > 0) {
+                    task.addMessage(Level.WARNING, skipped + " features were skipped.");
                 }
-
-                // apply the feature transform
-                next = tx.inline(task, dataStoreDestination, feature, next);
-
-                if (next == null) {
-                    skipped++;
-                } else {
-                    writer.write();
-                }
-                task.setNumberProcessed(++cnt);
+                LOGGER.info(
+                        "Load from reader in to target took "
+                                + (System.currentTimeMillis() - startTime));
+            } catch (Throwable e) {
+                error = e;
+                LOGGER.fine("Load from reader in to target error:" + error);
             }
-            if (skipped > 0) {
-                task.addMessage(Level.WARNING, skipped + " features were skipped.");
-            }
-            LOGGER.info("load to target took " + (System.currentTimeMillis() - startTime));
-        } catch (Throwable e) {
-            error = e;
         }
         // no finally block, there is too much to do
-
         if (error != null || monitor.isCanceled()) {
             // all sub exceptions in this catch block should be logged, not thrown
             // as the triggering exception will be thrown
-
-            // failure, rollback transaction
+            if (monitor.isCanceled()) {
+                LOGGER.log(
+                        Level.INFO,
+                        "Import from reader canceled, data insert into '"
+                                + nativeFeatureTypeName
+                                + "' rolling back");
+            } else if (error != null) {
+                LOGGER.log(
+                        Level.INFO,
+                        "Import from reader error, data insert into '"
+                                + nativeFeatureTypeName
+                                + "' rolling back due to error:"
+                                + error);
+            }
+            // cancel or failure, rollback transaction
             try {
                 transaction.rollback();
             } catch (Exception e1) {
@@ -1685,11 +2037,19 @@ public class Importer implements DisposableBean, ApplicationListener {
             }
 
             // drop the type that was created as well, only if it was created to start with
-            if (task.getUpdateMode() == UpdateMode.CREATE) {
+            if (createdFeatureTypeName != null) {
                 try {
-                    dropSchema(dataStoreDestination, featureTypeName);
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Unable to load data, removing created schema '"
+                                    + createdFeatureTypeName
+                                    + "'");
+                    dropSchema(dataStoreDestination, createdFeatureTypeName);
                 } catch (Exception e1) {
-                    LOGGER.log(Level.WARNING, "Error dropping schema in rollback", e1);
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Error dropping schema '" + createdFeatureTypeName + "' after rollback",
+                            e1);
                 }
             }
         }
@@ -1836,8 +2196,11 @@ public class Importer implements DisposableBean, ApplicationListener {
     }
 
     /*
-     * computes the lat/lon bounding box from the native bounding box and srs, optionally overriding
+     * Computes the lat/lon bounding box from the native bounding box and srs, optionally overriding
      * the value already set.
+     *
+     * If the does not contain a geometry (such as a csv file processing lat/long into a point)
+     * this activity may not have required information to work with.
      */
     boolean computeLatLonBoundingBox(ImportTask task, boolean force) throws Exception {
         ResourceInfo r = task.getLayer().getResource();
@@ -1845,8 +2208,15 @@ public class Importer implements DisposableBean, ApplicationListener {
             CoordinateReferenceSystem nativeCRS = CRS.decode(r.getSRS());
             ReferencedEnvelope nativeBbox =
                     new ReferencedEnvelope(r.getNativeBoundingBox(), nativeCRS);
-            r.setLatLonBoundingBox(nativeBbox.transform(CRS.decode("EPSG:4326"), true));
-            return true;
+
+            if (nativeBbox.isEmpty()) {
+                LOGGER.fine("Import '" + r.getName() + "' native bounding box is empty");
+                r.setLatLonBoundingBox(ReferencedEnvelope.create(CRS.decode("EPSG:4326")));
+                return true;
+            } else {
+                r.setLatLonBoundingBox(nativeBbox.transform(CRS.decode("EPSG:4326"), true));
+                return true;
+            }
         }
         return false;
     }
@@ -1875,6 +2245,7 @@ public class Importer implements DisposableBean, ApplicationListener {
         }
     }
 
+    @Override
     public void destroy() throws Exception {
         asynchronousJobs.shutdown();
         contextStore.destroy();
@@ -2031,21 +2402,12 @@ public class Importer implements DisposableBean, ApplicationListener {
         return null;
     }
 
-    /**
-     * Returns a copy of the importer configuration
-     *
-     * @return
-     */
+    /** Returns a copy of the importer configuration */
     public ImporterInfo getConfiguration() {
         return new ImporterInfoImpl(configuration);
     }
 
-    /**
-     * Sets the importer configuration, and saves it on disk
-     *
-     * @param configuration
-     * @throws IOException
-     */
+    /** Sets the importer configuration, and saves it on disk */
     public void setConfiguration(ImporterInfo configuration) throws IOException {
         configDAO.write(configuration, configFile);
         reloadConfiguration();

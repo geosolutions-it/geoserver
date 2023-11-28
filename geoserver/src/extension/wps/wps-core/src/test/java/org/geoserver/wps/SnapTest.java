@@ -7,13 +7,13 @@ package org.geoserver.wps;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.util.HashMap;
 import javax.xml.namespace.QName;
 import org.geoserver.config.GeoServer;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.data.test.SystemTestData.LayerProperty;
 import org.geoserver.wfs.WFSInfo;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,11 +28,7 @@ public class SnapTest extends WPSTestSupport {
         super.onSetUp(testData);
 
         testData.addVectorLayer(
-                STREAMS,
-                new HashMap<LayerProperty, Object>(),
-                "Streams.properties",
-                MockData.class,
-                getCatalog());
+                STREAMS, new HashMap<>(), "Streams.properties", MockData.class, getCatalog());
     }
 
     @Before
@@ -478,7 +474,7 @@ public class SnapTest extends WPSTestSupport {
     public void testWpsTitle() {
         final GeoServer geoserver = getGeoServer();
         WPSInfo wps = geoserver.getService(WPSInfo.class);
-        assertEquals("Prototype GeoServer WPS", wps.getTitle());
+        assertNull(wps.getTitle());
 
         final String updatedTitle = "WPS latest title";
         wps.setTitle(updatedTitle);

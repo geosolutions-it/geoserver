@@ -8,6 +8,7 @@ package org.geoserver.wcs2_0.response;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import net.opengis.wcs20.ExtensionItemType;
 import net.opengis.wcs20.ExtensionType;
@@ -34,10 +35,11 @@ public class WCS20GetCoverageResponse extends Response {
     CoverageResponseDelegateFinder responseFactory;
 
     public WCS20GetCoverageResponse(CoverageResponseDelegateFinder responseFactory) {
-        super(GridCoverage.class);
+        super(GridCoverage.class, new LinkedHashSet<>(responseFactory.getOutputFormats()));
         this.responseFactory = responseFactory;
     }
 
+    @Override
     public String getMimeType(Object value, Operation operation) {
         GetCoverageType getCoverage = (GetCoverageType) operation.getParameters()[0];
         String format = getCoverage.getFormat();
@@ -69,6 +71,7 @@ public class WCS20GetCoverageResponse extends Response {
         return getCoverage.getMediaType() == null;
     }
 
+    @Override
     public void write(Object value, OutputStream output, Operation operation) throws IOException {
         // grab the coverage
         GridCoverage2D coverage = (GridCoverage2D) value;
@@ -81,7 +84,7 @@ public class WCS20GetCoverageResponse extends Response {
         }
 
         // extract additional extensions
-        final Map<String, String> encodingParameters = new HashMap<String, String>();
+        final Map<String, String> encodingParameters = new HashMap<>();
         final ExtensionType extension = getCoverage.getExtension();
         if (extension != null) {
             final EList<ExtensionItemType> extensions = extension.getContents();

@@ -52,7 +52,17 @@ public class DataAccessLimits extends AccessLimits {
         return readFilter;
     }
 
+    /**
+     * Updates the read filter for this access limits object
+     *
+     * @param readFilter the new read filter
+     */
+    public void setReadFilter(Filter readFilter) {
+        this.readFilter = readFilter;
+    }
+
     /** The catalog mode for this layer */
+    @Override
     public CatalogMode getMode() {
         return mode;
     }
@@ -68,19 +78,20 @@ public class DataAccessLimits extends AccessLimits {
     }
 
     /**
-     * Writes the non Serializable Filter object ot the ObjectOutputStream via a OGC Filter XML
+     * Writes the non Serializable Filter object to the ObjectOutputStream via a OGC Filter XML
      * encoding conversion
-     *
-     * @param filter
-     * @param out
-     * @throws IOException
      */
     protected void writeFilter(Filter filter, ObjectOutputStream out) throws IOException {
         if (filter != null) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            Encoder encoder = new Encoder(CONFIGURATION);
-            encoder.encode(filter, OGC.Filter, bos);
-            out.writeObject(bos.toByteArray());
+            if (filter != Filter.INCLUDE && filter != Filter.EXCLUDE) {
+                try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+                    Encoder encoder = new Encoder(CONFIGURATION);
+                    encoder.encode(filter, OGC.Filter, bos);
+                    out.writeObject(bos.toByteArray());
+                }
+            } else {
+                out.writeObject(filter);
+            }
         } else {
             out.writeObject(null);
         }
@@ -89,19 +100,20 @@ public class DataAccessLimits extends AccessLimits {
     /**
      * Reads from the object input stream a string representing a filter in OGC XML encoding and
      * parses it back to a Filter object
-     *
-     * @param in
-     * @throws IOException
-     * @throws ClassNotFoundException
      */
     protected Filter readFilter(ObjectInputStream in) throws IOException, ClassNotFoundException {
-        byte[] serializedReadFilter = (byte[]) in.readObject();
+        final Object serializedReadFilter = in.readObject();
         if (serializedReadFilter != null) {
-            try {
-                Parser p = new Parser(CONFIGURATION);
-                return (Filter) p.parse(new ByteArrayInputStream(serializedReadFilter));
-            } catch (Exception e) {
-                throw (IOException) new IOException("Failed to parse filter").initCause(e);
+            if (serializedReadFilter != Filter.INCLUDE && serializedReadFilter != Filter.EXCLUDE) {
+                try {
+                    Parser p = new Parser(CONFIGURATION);
+                    return (Filter)
+                            p.parse(new ByteArrayInputStream((byte[]) serializedReadFilter));
+                } catch (Exception e) {
+                    throw (IOException) new IOException("Failed to parse filter").initCause(e);
+                }
+            } else {
+                return (Filter) serializedReadFilter;
             }
         } else {
             return null;

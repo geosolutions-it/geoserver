@@ -5,7 +5,9 @@
  */
 package org.geoserver.web.admin;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import com.sun.media.jai.mlib.MlibWarpRIF;
 import com.sun.media.jai.opimage.WarpRIF;
@@ -20,22 +22,64 @@ import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInfo;
 import org.geoserver.config.JAIEXTInfo;
 import org.geoserver.config.JAIInfo;
+import org.geoserver.web.GeoServerHomePage;
 import org.geoserver.web.GeoServerWicketTestSupport;
 import org.geotools.image.ImageWorker;
 import org.geotools.image.util.ImageUtilities;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class JAIPageTest extends GeoServerWicketTestSupport {
+
+    private GeoServer geoServer;
+
+    @Before
+    public void reset() {
+        geoServer = getGeoServerApplication().getGeoServer();
+        GeoServerInfo gsInfo = geoServer.getGlobal();
+        JAIInfo jai = gsInfo.getJAI();
+        jai.setTileThreads(2);
+        geoServer.save(gsInfo);
+    }
+
     @Test
     public void testValues() {
-        JAIInfo info = (JAIInfo) getGeoServerApplication().getGeoServer().getGlobal().getJAI();
+        JAIInfo info = geoServer.getGlobal().getJAI();
 
         login();
 
         tester.startPage(JAIPage.class);
         tester.assertComponent("form:tileThreads", TextField.class);
         tester.assertModelValue("form:tileThreads", info.getTileThreads());
+    }
+
+    @Test
+    public void testSave() {
+        login();
+
+        tester.startPage(JAIPage.class);
+        FormTester ft = tester.newFormTester("form");
+        ft.setValue("tileThreads", "3");
+        ft.submit("submit");
+
+        tester.assertRenderedPage(GeoServerHomePage.class);
+        JAIInfo jai = geoServer.getGlobal().getJAI();
+        assertEquals(3, jai.getTileThreads());
+    }
+
+    @Test
+    public void testApply() {
+        login();
+
+        tester.startPage(JAIPage.class);
+        FormTester ft = tester.newFormTester("form");
+        ft.setValue("tileThreads", "3");
+        ft.submit("apply");
+
+        tester.assertRenderedPage(JAIPage.class);
+        JAIInfo jai = geoServer.getGlobal().getJAI();
+        assertEquals(3, jai.getTileThreads());
     }
 
     @Test
@@ -47,7 +91,7 @@ public class JAIPageTest extends GeoServerWicketTestSupport {
         }
         GeoServer geoServer = getGeoServerApplication().getGeoServer();
         GeoServerInfo global = geoServer.getGlobal();
-        JAIInfo info = (JAIInfo) global.getJAI();
+        JAIInfo info = global.getJAI();
 
         // Ensure that by default Warp acceleration is set to false
         Assert.assertFalse(info.isAllowNativeWarp());
@@ -81,7 +125,7 @@ public class JAIPageTest extends GeoServerWicketTestSupport {
             jaiext = p.getChoices();
             assertNotNull(jaiext);
             // JAI choices
-            assertTrue(!jaiext.contains("Warp"));
+            assertFalse(jaiext.contains("Warp"));
         } else {
             tester.assertInvisible("form:jaiext");
         }
@@ -93,7 +137,7 @@ public class JAIPageTest extends GeoServerWicketTestSupport {
         // Ensure no exception has been thrown
         tester.assertNoErrorMessage();
 
-        info = (JAIInfo) global.getJAI();
+        info = global.getJAI();
 
         // Check that Warp is enabled
         if (isJAIExtEnabled) {
@@ -126,7 +170,7 @@ public class JAIPageTest extends GeoServerWicketTestSupport {
             jaiext = p.getChoices();
             assertNotNull(jaiext);
             // JAI choices
-            assertTrue(!jaiext.contains("Warp"));
+            assertFalse(jaiext.contains("Warp"));
         }
         form = tester.newFormTester("form");
         form.setValue("allowNativeWarp", false);
@@ -135,7 +179,7 @@ public class JAIPageTest extends GeoServerWicketTestSupport {
         // Ensure no exception has been thrown
         tester.assertNoErrorMessage();
 
-        info = (JAIInfo) global.getJAI();
+        info = global.getJAI();
 
         // Check that Warp is disabled
         Assert.assertFalse(info.isAllowNativeWarp());

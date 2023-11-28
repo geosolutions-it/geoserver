@@ -9,10 +9,22 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
 import static org.geoserver.rest.RestBaseController.ROOT_PATH;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.endsWith;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Objects;
 import net.sf.json.JSONObject;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerInfo;
@@ -133,8 +145,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
     public void testGetAllInWorkspaceAsXML() throws Exception {
         Document dom = getAsDOM(ROOT_PATH + "/workspaces/cite/layers.xml", 200);
         int count =
-                catalog.getResourcesByNamespace("cite", ResourceInfo.class)
-                        .stream()
+                catalog.getResourcesByNamespace("cite", ResourceInfo.class).stream()
                         .mapToInt(info -> catalog.getLayers(info).size())
                         .sum();
         assertXpathEvaluatesTo(count + "", "count(//layer)", dom);
@@ -162,6 +173,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
 
         l = catalog.getLayerByName("cite:Buildings");
         assertEquals("Forests", l.getDefaultStyle().getName());
+        assertNotNull(l.getDateModified());
     }
 
     @Test
@@ -182,6 +194,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
 
         l = catalog.getLayerByName("cite:Buildings");
         assertEquals("Forests", l.getDefaultStyle().getName());
+        assertNotNull(l.getDateModified());
     }
 
     @Test
@@ -210,6 +223,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
         assertEquals(isAdvertised, l.isAdvertised());
         assertEquals(isOpaque, l.isOpaque());
         assertEquals(isQueryable, l.isQueryable());
+        assertNotNull(l.getDateModified());
     }
 
     @Test
@@ -230,6 +244,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
 
         l = catalog.getLayerByName("cite:Buildings");
         assertEquals("polygon", l.getDefaultStyle().getName());
+        assertNotNull(l.getDateModified());
     }
 
     @Test
@@ -284,7 +299,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
         MockHttpServletResponse response =
                 postAsServletResponse(ROOT_PATH + "/workspaces/cite/styles", xml);
 
-        System.out.println(response.getContentAsString());
+        // System.out.println(response.getContentAsString());
         assertEquals(201, response.getStatus());
         assertThat(response.getContentType(), CoreMatchers.startsWith(MediaType.TEXT_PLAIN_VALUE));
         assertNotNull(cat.getStyleByName("cite", "foo"));
@@ -305,6 +320,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
         assertNotNull(l.getDefaultStyle());
         assertEquals("foo", l.getDefaultStyle().getName());
         assertNotNull(l.getDefaultStyle().getWorkspace());
+        assertNotNull(l.getDateModified());
 
         Document dom = getAsDOM(ROOT_PATH + "/layers/cite:Buildings.xml", 200);
         assertXpathExists("/layer/defaultStyle/name[text() = 'cite:foo']", dom);
@@ -348,6 +364,7 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
         StyleInfo style = l.getStyles().iterator().next();
         assertEquals("foo", style.getName());
         assertNotNull(style.getWorkspace());
+        assertNotNull(l.getDateModified());
 
         Document dom = getAsDOM(ROOT_PATH + "/layers/cite:Buildings.xml", 200);
         assertXpathExists("/layer/styles/style/name[text() = 'cite:foo']", dom);
@@ -383,9 +400,62 @@ public class LayerControllerTest extends CatalogRESTTestSupport {
         l = cat.getLayerByName("cite:Buildings");
         assertNotNull(l.getDefaultWMSInterpolationMethod());
         assertEquals(LayerInfo.WMSInterpolation.Nearest, l.getDefaultWMSInterpolationMethod());
+        assertNotNull(l.getDateModified());
 
         dom = getAsDOM(ROOT_PATH + "/layers/cite:Buildings.xml", 200);
         assertXpathEvaluatesTo("1", "count(/layer/defaultWMSInterpolationMethod)", dom);
         assertXpathExists("/layer/defaultWMSInterpolationMethod[text() = 'Nearest']", dom);
+    }
+
+    @Test
+    public void testGetLayerWithColonInStyleName() throws Exception {
+
+        LayerInfo roadsLayer = catalog.getLayerByName("RoadSegments");
+        roadsLayer.getStyles().add(catalog.getStyleByName("RoadSegments"));
+        catalog.save(roadsLayer);
+
+        updateStyleNameInXmlFile();
+
+        // reload to get the changes made in file
+        getGeoServer().reload();
+
+        String requestPath = ROOT_PATH + "/layers/RoadSegments.json";
+        MockHttpServletResponse response = getAsServletResponse(requestPath);
+        assertEquals(200, response.getStatus());
+
+        // test whether string before colon is not duplicated
+        assertFalse(response.getContentAsString().contains("demo:demo:RoadSegmentsDup"));
+    }
+
+    public void updateStyleNameInXmlFile() throws IOException {
+
+        File requiredFile =
+                Arrays.stream(
+                                Objects.requireNonNull(
+                                        getDataDirectory().get("styles").dir().listFiles()))
+                        .filter(file -> file.getName().equals("RoadSegments.xml"))
+                        .findFirst()
+                        .get();
+
+        StringBuilder fileContents = new StringBuilder();
+        try (BufferedReader reader =
+                new BufferedReader(new FileReader(requiredFile.getAbsolutePath()))) {
+            String currentLine;
+            while ((currentLine = reader.readLine()) != null) {
+                fileContents.append(currentLine);
+            }
+        }
+
+        try (BufferedWriter writer =
+                new BufferedWriter(new FileWriter(requiredFile.getAbsolutePath()))) {
+            fileContents =
+                    new StringBuilder(
+                            fileContents
+                                    .toString()
+                                    .replace(
+                                            "<name>RoadSegments</name>",
+                                            "<name>demo:RoadSegmentsDup</name>"));
+            writer.write(fileContents.toString());
+        }
     }
 }

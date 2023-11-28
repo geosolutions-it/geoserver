@@ -35,11 +35,7 @@ public class CoverageStoreEditPage extends AbstractCoverageStorePage {
     /** Dialog to ask for save confirmation in case the store can't be reached */
     private GeoServerDialog dialog;
 
-    /**
-     * Uses a "name" parameter to locate the datastore
-     *
-     * @param parameters
-     */
+    /** Uses a "name" parameter to locate the datastore */
     public CoverageStoreEditPage(PageParameters parameters) {
         String wsName = parameters.get(WS_NAME).toOptionalString();
         String storeName = parameters.get(STORE_NAME).toString();
@@ -96,7 +92,8 @@ public class CoverageStoreEditPage extends AbstractCoverageStorePage {
     }
 
     @Override
-    protected final void onSave(final CoverageStoreInfo info, final AjaxRequestTarget requestTarget)
+    protected final void onSave(
+            final CoverageStoreInfo info, final AjaxRequestTarget requestTarget, boolean doReturn)
             throws IllegalArgumentException {
 
         if (null == info.getType()) {
@@ -134,16 +131,18 @@ public class CoverageStoreEditPage extends AbstractCoverageStorePage {
                                 + reader.getClass().getName()
                                 + ". Saving store");
                 doSaveStore(info);
-                doReturn(StorePage.class);
-            } catch (IOException e) {
-                confirmSaveOnConnectionFailure(info, requestTarget, e);
-            } catch (RuntimeException e) {
+                if (doReturn) {
+                    doReturn(StorePage.class);
+                }
+            } catch (IOException | RuntimeException e) {
                 confirmSaveOnConnectionFailure(info, requestTarget, e);
             }
         } else {
             // store's disabled, no need to check for availability
             doSaveStore(info);
-            doReturn(StorePage.class);
+            if (doReturn) {
+                doReturn(StorePage.class);
+            }
         }
     }
 
@@ -199,8 +198,8 @@ public class CoverageStoreEditPage extends AbstractCoverageStorePage {
             final String prefix = info.getWorkspace().getName();
             final NamespaceInfo namespace = catalog.getNamespaceByPrefix(prefix);
 
-            List<CoverageInfo> alreadyConfigured;
-            alreadyConfigured = catalog.getResourcesByStore(info, CoverageInfo.class);
+            List<CoverageInfo> alreadyConfigured =
+                    catalog.getResourcesByStore(info, CoverageInfo.class);
 
             for (CoverageInfo coverage : alreadyConfigured) {
                 coverage.setNamespace(namespace);

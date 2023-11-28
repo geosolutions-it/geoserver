@@ -12,8 +12,8 @@ import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.createMockBuilder;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
-import static org.junit.Assert.assertThat;
 
 import com.google.common.collect.Sets;
 import com.hazelcast.core.Cluster;
@@ -90,9 +90,9 @@ public abstract class HzSynchronizerTest {
         configWatcher = createMock(ClusterConfigWatcher.class);
         clusterConfig = createMock(ClusterConfig.class);
 
-        captureTopicListener = new Capture<MessageListener<Event>>();
-        captureAckTopicListener = new Capture<MessageListener<UUID>>();
-        captureAckTopicPublish = new Capture<UUID>();
+        captureTopicListener = Capture.newInstance();
+        captureAckTopicListener = Capture.newInstance();
+        captureAckTopicPublish = Capture.newInstance();
 
         localAddress = new InetSocketAddress(localAddress(42), 5000);
         remoteAddress = new InetSocketAddress(localAddress(54), 5000);
@@ -156,16 +156,16 @@ public abstract class HzSynchronizerTest {
 
         expect(geoServer.getCatalog()).andStubReturn(catalog);
 
-        gsListenerCapture = new Capture<ConfigurationListener>();
+        gsListenerCapture = Capture.newInstance();
         geoServer.addListener(capture(gsListenerCapture));
         expectLastCall().atLeastOnce();
 
-        catListenerCapture = new Capture<CatalogListener>();
+        catListenerCapture = Capture.newInstance();
         catalog.addListener(capture(catListenerCapture));
         expectLastCall().atLeastOnce();
 
         executor = createMock(ScheduledExecutorService.class);
-        captureExecutor = new Capture<>(CaptureType.ALL);
+        captureExecutor = Capture.newInstance(CaptureType.ALL);
         expect(executor.schedule(capture(captureExecutor), anyLong(), (TimeUnit) anyObject()))
                 .andStubReturn(null);
     }
@@ -237,29 +237,17 @@ public abstract class HzSynchronizerTest {
         return catalog;
     }
 
-    /**
-     * Replay all the mocks on this test class, plus those specified
-     *
-     * @param mocks
-     */
+    /** Replay all the mocks on this test class, plus those specified */
     protected void replay(Object... mocks) {
         EasyMock.replay(myMocks().toArray());
         EasyMock.replay(mocks);
     }
-    /**
-     * Reset all the mocks on this test class, plus those specified
-     *
-     * @param mocks
-     */
+    /** Reset all the mocks on this test class, plus those specified */
     protected void reset(Object... mocks) {
         EasyMock.reset(myMocks().toArray());
         EasyMock.reset(mocks);
     }
-    /**
-     * Verify all the mocks on this test class, plus those specified
-     *
-     * @param mocks
-     */
+    /** Verify all the mocks on this test class, plus those specified */
     protected void verify(Object... mocks) {
         EasyMock.verify(myMocks().toArray());
         EasyMock.verify(mocks);

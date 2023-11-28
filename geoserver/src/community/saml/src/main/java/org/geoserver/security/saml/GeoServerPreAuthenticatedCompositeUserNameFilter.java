@@ -42,6 +42,7 @@ public abstract class GeoServerPreAuthenticatedCompositeUserNameFilter
             this.originalChain = chain;
         }
 
+        @Override
         public void doFilter(final ServletRequest request, final ServletResponse response)
                 throws IOException, ServletException {
 
@@ -84,13 +85,13 @@ public abstract class GeoServerPreAuthenticatedCompositeUserNameFilter
         }
     }
 
-    protected List<Filter> nestedFilters = new ArrayList<Filter>();
+    protected List<Filter> nestedFilters = new ArrayList<>();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
-        if (nestedFilters == null || nestedFilters.size() == 0) {
+        if (nestedFilters == null || nestedFilters.isEmpty()) {
             chain.doFilter(request, response);
             return;
         }

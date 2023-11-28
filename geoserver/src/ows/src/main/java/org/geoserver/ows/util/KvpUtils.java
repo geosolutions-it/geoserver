@@ -12,8 +12,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -21,11 +21,10 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.commons.collections.comparators.NullComparator;
+import org.apache.commons.collections4.comparators.NullComparator;
 import org.geoserver.ows.KvpParser;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
-import org.geotools.util.Version;
 
 /**
  * Utility class for reading Key Value Pairs from a http query string.
@@ -42,16 +41,14 @@ public class KvpUtils {
     private static Logger LOGGER =
             org.geotools.util.logging.Logging.getLogger("org.vfny.geoserver.requests.readers");
 
-    private static final Comparator<String> STRING_NULL_COMPARATOR = new NullComparator();
-    private static final Comparator<Version> VERSION_NULL_COMPARATOR = new NullComparator();
     /**
      * Comparator used to compare two parsers matching the same service/version/request
      * specification, and returning the most specific one (nulls are high, put at the end of list)
      */
     private static final Comparator<KvpParser> KVP_PARSER_COMPARATOR =
-            Comparator.comparing(KvpParser::getService, STRING_NULL_COMPARATOR)
-                    .thenComparing(KvpParser::getVersion, VERSION_NULL_COMPARATOR)
-                    .thenComparing(KvpParser::getRequest, STRING_NULL_COMPARATOR);
+            Comparator.comparing(KvpParser::getService, new NullComparator<>())
+                    .thenComparing(KvpParser::getVersion, new NullComparator<>())
+                    .thenComparing(KvpParser::getRequest, new NullComparator<>());
 
     /**
      * Defines how to tokenize a string by using some sort of delimiter.
@@ -74,20 +71,21 @@ public class KvpUtils {
             return regExp;
         }
 
+        @Override
         public String toString() {
             return getRegExp();
         }
 
-        public List readFlat(final String rawList) {
+        public List<String> readFlat(final String rawList) {
             if ((rawList == null || rawList.trim().equals(""))) {
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
             } else if (rawList.equals("*")) {
                 // handles explicit unconstrained case
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
             }
             // -1 keeps trailing empty strings in the pack
             String[] split = rawList.split(getRegExp(), -1);
-            return new ArrayList(Arrays.asList(split));
+            return new ArrayList<>(Arrays.asList(split));
         }
     }
     /** Delimeter for KVPs in the raw string */
@@ -99,15 +97,16 @@ public class KvpUtils {
     /** Delimeter for outer value lists in the KVPs */
     public static final Tokenizer OUTER_DELIMETER =
             new Tokenizer("\\)\\(") {
-                public List readFlat(final String rawList) {
-                    List list = new ArrayList(super.readFlat(rawList));
+                @Override
+                public List<String> readFlat(final String rawList) {
+                    List<String> list = new ArrayList<>(super.readFlat(rawList));
                     final int len = list.size();
                     if (len > 0) {
-                        String first = (String) list.get(0);
+                        String first = list.get(0);
                         if (first.startsWith("(")) {
                             list.set(0, first.substring(1));
                         }
-                        String last = (String) list.get(len - 1);
+                        String last = list.get(len - 1);
                         if (last.endsWith(")")) {
                             list.set(len - 1, last.substring(0, last.length() - 1));
                         }
@@ -122,6 +121,9 @@ public class KvpUtils {
     /** Delimeter for multiple filters in a CQL filter list (<code>";"</code>) */
     public static final Tokenizer CQL_DELIMITER = new Tokenizer(";");
 
+    /** Delimeter for inner value lists in the KVPs */
+    public static final Tokenizer SPACE_DELIMETER = new Tokenizer(" ");
+
     /**
      * Attempts to parse out the proper typeNames from the FeatureId filters. It simply uses the
      * value before the '.' character.
@@ -130,15 +132,14 @@ public class KvpUtils {
      *     kvpPairs.get("FEATUREID") in this class or one of its children
      * @return A list of typenames, made from the featureId filters.
      */
-    @SuppressWarnings("rawtypes")
     public static List getTypesFromFids(String rawFidList) {
-        List typeList = new ArrayList();
-        List unparsed = readNested(rawFidList);
-        Iterator i = unparsed.listIterator();
+        List<String> typeList = new ArrayList<>();
+        List<List<String>> unparsed = readNested(rawFidList);
+        Iterator<List<String>> i = unparsed.listIterator();
 
         while (i.hasNext()) {
-            List ids = (List) i.next();
-            ListIterator innerIterator = ids.listIterator();
+            List<String> ids = i.next();
+            ListIterator<String> innerIterator = ids.listIterator();
 
             while (innerIterator.hasNext()) {
                 String fid = innerIterator.next().toString();
@@ -154,7 +155,7 @@ public class KvpUtils {
     }
 
     /** Calls {@link #readFlat(String)} with the {@link #INNER_DELIMETER}. */
-    public static List readFlat(String rawList) {
+    public static List<String> readFlat(String rawList) {
         return readFlat(rawList, INNER_DELIMETER);
     }
 
@@ -175,7 +176,7 @@ public class KvpUtils {
      * @return A list of the tokenized string.
      * @see Tokenizer
      */
-    public static List readFlat(final String rawList, final Tokenizer tokenizer) {
+    public static List<String> readFlat(final String rawList, final Tokenizer tokenizer) {
         return tokenizer.readFlat(rawList);
     }
 
@@ -223,12 +224,12 @@ public class KvpUtils {
      * @param rawList The tokenized string.
      * @return A list of lists, containing outer and inner elements.
      */
-    public static List readNested(String rawList) {
+    public static List<List<String>> readNested(String rawList) {
         if (LOGGER.isLoggable(Level.FINEST)) {
             LOGGER.finest("reading nested: " + rawList);
         }
 
-        List kvpList = new ArrayList(10);
+        List<List<String>> kvpList = new ArrayList<>(10);
 
         // handles implicit unconstrained case
         if (rawList == null) {
@@ -236,7 +237,7 @@ public class KvpUtils {
                 LOGGER.finest("found implicit all requested");
             }
 
-            kvpList.add(Collections.EMPTY_LIST);
+            kvpList.add(Collections.emptyList());
             return kvpList;
 
             // handles explicit unconstrained case
@@ -245,7 +246,7 @@ public class KvpUtils {
                 LOGGER.finest("found explicit all requested");
             }
 
-            kvpList.add(Collections.EMPTY_LIST);
+            kvpList.add(Collections.emptyList());
             return kvpList;
 
             // handles explicit, constrained element lists
@@ -260,11 +261,11 @@ public class KvpUtils {
                     LOGGER.finest("reading complex list");
                 }
 
-                List outerList = readFlat(rawList, OUTER_DELIMETER);
-                Iterator i = outerList.listIterator();
+                List<String> outerList = readFlat(rawList, OUTER_DELIMETER);
+                Iterator<String> i = outerList.listIterator();
 
                 while (i.hasNext()) {
-                    kvpList.add(readFlat((String) i.next(), INNER_DELIMETER));
+                    kvpList.add(readFlat(i.next(), INNER_DELIMETER));
                 }
 
                 // handles single element list case
@@ -307,17 +308,16 @@ public class KvpUtils {
     }
 
     /** @param kvp unparsed/unormalized kvp set */
-    public static KvpMap normalize(Map kvp) {
+    public static KvpMap<String, Object> normalize(Map<String, ?> kvp) {
         if (kvp == null) {
             return null;
         }
 
         // create a normalied map
-        KvpMap normalizedKvp = new KvpMap();
+        KvpMap<String, Object> normalizedKvp = new KvpMap<>();
 
-        for (Iterator itr = kvp.entrySet().iterator(); itr.hasNext(); ) {
-            Map.Entry entry = (Map.Entry) itr.next();
-            String key = (String) entry.getKey();
+        for (Map.Entry<String, ?> entry : kvp.entrySet()) {
+            String key = entry.getKey();
             Object value = null;
 
             if (entry.getValue() instanceof String) {
@@ -327,19 +327,19 @@ public class KvpUtils {
                 // we use a set so that mere value repetition (a common error for which the OWS spec
                 // leaves the server up to decide what to do) does not cause the result to be a
                 // String[]
-                LinkedHashSet<String> normalized = new LinkedHashSet<String>();
+                LinkedHashSet<String> normalized = new LinkedHashSet<>();
                 for (String v : values) {
                     v = trim(v);
                     if (v != null) {
                         normalized.add(v);
                     }
                 }
-                if (normalized.size() == 0) {
+                if (normalized.isEmpty()) {
                     value = null;
                 } else if (normalized.size() == 1) {
                     value = normalized.iterator().next();
                 } else {
-                    value = (String[]) normalized.toArray(new String[normalized.size()]);
+                    value = normalized.toArray(new String[normalized.size()]);
                 }
             }
 
@@ -348,6 +348,44 @@ public class KvpUtils {
         }
 
         return normalizedKvp;
+    }
+
+    /**
+     * Converts a raw KVP with potential String[] values into one with String values, if multiple
+     * string values are actually present an exception will be thrown
+     *
+     * @param kvp
+     * @return
+     */
+    public static KvpMap<String, String> toStringKVP(Map<String, ?> kvp) {
+        if (kvp == null) {
+            return null;
+        }
+
+        KvpMap<String, String> result = new KvpMap<>();
+        for (Map.Entry<String, ?> entry : kvp.entrySet()) {
+            if (entry.getValue() instanceof String || entry.getValue() == null) {
+                result.put(entry.getKey(), (String) entry.getValue());
+            } else {
+                throw new IllegalArgumentException(
+                        "Found key with multiple values, this is unexpected: " + entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Converts a raw KVP based on String values to one with object values. Here to help trade with
+     * parts of the code assuming <code>KvpMap<String, String></code> and <code>
+     * KvpMap<String, Object></code>
+     *
+     * @param kvp
+     * @return
+     */
+    public static KvpMap<String, Object> toObjectKVP(Map<String, String> kvp) {
+        KvpMap<String, Object> result = new KvpMap<>();
+        kvp.forEach((k, v) -> result.put(k, v));
+        return result;
     }
 
     private static String trim(String value) {
@@ -371,7 +409,7 @@ public class KvpUtils {
      * @param kvp raw or unparsed kvp.
      * @return A list of errors that occured.
      */
-    public static List<Throwable> parse(Map kvp) {
+    public static List<Throwable> parse(Map<String, Object> kvp) {
 
         // look up parser objects
         List<KvpParser> parsers = GeoServerExtensions.extensions(KvpParser.class);
@@ -384,10 +422,9 @@ public class KvpUtils {
         purgeParsers(parsers, service, version, request);
 
         // parser the kvp's
-        ArrayList<Throwable> errors = new ArrayList<Throwable>();
-        for (Iterator<Map.Entry<Object, Object>> itr = kvp.entrySet().iterator(); itr.hasNext(); ) {
-            Map.Entry<Object, Object> entry = itr.next();
-            String key = (String) entry.getKey();
+        ArrayList<Throwable> errors = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : kvp.entrySet()) {
+            String key = entry.getKey();
 
             // find the parser for this key value pair
             KvpParser parser = findParser(key, service, request, version, parsers);
@@ -401,15 +438,14 @@ public class KvpUtils {
                         parsed = parser.parse(value);
                     } else {
                         String[] values = (String[]) entry.getValue();
-                        List<Object> result = new ArrayList<Object>();
+                        List<Object> result = new ArrayList<>();
                         for (String v : values) {
                             result.add(parser.parse(v));
                         }
                         parsed = result;
                     }
                 } catch (Throwable t) {
-                    // dont throw any exceptions yet, befor the service is
-                    // known
+                    // don't throw any exceptions yet, before the service is known
                     errors.add(t);
                 }
             }
@@ -574,12 +610,12 @@ public class KvpUtils {
         int index = path.indexOf('?');
 
         if (index == -1) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
 
         String queryString = path.substring(index + 1);
         StringTokenizer st = new StringTokenizer(queryString, "&");
-        Map<String, Object> result = new HashMap<String, Object>();
+        Map<String, Object> result = new LinkedHashMap<>();
         while (st.hasMoreTokens()) {
             String token = st.nextToken();
             String[] keyValuePair;
@@ -662,7 +698,7 @@ public class KvpUtils {
         if (maxTokens <= 0) {
             maxTokens = Integer.MAX_VALUE;
         }
-        List<String> ret = new ArrayList<String>();
+        List<String> ret = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         boolean escaped = false;
         int tokenCount = 1;
@@ -745,9 +781,8 @@ public class KvpUtils {
         return value;
     }
 
-    public static void merge(Map options, Map addition) {
-        for (Object o : addition.entrySet()) {
-            Map.Entry entry = (Map.Entry) o;
+    public static <K, V> void merge(Map<K, V> options, Map<K, V> addition) {
+        for (Map.Entry<K, V> entry : addition.entrySet()) {
             if (entry.getValue() == null) options.remove(entry.getKey());
             else options.put(entry.getKey(), entry.getValue());
         }

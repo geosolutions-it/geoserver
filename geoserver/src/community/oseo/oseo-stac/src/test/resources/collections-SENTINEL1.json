@@ -1,0 +1,24 @@
+{
+  "$merge": "collections.json",
+  "collections": [
+    {
+      "providers": [
+        {
+          "name": "European Union/ESA/Copernicus",
+          "roles": [
+            "producer",
+            "licensor"
+          ],
+          "url": "https://sentinel.esa.int/web/sentinel/user-guides/sentinel-2-msi"
+        },
+        {
+          "name": "GeoServer",
+          "url": "https://www.geoserver.org/",
+          "roles": [
+            "host"
+          ]
+        }
+      ]
+    }
+  ]
+}

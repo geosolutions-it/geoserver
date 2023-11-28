@@ -19,6 +19,8 @@ import org.eclipse.emf.ecore.EObject;
  */
 public abstract class GetCapabilitiesRequest extends RequestObject {
 
+    private String[] acceptLanguages;
+
     public static GetCapabilitiesRequest adapt(Object request) {
         if (request instanceof GetCapabilitiesType) {
             return new WFS11((EObject) request);
@@ -32,6 +34,7 @@ public abstract class GetCapabilitiesRequest extends RequestObject {
         super(adaptee);
     }
 
+    @SuppressWarnings("unchecked")
     public List<String> getSections() {
         return eGet(adaptee, "sections.section", List.class);
     }
@@ -40,10 +43,12 @@ public abstract class GetCapabilitiesRequest extends RequestObject {
         return eGet(adaptee, "updateSequence", String.class);
     }
 
+    @SuppressWarnings("unchecked")
     public List<String> getAcceptVersions() {
         return eGet(adaptee, "acceptVersions.version", List.class);
     }
 
+    @SuppressWarnings("unchecked")
     public List<String> getAcceptFormats() {
         return eGet(adaptee, "acceptFormats.outputFormat", List.class);
     }
@@ -86,5 +91,13 @@ public abstract class GetCapabilitiesRequest extends RequestObject {
         protected Object createAcceptedVersions() {
             return Ows11Factory.eINSTANCE.createAcceptVersionsType();
         }
+    }
+
+    public String[] getAcceptLanguages() {
+        return acceptLanguages;
+    }
+
+    public void setAcceptLanguages(String[] acceptLanguages) {
+        this.acceptLanguages = acceptLanguages;
     }
 }

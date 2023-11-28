@@ -5,15 +5,17 @@
  */
 package org.geoserver.wps;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geoserver.data.test.MockData.PRIMITIVEGEOFEATURE;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -32,17 +34,22 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.servlet.Filter;
 import javax.xml.namespace.QName;
 import net.opengis.ows11.BoundingBoxType;
 import org.apache.commons.codec.binary.Base64;
+import org.awaitility.Awaitility;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.custommonkey.xmlunit.exceptions.XpathException;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.config.GeoServer;
+import org.geoserver.config.GeoServerInfo;
+import org.geoserver.config.SettingsInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.data.test.SystemTestData.LayerProperty;
+import org.geoserver.ows.HTTPHeadersCollector;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
@@ -54,10 +61,10 @@ import org.geoserver.wps.executor.ProcessStatusTracker;
 import org.geoserver.wps.resource.ProcessArtifactsStore;
 import org.geoserver.wps.resource.WPSResourceManager;
 import org.geotools.data.collection.ListFeatureCollection;
+import org.geotools.data.geojson.GeoJSONReader;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.gml3.GMLConfiguration;
 import org.geotools.ows.v1_1.OWSConfiguration;
@@ -66,6 +73,7 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.util.PreventLocalEntityResolver;
 import org.geotools.xsd.Parser;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,7 +81,9 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.io.WKTReader;
+import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
@@ -88,7 +98,7 @@ public class ExecuteTest extends WPSTestSupport {
         String pgf = PRIMITIVEGEOFEATURE.getLocalPart();
         testData.addVectorLayer(
                 new QName("http://foo.org", pgf, "foo"),
-                new HashMap<LayerProperty, Object>(),
+                new HashMap<>(),
                 pgf + ".properties",
                 MockData.class,
                 getCatalog());
@@ -410,8 +420,6 @@ public class ExecuteTest extends WPSTestSupport {
     /**
      * Test GEOS-5663 https://osgeo-org.atlassian.net/browse/GEOS-5663 Location is removed from
      * collections
-     *
-     * @throws Exception
      */
     @Test
     public void testFeatureCollectionInlineWithLocation() throws Exception {
@@ -698,7 +706,7 @@ public class ExecuteTest extends WPSTestSupport {
 
         assertXpathExists("/ows:ExceptionReport/ows:Exception/ows:ExceptionText", d);
         assertXpathEvaluatesTo(
-                "Failed to parse process inputs\nRemote complex input references are disabled",
+                "Failed to parse process input: features\nRemote complex input references are disabled",
                 "/ows:ExceptionReport/ows:Exception/ows:ExceptionText",
                 d);
     }
@@ -798,7 +806,7 @@ public class ExecuteTest extends WPSTestSupport {
 
         assertXpathExists("/ows:ExceptionReport/ows:Exception/ows:ExceptionText", d);
         assertXpathEvaluatesTo(
-                "Failed to parse process inputs\nRemote complex input references are disabled",
+                "Failed to parse process input: features\nRemote complex input references are disabled",
                 "/ows:ExceptionReport/ows:Exception/ows:ExceptionText",
                 d);
     }
@@ -862,8 +870,10 @@ public class ExecuteTest extends WPSTestSupport {
         MockHttpServletResponse r = postAsServletResponse("wps", xml);
         assertEquals("application/json", r.getContentType());
         // System.out.println(r.getOutputStreamContent());
-        FeatureCollection fc = new FeatureJSON().readFeatureCollection(r.getContentAsString());
-        assertEquals(2, fc.size());
+        try (GeoJSONReader reader = new GeoJSONReader(r.getContentAsString())) {
+            FeatureCollection fc = reader.getFeatures();
+            assertEquals(2, fc.size());
+        }
     }
 
     @Test
@@ -899,8 +909,10 @@ public class ExecuteTest extends WPSTestSupport {
         // System.out.println(r.getOutputStreamContent());
         assertEquals("application/json", r.getContentType());
         // System.out.println(r.getOutputStreamContent());
-        FeatureCollection fc = new FeatureJSON().readFeatureCollection(r.getContentAsString());
-        assertEquals(2, fc.size());
+        try (GeoJSONReader reader = new GeoJSONReader(r.getContentAsString())) {
+            FeatureCollection fc = reader.getFeatures();
+            assertEquals(2, fc.size());
+        }
     }
 
     @Test
@@ -1297,9 +1309,7 @@ public class ExecuteTest extends WPSTestSupport {
                 "wps?service=WPS&version=1.0.0&request=Execute&Identifier=gs:Monkey&storeExecuteResponse=true&DataInputs="
                         + urlEncode("id=x2");
         Document dom = getAsDOM(request);
-        assertXpathExists("//wps:ProcessAccepted", dom);
-        XpathEngine xpath = XMLUnit.newXpathEngine();
-        String fullStatusLocation = xpath.evaluate("//wps:ExecuteResponse/@statusLocation", dom);
+        String fullStatusLocation = getFullStatusLocation(dom);
         String statusLocation = fullStatusLocation.substring(fullStatusLocation.indexOf('?') - 3);
 
         // we move the clock forward, but we asked no status, nothing should change
@@ -1548,7 +1558,7 @@ public class ExecuteTest extends WPSTestSupport {
                     }
 
                     @Override
-                    protected Iterator openIterator() {
+                    protected Iterator<SimpleFeature> openIterator() {
                         while (returnFlag.get() == false) {
                             try {
                                 Thread.sleep(20);
@@ -1577,14 +1587,7 @@ public class ExecuteTest extends WPSTestSupport {
         returnFlag.set(true);
 
         // wait until the execution actually ends
-        while (status != null && status.getPhase() == ProcessState.DISMISSING) {
-            Thread.sleep(50);
-            status = statusTracker.getStatus(executionId);
-            if (status != null) {
-                // the status must switch from dismissing to plain gone
-                Assert.assertEquals(ProcessState.DISMISSING, status.getPhase());
-            }
-        }
+        await().atMost(20, SECONDS).until(() -> statusTracker.getStatus(executionId) == null);
 
         // at this point also check there is no resource left
         WPSResourceManager resources =
@@ -2104,11 +2107,20 @@ public class ExecuteTest extends WPSTestSupport {
                 + "</wps:Execute>";
     }
 
+    /**
+     * Checks the progress is the one reported, waiting at most 5 seconds for the progress to match
+     * the expected value
+     */
     private void assertProgress(String statusLocation, String progress) throws Exception {
-        Document dom = getAsDOM(statusLocation);
-        // print(dom);
-        assertXpathExists("//wps:ProcessStarted", dom);
-        assertXpathEvaluatesTo(progress, "//wps:ProcessStarted/@percentCompleted", dom);
+        XpathEngine xp = XMLUnit.newXpathEngine();
+        Awaitility.await()
+                .atMost(5, SECONDS)
+                .until(
+                        () -> {
+                            Document dom = getAsDOM(statusLocation);
+                            String path = "//wps:ProcessStarted/@percentCompleted";
+                            return progress.equals(xp.evaluate(path, dom));
+                        });
     }
 
     private String submitMonkey(String id) throws Exception, XpathException {
@@ -2121,11 +2133,15 @@ public class ExecuteTest extends WPSTestSupport {
     }
 
     private String getStatusLocation(Document dom) throws XpathException {
-        assertXpathExists("//wps:ProcessAccepted", dom);
-        XpathEngine xpath = XMLUnit.newXpathEngine();
-        String fullStatusLocation = xpath.evaluate("//wps:ExecuteResponse/@statusLocation", dom);
+        String fullStatusLocation = getFullStatusLocation(dom);
         String statusLocation = fullStatusLocation.substring(fullStatusLocation.indexOf('?') - 3);
         return statusLocation;
+    }
+
+    private String getFullStatusLocation(Document dom) throws XpathException {
+        assertXpathExists("//wps:ProcessAccepted", dom);
+        XpathEngine xpath = XMLUnit.newXpathEngine();
+        return xpath.evaluate("//wps:ExecuteResponse/@statusLocation", dom);
     }
 
     private ListFeatureCollection collectionOfThings() {
@@ -2153,19 +2169,14 @@ public class ExecuteTest extends WPSTestSupport {
                     }
 
                     @Override
-                    protected Iterator openIterator() {
+                    protected Iterator<SimpleFeature> openIterator() {
                         throw new RuntimeException("Toasted!");
                     }
                 };
         return fc;
     }
 
-    /**
-     * Checks the bounds process returned the expected envelope
-     *
-     * @param request
-     * @param id
-     */
+    /** Checks the bounds process returned the expected envelope */
     void executeState1BoundsTest(String request, String id) throws Exception {
         if (!RemoteOWSTestSupport.isRemoteWMSStatesAvailable(LOGGER)) {
             LOGGER.warning(
@@ -2210,8 +2221,8 @@ public class ExecuteTest extends WPSTestSupport {
         ZipInputStream zis = new ZipInputStream(in);
         ZipEntry entry = null;
 
-        final String[] extensions = new String[] {".shp", ".shx", ".dbf", ".prj", ".cst"};
-        Set names = new HashSet();
+        final String[] extensions = {".shp", ".shx", ".dbf", ".prj", ".cst"};
+        Set<String> names = new HashSet<>();
         for (String name : typeNames) {
             for (String extension : extensions) {
                 names.add(name + extension);
@@ -2267,6 +2278,63 @@ public class ExecuteTest extends WPSTestSupport {
         ri.setDisabledServices(new ArrayList<>());
         getCatalog().save(ri);
         getCatalog().save(linfo);
+    }
+
+    @Test
+    public void testBacklinksProxyHeaders() throws Exception {
+        GeoServer gs = getGeoServer();
+        GeoServerInfo gsInfo = gs.getGlobal();
+        SettingsInfo settings = gsInfo.getSettings();
+        settings.setUseHeadersProxyURL(true);
+        settings.setProxyBaseUrl("${X-Forwarded-Proto}://${X-Forwarded-Host}/geoserver");
+        gs.save(gsInfo);
+
+        // submit asynch request with proxy headers
+        String wpsRequest =
+                "wps?service=WPS&version=1.0.0&request=Execute&Identifier=gs:Monkey&storeExecuteResponse=true&status=true&storeExecuteResponse=true&DataInputs="
+                        + urlEncode("id=proxyHeaders")
+                        + "&ResponseDocument="
+                        + urlEncode("result=@asReference=true");
+        MockHttpServletRequest hreq = createRequest(wpsRequest);
+        hreq.setMethod("GET");
+        hreq.setContent(new byte[] {});
+        hreq.addHeader("X-Forwarded-Proto", "https");
+        hreq.addHeader("X-Forwarded-Host", "mycompany.com");
+
+        MockHttpServletResponse response = dispatch(hreq, null);
+        InputStream responseContent =
+                new ByteArrayInputStream(response.getContentAsString().getBytes());
+        Document dom = dom(responseContent, true);
+        // print(dom);
+        String fullStatusLocation = getFullStatusLocation(dom);
+        String statusLocation = fullStatusLocation.substring(fullStatusLocation.indexOf('?') - 3);
+        assertThat(fullStatusLocation, CoreMatchers.startsWith("https://mycompany.com/geoserver"));
+
+        // pretend we are are container and clean up the HTTP Headers
+        hreq.removeHeader("X-Forwarded-Proto");
+        hreq.removeHeader("X-Forwarded-Host");
+
+        // now schedule the exit and wait for it to exit
+        MonkeyProcess.exit("proxyHeaders", collectionOfThings(), true);
+        dom = waitForProcessEnd(statusLocation, 60);
+        // print(dom);
+        assertXpathExists("//wps:ProcessSucceeded", dom);
+
+        // The document has been encoded as the final stage of the async execution, in a background
+        // thread. Check it is still using the right proxy variables
+        XpathEngine xpath = XMLUnit.newXpathEngine();
+        fullStatusLocation = xpath.evaluate("//wps:ExecuteResponse/@statusLocation", dom);
+        assertThat(fullStatusLocation, CoreMatchers.startsWith("https://mycompany.com/geoserver"));
+        String reference =
+                xpath.evaluate(
+                        "//wps:ExecuteResponse/wps:ProcessOutputs/wps:Output/wps:Reference/@href",
+                        dom);
+        assertThat(reference, CoreMatchers.startsWith("https://mycompany.com/geoserver"));
+    }
+
+    @Override
+    protected List<Filter> getFilters() {
+        return Arrays.asList(new HTTPHeadersCollector());
     }
 
     private void setRemoteInputDisabled(boolean enabled) {

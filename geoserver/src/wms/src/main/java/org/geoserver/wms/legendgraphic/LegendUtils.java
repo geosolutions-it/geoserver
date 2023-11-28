@@ -5,11 +5,14 @@
  */
 package org.geoserver.wms.legendgraphic;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.RenderingHints.Key;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,6 +22,7 @@ import java.util.MissingResourceException;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.text.WordUtils;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.map.ImageUtils;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -53,7 +57,6 @@ import org.opengis.util.InternationalString;
  *
  * @author Simone Giannecchini, GeoSolutions SAS
  */
-@SuppressWarnings({"deprecation", "unchecked"})
 public class LegendUtils {
     /**
      * Ensures that the provided argument is not <code>null</code>.
@@ -386,6 +389,40 @@ public class LegendUtils {
 
         return false;
     }
+    /**
+     * Checks if the label should be word wrapped
+     *
+     * @param req the {@link GetLegendGraphicRequest} from which to extract font antialiasing
+     *     information.
+     * @return true if the wrap is set to on
+     */
+    public static boolean isWrap(final GetLegendGraphicRequest req) {
+        if (req.getLegendOptions().get("wrap") instanceof String) {
+            String wrapVal = (String) req.getLegendOptions().get("wrap");
+            if (wrapVal.equalsIgnoreCase("on")
+                    || wrapVal.equalsIgnoreCase("true")
+                    || wrapVal.equalsIgnoreCase("yes")
+                    || wrapVal.equalsIgnoreCase("1")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the wrap limit
+     *
+     * @param req the {@link GetLegendGraphicRequest} from which to extract wrap limit.
+     * @return the wrap limit or -1 if no wrap limit provided
+     */
+    public static int getWrapLimit(final GetLegendGraphicRequest req) {
+        if (req.getLegendOptions().get("wrap_limit") instanceof String) {
+            String wrapVal = (String) req.getLegendOptions().get("wrap_limit");
+            return Integer.parseInt(wrapVal);
+        }
+        return -1;
+    }
 
     /**
      * Returns the image background color for the given {@link GetLegendGraphicRequest}.
@@ -425,10 +462,7 @@ public class LegendUtils {
      *
      * <p>1.0 is returned in case the provided {@link ColorMapEntry} is null or invalid.
      *
-     * @param entry
      * @return the opacity from the provided {@link ColorMapEntry} or 1.0 if something bad happens.
-     * @throws IllegalArgumentException
-     * @throws MissingResourceException
      */
     public static double getOpacity(final ColorMapEntry entry)
             throws IllegalArgumentException, MissingResourceException {
@@ -548,19 +582,16 @@ public class LegendUtils {
     /**
      * Finds the applicable Rules for the given scale denominator.
      *
-     * @param ftStyles
-     * @param scaleDenominator
      * @return an array of {@link Rule}s.
      */
     public static Rule[] getApplicableRules(
             final FeatureTypeStyle[] ftStyles, double scaleDenominator) {
         ensureNotNull(ftStyles, "FeatureTypeStyle array ");
         /** Holds both the rules that apply and the ElseRule's if any, in the order they appear */
-        final List<Rule> ruleList = new ArrayList<Rule>();
+        final List<Rule> ruleList = new ArrayList<>();
 
         // get applicable rules at the current scale
-        for (int i = 0; i < ftStyles.length; i++) {
-            FeatureTypeStyle fts = ftStyles[i];
+        for (FeatureTypeStyle fts : ftStyles) {
             for (Rule r : fts.rules()) {
                 if (isWithInScale(r, scaleDenominator)) {
                     ruleList.add(r);
@@ -599,7 +630,7 @@ public class LegendUtils {
 
     /**
      * Return a {@link BufferedImage} representing this label. The characters '\n' '\r' and '\f' are
-     * interpreted as linebreaks, as is the characater combination "\n" (as opposed to the actual
+     * interpreted as line breaks, as is the character combination "\n" (as opposed to the actual
      * '\n' character). This allows people to force line breaks in their labels by including the
      * character "\" followed by "n" in their label.
      *
@@ -608,7 +639,8 @@ public class LegendUtils {
      * @return a {@link BufferedImage} of the properly rendered label.
      */
     public static BufferedImage renderLabel(
-            final String label, final Graphics2D g, final GetLegendGraphicRequest req) {
+            String label, final Graphics2D g, final GetLegendGraphicRequest req) {
+
         ensureNotNull(label);
         ensureNotNull(g);
         ensureNotNull(req);
@@ -616,11 +648,20 @@ public class LegendUtils {
         // to indicate a line break, as well as a traditional 'real' line-break in the XML.
         BufferedImage renderedLabel;
         Color labelColor = getLabelFontColor(req);
+        if (LegendUtils.isWrap(req)) {
+            int width = getWrapLimit(req);
+            if (width == -1) {
+                width = req.getWidth();
+            }
+            FontMetrics fm = g.getFontMetrics();
+            int widthChars = width / fm.stringWidth("m");
+            label = WordUtils.wrap(label, widthChars, "\n", true);
+        }
         if ((label.indexOf("\n") != -1) || (label.indexOf("\\n") != -1)) {
             // this is a label WITH line-breaks...we need to figure out it's height *and*
             // width, and then adjust the legend size accordingly
             Rectangle2D bounds = new Rectangle2D.Double(0, 0, 0, 0);
-            ArrayList<Integer> lineHeight = new ArrayList<Integer>();
+            ArrayList<Integer> lineHeight = new ArrayList<>();
             // four backslashes... "\\" -> '\', so "\\\\n" -> '\' + '\' + 'n'
             final String realLabel = label.replaceAll("\\\\n", "\n");
             StringTokenizer st = new StringTokenizer(realLabel, "\n\r\f");
@@ -676,9 +717,11 @@ public class LegendUtils {
             rlg.setRenderingHint(
                     RenderingHints.KEY_TEXT_ANTIALIASING,
                     g.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING));
-            rlg.setRenderingHint(
-                    RenderingHints.KEY_FRACTIONALMETRICS,
-                    g.getRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS));
+            if (g.getRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS) != null) {
+                rlg.setRenderingHint(
+                        RenderingHints.KEY_FRACTIONALMETRICS,
+                        g.getRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS));
+            }
             rlg.drawString(label, 0, height - rlg.getFontMetrics().getDescent());
             rlg.dispose();
         }
@@ -727,8 +770,7 @@ public class LegendUtils {
                                 + 2 * dx
                                 + 0.5);
         final BufferedImage finalImage =
-                ImageUtils.createImage(
-                        totalWidth, totalHeight, (IndexColorModel) null, transparent);
+                ImageUtils.createImage(totalWidth, totalHeight, null, transparent);
         final Graphics2D finalGraphics =
                 ImageUtils.prepareTransparency(transparent, backgroundColor, finalImage, hintsMap);
 
@@ -749,7 +791,7 @@ public class LegendUtils {
         }
 
         finalGraphics.dispose();
-        return (BufferedImage) finalImage;
+        return finalImage;
     }
 
     /**
@@ -791,16 +833,11 @@ public class LegendUtils {
         return false;
     }
 
-    /**
-     * Locates the specified rule by name
-     *
-     * @param fts
-     * @param rule
-     */
+    /** Locates the specified rule by name */
     public static Rule getRule(FeatureTypeStyle[] fts, String rule) {
         Rule sldRule = null;
-        for (int i = 0; i < fts.length; i++) {
-            for (Rule r : fts[i].rules()) {
+        for (FeatureTypeStyle ft : fts) {
+            for (Rule r : ft.rules()) {
                 if (rule.equalsIgnoreCase(r.getName())) {
                     sldRule = r;
                     if (LOGGER.isLoggable(Level.FINE)) {

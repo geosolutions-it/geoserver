@@ -74,46 +74,49 @@ public class MaxExecutionTimeListener extends DelegateProgressListener {
         return maxExecutionTime;
     }
 
-    /**
-     * The maximum total time
-     *
-     * @return
-     */
+    /** The maximum total time */
     public long getMaxTotalTime() {
         return maxTotalTime;
     }
 
+    @Override
     public void started() {
         this.startTime = System.currentTimeMillis();
         checkNotExpired();
         super.started();
     }
 
+    @Override
     public void complete() {
         checkNotExpired();
         super.complete();
     }
 
+    @Override
     public InternationalString getTask() {
         checkNotExpired();
         return super.getTask();
     }
 
+    @Override
     public void progress(float progress) {
         checkNotExpired();
         super.progress(progress);
     }
 
+    @Override
     public float getProgress() {
         checkNotExpired();
         return super.getProgress();
     }
 
+    @Override
     public void setTask(InternationalString task) {
         checkNotExpired();
         super.setTask(task);
     }
 
+    @Override
     public void warningOccurred(String source, String location, String warning) {
         checkNotExpired();
         super.warningOccurred(source, location, warning);

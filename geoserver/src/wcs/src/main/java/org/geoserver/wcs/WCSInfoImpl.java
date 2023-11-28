@@ -16,12 +16,11 @@ import org.geotools.coverage.grid.io.OverviewPolicy;
  *
  * @author Simone Giannecchini, GeoSolutions SAS
  */
-@SuppressWarnings("unchecked")
 public class WCSInfoImpl extends ServiceInfoImpl implements WCSInfo {
 
     private static final long serialVersionUID = 3721044439071286273L;
 
-    List<String> srs = new ArrayList<String>();
+    List<String> srs = new ArrayList<>();
 
     boolean gmlPrefixing;
 
@@ -41,42 +40,57 @@ public class WCSInfoImpl extends ServiceInfoImpl implements WCSInfo {
 
     public WCSInfoImpl() {}
 
+    @Override
+    public String getType() {
+        return "WCS";
+    }
+
+    @Override
     public boolean isGMLPrefixing() {
         return gmlPrefixing;
     }
 
+    @Override
     public void setGMLPrefixing(boolean gmlPrefixing) {
         this.gmlPrefixing = gmlPrefixing;
     }
 
+    @Override
     public long getMaxInputMemory() {
         return maxInputMemory;
     }
 
+    @Override
     public void setMaxInputMemory(long maxInputSize) {
         this.maxInputMemory = maxInputSize;
     }
 
+    @Override
     public long getMaxOutputMemory() {
         return maxOutputMemory;
     }
 
+    @Override
     public void setMaxOutputMemory(long maxOutputSize) {
         this.maxOutputMemory = maxOutputSize;
     }
 
+    @Override
     public boolean isSubsamplingEnabled() {
         return subsamplingEnabled == null ? true : subsamplingEnabled;
     }
 
+    @Override
     public void setSubsamplingEnabled(boolean subsamplingEnabled) {
         this.subsamplingEnabled = subsamplingEnabled;
     }
 
+    @Override
     public OverviewPolicy getOverviewPolicy() {
         return overviewPolicy == null ? OverviewPolicy.IGNORE : overviewPolicy;
     }
 
+    @Override
     public void setOverviewPolicy(OverviewPolicy overviewPolicy) {
         this.overviewPolicy = overviewPolicy;
     }
@@ -95,6 +109,7 @@ public class WCSInfoImpl extends ServiceInfoImpl implements WCSInfo {
         return latLon;
     }
 
+    @Override
     public List<String> getSRS() {
         return srs;
     }
@@ -157,12 +172,14 @@ public class WCSInfoImpl extends ServiceInfoImpl implements WCSInfo {
         return true;
     }
 
+    @Override
     public int getMaxRequestedDimensionValues() {
         return maxRequestedDimensionValues == null
                 ? DimensionInfo.DEFAULT_MAX_REQUESTED_DIMENSION_VALUES
                 : maxRequestedDimensionValues;
     }
 
+    @Override
     public void setMaxRequestedDimensionValues(int maxRequestedDimensionValues) {
         this.maxRequestedDimensionValues = maxRequestedDimensionValues;
     }

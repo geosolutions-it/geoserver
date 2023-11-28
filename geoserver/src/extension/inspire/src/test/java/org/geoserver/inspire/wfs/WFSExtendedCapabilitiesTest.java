@@ -7,6 +7,7 @@ package org.geoserver.inspire.wfs;
 
 import static org.geoserver.inspire.InspireMetadata.CREATE_EXTENDED_CAPABILITIES;
 import static org.geoserver.inspire.InspireMetadata.LANGUAGE;
+import static org.geoserver.inspire.InspireMetadata.OTHER_LANGUAGES;
 import static org.geoserver.inspire.InspireMetadata.SERVICE_METADATA_TYPE;
 import static org.geoserver.inspire.InspireMetadata.SERVICE_METADATA_URL;
 import static org.geoserver.inspire.InspireMetadata.SPATIAL_DATASET_IDENTIFIER_TYPE;
@@ -19,7 +20,6 @@ import static org.geoserver.inspire.InspireTestSupport.assertInspireMetadataUrlR
 import static org.geoserver.inspire.InspireTestSupport.assertSchemaLocationContains;
 import static org.geoserver.inspire.InspireTestSupport.clearInspireMetadata;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.config.ServiceInfo;
@@ -188,7 +188,7 @@ public class WFSExtendedCapabilitiesTest extends GeoServerSystemTestSupport {
         final Document dom = getAsDOM(WFS_1_0_0_GETCAPREQUEST);
 
         final NodeList nodeList = dom.getElementsByTagNameNS(DLS_NAMESPACE, "ExtendedCapabilities");
-        assertTrue(nodeList.getLength() == 0);
+        assertEquals(0, nodeList.getLength());
     }
 
     // Test ExtendedCapabilities is not produced if required settings missing
@@ -385,5 +385,42 @@ public class WFSExtendedCapabilitiesTest extends GeoServerSystemTestSupport {
         nodeList = dom.getElementsByTagNameNS(DLS_NAMESPACE, "ExtendedCapabilities");
         final Element extendedCaps = (Element) nodeList.item(0);
         assertInspireDownloadSpatialDataSetIdentifierResponse(extendedCaps, ids);
+    }
+
+    @Test
+    public void testSupportedLanguages() throws Exception {
+        final ServiceInfo serviceInfo = getGeoServer().getService(WFSInfo.class);
+        final MetadataMap metadata = serviceInfo.getMetadata();
+        clearInspireMetadata(metadata);
+        metadata.put(CREATE_EXTENDED_CAPABILITIES.key, true);
+        metadata.put(SERVICE_METADATA_URL.key, "http://foo.com?bar=baz");
+        metadata.put(SERVICE_METADATA_TYPE.key, "application/vnd.iso.19139+xml");
+        metadata.put(LANGUAGE.key, "fre");
+        metadata.put(OTHER_LANGUAGES.key, "ita,eng");
+        metadata.put(
+                SPATIAL_DATASET_IDENTIFIER_TYPE.key,
+                "one,http://www.geoserver.org/one;two,http://www.geoserver.org/two,http://metadata.geoserver.org/id?two");
+        getGeoServer().save(serviceInfo);
+
+        final Document dom = getAsDOM(WFS_1_1_0_GETCAPREQUEST);
+
+        NodeList nodeList = dom.getElementsByTagNameNS(DLS_NAMESPACE, "ExtendedCapabilities");
+        assertEquals("Number of INSPIRE ExtendedCapabilities elements", 1, nodeList.getLength());
+
+        String schemaLocation = dom.getDocumentElement().getAttribute("xsi:schemaLocation");
+        assertSchemaLocationContains(schemaLocation, DLS_NAMESPACE, DLS_SCHEMA);
+
+        final Element extendedCaps = (Element) nodeList.item(0);
+
+        final Element suppLangs =
+                (Element)
+                        extendedCaps
+                                .getElementsByTagNameNS(COMMON_NAMESPACE, "SupportedLanguages")
+                                .item(0);
+
+        nodeList = suppLangs.getElementsByTagNameNS(COMMON_NAMESPACE, "DefaultLanguage");
+        assertEquals("Number of DefaultLanguage elements", 1, nodeList.getLength());
+        nodeList = suppLangs.getElementsByTagNameNS(COMMON_NAMESPACE, "SupportedLanguage");
+        assertEquals("Number of Supported Languages", 2, nodeList.getLength());
     }
 }

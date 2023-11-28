@@ -33,7 +33,7 @@ public class LDAPRoleServicePanel extends RoleServicePanel<LDAPRoleServiceConfig
         private static final long serialVersionUID = 8919421089437979222L;
 
         public LDAPAuthenticationPanel(String id) {
-            super(id, new Model<String>());
+            super(id, new Model<>());
             add(new TextField<String>("user"));
 
             PasswordTextField pwdField = new PasswordTextField("password");
@@ -57,6 +57,11 @@ public class LDAPRoleServicePanel extends RoleServicePanel<LDAPRoleServiceConfig
         add(new TextField<String>("groupSearchFilter"));
         add(new TextField<String>("allGroupsSearchFilter"));
         add(new TextField<String>("userFilter"));
+        TextField<String> rolePrefixField = new TextField<>("rolePrefix");
+        rolePrefixField.setConvertEmptyInputStringToNull(
+                false); // empty string is a legitimate prefix value
+        add(rolePrefixField);
+        add(new CheckBox("convertToUpperCase"));
         add(
                 new AjaxCheckBox("bindBeforeGroupSearch") {
                     private static final long serialVersionUID = -1675695153498067857L;

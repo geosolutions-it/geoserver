@@ -7,7 +7,6 @@ package org.geoserver.importer;
 
 import static org.junit.Assert.assertEquals;
 
-import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.impl.FeatureTypeInfoImpl;
@@ -38,6 +37,15 @@ public class FeatureDataConverterTest {
         assertEquals("i_has_spaces", t.getAttributeDescriptors().get(1).getLocalName());
     }
 
+    @Test
+    public void testOracleConversion() {
+        SimpleFeatureType t =
+                FeatureDataConverter.TO_ORACLE.convertType(
+                        buildFeatureTypeWithXMLUnsafeAtts(), null, null, null);
+        assertEquals("_123_NUMBER_FIRST", t.getAttributeDescriptors().get(0).getLocalName());
+        assertEquals("I_HAS_SPACES", t.getAttributeDescriptors().get(1).getLocalName());
+    }
+
     SimpleFeatureType buildFeatureTypeWithXMLUnsafeAtts() {
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
         typeBuilder.setName("badatts");
@@ -52,20 +60,39 @@ public class FeatureDataConverterTest {
     }
 
     @Test
-    public void testLayerNameFromTask() {
+    public void testLayerNameFromTaskLabel() {
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
         typeBuilder.setName("badname");
-        SimpleFeatureType badname = typeBuilder.buildFeatureType();
+        SimpleFeatureType schema = typeBuilder.buildFeatureType();
 
         ImportTask task = new ImportTask();
         LayerInfo layer = new LayerInfoImpl();
-        ResourceInfo resource = new FeatureTypeInfoImpl((Catalog) null);
+        ResourceInfo resource = new FeatureTypeInfoImpl(null);
         layer.setResource(resource);
         layer.setName("goodname");
         task.setLayer(layer);
 
-        badname = FeatureDataConverter.DEFAULT.convertType(badname, null, null, task);
+        schema = FeatureDataConverter.DEFAULT.convertType(schema, null, null, task);
 
-        assertEquals("goodname", badname.getName().getLocalPart());
+        assertEquals("goodname", schema.getName().getLocalPart());
+    }
+
+    @Test
+    public void testLayerNameFromTaskNative() {
+        SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
+        typeBuilder.setName("badname");
+        SimpleFeatureType schema = typeBuilder.buildFeatureType();
+
+        ImportTask task = new ImportTask();
+        LayerInfo layer = new LayerInfoImpl();
+        ResourceInfo resource = new FeatureTypeInfoImpl(null);
+        resource.setNativeName("tablename");
+        layer.setResource(resource);
+        layer.setName("goodname");
+        task.setLayer(layer);
+
+        schema = FeatureDataConverter.DEFAULT.convertType(schema, null, null, task);
+
+        assertEquals("tablename", schema.getName().getLocalPart());
     }
 }

@@ -42,7 +42,7 @@ GeoServer provides the ``format_options`` vendor-specific parameter to specify p
 
 ::
 
-    format-options=param1:value1;param2:value2;...
+    format_options=param1:value1;param2:value2;...
 
 .. _wfs_outputformat_shapezip:
 
@@ -50,7 +50,7 @@ Shapefile output
 ----------------
 
 The shapefile format has a number of limitations that would prevent turning data sources into an equivalent shapefile. In order to abide with such limitations
-the shape-zip output format will automatically apply some transformations on the source data, and eventually split the single colleciton into multiple
+the shape-zip output format will automatically apply some transformations on the source data, and eventually split the single collection into multiple
 shapefiles. In particular, the shape-zip format will:
 
 * Reduce attribute names to the DBF accepted length, making sure there are not conflicts (counters being added at the end of the attribute name to handle this).
@@ -131,6 +131,25 @@ JSON output ``format_options``:
 
 * ``format_options=callback:<parseResponse>`` applies only to the JSONP output format. See :ref:`wms_vendor_parameters` to change the callback name. Note that this format is disabled by default (See :ref:`wms_global_variables`).
 
+* ``format_option=filename:<file>``: if a file name is provided, the name is used as the output file name. The extension :file:`json` is optional, for example ``format_options=filename:export`` or ``format_options=features.json``
+
 JSON output ``system properties``:
 
 * ``json.maxDepth=<max_value>`` is used to determine the max number of allowed JSON nested objects on encoding phase.  By default the value is 100.
+
+
+CSV output
+----------------
+
+A Default CSV file uses a comma to separate values. Each line of the file is a data record. Each record consists of one or more fields, separated by commas. The separator can be changed using format_options as specified below.
+
+csv file output ``format_options``:
+
+* ``format_option=filename:<file>``: if a file name is provided, the name is used as the output file name. For example, ``format_options=filename:roads.csv``.
+* ``format_option=csvseparator:<csvseparator>`` (default is ```,``` ): if a separator is provided, it is used to separate values in output csv file. For example, ``format_options=csvseparator:-`` is used to get dash separated file.
+
+Some special characters need to be handled using keywords as below:
+
+* space separated: ``format_options=csvseparator:space``
+* tab separated: ``format_options=csvseparator:tab``
+* semicolon separated: ``format_options=csvseparator:semicolon``

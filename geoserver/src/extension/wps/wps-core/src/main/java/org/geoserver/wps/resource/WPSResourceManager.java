@@ -5,9 +5,12 @@
  */
 package org.geoserver.wps.resource;
 
+import com.google.common.base.Splitter;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.parsers.ParserConfigurationException;
 import net.opengis.wps10.ExecuteType;
+import org.apache.commons.io.IOUtils;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.DispatcherCallback;
 import org.geoserver.ows.Request;
@@ -25,11 +29,14 @@ import org.geoserver.ows.Response;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.Service;
 import org.geoserver.platform.ServiceException;
+import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
+import org.geoserver.platform.resource.Resources;
 import org.geoserver.wps.ProcessEvent;
 import org.geoserver.wps.ProcessListenerAdapter;
 import org.geoserver.wps.WPSException;
@@ -77,10 +84,9 @@ public class WPSResourceManager extends ProcessListenerAdapter
         return COPY_BUFFER_SIZE;
     }
 
-    ConcurrentHashMap<String, ExecutionResources> resourceCache =
-            new ConcurrentHashMap<String, ExecutionResources>();
+    ConcurrentHashMap<String, ExecutionResources> resourceCache = new ConcurrentHashMap<>();
 
-    ThreadLocal<String> executionId = new InheritableThreadLocal<String>();
+    ThreadLocal<String> executionId = new InheritableThreadLocal<>();
 
     private ProcessArtifactsStore artifactsStore;
 
@@ -99,8 +105,16 @@ public class WPSResourceManager extends ProcessListenerAdapter
 
         public ExecutionResources(boolean synchronouos) {
             this.synchronouos = synchronouos;
-            this.temporary = new ArrayList<WPSResource>();
+            this.temporary = new ArrayList<>();
         }
+    }
+
+    private GeoServerResourceLoader resourceLoader;
+
+    private File outputDirectory;
+
+    public WPSResourceManager(GeoServerResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
     }
 
     private String getExecutionId(String executionId) {
@@ -132,8 +146,6 @@ public class WPSResourceManager extends ProcessListenerAdapter
      * ProcessManagers should call this method every time they are running the process in a thread
      * other than the request thread, and that is not a child of it either (typical case is running
      * in a thread pool)
-     *
-     * @param executionId
      */
     void setCurrentExecutionId(String executionId) {
         ExecutionResources resources = resourceCache.get(executionId);
@@ -143,12 +155,8 @@ public class WPSResourceManager extends ProcessListenerAdapter
         this.executionId.set(executionId);
     }
 
-    /**
-     * Returns the executionId bound to this thread, if any
-     *
-     * @param executionId
-     */
-    String getCurrentExecutionId() {
+    /** Returns the executionId bound to this thread, if any */
+    public String getCurrentExecutionId() {
         return this.executionId.get();
     }
 
@@ -171,7 +179,6 @@ public class WPSResourceManager extends ProcessListenerAdapter
      * Returns a resource that will be used to store a process output as a "reference"
      *
      * @param executionId - can be null
-     * @param fileName
      */
     public Resource getOutputResource(String executionId, String fileName) {
         executionId = getExecutionId(executionId);
@@ -195,15 +202,13 @@ public class WPSResourceManager extends ProcessListenerAdapter
      *
      * @param executionId - optional, if you don't have it the resource manager will use its thread
      *     local version
-     * @param name
      * @param baseUrl - optional, if you don't have it the resource manager will pick one from
      *     Dispatcher.REQUEST
-     * @param mimeType
      */
     public String getOutputResourceUrl(
             String executionId, String name, String baseUrl, String mimeType) {
         // create the link
-        Map<String, String> kvp = new LinkedHashMap<String, String>();
+        Map<String, String> kvp = new LinkedHashMap<>();
         kvp.put("service", "WPS");
         kvp.put("version", "1.0.0");
         kvp.put("request", "GetExecutionResult");
@@ -217,16 +222,19 @@ public class WPSResourceManager extends ProcessListenerAdapter
         }
         String url = ResponseUtils.buildURL(baseUrl, "ows", kvp, URLType.SERVICE);
 
+        Resource mimeResource = getOutputResource(getExecutionId(executionId), name + ".mime");
+        try (OutputStream output = mimeResource.out()) {
+            IOUtils.write(mimeType, output, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new WPSException("Error storing the output resource mime type", e);
+        }
+
         return url;
     }
 
     /**
      * Returns a resource that will be used to store some temporary file for processing sake, and
      * will mark it for deletion when the process ends
-     *
-     * @param executionId
-     * @param fileName
-     * @throws IOException
      */
     public Resource getTemporaryResource(String extension) throws IOException {
 
@@ -240,11 +248,7 @@ public class WPSResourceManager extends ProcessListenerAdapter
         return resource;
     }
 
-    /**
-     * Gets the stored response file for the specified execution id
-     *
-     * @param executionId
-     */
+    /** Gets the stored response file for the specified execution id */
     public Resource getStoredResponse(String executionId) {
         return artifactsStore.getArtifact(executionId, ArtifactType.Response, null);
     }
@@ -252,19 +256,12 @@ public class WPSResourceManager extends ProcessListenerAdapter
     /**
      * Gets the stored request file for the specified execution id. It will be available only if the
      * process is executing asynchronously
-     *
-     * @param executionId
      */
     public Resource getStoredRequest(String executionId) {
         return artifactsStore.getArtifact(executionId, ArtifactType.Request, null);
     }
 
-    /**
-     * Gets the stored request as a parsed object
-     *
-     * @param executionId
-     * @throws IOException
-     */
+    /** Gets the stored request as a parsed object */
     public ExecuteType getStoredRequestObject(String executionId) throws IOException {
         Resource resource = getStoredRequest(executionId);
         if (resource == null || resource.getType() == Type.UNDEFINED) {
@@ -281,11 +278,65 @@ public class WPSResourceManager extends ProcessListenerAdapter
     }
 
     /**
-     * Stores the request in a binary resource for efficient later retrieval
-     *
-     * @param executionId
-     * @throws IOException
+     * Gets the output file if writing output outside of the WPS resource storage is enabled and the
+     * requested file is within the allowed output directory. Also attempts to create the parent
+     * directories for valid output files.
      */
+    public File getExternalOutputFile(String outPath, String outFile) throws IOException {
+        if (outputDirectory == null) {
+            throw new WPSException("Writing to external output files is disabled");
+        }
+        File file = outFile != null ? new File(outPath, outFile) : new File(outPath);
+        String path = file.getPath();
+        if (Splitter.on(File.separatorChar).splitToStream(path).anyMatch(".."::equals)) {
+            throw new IllegalArgumentException("Output file contains invalid '..' in path");
+        } else if (!file.isAbsolute()) {
+            // resolve relative paths to the output directory
+            file = new File(outputDirectory, path).getAbsoluteFile();
+        }
+        String canonicalFile = file.getCanonicalPath();
+        String canonicalDir = outputDirectory.getCanonicalPath();
+        canonicalDir += canonicalDir.endsWith(File.separator) ? "" : File.separator;
+        if (canonicalFile.startsWith(canonicalDir)) {
+            File parent = file.getParentFile();
+            if (!parent.exists() && !parent.mkdirs()) {
+                LOGGER.severe("Unable to create directory: " + parent);
+                throw new WPSException(
+                        "Output file parent directory does not exist and cannot be created");
+            }
+            return file;
+        }
+        LOGGER.warning("Output file " + canonicalFile + " is not in directory: " + canonicalDir);
+        throw new WPSException("Output file is not in the allowed directory");
+    }
+
+    /**
+     * Sets the directory that processes are allowed to write their output to outside of the WPS
+     * resource storage.
+     */
+    public void setExternalOutputDirectory(String directory) {
+        File file = null;
+        if (directory != null && !directory.trim().isEmpty()) {
+            String path = directory.trim();
+            file = new File(path);
+            if (!file.isAbsolute()) {
+                // if it's a path relative to the data directory, make it absolute
+                File base = resourceLoader.getBaseDirectory();
+                file = Resources.find(Resources.fromURL(Files.asResource(base), path), true);
+            }
+        }
+        if (file != null) {
+            outputDirectory = file.getAbsoluteFile();
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.fine("Writing to output directory is allowed: " + outputDirectory);
+            }
+        } else {
+            outputDirectory = null;
+            LOGGER.fine("Writing to external output files is disabled");
+        }
+    }
+
+    /** Stores the request in a binary resource for efficient later retrieval */
     public void storeRequestObject(ExecuteType execute, String executionId) throws IOException {
         Resource resource = getStoredRequest(executionId);
         try (OutputStream out = resource.out()) {
@@ -299,6 +350,7 @@ public class WPSResourceManager extends ProcessListenerAdapter
     // DispatcherCallback methods
     // -----------------------------------------------------------------
 
+    @Override
     public void finished(Request request) {
         // if we did not generate any process id, no resources have been added
         if (executionId.get() == null) {
@@ -331,8 +383,6 @@ public class WPSResourceManager extends ProcessListenerAdapter
      * Cleans up all the resources associated to a certain id. It is called automatically when the
      * request ends for synchronous processes, for asynch ones it will be triggered by the process
      * completion
-     *
-     * @param id
      */
     public void cleanProcess(String id, boolean cancelled) {
         // delete all resources associated with the process
@@ -358,23 +408,28 @@ public class WPSResourceManager extends ProcessListenerAdapter
         }
     }
 
+    @Override
     public Request init(Request request) {
         return null;
     }
 
+    @Override
     public Operation operationDispatched(Request request, Operation operation) {
         return null;
     }
 
+    @Override
     public Object operationExecuted(Request request, Operation operation, Object result) {
         return null;
     }
 
+    @Override
     public Response responseDispatched(
             Request request, Operation operation, Object result, Response response) {
         return null;
     }
 
+    @Override
     public Service serviceDispatched(Request request, Service service) throws ServiceException {
         return null;
     }
@@ -383,6 +438,7 @@ public class WPSResourceManager extends ProcessListenerAdapter
     // ApplicationListener methods
     // -----------------------------------------------------------------
 
+    @Override
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ContextClosedEvent || event instanceof ContextStoppedEvent) {
             // we are shutting down, remove all temp resources!

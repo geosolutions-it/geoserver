@@ -5,6 +5,8 @@
  */
 package org.geoserver.wps;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.junit.Assert.fail;
 
@@ -15,18 +17,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Callable;
 import javax.xml.namespace.QName;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.dom.DOMSource;
 import org.custommonkey.xmlunit.SimpleNamespaceContext;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
+import org.custommonkey.xmlunit.exceptions.XpathException;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
@@ -57,7 +56,11 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
     public static QName WORLD = new QName(WCS_URI, "World", WCS_PREFIX);
     public static String TIFF = "tiff";
 
-    List<GridCoverage> coverages = new ArrayList<GridCoverage>();
+    List<GridCoverage> coverages = new ArrayList<>();
+
+    public interface ThrowingFunction<T, R> {
+        R apply(T t) throws Exception;
+    }
 
     static {
         Processors.addProcessFactory(MonkeyProcess.getFactory());
@@ -87,7 +90,7 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         catalog = getCatalog();
 
         // init xmlunit
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("wps", "http://www.opengis.net/wps/1.0.0");
         namespaces.put("ows", "http://www.opengis.net/ows/1.1");
         namespaces.put("gml", "http://www.opengis.net/gml");
@@ -102,11 +105,7 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         xp = XMLUnit.newXpathEngine();
     }
 
-    /**
-     * Subclasses can override to register custom namespace mappings for xml unit
-     *
-     * @param namespaces
-     */
+    /** Subclasses can override to register custom namespace mappings for xml unit */
     protected void registerNamespaces(Map<String, String> namespaces) {
         // TODO Auto-generated method stub
 
@@ -125,22 +124,12 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         return "wps?";
     }
 
-    /**
-     * Validates a document based on the WPS schema
-     *
-     * @throws TransformerException
-     * @throws ParserConfigurationException
-     */
+    /** Validates a document based on the WPS schema */
     protected void checkValidationErrors(Document dom) throws Exception {
         checkValidationErrors(dom, new WPSConfiguration());
     }
 
-    /**
-     * Validates a document against the
-     *
-     * @param dom
-     * @param configuration
-     */
+    /** Validates a document against the */
     protected void checkValidationErrors(Document dom, Configuration configuration)
             throws Exception {
         Parser p = new Parser(configuration);
@@ -148,9 +137,9 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         p.parse(new DOMSource(dom));
 
         if (!p.getValidationErrors().isEmpty()) {
-            for (Iterator e = p.getValidationErrors().iterator(); e.hasNext(); ) {
-                SAXParseException ex = (SAXParseException) e.next();
-                System.out.println(
+            for (Exception exception : p.getValidationErrors()) {
+                SAXParseException ex = (SAXParseException) exception;
+                LOGGER.warning(
                         ex.getLineNumber() + "," + ex.getColumnNumber() + " -" + ex.toString());
             }
             fail("Document did not validate.");
@@ -158,27 +147,23 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
     }
 
     protected String readFileIntoString(String filename) throws IOException {
-        InputStream stream = getClass().getResourceAsStream(filename);
-        BufferedReader in = new BufferedReader(new InputStreamReader(stream));
-        StringBuffer sb = new StringBuffer();
-        String line = null;
-        while ((line = in.readLine()) != null) {
-            sb.append(line);
+        try (InputStream stream = getClass().getResourceAsStream(filename);
+                BufferedReader in = new BufferedReader(new InputStreamReader(stream))) {
+            StringBuffer sb = new StringBuffer();
+            String line = null;
+            while ((line = in.readLine()) != null) {
+                sb.append(line);
+            }
+            return sb.toString();
         }
-        in.close();
-        return sb.toString();
     }
 
-    /**
-     * Adds the wcs 1.1 coverages.
-     *
-     * @param testData
-     */
+    /** Adds the wcs 1.1 coverages. */
     public void addWcs11Coverages(SystemTestData testData) throws Exception {
         String styleName = "raster";
         testData.addStyle(styleName, "raster.sld", MockData.class, getCatalog());
 
-        Map<LayerProperty, Object> props = new HashMap<SystemTestData.LayerProperty, Object>();
+        Map<LayerProperty, Object> props = new HashMap<>();
         props.put(LayerProperty.STYLE, styleName);
 
         // wcs 1.1
@@ -191,12 +176,7 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         testData.addRasterLayer(WORLD, "world.tiff", TIFF, props, MockData.class, getCatalog());
     }
 
-    /**
-     * Submits an asynch execute request and waits for the final result, which is then returned
-     *
-     * @param xml
-     * @param maxWaitSeconds
-     */
+    /** Submits an asynch execute request and waits for the final result, which is then returned */
     protected Document submitAsynchronous(String xml, long maxWaitSeconds) throws Exception {
         Document dom = postAsDOM("wps", xml);
         assertXpathExists("//wps:ProcessAccepted", dom);
@@ -206,103 +186,51 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         return waitForProcessEnd(statusLocation, maxWaitSeconds);
     }
 
+    protected Document waitForProcess(
+            String statusLocation,
+            long maxWaitSeconds,
+            ThrowingFunction<Document, Boolean> exitCondition)
+            throws Exception {
+        await().atMost(maxWaitSeconds, SECONDS)
+                .until(
+                        () -> {
+                            MockHttpServletResponse response = getAsServletResponse(statusLocation);
+                            String contents = response.getContentAsString();
+                            // super weird... and I believe related to the testing harness... just
+                            // ignoring it for the moment.
+                            if ("".equals(contents)) {
+                                return false;
+                            }
+                            Document dom = dom(new ByteArrayInputStream(contents.getBytes()));
+                            // print(dom);
+                            return exitCondition.apply(dom);
+                        });
+
+        return getAsDOM(statusLocation);
+    }
+
     protected Document waitForProcessEnd(String statusLocation, long maxWaitSeconds)
             throws Exception {
-        XpathEngine xpath = XMLUnit.newXpathEngine();
-        Document dom = null;
-        long start = System.currentTimeMillis();
-        while ((((System.currentTimeMillis() - start) / 1000) < maxWaitSeconds)) {
-            MockHttpServletResponse response = getAsServletResponse(statusLocation);
-            String contents = response.getContentAsString();
-            // super weird... and I believe related to the testing harness... just ignoring it
-            // for the moment.
-            if ("".equals(contents)) {
-                continue;
-            }
-            dom = dom(new ByteArrayInputStream(contents.getBytes()));
-            // print(dom);
-            // are we still waiting for termination?
-            if (xpath.getMatchingNodes("//wps:Status/wps:ProcessAccepted", dom).getLength() > 0
-                    || xpath.getMatchingNodes("//wps:Status/wps:ProcessStarted", dom).getLength()
-                            > 0
-                    || xpath.getMatchingNodes("//wps:Status/wps:ProcessQueued", dom).getLength()
-                            > 0) {
-                Thread.sleep(100);
-            } else {
-                return dom;
-            }
-        }
-        throw new Exception("Waited for the process to complete more than " + maxWaitSeconds);
+        return waitForProcess(statusLocation, maxWaitSeconds, this::executionComplete);
     }
 
-    protected Document waitForProcessEnd(String statusLocation, int maxWaitSeconds)
-            throws Exception {
-        return waitForProcessEnd(
-                statusLocation,
-                maxWaitSeconds,
-                new Callable<Void>() {
-
-                    @Override
-                    public Void call() throws Exception {
-                        Thread.sleep(100);
-                        return null;
-                    }
-                });
+    private boolean executionComplete(Document dom) throws XpathException {
+        return countMatches(dom, "//wps:Status/wps:ProcessAccepted") == 0
+                && countMatches(dom, "//wps:Status/wps:ProcessStarted") == 0
+                && countMatches(dom, "//wps:Status/wps:ProcessQueued") == 0;
     }
 
-    protected Document waitForProcessEnd(
-            String statusLocation, int maxWaitSeconds, Callable<Void> waitAction) throws Exception {
-        XpathEngine xpath = XMLUnit.newXpathEngine();
-        Document dom = null;
-        long start = System.currentTimeMillis();
-        while ((((System.currentTimeMillis() - start) / 1000) < maxWaitSeconds)) {
-            MockHttpServletResponse response = getAsServletResponse(statusLocation);
-            String contents = response.getContentAsString();
-            // super weird... and I believe related to the testing harness... just ignoring it
-            // for the moment.
-            if ("".equals(contents)) {
-                continue;
-            }
-            dom = dom(new ByteArrayInputStream(contents.getBytes()));
-            // print(dom);
-            // are we still waiting for termination?
-            if (xpath.getMatchingNodes("//wps:Status/wps:ProcessAccepted", dom).getLength() > 0
-                    || xpath.getMatchingNodes("//wps:Status/wps:ProcessStarted", dom).getLength()
-                            > 0
-                    || xpath.getMatchingNodes("//wps:Status/wps:ProcessQueued", dom).getLength()
-                            > 0) {
-                waitAction.call();
-            } else {
-                return dom;
-            }
-        }
-        throw new Exception("Waited for the process to complete more than " + maxWaitSeconds);
+    protected int countMatches(Document d, String xpath) throws XpathException {
+        return xp.getMatchingNodes(xpath, d).getLength();
     }
 
     protected Document waitForProcessStart(String statusLocation, long maxWaitSeconds)
             throws Exception {
-        XpathEngine xpath = XMLUnit.newXpathEngine();
-        Document dom = null;
-        long start = System.currentTimeMillis();
-        while ((((System.currentTimeMillis() - start) / 1000) < maxWaitSeconds)) {
-            MockHttpServletResponse response = getAsServletResponse(statusLocation);
-            String contents = response.getContentAsString();
-            // super weird... and I believe related to the testing harness... just ignoring it
-            // for the moment.
-            if ("".equals(contents)) {
-                continue;
-            }
-            dom = dom(new ByteArrayInputStream(contents.getBytes()));
-            // print(dom);
-            // are we still waiting for termination?
-            if (xpath.getMatchingNodes("//wps:Status/wps:ProcessAccepted", dom).getLength() > 0
-                    || xpath.getMatchingNodes("//wps:Status/wps:ProcessQueued", dom).getLength()
-                            > 0) {
-                Thread.sleep(100);
-            } else {
-                return dom;
-            }
-        }
-        throw new Exception("Waited for the process to complete more than " + maxWaitSeconds);
+        return waitForProcess(statusLocation, maxWaitSeconds, this::executionStarted);
+    }
+
+    private boolean executionStarted(Document d) throws XpathException {
+        return countMatches(d, "//wps:Status/wps:ProcessAccepted") == 0
+                && countMatches(d, "//wps:Status/wps:ProcessQueued") == 0;
     }
 }

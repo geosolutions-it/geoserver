@@ -5,6 +5,7 @@
 package org.geoserver.security.oauth2;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -14,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.geoserver.ows.URLMangler.URLType;
+import org.geoserver.security.oauth2.services.GeoNodeTokenServices;
 import org.junit.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -31,11 +33,14 @@ import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResour
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
+import org.springframework.util.MultiValueMap;
 
 /** @author Alessio Fabiani, GeoSolutions S.A.S. */
 public class OAuth2RestTemplateTest extends AbstractOAuth2RestTemplateTest {
 
     @Override
+    @SuppressWarnings("PMD.CloseResource") // just a mock
     public void open() throws Exception {
         configuration = new GeoNodeOAuth2SecurityConfiguration();
         configuration.setAccessTokenRequest(accessTokenRequest);
@@ -132,12 +137,58 @@ public class OAuth2RestTemplateTest extends AbstractOAuth2RestTemplateTest {
 
         StringBuilder baseURL = new StringBuilder("http://test.geoserver-org/wms");
         StringBuilder path = new StringBuilder();
-        Map<String, String> kvp = new HashMap<String, String>();
+        Map<String, String> kvp = new HashMap<>();
         kvp.put("request", "GetCapabilities");
 
         urlMangler.mangleURL(baseURL, path, kvp, URLType.SERVICE);
 
-        assertTrue(kvp.containsKey("access_token"));
-        assertTrue("12345".equals(kvp.get("access_token")));
+        assertFalse(kvp.containsKey("access_token"));
+
+        try {
+            System.setProperty(OAuth2AccessTokenURLMangler.ALLOW_OAUTH2_URL_MANGLER, "true");
+
+            urlMangler.mangleURL(baseURL, path, kvp, URLType.SERVICE);
+
+            assertTrue(kvp.containsKey("access_token"));
+            assertEquals("12345", kvp.get("access_token"));
+        } finally {
+            System.clearProperty(OAuth2AccessTokenURLMangler.ALLOW_OAUTH2_URL_MANGLER);
+        }
+    }
+
+    @Test
+    public void testAccessTokenConverter() throws Exception {
+        final String path = "http://foo.url";
+        final String accessToken = "access_token Nah-nah-na-nah-nah";
+
+        GeoNodeTokenServices accessTokenServices = new MockGeoNodeTokenServices(accessToken);
+
+        accessTokenServices.checkTokenEndpointUrl = path;
+        accessTokenServices.setClientId("1234");
+        accessTokenServices.setClientSecret("56789-10");
+
+        OAuth2Authentication auth = accessTokenServices.loadAuthentication(accessToken);
+        assertEquals("1234", auth.getOAuth2Request().getClientId());
+    }
+
+    class MockGeoNodeTokenServices extends GeoNodeTokenServices {
+
+        final String accessToken;
+
+        public MockGeoNodeTokenServices(String accessToken) {
+            this.accessToken = accessToken;
+        }
+
+        @Override
+        protected Map<String, Object> postForMap(
+                String path, MultiValueMap<String, String> formData, HttpHeaders headers) {
+
+            assertTrue(headers.containsKey("Authorization"));
+            assertEquals(getAuthorizationHeader(accessToken), headers.get("Authorization").get(0));
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("client_id", clientId);
+            return body;
+        }
     }
 }

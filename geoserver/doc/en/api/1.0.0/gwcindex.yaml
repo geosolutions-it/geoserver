@@ -4,14 +4,20 @@ info:
   version: 1.0.0
   title: GeoWebCache Index
   description: The front facing html ui for GeoWebCache.
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
 schemes:
 - http
-host: localhost:8080
 basePath: /geoserver/gwc
 paths:
   /rest:
     get:
       operationId: indexGet
+      tags:
+       - "GwcIndex"
       summary: Returns the HTML user interface
       description: Returns the HTML for the front facing ui homepage for GeoWebCache.
       produces:

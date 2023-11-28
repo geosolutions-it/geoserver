@@ -48,7 +48,7 @@ public class DownloadLinkHandler {
     static final Logger LOGGER = Logging.getLogger(DownloadLinkHandler.class);
 
     static {
-        STANDARD_DOMAINS = new HashSet<String>();
+        STANDARD_DOMAINS = new HashSet<>();
         STANDARD_DOMAINS.add(Utils.TIME_DOMAIN);
         STANDARD_DOMAINS.add(Utils.ELEVATION_DOMAIN);
         STANDARD_DOMAINS.add(Utils.BBOX);
@@ -121,21 +121,13 @@ public class DownloadLinkHandler {
                     }
                 }
                 return builder.toString();
-            } catch (IOException e) {
-                throw new RuntimeException(
-                        "Unable to encode the specified file:" + canonicalPath, e.getCause());
-            } catch (NoSuchAlgorithmException e) {
+            } catch (IOException | NoSuchAlgorithmException e) {
                 throw new RuntimeException(
                         "Unable to encode the specified file:" + canonicalPath, e.getCause());
             }
         }
 
-        /**
-         * Append the BBOX parameter to the directDownload link
-         *
-         * @param envelope
-         * @param builder
-         */
+        /** Append the BBOX parameter to the directDownload link */
         private void appendBBOXToLink(ReferencedEnvelope envelope, StringBuilder builder) {
             if (envelope == null) {
                 throw new IllegalArgumentException("Envelope can't be null");
@@ -202,11 +194,7 @@ public class DownloadLinkHandler {
                     + "="
                     + FILE_TEMPLATE;
 
-    /**
-     * Generate download links for the specified info object.
-     *
-     * @param info
-     */
+    /** Generate download links for the specified info object. */
     public CloseableIterator<String> generateDownloadLinks(CatalogInfo info) {
         Request request = Dispatcher.REQUEST.get();
         String baseURL = null;
@@ -239,9 +227,6 @@ public class DownloadLinkHandler {
     /**
      * Return an {@link Iterator} containing {@link String}s representing the downloadLinks
      * associated to the provided {@link CoverageInfo} object.
-     *
-     * @param baseURL
-     * @param coverageInfo
      */
     protected CloseableIterator<String> linksFromCoverage(
             String baseURL, CoverageInfo coverageInfo) {
@@ -264,10 +249,7 @@ public class DownloadLinkHandler {
                         baseURL.replace("${nameSpace}", coverageInfo.getNamespace().getName())
                                 .replace("${layerName}", coverageInfo.getName());
 
-                CloseableIterator<org.geotools.data.FileGroupProvider.FileGroup> dataIterator =
-                        fileResourceInfo.getFiles(null);
-                return new CloseableLinksIterator(baseLink, dataIterator);
-
+                return new CloseableLinksIterator<>(baseLink, fileResourceInfo.getFiles(null));
             } else {
                 throw new RuntimeException(
                         "Donwload links handler need to provide "

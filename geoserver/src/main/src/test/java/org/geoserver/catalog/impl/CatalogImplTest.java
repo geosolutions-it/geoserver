@@ -12,34 +12,40 @@ import static org.geoserver.catalog.Predicates.contains;
 import static org.geoserver.catalog.Predicates.desc;
 import static org.geoserver.catalog.Predicates.equal;
 import static org.geoserver.catalog.Predicates.or;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogException;
 import org.geoserver.catalog.CatalogFactory;
@@ -66,12 +72,18 @@ import org.geoserver.catalog.WMTSLayerInfo;
 import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.event.CatalogAddEvent;
+import org.geoserver.catalog.event.CatalogEvent;
 import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.event.CatalogModifyEvent;
 import org.geoserver.catalog.event.CatalogPostModifyEvent;
 import org.geoserver.catalog.event.CatalogRemoveEvent;
 import org.geoserver.catalog.util.CloseableIterator;
+import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.security.AccessMode;
+import org.geoserver.security.SecuredResourceNameChangeListener;
+import org.geoserver.security.impl.DataAccessRule;
+import org.geoserver.security.impl.DataAccessRuleDAO;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.util.logging.Logging;
@@ -113,6 +125,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
     @Before
     public void setUp() throws Exception {
+        GeoServerExtensionsHelper.setIsSpringContext(false);
         catalog = createCatalog();
         catalog.setResourceLoader(new GeoServerResourceLoader());
 
@@ -402,7 +415,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         NamespaceInfo ns2 = catalog.getNamespace(ns.getId());
 
         assertNotNull(ns2);
-        assertFalse(ns == ns2);
+        assertNotSame(ns, ns2);
         assertEquals(ns, ns2);
     }
 
@@ -412,17 +425,17 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         NamespaceInfo ns2 = catalog.getNamespaceByPrefix(ns.getPrefix());
         assertNotNull(ns2);
-        assertFalse(ns == ns2);
+        assertNotSame(ns, ns2);
         assertEquals(ns, ns2);
 
         NamespaceInfo ns3 = catalog.getNamespaceByPrefix(null);
         assertNotNull(ns3);
-        assertFalse(ns == ns3);
+        assertNotSame(ns, ns3);
         assertEquals(ns, ns3);
 
         NamespaceInfo ns4 = catalog.getNamespaceByPrefix(Catalog.DEFAULT);
         assertNotNull(ns4);
-        assertFalse(ns == ns4);
+        assertNotSame(ns, ns4);
         assertEquals(ns, ns4);
     }
 
@@ -432,7 +445,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         NamespaceInfo ns2 = catalog.getNamespaceByURI(ns.getURI());
 
         assertNotNull(ns2);
-        assertFalse(ns == ns2);
+        assertNotSame(ns, ns2);
         assertEquals(ns, ns2);
     }
 
@@ -662,7 +675,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         WorkspaceInfo ws2 = catalog.getWorkspace(ws.getId());
 
         assertNotNull(ws2);
-        assertFalse(ws == ws2);
+        assertNotSame(ws, ws2);
         assertEquals(ws, ws2);
     }
 
@@ -672,17 +685,17 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         WorkspaceInfo ws2 = catalog.getWorkspaceByName(ws.getName());
 
         assertNotNull(ws2);
-        assertFalse(ws == ws2);
+        assertNotSame(ws, ws2);
         assertEquals(ws, ws2);
 
         WorkspaceInfo ws3 = catalog.getWorkspaceByName(null);
         assertNotNull(ws3);
-        assertFalse(ws == ws3);
+        assertNotSame(ws, ws3);
         assertEquals(ws, ws3);
 
         WorkspaceInfo ws4 = catalog.getWorkspaceByName(Catalog.DEFAULT);
         assertNotNull(ws4);
-        assertFalse(ws == ws4);
+        assertNotSame(ws, ws4);
         assertEquals(ws, ws4);
     }
 
@@ -772,8 +785,6 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         assertEquals(1, catalog.getDataStores().size());
 
-        DataStoreInfo retrieved = catalog.getDataStore(ds.getId());
-
         DataStoreInfo ds2 = catalog.getFactory().createDataStore();
         try {
             catalog.add(ds2);
@@ -827,7 +838,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         DataStoreInfo ds2 = catalog.getDataStore(ds.getId());
         assertNotNull(ds2);
-        assertFalse(ds == ds2);
+        assertNotSame(ds, ds2);
         assertEquals(ds, ds2);
     }
 
@@ -837,22 +848,22 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         DataStoreInfo ds2 = catalog.getDataStoreByName(ds.getName());
         assertNotNull(ds2);
-        assertFalse(ds == ds2);
+        assertNotSame(ds, ds2);
         assertEquals(ds, ds2);
 
         DataStoreInfo ds3 = catalog.getDataStoreByName(ws, null);
         assertNotNull(ds3);
-        assertFalse(ds == ds3);
+        assertNotSame(ds, ds3);
         assertEquals(ds, ds3);
 
         DataStoreInfo ds4 = catalog.getDataStoreByName(ws, Catalog.DEFAULT);
         assertNotNull(ds4);
-        assertFalse(ds == ds4);
+        assertNotSame(ds, ds4);
         assertEquals(ds, ds4);
 
         DataStoreInfo ds5 = catalog.getDataStoreByName(Catalog.DEFAULT, Catalog.DEFAULT);
         assertNotNull(ds5);
-        assertFalse(ds == ds5);
+        assertNotSame(ds, ds5);
         assertEquals(ds, ds5);
     }
 
@@ -862,32 +873,32 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         StoreInfo ds2 = catalog.getStoreByName(ds.getName(), StoreInfo.class);
         assertNotNull(ds2);
-        assertFalse(ds == ds2);
+        assertNotSame(ds, ds2);
         assertEquals(ds, ds2);
 
         StoreInfo ds3 = catalog.getStoreByName(ws, null, StoreInfo.class);
         assertNotNull(ds3);
-        assertFalse(ds == ds3);
+        assertNotSame(ds, ds3);
         assertEquals(ds, ds3);
 
         StoreInfo ds4 = catalog.getStoreByName(ws, Catalog.DEFAULT, StoreInfo.class);
         assertNotNull(ds4);
-        assertFalse(ds == ds4);
+        assertNotSame(ds, ds4);
         assertEquals(ds, ds4);
 
         StoreInfo ds5 = catalog.getStoreByName(Catalog.DEFAULT, Catalog.DEFAULT, StoreInfo.class);
         assertNotNull(ds5);
-        assertFalse(ds == ds5);
+        assertNotSame(ds, ds5);
         assertEquals(ds, ds5);
 
         StoreInfo ds6 = catalog.getStoreByName((String) null, null, StoreInfo.class);
         assertNotNull(ds6);
-        assertFalse(ds == ds6);
+        assertNotSame(ds, ds6);
         assertEquals(ds, ds3);
 
         StoreInfo ds7 = catalog.getStoreByName(Catalog.DEFAULT, Catalog.DEFAULT, StoreInfo.class);
         assertNotNull(ds7);
-        assertFalse(ds == ds7);
+        assertNotSame(ds, ds7);
         assertEquals(ds6, ds7);
     }
 
@@ -1110,7 +1121,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         FeatureTypeInfo ft2 = catalog.getFeatureType(ft.getId());
 
         assertNotNull(ft2);
-        assertFalse(ft == ft2);
+        assertNotSame(ft, ft2);
         assertEquals(ft, ft2);
     }
 
@@ -1120,7 +1131,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         FeatureTypeInfo ft2 = catalog.getFeatureTypeByName(ft.getName());
 
         assertNotNull(ft2);
-        assertFalse(ft == ft2);
+        assertNotSame(ft, ft2);
         assertEquals(ft, ft2);
 
         NamespaceInfo ns2 = catalog.getFactory().createNamespace();
@@ -1136,12 +1147,12 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         FeatureTypeInfo ft4 = catalog.getFeatureTypeByName(ns2.getPrefix(), ft3.getName());
         assertNotNull(ft4);
-        assertFalse(ft4 == ft3);
+        assertNotSame(ft4, ft3);
         assertEquals(ft3, ft4);
 
         ft4 = catalog.getFeatureTypeByName(ns2.getURI(), ft3.getName());
         assertNotNull(ft4);
-        assertFalse(ft4 == ft3);
+        assertNotSame(ft4, ft3);
         assertEquals(ft3, ft4);
     }
 
@@ -1339,6 +1350,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         assertEquals(1, catalog.getLayers().size());
 
         LayerInfo l2 = catalog.getFactory().createLayer();
+        ((LayerInfoImpl) l2).setId("foobar");
         try {
             catalog.add(l2);
             fail("adding with no name should throw exception");
@@ -1527,6 +1539,38 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
     }
 
     @Test
+    public void testRemoveLayerAndAssociatedDataRules() throws IOException {
+        DataAccessRuleDAO dao = DataAccessRuleDAO.get();
+        CatalogListener listener = new SecuredResourceNameChangeListener(catalog, dao);
+        addLayer();
+        assertEquals(1, catalog.getLayers().size());
+
+        String workspaceName = l.getResource().getStore().getWorkspace().getName();
+        addLayerAccessRule(workspaceName, l.getName(), AccessMode.WRITE, "*");
+        assertTrue(layerHasSecurityRule(dao, workspaceName, l.getName()));
+        catalog.remove(l);
+        assertTrue(catalog.getLayers().isEmpty());
+        dao.reload();
+        assertFalse(layerHasSecurityRule(dao, workspaceName, l.getName()));
+        catalog.removeListener(listener);
+    }
+
+    private boolean layerHasSecurityRule(
+            DataAccessRuleDAO dao, final String ruleRoot, String ruleLayer) {
+        Objects.requireNonNull(ruleRoot);
+        Objects.requireNonNull(ruleLayer);
+        List<DataAccessRule> rules = dao.getRules();
+        for (DataAccessRule rule : rules) {
+            if (rule.getRoot().equalsIgnoreCase(ruleRoot)
+                    && ruleLayer.equalsIgnoreCase(rule.getLayer())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Test
     public void testModifyLayer() {
         addLayer();
 
@@ -1689,9 +1733,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         s2.setWorkspace(ws);
         catalog.add(s2);
 
-        assertFalse(
-                new HashSet<StyleInfo>(currStyles)
-                        .equals(new HashSet<StyleInfo>(catalog.getStyles())));
+        assertNotEquals(new HashSet<>(currStyles), new HashSet<>(catalog.getStyles()));
 
         StyleInfo s3 = catalog.getFactory().createStyle();
         s3.setName(s2.getName());
@@ -1951,13 +1993,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         assertEquals(2, styles.size());
 
         // test immutability
-        Comparator<StyleInfo> comparator =
-                new Comparator<StyleInfo>() {
-
-                    public int compare(StyleInfo o1, StyleInfo o2) {
-                        return o1.getName().compareTo(o2.getName());
-                    }
-                };
+        Comparator<StyleInfo> comparator = (o1, o2) -> o1.getName().compareTo(o2.getName());
         try {
             Collections.sort(styles, comparator);
             fail("Expected runtime exception, immutable collection");
@@ -1965,7 +2001,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
             assertTrue(true);
         }
 
-        styles = new ArrayList<StyleInfo>(styles);
+        styles = new ArrayList<>(styles);
         Collections.sort(styles, comparator);
 
         assertEquals("a" + s.getName(), styles.get(0).getName());
@@ -1976,24 +2012,27 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
     public void testExceptionThrowingListener() throws Exception {
         ExceptionThrowingListener l = new ExceptionThrowingListener();
         catalog.addListener(l);
-
-        l.throwCatalogException = false;
-
-        WorkspaceInfo ws = catalog.getFactory().createWorkspace();
-        ws.setName("foo");
-
-        // no exception thrown back
-        catalog.add(ws);
-
-        l.throwCatalogException = true;
-        ws = catalog.getFactory().createWorkspace();
-        ws.setName("bar");
-
         try {
+            l.throwCatalogException = false;
+
+            WorkspaceInfo ws = catalog.getFactory().createWorkspace();
+            ws.setName("foo");
+
+            // no exception thrown back
             catalog.add(ws);
-            fail();
-        } catch (CatalogException ce) {
-            // good
+
+            l.throwCatalogException = true;
+            ws = catalog.getFactory().createWorkspace();
+            ws.setName("bar");
+
+            try {
+                catalog.add(ws);
+                fail();
+            } catch (CatalogException ce) {
+                // good
+            }
+        } finally {
+            catalog.removeListener(l);
         }
     }
 
@@ -2002,8 +2041,6 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         assertTrue(catalog.getStores(WMSStoreInfo.class).isEmpty());
         addWMSStore();
         assertEquals(1, catalog.getStores(WMSStoreInfo.class).size());
-
-        WMSStoreInfo retrieved = catalog.getStore(wms.getId(), WMSStoreInfo.class);
 
         WMSStoreInfo wms2 = catalog.getFactory().createWebMapServer();
         wms2.setName("wms2Name");
@@ -2054,7 +2091,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
                 new CountDownLatch(GET_LAYER_BY_ID_WITH_CONCURRENT_ADD_THREAD_COUNT + 1);
         CountDownLatch done = new CountDownLatch(GET_LAYER_BY_ID_WITH_CONCURRENT_ADD_THREAD_COUNT);
 
-        List<RunnerBase> runners = new ArrayList<RunnerBase>();
+        List<RunnerBase> runners = new ArrayList<>();
         for (int i = 0; i < GET_LAYER_BY_ID_WITH_CONCURRENT_ADD_THREAD_COUNT; i++) {
             RunnerBase runner = new LayerAddRunner(ready, done, i);
             new Thread(runner).start();
@@ -2115,6 +2152,21 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
     }
 
     @Test
+    public void testAddLayerGroupWithMissingResource() throws Exception {
+        addLayerGroup();
+
+        LayerGroupInfo lg2 = catalog.getFactory().createLayerGroup();
+        lg2.setName("layerGroup2");
+        lg2.getLayers().add(l);
+
+        CatalogFactory factory = catalog.getFactory();
+        LayerInfo l2 = factory.createLayer();
+        lg2.setWorkspace(ws);
+        lg2.getLayers().add(l2);
+        assertThrows(IllegalArgumentException.class, () -> catalog.add(lg2));
+    }
+
+    @Test
     public void testGetLayerGroupByName() {
         addLayerGroup();
         assertNotNull(catalog.getLayerGroupByName("layerGroup"));
@@ -2147,6 +2199,257 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         assertNotNull(catalog.getLayerGroupByName(ws.getName() + ":layerGroup2"));
         assertNotNull(catalog.getLayerGroupByName(ws, "layerGroup2"));
         assertNull(catalog.getLayerGroupByName("cite", "layerGroup2"));
+    }
+
+    @Test
+    public void testRenameResourceRenamesAssociatedDataRules() throws IOException {
+        CatalogListener listener =
+                new SecuredResourceNameChangeListener(catalog, DataAccessRuleDAO.get());
+        addFeatureType();
+        ft = catalog.getFeatureType(ft.getId());
+
+        final String wsName = ws.getName();
+        final String oldName = ft.getName();
+        final String newName = oldName + "_modified";
+
+        addLayerAccessRule(wsName, oldName, AccessMode.WRITE, "*");
+        addLayerAccessRule(wsName, oldName, AccessMode.READ, "ROLE_USER");
+
+        Predicate<DataAccessRule> filter = layerFilter(wsName, oldName);
+        assertEquals(2, count(filter));
+
+        ft.setName(newName);
+        catalog.save(ft);
+
+        assertEquals(0, count(filter));
+        filter = layerFilter(wsName, newName);
+        assertEquals(2, count(filter));
+        catalog.removeListener(listener);
+    }
+
+    @Test
+    public void testRenameWorkspaceRenamesAssociatedDataRules() throws IOException {
+        CatalogListener listener =
+                new SecuredResourceNameChangeListener(catalog, DataAccessRuleDAO.get());
+
+        lg.setWorkspace(ws);
+        addLayerGroup();
+        lg = catalog.getLayerGroup(lg.getId());
+        ws = catalog.getWorkspace(ws.getId());
+        assertNotNull(lg.getWorkspace());
+        assertEquals(ws.getName(), lg.getWorkspace().getName());
+
+        addLayerAccessRule(ws.getName(), lg.getName(), AccessMode.WRITE, "*");
+        addLayerAccessRule(ws.getName(), lg.getName(), AccessMode.READ, "ROLE_USER");
+
+        Predicate<DataAccessRule> filter = layerFilter(ws.getName(), lg.getName());
+        assertEquals(2, count(filter));
+
+        final String oldWsName = ws.getName();
+        final String newWsName = oldWsName + "_renamed";
+        ws.setName(newWsName);
+        catalog.save(ws);
+
+        assertEquals(0, count(filter));
+        filter = layerFilter(newWsName, lg.getName());
+        assertEquals(2, count(filter));
+        catalog.removeListener(listener);
+    }
+
+    @Test
+    public void testRenameRootLayerGroupRenamesAssociatedDataRules() throws IOException {
+        CatalogListener listener =
+                new SecuredResourceNameChangeListener(catalog, DataAccessRuleDAO.get());
+        addLayerGroup();
+        lg = catalog.getLayerGroup(lg.getId());
+        addLayerAccessRule(lg.getName(), null, AccessMode.WRITE, "*");
+        addLayerAccessRule(lg.getName(), null, AccessMode.READ, "ROLE_USER");
+        assertEquals(2, count(rootFilter(lg.getName())));
+
+        final String oldName = lg.getName();
+        final String newName = oldName + "_renamed";
+        lg.setName(newName);
+        catalog.save(lg);
+
+        assertEquals(0, count(rootFilter(oldName)));
+        assertEquals(2, count(rootFilter(newName)));
+        catalog.removeListener(listener);
+    }
+
+    private Predicate<DataAccessRule> workspaceFilter(String workspaceName) {
+        return r -> r.getRoot().equalsIgnoreCase(workspaceName) && r.getLayer() != null;
+    }
+
+    private Predicate<DataAccessRule> globalLayerGroupFilter(String layerGroupName) {
+        return r -> r.getRoot().equalsIgnoreCase(layerGroupName) && r.getLayer() == null;
+    }
+
+    private Predicate<DataAccessRule> rootFilter(String root) {
+        return r -> r.getRoot().equalsIgnoreCase(root);
+    }
+
+    private Predicate<DataAccessRule> layerFilter(String workspace, String layer) {
+        Objects.requireNonNull(workspace);
+        Objects.requireNonNull(layer);
+        return rootFilter(workspace).and(r -> r.getLayer().equalsIgnoreCase(layer));
+    }
+
+    private int count(Predicate<DataAccessRule> filter) {
+        return (int) findRules(filter).count();
+    }
+
+    private Stream<DataAccessRule> findRules(Predicate<DataAccessRule> filter) {
+        return DataAccessRuleDAO.get().getRules().stream().filter(filter);
+    }
+
+    @Test
+    public void testRemoveLayerGroupAndAssociatedGlobalLayerGroupRules() throws IOException {
+        testRemoveLayerGroupAndAssociatedDataRules(null);
+    }
+
+    @Test
+    public void testRemoveLayerGroupAndAssociatedDataRules() throws IOException {
+        testRemoveLayerGroupAndAssociatedDataRules(this.ws);
+    }
+
+    private void testRemoveLayerGroupAndAssociatedDataRules(WorkspaceInfo ws) throws IOException {
+        DataAccessRuleDAO dao = DataAccessRuleDAO.get();
+        // SecuredResourceNameChangeListener registers itself...
+        CatalogListener listener = new SecuredResourceNameChangeListener(catalog, dao);
+        addLayer();
+        CatalogFactory factory = catalog.getFactory();
+        LayerGroupInfo lg = factory.createLayerGroup();
+        String lgName = "MyFakeWorkspace:layerGroup";
+        lg.setName(lgName);
+        lg.setWorkspace(ws);
+        lg.getLayers().add(l);
+        lg.getStyles().add(s);
+        catalog.add(lg);
+        final String ruleRoot;
+        final String ruleLayer;
+        Predicate<DataAccessRule> filter;
+        if (ws == null) {
+            assertNotNull(catalog.getLayerGroupByName(lg.getName()));
+            filter = globalLayerGroupFilter(lg.getName());
+            ruleRoot = lg.getName();
+            ruleLayer = null;
+        } else {
+            String workspaceName = ws.getName();
+            assertNotNull(catalog.getLayerGroupByName(workspaceName, lg.getName()));
+            filter = layerFilter(workspaceName, lg.getName());
+            ruleRoot = workspaceName;
+            ruleLayer = lg.getName();
+        }
+        addLayerAccessRule(ruleRoot, ruleLayer, AccessMode.WRITE, "*");
+        assertEquals(1, count(filter));
+        catalog.remove(lg);
+        if (ws == null) {
+            assertNull(catalog.getLayerGroupByName(lg.getName()));
+        } else {
+            assertNull(catalog.getLayerGroupByName(ws.getName(), lg.getName()));
+        }
+        assertFalse(layerHasSecurityRule(dao, ruleRoot, lg.getName()));
+        catalog.removeListener(listener);
+    }
+
+    /**
+     * A {@link DataAccessRule} for a global layer group is created with the rule's root as the
+     * layergroup's name, and the rule's layer to {@code null}; while a workspace rule has the
+     * workspace name as root, and a non-null layer (it's either a layer(/group) name or the
+     * {@literal *} glob.
+     *
+     * <p>Since a global layer group and a workspace may have the same name, make sure they don't
+     * get confused. More specifically, {@code SecuredResourceNameChangeListener}'s {@link
+     * SecuredResourceNameChangeListener#handleRemoveEvent handleRemoveEvent} and {@link
+     * SecuredResourceNameChangeListener#handlePostModifyEvent handlePostModifyEvent} correctly
+     * resolve which rules to work on based on the event's {@link CatalogEvent#getSource() source}.
+     */
+    @Test
+    public void testRootLayerGroupAndWorkspaceDataRulesDontCollideWhenHandlingEvents()
+            throws IOException {
+        final CatalogListener listener =
+                new SecuredResourceNameChangeListener(catalog, DataAccessRuleDAO.get());
+
+        // workspace and global layer group shared name
+        final String sharedName = "osm";
+        WorkspaceInfo workspace = catalog.getFactory().createWorkspace();
+        LayerGroupInfo layerGroup = this.lg;
+        workspace.setName(sharedName);
+        layerGroup.setName(sharedName);
+
+        catalog.add(workspace);
+        addLayerGroup();
+
+        // workspace rule
+        addLayerAccessRule(sharedName, "*", AccessMode.WRITE);
+        // global layer group rule
+        addLayerAccessRule(sharedName, null, AccessMode.READ);
+
+        // preflight check
+        assertEquals(1, count(workspaceFilter(sharedName)));
+        assertEquals(1, count(globalLayerGroupFilter(sharedName)));
+
+        layerGroup = catalog.getLayerGroup(layerGroup.getId());
+        workspace = catalog.getWorkspace(workspace.getId());
+
+        final String newName = sharedName + "_modified";
+
+        // change the layer group name, make sure the workspace filter hasn't changed
+        layerGroup.setName(newName);
+        layerGroup.setWorkspace(null);
+        catalog.save(layerGroup);
+
+        assertEquals(0, count(globalLayerGroupFilter(sharedName)));
+        assertEquals(1, count(globalLayerGroupFilter(newName)));
+        // filter only on the rule's root
+        assertEquals("only the lg rule should have been updated", 1, count(rootFilter(newName)));
+
+        // restore the lg name and change the ws name, check only the ws rule is updated
+        layerGroup.setName(sharedName);
+        workspace.setName(newName);
+        catalog.save(layerGroup);
+        catalog.save(workspace);
+
+        assertEquals(0, count(workspaceFilter(sharedName)));
+        assertEquals(1, count(workspaceFilter(newName)));
+        assertEquals("only the ws rule should have been updated", 1, count(rootFilter(newName)));
+
+        // now verify deletes
+        layerGroup.setName(sharedName);
+        workspace.setName(sharedName);
+        catalog.save(layerGroup);
+        catalog.save(workspace);
+        // preflight check
+        assertEquals(1, count(workspaceFilter(sharedName)));
+        assertEquals(1, count(globalLayerGroupFilter(sharedName)));
+
+        catalog.remove(layerGroup);
+        assertEquals(0, count(globalLayerGroupFilter(sharedName)));
+        assertEquals("ws rule should have not been deleted", 1, count(workspaceFilter(sharedName)));
+
+        // re-add lg
+        layerGroup = catalog.getFactory().createLayerGroup();
+        layerGroup.setName(sharedName);
+        layerGroup.getLayers().add(l);
+        catalog.add(layerGroup);
+        // prevent CascadeDeleteVisitor to remove the lg automatically
+
+        addLayerAccessRule(sharedName, null, AccessMode.READ);
+
+        assertEquals(1, count(workspaceFilter(sharedName)));
+        assertEquals(1, count(globalLayerGroupFilter(sharedName)));
+
+        // remove ws
+        assertEquals(1, count(globalLayerGroupFilter(sharedName)));
+        catalog.remove(workspace);
+
+        assertEquals(0, count(workspaceFilter(sharedName)));
+        assertEquals(
+                "lg rule should have not been deleted",
+                1,
+                count(globalLayerGroupFilter(sharedName)));
+
+        catalog.removeListener(listener);
     }
 
     @Test
@@ -2509,22 +2812,27 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         public List<CatalogPostModifyEvent> postModified = new CopyOnWriteArrayList<>();
         public List<CatalogRemoveEvent> removed = new CopyOnWriteArrayList<>();
 
+        @Override
         public void handleAddEvent(CatalogAddEvent event) {
             added.add(event);
         }
 
+        @Override
         public void handleModifyEvent(CatalogModifyEvent event) {
             modified.add(event);
         }
 
+        @Override
         public void handlePostModifyEvent(CatalogPostModifyEvent event) {
             postModified.add(event);
         }
 
+        @Override
         public void handleRemoveEvent(CatalogRemoveEvent event) {
             removed.add(event);
         }
 
+        @Override
         public void reloaded() {}
     }
 
@@ -2532,6 +2840,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         public boolean throwCatalogException;
 
+        @Override
         public void handleAddEvent(CatalogAddEvent event) throws CatalogException {
             if (throwCatalogException) {
                 throw new CatalogException();
@@ -2540,12 +2849,16 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
             }
         }
 
+        @Override
         public void handleModifyEvent(CatalogModifyEvent event) throws CatalogException {}
 
+        @Override
         public void handlePostModifyEvent(CatalogPostModifyEvent event) throws CatalogException {}
 
+        @Override
         public void handleRemoveEvent(CatalogRemoveEvent event) throws CatalogException {}
 
+        @Override
         public void reloaded() {}
     }
 
@@ -2558,6 +2871,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
             this.idx = idx;
         }
 
+        @Override
         protected void runInternal() throws Exception {
             CatalogFactory factory = catalog.getFactory();
             for (int i = 0; i < GET_LAYER_BY_ID_WITH_CONCURRENT_ADD_TEST_COUNT; i++) {
@@ -2685,17 +2999,16 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         ft3 = catalog.getFeatureType(ft3.getId());
 
         Filter filter = acceptAll();
-        Set<? extends CatalogInfo> expected;
-        Set<? extends CatalogInfo> actual;
 
-        expected = Sets.newHashSet(ft1, ft2, ft3);
-        actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
+        Set<? extends CatalogInfo> expected = Sets.newHashSet(ft1, ft2, ft3);
+        Set<? extends CatalogInfo> actual =
+                Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(3, actual.size());
         assertEquals(expected, actual);
 
         filter = contains("name", "t");
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
-        assertTrue(expected.equals(actual));
+        assertEquals(expected, actual);
         assertEquals(expected, actual);
 
         filter = or(contains("name", "t2"), contains("name", "t1"));
@@ -2711,9 +3024,9 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         catalog.add(s5 = newStyle("s5", "s5Filename"));
         catalog.add(s6 = newStyle("s6", "s6Filename"));
 
-        LayerInfo l1, l2, l3;
+        LayerInfo l1, l3;
         catalog.add(l1 = newLayer(ft1, s1));
-        catalog.add(l2 = newLayer(ft2, s2, s3, s4));
+        catalog.add(newLayer(ft2, s2, s3, s4));
         catalog.add(l3 = newLayer(ft3, s3, s5, s6));
 
         filter = contains("styles.name", "s6");
@@ -2784,14 +3097,11 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         ft3.setDescription("FT3");
         catalog.save(ft3);
 
-        Filter filter = acceptAll();
-        Set<? extends CatalogInfo> expected;
-        Set<? extends CatalogInfo> actual;
-
         // opposite equality
-        filter = factory.equal(factory.literal(ft1.getId()), factory.property("id"), true);
-        expected = Sets.newHashSet(ft1);
-        actual = Sets.newHashSet(catalog.list(ResourceInfo.class, filter));
+        Filter filter = factory.equal(factory.literal(ft1.getId()), factory.property("id"), true);
+        Set<? extends CatalogInfo> expected = Sets.newHashSet(ft1);
+        Set<? extends CatalogInfo> actual =
+                Sets.newHashSet(catalog.list(ResourceInfo.class, filter));
         assertEquals(expected, actual);
 
         // match case
@@ -2884,55 +3194,67 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         assertEquals(expected, actual);
 
         // multivalued literals
-        List values = new ArrayList<String>();
-        values.add("ft1");
-        values.add("ft2");
+        List<String> strValues = new ArrayList<>();
+        strValues.add("ft1");
+        strValues.add("ft2");
         filter =
                 factory.equal(
-                        factory.literal(values), factory.property("name"), true, MatchAction.ANY);
+                        factory.literal(strValues),
+                        factory.property("name"),
+                        true,
+                        MatchAction.ANY);
         expected = Sets.newHashSet(ft1, ft2);
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(expected, actual);
 
-        values = new ArrayList<String>();
-        values.add("ft1");
-        values.add("ft1");
+        strValues = new ArrayList<>();
+        strValues.add("ft1");
+        strValues.add("ft1");
         filter =
                 factory.equal(
-                        factory.literal(values), factory.property("name"), true, MatchAction.ALL);
+                        factory.literal(strValues),
+                        factory.property("name"),
+                        true,
+                        MatchAction.ALL);
         expected = Sets.newHashSet(ft1);
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(expected, actual);
 
-        values = new ArrayList<String>();
-        values.add("ft1");
-        values.add("ft2");
+        strValues = new ArrayList<>();
+        strValues.add("ft1");
+        strValues.add("ft2");
         filter =
                 factory.equal(
-                        factory.literal(values), factory.property("name"), true, MatchAction.ALL);
+                        factory.literal(strValues),
+                        factory.property("name"),
+                        true,
+                        MatchAction.ALL);
         expected = Sets.newHashSet();
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(expected, actual);
 
-        values = new ArrayList<String>();
-        values.add("ft1");
-        values.add("ft1");
-        values.add("ft2");
+        strValues = new ArrayList<>();
+        strValues.add("ft1");
+        strValues.add("ft1");
+        strValues.add("ft2");
         filter =
                 factory.equal(
-                        factory.literal(values), factory.property("name"), true, MatchAction.ONE);
+                        factory.literal(strValues),
+                        factory.property("name"),
+                        true,
+                        MatchAction.ONE);
         expected = Sets.newHashSet(ft2);
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(expected, actual);
 
         // multivalued literals with multivalued fields
 
-        values = new ArrayList<Keyword>();
-        values.add(new Keyword("keyword1"));
-        values.add(new Keyword("keyword2"));
+        List<Keyword> keywords = new ArrayList<>();
+        keywords.add(new Keyword("keyword1"));
+        keywords.add(new Keyword("keyword2"));
         filter =
                 factory.equal(
-                        factory.literal(values),
+                        factory.literal(keywords),
                         factory.property("keywords"),
                         true,
                         MatchAction.ANY);
@@ -2940,12 +3262,12 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(expected, actual);
 
-        values = new ArrayList<Keyword>();
-        values.add(new Keyword("keyword1"));
-        values.add(new Keyword("keyword1"));
+        keywords = new ArrayList<>();
+        keywords.add(new Keyword("keyword1"));
+        keywords.add(new Keyword("keyword1"));
         filter =
                 factory.equal(
-                        factory.literal(values),
+                        factory.literal(keywords),
                         factory.property("keywords"),
                         true,
                         MatchAction.ALL);
@@ -2953,12 +3275,12 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         actual = Sets.newHashSet(catalog.list(FeatureTypeInfo.class, filter));
         assertEquals(expected, actual);
 
-        values = new ArrayList<Keyword>();
-        values.add(new Keyword("keyword1"));
-        values.add(new Keyword("blah"));
+        keywords = new ArrayList<>();
+        keywords.add(new Keyword("keyword1"));
+        keywords.add(new Keyword("blah"));
         filter =
                 factory.equal(
-                        factory.literal(values),
+                        factory.literal(keywords),
                         factory.property("keywords"),
                         true,
                         MatchAction.ONE);
@@ -3000,13 +3322,9 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         assertEquals(3, catalog.getLayers().size());
 
-        Filter filter;
-        SortBy sortOrder;
-        List<LayerInfo> expected;
-
-        filter = acceptAll();
-        sortOrder = asc("resource.name");
-        expected = Lists.newArrayList(l1, l2, l3);
+        Filter filter = acceptAll();
+        SortBy sortOrder = asc("resource.name");
+        List<LayerInfo> expected = Lists.newArrayList(l1, l2, l3);
 
         testOrderBy(LayerInfo.class, filter, null, null, sortOrder, expected);
 
@@ -3047,22 +3365,19 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
 
         CatalogPropertyAccessor pe = new CatalogPropertyAccessor();
 
-        List<Object> props = new ArrayList<Object>();
-        List<Object> actual = new ArrayList<Object>();
+        List<Object> props = new ArrayList<>();
+        List<Object> actual = new ArrayList<>();
         String sortProperty = sortOrder.getPropertyName().getPropertyName();
         for (T info : expected) {
             Object pval = pe.getProperty(info, sortProperty);
             props.add(pval);
         }
 
-        CloseableIterator<T> it = catalog.list(clazz, filter, offset, limit, sortOrder);
-        try {
+        try (CloseableIterator<T> it = catalog.list(clazz, filter, offset, limit, sortOrder)) {
             while (it.hasNext()) {
                 Object property = pe.getProperty(it.next(), sortProperty);
                 actual.add(property);
             }
-        } finally {
-            it.close();
         }
 
         assertEquals(props, actual);
@@ -3199,14 +3514,13 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
         assertEquals(newHashSet(lproxy), asSet(catalog.list(LayerInfo.class, filter)));
     }
 
+    @SuppressWarnings("PMD.UseTryWithResources")
     private <T> Set<T> asSet(CloseableIterator<T> list) {
-        ImmutableSet<T> set;
         try {
-            set = ImmutableSet.copyOf(list);
+            return ImmutableSet.copyOf(list);
         } finally {
             list.close();
         }
-        return set;
     }
 
     protected LayerInfo newLayer(
@@ -3268,9 +3582,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
                             for (TestListener testListener : listeners) {
                                 assertTrue(
                                         "Did not find the expected even in the listener",
-                                        testListener
-                                                .removed
-                                                .stream()
+                                        testListener.removed.stream()
                                                 .anyMatch(
                                                         event -> event.getSource() == catalogInfo));
                             }
@@ -3290,6 +3602,7 @@ public class CatalogImplTest extends GeoServerSystemTestSupport {
     }
 
     @Test
+    @SuppressWarnings("PMD.SimplifiableTestAssertion")
     public void testChangeLayerGroupOrder() {
         addLayerGroup();
 

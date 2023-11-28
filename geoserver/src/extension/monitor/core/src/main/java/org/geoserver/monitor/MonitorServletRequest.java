@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -28,12 +29,14 @@ public class MonitorServletRequest extends HttpServletRequestWrapper {
     }
 
     public byte[] getBodyContent() throws IOException {
+        @SuppressWarnings("PMD.CloseResource") // wraps the servlet one
         MonitorInputStream stream = getInputStream();
         return stream.getData();
     }
 
     public long getBytesRead() {
         try {
+            @SuppressWarnings("PMD.CloseResource") // wraps the servlet one
             MonitorInputStream stream = getInputStream();
             return stream.getBytesRead();
         } catch (IOException ex) {
@@ -44,6 +47,7 @@ public class MonitorServletRequest extends HttpServletRequestWrapper {
     @Override
     public MonitorInputStream getInputStream() throws IOException {
         if (input == null) {
+            @SuppressWarnings("PMD.CloseResource") // managed by servlet container
             ServletInputStream delegateTo = super.getInputStream();
             input = new MonitorInputStream(delegateTo, maxSize);
         }
@@ -73,31 +77,37 @@ public class MonitorServletRequest extends HttpServletRequestWrapper {
         public MonitorInputStream(ServletInputStream delegate, long maxSize) {
             this.delegate = delegate;
             this.maxSize = maxSize;
-            if (maxSize > 0) {
+            if (maxSize > 0 || maxSize == BODY_SIZE_UNBOUNDED) {
                 buffer = new ByteArrayOutputStream();
             }
         }
 
+        @Override
         public int available() throws IOException {
             return delegate.available();
         }
 
+        @Override
         public void close() throws IOException {
             delegate.close();
         }
 
+        @Override
         public void mark(int readlimit) {
             delegate.mark(readlimit);
         }
 
+        @Override
         public boolean markSupported() {
             return delegate.markSupported();
         }
 
+        @Override
         public void reset() throws IOException {
             delegate.reset();
         }
 
+        @Override
         public long skip(long n) throws IOException {
             nbytes += n;
             return delegate.skip(n);
@@ -141,6 +151,21 @@ public class MonitorServletRequest extends HttpServletRequestWrapper {
             return n;
         }
 
+        @Override
+        public boolean isFinished() {
+            return delegate.isFinished();
+        }
+
+        @Override
+        public boolean isReady() {
+            return delegate.isReady();
+        }
+
+        @Override
+        public void setReadListener(ReadListener readListener) {
+            delegate.setReadListener(readListener);
+        }
+
         void fill(byte[] b, int off, int len) {
             if (len < 0) return;
             if (!bufferIsFull()) {
@@ -153,7 +178,8 @@ public class MonitorServletRequest extends HttpServletRequestWrapper {
         }
 
         boolean bufferIsFull() {
-            return maxSize == 0 || (buffer.size() >= maxSize && maxSize > 0);
+            return maxSize == 0
+                    || (buffer.size() >= maxSize && maxSize > 0 && maxSize != BODY_SIZE_UNBOUNDED);
         }
 
         public byte[] getData() {

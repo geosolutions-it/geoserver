@@ -16,7 +16,7 @@ The importer REST api is built around a tree of objects representing a single im
           * layer
           * transformation (one or more)
 
-An **import** refers to the top level object and is a "session" like entity the state of the entire import. It maintains information relevant to the import as a whole such as user infromation, timestamps 
+An **import** refers to the top level object and is a "session" like entity the state of the entire import. It maintains information relevant to the import as a whole such as user information, timestamps 
 along with optional information that is uniform along all tasks, such as a target workspace, the shared input data (e.g., a directory, a database).
 An import is made of any number of task objects. 
 
@@ -412,8 +412,8 @@ The creation response will be the same as the multipart upload.
 Single task resource
 ^^^^^^^^^^^^^^^^^^^^
 
-/imports/<importId>/task/<taskId>
-"""""""""""""""""""""""""""""""""
+/imports/<importId>/tasks/<taskId>
+""""""""""""""""""""""""""""""""""
 
 .. list-table::
    :header-rows: 1
@@ -447,9 +447,19 @@ Updating a task
 A PUT request over an existing task can be used to update its representation. The representation can be partial, and just contains
 the elements that need to be updated.
 
-The updateMode of a task normally starts as "CREATE", that is, create the target resource if missing. Other possible values are
-"REPLACE", that is, delete the existing features in the target layer and replace them with the task source ones, or "APPEND",
-to just add the features from the task source into an existing layer.
+The updateMode of a task may have different values. 
+
+.. list-table::
+   :header-rows: 1
+
+   * - UpdateMode
+     - Description
+   * - CREATE
+     - This is the default starting updateMode of a task, that is: create the target resource if missing.
+   * - REPLACE
+     - For vector stores: delete the existing features in the target layer and replace them with those from the task source. For raster stores: replace the underlying data. When dealing with StructuredGridCoverage reader (e.g. ImageMosaic) the new file will be harvested (replacing the old one). For single raster coverages (e.g. GeoTIFF) the name of the file should be the same so that the coverageStore layer will preserve the original name (the old file will be deleted).
+   * - APPEND
+     - Add the features from the task source into an existing layer.
 
 The following PUT request updates a task from "CREATE" to "APPEND" mode::
 
@@ -466,8 +476,8 @@ Directory files representation
 
 The following operations are specific to data objects of type ``directory``.
 
-/imports/<importId>/task/<taskId>/data/files
-""""""""""""""""""""""""""""""""""""""""""""
+/imports/<importId>/tasks/<taskId>/data/files
+"""""""""""""""""""""""""""""""""""""""""""""
 
 .. list-table::
    :header-rows: 1
@@ -509,8 +519,8 @@ The response to a GET request will be::
 		]
 	}
 
-/imports/<importId>/task/<taskId>/data/files/<fileId>
-"""""""""""""""""""""""""""""""""""""""""""""""""""""
+/imports/<importId>/tasks/<taskId>/data/files/<fileId>
+""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. list-table::
    :header-rows: 1
@@ -773,7 +783,7 @@ Task transformations
      - n/a
      - A list of transfromations in JSON format
    * - POST
-     - Create a new transormation and append it inside a task with id <taskId> within import with id <importId>
+     - Create a new transformation and append it inside a task with id <taskId> within import with id <importId>
      - 201
      - A JSON transformation representation
      - The transform location 

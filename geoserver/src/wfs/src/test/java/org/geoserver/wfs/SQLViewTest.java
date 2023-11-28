@@ -7,13 +7,15 @@ package org.geoserver.wfs;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.Map;
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
+import org.apache.commons.text.StringEscapeUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.DataStoreInfo;
@@ -49,7 +51,7 @@ public class SQLViewTest extends WFSTestSupport {
         ds.setWorkspace(ws);
         ds.setEnabled(true);
 
-        Map params = ds.getConnectionParameters();
+        Map<String, Serializable> params = ds.getConnectionParameters();
         params.put("dbtype", "h2");
         File dbFile =
                 new File(getTestData().getDataDirectoryRoot().getAbsolutePath(), "data/h2test");
@@ -146,7 +148,7 @@ public class SQLViewTest extends WFSTestSupport {
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
 
         NodeList featureMembers = doc.getElementsByTagName("gml:featureMember");
-        assertFalse(featureMembers.getLength() == 0);
+        assertNotEquals(0, featureMembers.getLength());
         assertXpathEvaluatesTo("name-f003", "//gs:pgeo_view/gs:name", doc);
         assertXpathEvaluatesTo("1", "count(//gs:pgeo_view)", doc);
     }
@@ -169,7 +171,7 @@ public class SQLViewTest extends WFSTestSupport {
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
 
         NodeList featureCollection = doc.getElementsByTagName("wfs:FeatureCollection");
-        assertFalse(featureCollection.getLength() == 0);
+        assertNotEquals(0, featureCollection.getLength());
         assertXpathEvaluatesTo("name-f003", "//gs:pgeo_view/gml:name", doc);
         assertXpathEvaluatesTo("1", "count(//gs:pgeo_view)", doc);
     }
@@ -186,6 +188,44 @@ public class SQLViewTest extends WFSTestSupport {
                         + "</wfs:Query></wfs:GetFeature>";
 
         Document doc = postAsDOM("wfs", xml);
+        assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
+
+        NodeList features = doc.getElementsByTagName("gs:pgeo_view");
+        assertEquals(1, features.getLength());
+        assertEquals(features.item(0).getFirstChild().getNodeName(), "gml:name");
+        assertEquals(features.item(0).getFirstChild().getTextContent(), "name-f003");
+    }
+
+    @Test
+    public void testXMLViewParamsGet() throws Exception {
+        Document dom =
+                getAsDOM(
+                        "wfs?service=WFS&request=GetFeature&typename="
+                                + viewTypeName
+                                + "&version=1.1&viewParamsFormat=XML&viewparams=<VP><PS><P n=\"bool\">true</P><P n=\"name\">name-f003</P></PS></VP>");
+        // print(dom);
+
+        assertXpathEvaluatesTo("name-f003", "//gs:pgeo_view/gml:name", dom);
+        assertXpathEvaluatesTo("1", "count(//gs:pgeo_view)", dom);
+    }
+
+    @Test
+    public void testPostWithXMLViewParams_200() throws Exception {
+        String xmlViewParams =
+                StringEscapeUtils.escapeXml10(
+                        "<VP><PS><P n=\"bool\">true</P><P n=\"name\">name-f003</P></PS></VP>");
+        String xml =
+                "<wfs:GetFeature service=\"WFS\" version=\"2.0.0\" "
+                        + "xmlns:wfs=\"http://www.opengis.net/wfs/2.0\" "
+                        + "viewParams=\""
+                        + xmlViewParams
+                        + "\"> "
+                        + "<wfs:Query typeNames=\""
+                        + viewTypeName
+                        + "\">"
+                        + "</wfs:Query></wfs:GetFeature>";
+
+        Document doc = postAsDOM("wfs?viewParamsFormat=XML", xml);
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
 
         NodeList features = doc.getElementsByTagName("gs:pgeo_view");

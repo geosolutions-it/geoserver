@@ -7,7 +7,6 @@ package org.geoserver.web.wicket;
 
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.regex.Pattern;
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
@@ -32,32 +31,20 @@ public class WicketHierarchyPrinter {
 
     boolean pathDumpEnabled;
 
-    /**
-     * Utility method to dump a single component/page to standard output
-     *
-     * @param c
-     * @param dumpClass
-     * @param dumpValue
-     */
+    /** Utility method to dump a single component/page to standard output */
     public static void print(Component c, boolean dumpClass, boolean dumpValue, boolean dumpPath) {
         WicketHierarchyPrinter printer = new WicketHierarchyPrinter();
         printer.setPathDumpEnabled(dumpClass);
         printer.setClassDumpEnabled(dumpClass);
         printer.setValueDumpEnabled(dumpValue);
         if (c instanceof Page) {
-            printer.print((Page) c);
+            printer.print(c);
         } else {
             printer.print(c);
         }
     }
 
-    /**
-     * Utility method to dump a single component/page to standard output
-     *
-     * @param c
-     * @param dumpClass
-     * @param dumpValue
-     */
+    /** Utility method to dump a single component/page to standard output */
     public static void print(Component c, boolean dumpClass, boolean dumpValue) {
         print(c, dumpClass, dumpValue, false);
     }
@@ -72,29 +59,17 @@ public class WicketHierarchyPrinter {
         this.out = out;
     }
 
-    /**
-     * Set to true if you want to see the model values in the dump
-     *
-     * @param valueDumpEnabled
-     */
+    /** Set to true if you want to see the model values in the dump */
     public void setValueDumpEnabled(boolean valueDumpEnabled) {
         this.valueDumpEnabled = valueDumpEnabled;
     }
 
-    /**
-     * Set to true if you want to see the component classes in the dump
-     *
-     * @param classDumpEnabled
-     */
+    /** Set to true if you want to see the component classes in the dump */
     public void setClassDumpEnabled(boolean classDumpEnabled) {
         this.classDumpEnabled = classDumpEnabled;
     }
 
-    /**
-     * Prints the component containment hierarchy
-     *
-     * @param c
-     */
+    /** Prints the component containment hierarchy */
     public void print(Component c) {
         walkHierarchy(c, 0);
     }
@@ -104,8 +79,8 @@ public class WicketHierarchyPrinter {
         printComponent(c, level);
         if (c instanceof MarkupContainer) {
             MarkupContainer mc = (MarkupContainer) c;
-            for (Iterator<?> it = mc.iterator(); it.hasNext(); ) {
-                walkHierarchy((Component) it.next(), level + 1);
+            for (Component component : mc) {
+                walkHierarchy(component, level + 1);
             }
         }
     }
@@ -132,9 +107,15 @@ public class WicketHierarchyPrinter {
 
         if (valueDumpEnabled) {
             try {
-                String value =
-                        NEWLINE.matcher(c.getDefaultModelObjectAsString()).replaceAll("\\\\n");
-                out.print(" '" + value + "'");
+                String value = "null";
+                if (c.getDefaultModel() != null && c.getDefaultModelObject() != null) {
+                    value =
+                            "'"
+                                    + NEWLINE.matcher(c.getDefaultModelObjectAsString())
+                                            .replaceAll("\\\\n")
+                                    + "'";
+                }
+                out.print(" " + value);
             } catch (Exception e) {
                 out.print(" 'ERROR_RETRIEVING_MODEL " + e.getMessage() + "'");
             }
@@ -155,11 +136,7 @@ public class WicketHierarchyPrinter {
         return pathDumpEnabled;
     }
 
-    /**
-     * Sets/unsets the relative path dumping
-     *
-     * @param pathDumpEnabled
-     */
+    /** Sets/unsets the relative path dumping */
     public void setPathDumpEnabled(boolean pathDumpEnabled) {
         this.pathDumpEnabled = pathDumpEnabled;
     }

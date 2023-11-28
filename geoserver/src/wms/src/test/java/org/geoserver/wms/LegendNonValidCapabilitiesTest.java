@@ -58,8 +58,7 @@ public class LegendNonValidCapabilitiesTest extends WMSTestSupport {
 
         // add layer
         testData.addStyle(null, STYLE_NAME, STYLE_FILE, getClass(), getCatalog(), legend);
-        Map<SystemTestData.LayerProperty, Object> propertyMap =
-                new HashMap<SystemTestData.LayerProperty, Object>();
+        Map<SystemTestData.LayerProperty, Object> propertyMap = new HashMap<>();
         propertyMap.put(LayerProperty.STYLE, STYLE_NAME);
 
         testData.addRasterLayer(
@@ -74,7 +73,7 @@ public class LegendNonValidCapabilitiesTest extends WMSTestSupport {
         wms.getSRS().add("EPSG:4326");
         getGeoServer().save(wms);
 
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("xlink", "http://www.w3.org/1999/xlink");
         namespaces.put("", "http://www.opengis.net/wms");
         namespaces.put("wms", "http://www.opengis.net/wms");
@@ -95,7 +94,7 @@ public class LegendNonValidCapabilitiesTest extends WMSTestSupport {
         assertXpathEvaluatesTo(LEGEND_FORMAT, legendUrlPath + "/wms:Format", dom);
         assertXpathEvaluatesTo(
                 BASE
-                        + "/ows?service=WMS&request=GetLegendGraphic&format=image%2Fpng&width=20"
+                        + "/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image%2Fpng&width=20"
                         + "&height=20&layer=gs%3Awatertemp",
                 legendUrlPath + "/wms:OnlineResource/@xlink:href",
                 dom);
@@ -112,7 +111,7 @@ public class LegendNonValidCapabilitiesTest extends WMSTestSupport {
         assertXpathEvaluatesTo(LEGEND_FORMAT, legendUrlPath + "/Format", dom);
         assertXpathEvaluatesTo(
                 BASE
-                        + "/wms?request=GetLegendGraphic&format=image%2Fpng&width=20"
+                        + "/wms?request=GetLegendGraphic&version=1.1.1&format=image%2Fpng&width=20"
                         + "&height=20&layer=gs%3Awatertemp",
                 legendUrlPath + "/OnlineResource/@xlink:href",
                 dom);

@@ -47,11 +47,7 @@ public class StreamingSVGMap extends WebMap {
 
     private SVGWriter writer;
 
-    /**
-     * Creates a new EncodeSVG object.
-     *
-     * @param mapContent
-     */
+    /** Creates a new EncodeSVG object. */
     public StreamingSVGMap(WMSMapContent mapContent) {
         super(mapContent);
     }
@@ -100,7 +96,7 @@ public class StreamingSVGMap extends WebMap {
 
     private void writeDefs(SimpleFeatureType layer) throws IOException {
         GeometryDescriptor gtype = layer.getGeometryDescriptor();
-        Class geometryClass = gtype.getType().getBinding();
+        Class<?> geometryClass = gtype.getType().getBinding();
 
         if ((geometryClass == MultiPoint.class) || (geometryClass == Point.class)) {
             writePointDefs();
@@ -115,15 +111,10 @@ public class StreamingSVGMap extends WebMap {
     /** @task TODO: respect layer filtering given by their Styles */
     private void writeLayers() throws IOException {
         List<Layer> layers = mapContent.layers();
-        int nLayers = layers.size();
-
         FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
 
-        for (int i = 0; i < nLayers; i++) {
-            Layer layer = layers.get(i);
-            SimpleFeatureIterator featureReader = null;
-            SimpleFeatureSource fSource;
-            fSource = (SimpleFeatureSource) layer.getFeatureSource();
+        for (Layer layer : layers) {
+            SimpleFeatureSource fSource = (SimpleFeatureSource) layer.getFeatureSource();
             SimpleFeatureType schema = fSource.getSchema();
 
             try {
@@ -141,15 +132,11 @@ public class StreamingSVGMap extends WebMap {
                 finalQuery.setStartIndex(definitionQuery.getStartIndex());
 
                 LOGGER.fine("obtaining FeatureReader for " + schema.getTypeName());
-                featureReader = fSource.getFeatures(finalQuery).features();
                 LOGGER.fine("got FeatureReader, now writing");
 
-                String groupId = null;
-                String styleName = null;
+                String groupId = schema.getTypeName();
 
-                groupId = schema.getTypeName();
-
-                styleName = layer.getStyle().getName();
+                String styleName = layer.getStyle().getName();
 
                 writer.write("<g id=\"" + groupId + "\"");
 
@@ -161,8 +148,11 @@ public class StreamingSVGMap extends WebMap {
 
                 writeDefs(schema);
 
-                writer.writeFeatures(fSource.getSchema(), featureReader, styleName);
-                writer.write("</g>\n");
+                try (SimpleFeatureIterator featureReader =
+                        fSource.getFeatures(finalQuery).features()) {
+                    writer.writeFeatures(fSource.getSchema(), featureReader, styleName);
+                    writer.write("</g>\n");
+                }
             } catch (IOException ex) {
                 throw ex;
             } catch (Throwable t) {
@@ -171,10 +161,6 @@ public class StreamingSVGMap extends WebMap {
                 IOException ioe = new IOException("UNCAUGHT exception: " + t.getMessage());
                 ioe.setStackTrace(t.getStackTrace());
                 throw ioe;
-            } finally {
-                if (featureReader != null) {
-                    featureReader.close();
-                }
             }
         }
     }

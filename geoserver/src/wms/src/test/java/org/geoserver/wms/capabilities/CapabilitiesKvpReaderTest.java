@@ -5,7 +5,11 @@
  */
 package org.geoserver.wms.capabilities;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import org.geoserver.wms.GetCapabilitiesRequest;
@@ -13,7 +17,6 @@ import org.geoserver.wms.WMS;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("rawtypes")
 public class CapabilitiesKvpReaderTest {
 
     private CapabilitiesKvpReader reader;
@@ -82,7 +85,6 @@ public class CapabilitiesKvpReaderTest {
         assertEquals("1000", read.getUpdateSequence());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testRootLayerDefault() throws Exception {
         GetCapabilitiesRequest read = reader.read(reader.createRequest(), kvp, rawKvp);

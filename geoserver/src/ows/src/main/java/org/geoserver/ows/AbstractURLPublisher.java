@@ -23,6 +23,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.geoserver.ows.util.EncodingInfo;
 import org.geoserver.ows.util.XmlCharsetDetector;
 import org.geotools.util.URLs;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.MediaType;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.AbstractController;
 
@@ -52,6 +54,7 @@ import org.springframework.web.servlet.mvc.AbstractController;
  */
 public abstract class AbstractURLPublisher extends AbstractController {
 
+    @Override
     protected ModelAndView handleRequestInternal(
             HttpServletRequest request, HttpServletResponse response) throws Exception {
         URL url = getUrl(request);
@@ -78,39 +81,36 @@ public abstract class AbstractURLPublisher extends AbstractController {
             return null;
         }
 
-        // set the mime if known by the servlet container, set nothing otherwise
-        // (Tomcat behaves like this when it does not recognize the file format)
+        // set the mime if known by the servlet container, otherwise default to
+        // application/octet-stream to mitigate potential cross-site scripting
+        String filename = new File(url.getFile()).getName();
         String mime =
                 Optional.ofNullable(getServletContext())
-                        .map(sc -> sc.getMimeType(new File(url.getFile()).getName()))
-                        .orElse(null);
-        if (mime != null) {
-            response.setContentType(mime);
-        }
+                        .map(sc -> sc.getMimeType(filename))
+                        .orElse(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        response.setContentType(mime);
+        String dispositionType = isAttachment(url, filename, mime) ? "attachment" : "inline";
+        response.setHeader(
+                "Content-Disposition",
+                ContentDisposition.builder(dispositionType).filename(filename).build().toString());
 
         // set the content length and content type
-        URLConnection connection = null;
-        InputStream input = null;
-        try {
-            connection = url.openConnection();
-            long length = connection.getContentLength();
-            if (length > 0 && length <= Integer.MAX_VALUE) {
-                response.setContentLength((int) length);
-            }
+        URLConnection connection = url.openConnection();
+        long length = connection.getContentLength();
+        if (length > 0 && length <= Integer.MAX_VALUE) {
+            response.setContentLength((int) length);
+        }
 
-            long lastModified = connection.getLastModified();
-            if (lastModified > 0) {
-                response.setHeader("Last-Modified", lastModified(lastModified));
-            }
+        long lastModified = connection.getLastModified();
+        if (lastModified > 0) {
+            response.setHeader("Last-Modified", lastModified(lastModified));
+        }
 
-            // Guessing the charset (and closing the stream)
-            EncodingInfo encInfo = null;
-            OutputStream output = null;
-            final byte[] b4 = new byte[4];
-            int count = 0;
-            // open the output
-            input = connection.getInputStream();
-
+        // Guessing the charset (and closing the stream)
+        EncodingInfo encInfo = null;
+        final byte[] b4 = new byte[4];
+        int count = 0;
+        try (InputStream input = connection.getInputStream()) {
             // Read the first four bytes, and determine charset encoding
             count = input.read(b4);
             encInfo = XmlCharsetDetector.getEncodingName(b4, count);
@@ -120,7 +120,8 @@ public abstract class AbstractURLPublisher extends AbstractController {
             // count < 1 -> empty file
             if (count > 0) {
                 // send out the first four bytes read
-                output = response.getOutputStream();
+                @SuppressWarnings("PMD.CloseResource") // managed by servlet container
+                OutputStream output = response.getOutputStream();
                 output.write(b4, 0, count);
 
                 // copy the content to the output
@@ -130,8 +131,6 @@ public abstract class AbstractURLPublisher extends AbstractController {
                     output.write(buffer, 0, n);
                 }
             }
-        } finally {
-            if (input != null) input.close();
         }
 
         return null;
@@ -172,10 +171,13 @@ public abstract class AbstractURLPublisher extends AbstractController {
     }
 
     /**
-     * Retrieves the resource URL from the specified request
-     *
-     * @param request
-     * @throws IOException
+     * Can be overridden to set the Content-Disposition: attachment to mitigate potential XSS issues
+     * with certain resources
      */
+    protected boolean isAttachment(URL url, String filename, String mime) {
+        return false;
+    }
+
+    /** Retrieves the resource URL from the specified request */
     protected abstract URL getUrl(HttpServletRequest request) throws IOException;
 }

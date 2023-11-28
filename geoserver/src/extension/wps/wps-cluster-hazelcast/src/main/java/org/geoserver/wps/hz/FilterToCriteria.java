@@ -4,13 +4,24 @@
  */
 package org.geoserver.wps.hz;
 
-import static com.hazelcast.query.Predicates.*;
+import static com.hazelcast.query.Predicates.and;
+import static com.hazelcast.query.Predicates.between;
+import static com.hazelcast.query.Predicates.equal;
+import static com.hazelcast.query.Predicates.greaterEqual;
+import static com.hazelcast.query.Predicates.greaterThan;
+import static com.hazelcast.query.Predicates.ilike;
+import static com.hazelcast.query.Predicates.in;
+import static com.hazelcast.query.Predicates.lessEqual;
+import static com.hazelcast.query.Predicates.lessThan;
+import static com.hazelcast.query.Predicates.like;
+import static com.hazelcast.query.Predicates.not;
+import static com.hazelcast.query.Predicates.or;
 
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.TruePredicate;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.collections.functors.FalsePredicate;
+import org.apache.commons.collections4.functors.FalsePredicate;
 import org.geotools.filter.LikeToRegexConverter;
 import org.opengis.filter.And;
 import org.opengis.filter.BinaryComparisonOperator;

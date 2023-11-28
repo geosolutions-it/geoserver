@@ -74,6 +74,7 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
 
     private Class<T> clazz;
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public BackupRestorePage(PageParameters pp) {
         this(
                 new BackupRestoreExecutionModel(
@@ -82,6 +83,7 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
                 getType(pp.get("clazz").toString()));
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public BackupRestorePage(T bkp, PageParameters pp) {
         this(
                 new BackupRestoreExecutionModel(bkp, getType(pp.get("clazz").toString())),
@@ -89,10 +91,8 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
                 getType(pp.get("clazz").toString()));
     }
 
-    /**
-     * @param string
-     * @return
-     */
+    /** */
+    @SuppressWarnings("rawtypes")
     private static Class getType(String simpleName) {
         if (BackupExecutionAdapter.class.getSimpleName().equals(simpleName)) {
             return BackupExecutionAdapter.class;
@@ -218,6 +218,7 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
                     public void onClick() {
                         IResourceStream stream =
                                 new FileResourceStream(backupFile) {
+                                    @Override
                                     public String getContentType() {
                                         return "application/zip";
                                     }
@@ -380,10 +381,7 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
         add(dialog = new GeoServerDialog("dialog"));
     }
 
-    /**
-     * @param bkp
-     * @return
-     */
+    /** */
     private boolean doSelectReady(AbstractExecutionAdapter bkp) {
         if (bkp.getStatus() == BatchStatus.COMPLETED
                 || bkp.getStatus() == BatchStatus.FAILED
@@ -487,12 +485,7 @@ public class BackupRestorePage<T extends AbstractExecutionAdapter> extends GeoSe
             return buf.toString();
         }
 
-        /**
-         * @param buf
-         * @param ex
-         * @param severe
-         * @return
-         */
+        /** */
         private Throwable writeException(StringBuilder buf, Throwable ex, Level level) {
             int cnt = 0;
             while (ex != null) {

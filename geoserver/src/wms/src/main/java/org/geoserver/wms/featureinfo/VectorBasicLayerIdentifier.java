@@ -31,12 +31,12 @@ import org.geotools.styling.Rule;
 import org.geotools.styling.Style;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
-import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Polygon;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.GeometryDescriptor;
+import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.Or;
@@ -54,7 +54,7 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
 
     public static final String FEATUREINFO_DEFAULT_BUFFER =
             "org.geoserver.wms.featureinfo.minBuffer";
-    protected static final int MIN_BUFFER_SIZE = Integer.getInteger(FEATUREINFO_DEFAULT_BUFFER, 5);
+    public static final int MIN_BUFFER_SIZE = Integer.getInteger(FEATUREINFO_DEFAULT_BUFFER, 5);
 
     private WMS wms;
 
@@ -62,6 +62,7 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
         this.wms = wms;
     }
 
+    @Override
     public List<FeatureCollection> identify(FeatureInfoRequestParameters params, int maxFeatures)
             throws Exception {
         LOGGER.log(Level.FINER, "Appliying bbox based feature info identifier");
@@ -71,7 +72,7 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
         final Style style = params.getStyle();
         // ok, internally rendered layer then, we check the style to see what's active
         final List<Rule> rules = getActiveRules(style, params.getScaleDenominator());
-        if (rules.size() == 0) {
+        if (rules.isEmpty()) {
             return null;
         }
 
@@ -79,7 +80,7 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
         double radius = getSearchRadius(params, layer, rules);
 
         // compute the bbox for the request
-        ReferencedEnvelope queryEnvelope = getEnvelopeFilter(params, radius);
+        ReferencedEnvelope queryEnvelope = LayerIdentifier.getEnvelopeFilter(params, radius);
         CoordinateReferenceSystem requestedCRS = params.getRequestedCRS();
         CoordinateReferenceSystem dataCRS = layer.getCoordinateReferenceSystem();
         if ((requestedCRS != null) && !CRS.equalsIgnoreMetadata(dataCRS, requestedCRS)) {
@@ -91,19 +92,19 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
             }
         }
 
-        final FeatureSource<? extends FeatureType, ? extends Feature> featureSource;
-        featureSource = layer.getFeatureSource(false);
+        final FeatureSource<? extends FeatureType, ? extends Feature> featureSource =
+                super.handleClipParam(params, layer.getFeatureSource(false, requestedCRS));
         FeatureType schema = featureSource.getSchema();
 
         Filter getFInfoFilter = null;
         FilterFactory2 ff = params.getFilterFactory();
         try {
             GeometryDescriptor geometryDescriptor = schema.getGeometryDescriptor();
-            String localName = geometryDescriptor.getLocalName();
+            Name name = geometryDescriptor.getName();
             Polygon queryPolygon = JTS.toGeometry(queryEnvelope);
-            getFInfoFilter = ff.intersects(ff.property(localName), ff.literal(queryPolygon));
+            getFInfoFilter = ff.intersects(ff.property(name), ff.literal(queryPolygon));
         } catch (IllegalFilterException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.FINE, "", e);
             throw new ServiceException("Internal error : " + e.getMessage(), e);
         }
 
@@ -148,11 +149,10 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
 
         // handle sql view params
         final Map<String, String> viewParams = params.getViewParams();
-        if (viewParams != null && viewParams.size() > 0) {
+        if (viewParams != null && !viewParams.isEmpty()) {
             q.setHints(new Hints(Hints.VIRTUAL_TABLE_PARAMETERS, viewParams));
         }
 
-        FeatureCollection match;
         LOGGER.log(Level.FINE, q.toString());
         // let's see if we need to reproject
         if (!wms.isFeaturesReprojectionDisabled()) {
@@ -160,12 +160,13 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
             // reprojected
             q.setCoordinateSystemReproject(requestedCRS);
         }
-        match = featureSource.getFeatures(q);
+        FeatureCollection<? extends FeatureType, ? extends Feature> match =
+                featureSource.getFeatures(q);
 
         // if we could not include the rules filter into the query, post process in
         // memory
         if (!Filter.INCLUDE.equals(postFilter)) {
-            match = new FilteringFeatureCollection(match, postFilter);
+            match = new FilteringFeatureCollection<>(match, postFilter);
         }
 
         return Collections.singletonList(match);
@@ -212,7 +213,7 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
 
     private Filter buildRulesFilter(org.opengis.filter.FilterFactory ff, List<Rule> rules) {
         // build up a or of all the rule filters
-        List<Filter> filters = new ArrayList<Filter>();
+        List<Filter> filters = new ArrayList<>();
         for (Rule rule : rules) {
             if (rule.getFilter() == null || rule.isElseFilter()) return Filter.INCLUDE;
             filters.add(rule.getFilter());
@@ -222,23 +223,5 @@ public class VectorBasicLayerIdentifier extends AbstractVectorLayerIdentifier {
         Filter or = ff.or(filters);
         SimplifyingFilterVisitor simplifier = new SimplifyingFilterVisitor();
         return (Filter) or.accept(simplifier, null);
-    }
-
-    private ReferencedEnvelope getEnvelopeFilter(
-            FeatureInfoRequestParameters params, double radius) {
-        final int x = params.getX();
-        final int y = params.getY();
-        final ReferencedEnvelope bbox = params.getRequestedBounds();
-        final int width = params.getWidth();
-        final int height = params.getHeight();
-        Coordinate upperLeft = WMS.pixelToWorld(x - radius, y - radius, bbox, width, height);
-        Coordinate lowerRight = WMS.pixelToWorld(x + radius, y + radius, bbox, width, height);
-
-        return new ReferencedEnvelope(
-                upperLeft.x,
-                lowerRight.x,
-                lowerRight.y,
-                upperLeft.y,
-                bbox.getCoordinateReferenceSystem());
     }
 }

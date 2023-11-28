@@ -5,7 +5,9 @@
 package org.geoserver.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -14,6 +16,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.security.decorators.DecoratingFeatureSource;
 import org.geotools.appschema.filter.FilterFactoryImplNamespaceAware;
 import org.geotools.data.DefaultTransaction;
 import org.geotools.data.FeatureSource;
@@ -32,6 +35,7 @@ import org.geotools.jdbc.JDBCDataStore;
 import org.junit.Before;
 import org.junit.Test;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.PropertyIsEqualTo;
 
@@ -173,8 +177,6 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
      * This test uses a conditionally joined feature with a broken mapping configuration to trigger
      * a RuntimeException when iterator.next() is called and verifies that no connection leak
      * occurs, even if the caller forgets to catch unchecked exceptions.
-     *
-     * @throws Exception
      */
     @Test
     @SuppressWarnings("TryFailThrowable")
@@ -190,8 +192,7 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
                                 "ex:nestedFeature/ex:ConnectionUsageFirstNested/ex:nestedFeature/ex:ConnectionUsageSecondNested/gml:name"),
                         ff.literal("A_nested_second"));
 
-        FeatureIterator fIt = mappingFs.getFeatures(equals).features();
-        try {
+        try (FeatureIterator fIt = mappingFs.getFeatures(equals).features()) {
             testNestedIterators(fIt);
             fail("Expected exception was not thrown!");
         } catch (Throwable e) {
@@ -212,8 +213,7 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
         assertNotNull(typeInfo);
 
         FeatureSource fs = typeInfo.getFeatureSource(new NullProgressListener(), null);
-        assertTrue(fs instanceof MappingFeatureSource);
-        mappingFs = (MappingFeatureSource) fs;
+        initMappingFS(fs);
 
         FeatureSource sourceFs = mappingFs.getMapping().getSource();
 
@@ -241,6 +241,18 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
         sourceDataStore.getConnectionLifecycleListeners().add(connListener);
     }
 
+    @SuppressWarnings("unchecked")
+    private void initMappingFS(FeatureSource fs) {
+        if (fs instanceof DecoratingFeatureSource) {
+            mappingFs =
+                    ((DecoratingFeatureSource<FeatureType, Feature>) fs)
+                            .unwrap(MappingFeatureSource.class);
+        } else {
+            assertTrue(fs instanceof MappingFeatureSource);
+            mappingFs = (MappingFeatureSource) fs;
+        }
+    }
+
     private void testNestedIterators(FeatureIterator iterator) throws IOException {
         assertTrue(iterator instanceof DataAccessMappingFeatureIterator);
         DataAccessMappingFeatureIterator mappingIt = (DataAccessMappingFeatureIterator) iterator;
@@ -251,7 +263,7 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
         assertNotNull(f);
 
         FeatureSource mappedSource = mappingIt.getMappedSource();
-        assertTrue(mappedSource.getDataStore() == sourceDataStore);
+        assertSame(mappedSource.getDataStore(), sourceDataStore);
         assertNotNull(mappingIt.getTransaction());
         transaction = mappingIt.getTransaction();
 
@@ -262,8 +274,8 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
             FeatureTypeMapping mapping, DataAccessMappingFeatureIterator mappingIt)
             throws IOException {
         List<AttributeMapping> attrs = mapping.getAttributeMappings();
-        assertTrue(attrs != null);
-        assertTrue(attrs.size() > 0);
+        assertNotNull(attrs);
+        assertFalse(attrs.isEmpty());
 
         for (AttributeMapping attr : attrs) {
             if (attr instanceof JoiningNestedAttributeMapping) {
@@ -275,20 +287,21 @@ public class ConnectionUsageTest extends AbstractAppSchemaTestSupport {
                         joiningNestedAttr.getNestedFeatureIterators(mappingIt);
                 assertNotNull(nestedFeatureIterators);
 
-                if (nestedFeatureIterators.size() > 0) {
+                if (!nestedFeatureIterators.isEmpty()) {
                     assertEquals(1, nestedFeatureIterators.size());
 
                     FeatureTypeMapping nestedMapping =
                             joiningNestedAttr.getFeatureTypeMapping(null);
 
-                    DataAccessMappingFeatureIterator nestedIt =
-                            nestedFeatureIterators.values().iterator().next();
+                    try (DataAccessMappingFeatureIterator nestedIt =
+                            nestedFeatureIterators.values().iterator().next()) {
 
-                    FeatureSource nestedMappedSource = nestedIt.getMappedSource();
-                    assertEquals(sourceDataStore, nestedMappedSource.getDataStore());
-                    assertEquals(transaction, nestedIt.getTransaction());
+                        FeatureSource nestedMappedSource = nestedIt.getMappedSource();
+                        assertEquals(sourceDataStore, nestedMappedSource.getDataStore());
+                        assertEquals(transaction, nestedIt.getTransaction());
 
-                    testNestedIteratorsRecursively(nestedMapping, nestedIt);
+                        testNestedIteratorsRecursively(nestedMapping, nestedIt);
+                    }
                 }
             }
         }

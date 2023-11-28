@@ -6,8 +6,10 @@
 package org.geoserver.wcs;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
-import static org.geoserver.data.test.MockData.*;
-import static org.junit.Assert.*;
+import static org.geoserver.data.test.MockData.TASMANIA_DEM;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
@@ -36,11 +38,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class GetCapabilitiesTest extends WCSTestSupport {
-
-    // @Override
-    // protected String getDefaultLogConfiguration() {
-    // return "/GEOTOOLS_DEVELOPER_LOGGING.properties";
-    // }
 
     @Before
     public void revertTasmaniaDem() throws IOException {

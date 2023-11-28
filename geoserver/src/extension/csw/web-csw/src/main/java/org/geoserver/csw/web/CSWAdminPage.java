@@ -34,21 +34,24 @@ public class CSWAdminPage extends BaseServiceAdminPage<CSWInfo> {
         super(service);
     }
 
+    @Override
     protected Class<CSWInfo> getServiceClass() {
         return CSWInfo.class;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Override
+    @SuppressWarnings("unchecked")
     protected void build(final IModel info, Form form) {
 
-        CSWInfo model = (CSWInfo) info.getObject();
-        MetadataMap metadata = model.getMetadata();
+        final PropertyModel<MetadataMap> metadata = new PropertyModel<>(info, "metadata");
+        if (metadata.getObject() == null) {
+            metadata.setObject(new MetadataMap());
+        }
 
         DirectDownloadSettings settings =
-                DirectDownloadSettings.getSettingsFromMetadata(metadata, null);
-        metadata = metadata == null ? new MetadataMap() : metadata;
+                DirectDownloadSettings.getSettingsFromMetadata(metadata.getObject(), null);
         if (settings == null) {
-            metadata.getMap()
+            metadata.getObject()
                     .put(DirectDownloadSettings.DIRECTDOWNLOAD_KEY, new DirectDownloadSettings());
         }
 
@@ -62,14 +65,15 @@ public class CSWAdminPage extends BaseServiceAdminPage<CSWInfo> {
                 new CheckBox(
                         "directDownloadEnabled",
                         new PropertyModel(directDownloadModel, "directDownloadEnabled")));
-        TextField maxDownloadSize =
-                new TextField<Integer>(
+        TextField<Integer> maxDownloadSize =
+                new TextField<>(
                         "maxDownloadSize",
                         new PropertyModel(directDownloadModel, "maxDownloadSize"));
         maxDownloadSize.add(RangeValidator.minimum(0l));
         form.add(maxDownloadSize);
     }
 
+    @Override
     protected String getServiceName() {
         return "CSW";
     }

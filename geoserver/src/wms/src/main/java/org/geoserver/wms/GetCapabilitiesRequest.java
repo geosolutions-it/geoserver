@@ -20,6 +20,8 @@ public class GetCapabilitiesRequest extends WMSRequest {
 
     private Boolean includeRootLayer = null;
 
+    private String[] acceptLanguages;
+
     public GetCapabilitiesRequest() {
         super("GetCapabilities");
     }
@@ -29,6 +31,7 @@ public class GetCapabilitiesRequest extends WMSRequest {
      *
      * @return a string of with the service and version.
      */
+    @Override
     public String toString() {
         return "GetCapabilities [service: WMS, version: " + version + "]";
     }
@@ -67,5 +70,13 @@ public class GetCapabilitiesRequest extends WMSRequest {
 
     public void setRootLayerEnabled(Boolean includeRootLayer) {
         this.includeRootLayer = includeRootLayer;
+    }
+
+    public String[] getAcceptLanguages() {
+        return acceptLanguages;
+    }
+
+    public void setAcceptLanguages(String[] acceptLanguages) {
+        this.acceptLanguages = acceptLanguages;
     }
 }

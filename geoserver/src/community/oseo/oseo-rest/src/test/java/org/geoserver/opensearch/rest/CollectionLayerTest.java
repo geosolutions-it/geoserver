@@ -5,17 +5,18 @@
 package org.geoserver.opensearch.rest;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.geoserver.config.JAIInfo.PngEncoderType;
 import org.geoserver.data.test.SystemTestData;
 import org.geotools.gce.imagemosaic.ImageMosaicFormat;
 import org.geotools.image.test.ImageAssert;
+import org.geotools.referencing.operation.projection.MapProjection;
 import org.geotools.styling.ChannelSelection;
 import org.geotools.styling.FeatureTypeStyle;
 import org.geotools.styling.RasterSymbolizer;
@@ -46,7 +48,9 @@ import org.geotools.styling.Rule;
 import org.geotools.styling.Style;
 import org.geotools.styling.Symbolizer;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -56,6 +60,11 @@ import org.w3c.dom.Document;
 public class CollectionLayerTest extends OSEORestTestSupport {
 
     private String resourceBase;
+
+    @Override
+    protected String getLogConfiguration() {
+        return "DEFAULT_LOGGING";
+    }
 
     @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
@@ -71,12 +80,6 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         namespaces.put("wms", "http://www.opengis.net/wms");
 
         XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
-    }
-
-    @Override
-    protected String getLogConfiguration() {
-        // return "/GEOTOOLS_DEVELOPER_LOGGING.properties";
-        return super.getLogConfiguration();
     }
 
     @Override
@@ -136,8 +139,19 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         resourceBase = file.getCanonicalFile().getAbsolutePath().replace("\\", "/");
     }
 
+    @BeforeClass
+    public static void disableProjectionChecks() {
+        // some COG data used in tests is a tad too close to the pole
+        MapProjection.SKIP_SANITY_CHECKS = true;
+    }
+
+    @AfterClass
+    public static void enableProjectionChecks() {
+        MapProjection.SKIP_SANITY_CHECKS = false;
+    }
+
     protected String getTestStringData(String location) throws IOException {
-        return IOUtils.toString(getClass().getResourceAsStream(location), "UTF-8");
+        return IOUtils.toString(getClass().getResourceAsStream(location), StandardCharsets.UTF_8);
     }
 
     @Test
@@ -159,6 +173,55 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         BufferedImage image =
                 getAsImage("wms/reflect?layers=gs:test123&format=image/png&width=200", "image/png");
         File expected = new File("src/test/resources/test123-simple-rgb.png");
+        ImageAssert.assertEquals(expected, image, 1000);
+    }
+
+    @Test
+    public void testCreateCollectionSimpleCogLayer() throws Exception {
+        // setup the granules
+        setupDefaultLayer(
+                "/test123-product-granules-cog.json",
+                "/test123-layer-simple-cog.json",
+                "gs",
+                Boolean.FALSE);
+
+        // check the configuration elements are there too
+        LayerInfo layer = validateBasicLayerStructure("gs", "test123", new String[] {"GRAY_INDEX"});
+        assertThat(layer.getDefaultStyle().getName(), equalTo("raster"));
+
+        BufferedImage image =
+                getAsImage(
+                        "wms/reflect?layers=gs:test123&format=image/png&bbox=-159.44,-82.04,-152.43,-81.06&width=200",
+                        "image/png");
+        File expected = new File("src/test/resources/test123-simple-cog.png");
+        ImageAssert.assertEquals(expected, image, 1000);
+    }
+
+    @Test
+    public void testCreateCollectionMultibandCogLayer() throws Exception {
+        // setup the granules
+        setupDefaultLayer(
+                "/test123-product-granules-multiband-cog.json",
+                "/test123-layer-multiband-cog.json",
+                "gs",
+                Boolean.TRUE);
+
+        // check the configuration elements are there too
+        LayerInfo layer =
+                validateBasicLayerStructure(
+                        "gs", "test123", new String[] {"B02", "B03", "B04", "B08"});
+        assertThat(layer.getDefaultStyle().prefixedName(), equalTo("gs:test123"));
+        ChannelSelection cs = getChannelSelection(layer);
+        assertEquals("4", cs.getRGBChannels()[0].getChannelName().evaluate(null, String.class));
+        assertEquals("2", cs.getRGBChannels()[1].getChannelName().evaluate(null, String.class));
+        assertEquals("1", cs.getRGBChannels()[2].getChannelName().evaluate(null, String.class));
+        assertNull(cs.getGrayChannel());
+
+        BufferedImage image =
+                getAsImage(
+                        "wms/reflect?layers=gs:test123&format=image/png&bbox=-159.44,-82.04,-152.43,-81.06&width=200",
+                        "image/png");
+        File expected = new File("src/test/resources/test123-multiband-cog.png");
         ImageAssert.assertEquals(expected, image, 1000);
     }
 
@@ -200,9 +263,7 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         // ... its style is a gray one based on the RED band
         assertThat(layer.getDefaultStyle().prefixedName(), equalTo("gs:test123"));
         ChannelSelection cs = getChannelSelection(layer);
-        assertNull(cs.getRGBChannels()[0]);
-        assertNull(cs.getRGBChannels()[1]);
-        assertNull(cs.getRGBChannels()[2]);
+        assertNull(cs.getRGBChannels());
         assertEquals("1", cs.getGrayChannel().getChannelName().evaluate(null, String.class));
 
         BufferedImage image =
@@ -243,9 +304,7 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         assertThat(dimension.getDefaultValue().getStrategyType(), equalTo(Strategy.MAXIMUM));
         // ... has the expected bands
         String[] names =
-                coverageInfo
-                        .getDimensions()
-                        .stream()
+                coverageInfo.getDimensions().stream()
                         .map(cd -> cd.getName())
                         .toArray(String[]::new);
         assertThat(expectedNames, equalTo(names));
@@ -281,11 +340,7 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         ImageAssert.assertEquals(expected, image, 1000);
     }
 
-    /**
-     * This test checks it's possible to change an existing configuration and stuff still works
-     *
-     * @throws Exception
-     */
+    /** This test checks it's possible to change an existing configuration and stuff still works */
     @Test
     public void testModifyConfigurationSingleBand() throws Exception {
         // setup and check one collection
@@ -383,9 +438,7 @@ public class CollectionLayerTest extends OSEORestTestSupport {
         assertThat(layer.getDefaultStyle().prefixedName(), equalTo("gs:test123"));
         // ... and it uses only a gray band, the snow flag
         ChannelSelection cs = getChannelSelection(layer);
-        assertNull(cs.getRGBChannels()[0]);
-        assertNull(cs.getRGBChannels()[1]);
-        assertNull(cs.getRGBChannels()[2]);
+        assertNull(cs.getRGBChannels());
         assertEquals("7", cs.getGrayChannel().getChannelName().evaluate(null, String.class));
 
         // the image is almost black, but not fully

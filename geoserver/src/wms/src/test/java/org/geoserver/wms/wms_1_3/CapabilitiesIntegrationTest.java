@@ -11,6 +11,8 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
 import static org.custommonkey.xmlunit.XMLUnit.newXpathEngine;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Proxy;
@@ -41,6 +43,7 @@ import org.geoserver.catalog.impl.NamespaceInfoImpl;
 import org.geoserver.catalog.impl.WorkspaceInfoImpl;
 import org.geoserver.config.ContactInfo;
 import org.geoserver.config.GeoServerInfo;
+import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wfs.json.JSONType;
@@ -53,6 +56,7 @@ import org.geotools.util.decorate.AbstractDecorator;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
@@ -163,6 +167,7 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
     @org.junit.Test
     public void testWorkspaceQualified() throws Exception {
         Document dom = dom(get("cite/wms?request=getCapabilities&version=1.3.0"), true);
+        print(dom);
         Element e = dom.getDocumentElement();
         assertEquals("WMS_Capabilities", e.getLocalName());
         XpathEngine xpath = XMLUnit.newXpathEngine();
@@ -347,6 +352,17 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
         assertTrue(href.contains("GetLegendGraphic"));
         assertTrue(href.contains("layer=cdf%3AFifteen"));
         assertTrue(href.contains("style=point"));
+
+        // Default style set to point
+        layer.setDefaultStyle(pointStyle);
+        getCatalog().save(layer);
+        Document document = getAsDOM("wms?service=WMS&request=getCapabilities&version=1.3.0", true);
+        assertXpathEvaluatesTo("1", "count(//wms:Layer[wms:Name='cdf:Fifteen'])", document);
+        assertXpathEvaluatesTo(
+                "1", "count(//wms:Layer[wms:Name='cdf:Fifteen']/wms:Style)", document);
+        // getStyles() has the default style, styles() doesnt have default style
+        assertTrue(layer.getStyles().contains(pointStyle));
+        assertFalse(layer.styles().contains(pointStyle));
     }
 
     @org.junit.Test
@@ -698,7 +714,6 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
         for (LayerInfo l : getCatalog().getLayerGroupByName(OPAQUE_GROUP).layers()) {
             assertXpathNotExists("//wms:Layer[wms:Name='" + l.prefixedName() + "']", dom);
         }
-        ;
     }
 
     @Test
@@ -721,7 +736,6 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
             for (PublishedInfo p : getCatalog().getLayerGroupByName(OPAQUE_GROUP).getLayers()) {
                 assertXpathNotExists("//wms:Layer[wms:Name='" + p.prefixedName() + "']", dom);
             }
-            ;
 
             // now check the layer count too, we just hid everything in the container layer
             List<LayerInfo> nestedLayers = new LayerGroupHelper(container).allLayers();
@@ -759,8 +773,7 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
         nameSpace.setURI("http://non-advertised.org");
         // remove all layer groups and store them
         List<LayerGroupInfo> layerGroups =
-                catalog.getLayerGroups()
-                        .stream()
+                catalog.getLayerGroups().stream()
                         .map(this::unwrapLayerGroup)
                         .collect(Collectors.toList());
         catalog.getLayerGroups().forEach(catalog::remove);
@@ -945,6 +958,42 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
         }
     }
 
+    @Test
+    public void testDefaultAbstract() throws Exception {
+        Document dom = getAsDOM("wms?service=WMS&request=getCapabilities&version=1.3.0", true);
+
+        Element el = findAbstractForLayerWithName(CiteTestData.BASIC_POLYGONS.getLocalPart(), dom);
+        assertNotNull(el);
+        assertNotNull(el.getFirstChild());
+        assertEquals(
+                getCatalog()
+                        .getLayerByName(CiteTestData.BASIC_POLYGONS.getLocalPart())
+                        .getAbstract(),
+                el.getFirstChild().getNodeValue());
+
+        el = findAbstractForLayerWithName(CiteTestData.TASMANIA_BM.getLocalPart(), dom);
+        assertNotNull(el);
+        assertNull(el.getFirstChild());
+    }
+
+    /** Helper to fetch the abstract for a given layer in the capabilities doc. */
+    private Element findAbstractForLayerWithName(String name, Document dom) {
+        NodeList nodeList = dom.getElementsByTagName("Layer");
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node node = nodeList.item(i);
+            if (node instanceof Element && node.getLocalName().equals("Layer")) {
+                Element el = (Element) node;
+                Node title = getFirstElementByTagName(el, "Title");
+                if (title != null
+                        && title.getFirstChild() != null
+                        && name.equals(title.getFirstChild().getTextContent())) {
+                    return getFirstElementByTagName(el, "Abstract");
+                }
+            }
+        }
+        return null;
+    }
+
     /** Check that the global bounding box matches the expected envelope */
     private void checkGlobalBoundingBox(
             ReferencedEnvelope expectedBoundingBox, Document capabilitiesResult) throws Exception {
@@ -982,7 +1031,7 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
         // get the original layer group object
         while (layerGroup instanceof AbstractDecorator) {
             AbstractDecorator decorator = (AbstractDecorator) layerGroup;
-            layerGroup = (LayerGroupInfo) decorator.unwrap(LayerGroupInfo.class);
+            layerGroup = unwrap(decorator);
         }
         // catalog detach doesn't work for layer groups
         if (Proxy.isProxyClass(layerGroup.getClass())) {
@@ -992,6 +1041,11 @@ public class CapabilitiesIntegrationTest extends WMSTestSupport {
             layerGroup = (LayerGroupInfo) proxy.getProxyObject();
         }
         return layerGroup;
+    }
+
+    @SuppressWarnings("unchecked")
+    private LayerGroupInfo unwrap(AbstractDecorator decorator) {
+        return (LayerGroupInfo) decorator.unwrap(LayerGroupInfo.class);
     }
 
     /** Helper method that creates a layer group using the provided name and layers. */

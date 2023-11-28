@@ -5,7 +5,8 @@
 package org.geotools.renderer.lite;
 
 import com.google.common.base.Preconditions;
-import java.awt.*;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,11 +61,6 @@ public class VectorMapRenderUtils {
     /**
      * Creates a query selecting those features relevant to the style and extent of the given map,
      * for the given layer.
-     *
-     * @param layer
-     * @param mapContent
-     * @return
-     * @throws IOException
      */
     public static Query getStyleQuery(Layer layer, WMSMapContent mapContent) throws IOException {
 
@@ -125,8 +121,7 @@ public class VectorMapRenderUtils {
         final int bufferScreen;
         if (requestBufferScreen <= 0) {
             MetaBufferEstimator bufferEstimator = new MetaBufferEstimator();
-            styleList
-                    .stream()
+            styleList.stream()
                     .flatMap(
                             fts ->
                                     Stream.concat(
@@ -250,8 +245,6 @@ public class VectorMapRenderUtils {
      * the {@link MathTransform2D} returned here will transition from WGS84 to the requested
      * destCRS.
      *
-     * @param sourceCRS
-     * @param destCRS
      * @return the transform from {@code sourceCRS} to {@code destCRS}, will be an identity
      *     transform if the the two crs are equal
      * @throws FactoryException If no transform is available to the destCRS
@@ -276,8 +269,8 @@ public class VectorMapRenderUtils {
         }
 
         // the basic crs transformation, if any
-        MathTransform2D sourceToTarget;
-        sourceToTarget = (MathTransform2D) CRS.findMathTransform(sourceCRS, destCRS, true);
+        MathTransform2D sourceToTarget =
+                (MathTransform2D) CRS.findMathTransform(sourceCRS, destCRS, true);
 
         if (transform == null) {
             return sourceToTarget;
@@ -301,9 +294,6 @@ public class VectorMapRenderUtils {
      * when your filters really mean you're secretly asking for all the data in which case sending
      * the filters to the Datastore actually costs you. But, databases are *much* faster at
      * processing the Filters than JAVA is and can use statistical analysis to do it.
-     *
-     * @param styles
-     * @param query
      */
     private static void processRuleForQuery(LiteFeatureTypeStyle[] styles, Query query) {
         try {
@@ -323,7 +313,7 @@ public class VectorMapRenderUtils {
             // filter2 OR filter3);
 
             final int maxFilters = 5;
-            final List<Filter> filtersToDS = new ArrayList<Filter>();
+            final List<Filter> filtersToDS = new ArrayList<>();
             // look at each featuretypestyle
             for (LiteFeatureTypeStyle style : styles) {
                 if (style.elseRules.length > 0) // uh-oh has elseRule
@@ -367,7 +357,7 @@ public class VectorMapRenderUtils {
             Rectangle screenSize)
             throws IOException {
 
-        ArrayList<LiteFeatureTypeStyle> result = new ArrayList<LiteFeatureTypeStyle>();
+        ArrayList<LiteFeatureTypeStyle> result = new ArrayList<>();
 
         LiteFeatureTypeStyle lfts;
 
@@ -399,11 +389,8 @@ public class VectorMapRenderUtils {
     private static List<Rule>[] splitRules(
             final FeatureTypeStyle fts, final double scaleDenominator) {
 
-        List<Rule> ruleList = new ArrayList<Rule>();
-        List<Rule> elseRuleList = new ArrayList<Rule>();
-
-        ruleList = new ArrayList<>();
-        elseRuleList = new ArrayList<>();
+        List<Rule> ruleList = new ArrayList<>();
+        List<Rule> elseRuleList = new ArrayList<>();
 
         for (Rule r : fts.rules()) {
             if (isWithInScale(r, scaleDenominator)) {
@@ -415,7 +402,7 @@ public class VectorMapRenderUtils {
             }
         }
 
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({"unchecked", "PMD.UseShortArrayInitializer"})
         List<Rule>[] ret = new List[] {ruleList, elseRuleList};
         return ret;
     }

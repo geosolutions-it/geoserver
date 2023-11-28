@@ -31,14 +31,17 @@ public class SessionDebugFilter implements Filter {
 
     static final Logger LOGGER = Logging.getLogger(SessionDebugWrapper.class);
 
+    @Override
     public void destroy() {
         // nothing to do
     }
 
+    @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         // nothing to do
     }
 
+    @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
         if (req instanceof HttpServletRequest) {
@@ -86,7 +89,9 @@ public class SessionDebugFilter implements Filter {
                                             .ALLOWSESSIONCREATION_ATTR);
 
             // are we creating the session in the web ui?
-            if (getPathInfo().startsWith("/web") || Boolean.TRUE.equals(allow)) {
+            String pathInfo = getPathInfo();
+            boolean isWebUIPath = pathInfo != null && getPathInfo().startsWith("/web");
+            if (isWebUIPath || Boolean.TRUE.equals(allow)) {
                 if (LOGGER.isLoggable(Level.FINE)) {
                     Exception e = new Exception("Full stack trace for the session creation path");
                     e.fillInStackTrace();
@@ -99,11 +104,13 @@ public class SessionDebugFilter implements Filter {
                 if (LOGGER.isLoggable(Level.INFO)) {
                     Exception e = new Exception("Full stack trace for the session creation path");
                     e.fillInStackTrace();
+                    String logPathInfo = pathInfo;
+                    if (logPathInfo == null) logPathInfo = getContextPath();
                     LOGGER.log(
                             Level.INFO,
                             "Creating a new http session outside of the web UI! "
                                     + "(normally not desirable), the path is"
-                                    + getPathInfo(),
+                                    + logPathInfo,
                             e);
                 }
             }

@@ -57,11 +57,13 @@ public class FileModel implements IModel<String> {
         return (String) obj;
     }
 
+    @Override
     public void detach() {
         // TODO Auto-generated method stub
 
     }
 
+    @Override
     public void setObject(String location) {
 
         if (location != null) {
@@ -91,11 +93,7 @@ public class FileModel implements IModel<String> {
         delegate.setObject(location);
     }
 
-    /**
-     * Turns a file in canonical form if possible
-     *
-     * @param file
-     */
+    /** Turns a file in canonical form if possible */
     File canonicalize(File file) {
         try {
             return file.getCanonicalFile();

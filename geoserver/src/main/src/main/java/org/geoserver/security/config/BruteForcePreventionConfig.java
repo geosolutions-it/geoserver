@@ -100,8 +100,7 @@ public class BruteForcePreventionConfig implements SecurityConfig {
         try {
             if (this.getWhitelistedMasks() != null && this.whitelistedAddressMatchers == null) {
                 this.whitelistedAddressMatchers =
-                        whitelistedMasks
-                                .stream()
+                        whitelistedMasks.stream()
                                 .map(mask -> new IpAddressMatcher(mask))
                                 .collect(Collectors.toList());
             }
@@ -131,7 +130,7 @@ public class BruteForcePreventionConfig implements SecurityConfig {
         if (clone != null) {
             if (allowEnvParametrization
                     && gsEnvironment != null
-                    && GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+                    && GeoServerEnvironment.allowEnvParametrization()) {
                 List<String> resolvedMasks = new ArrayList<>();
                 for (String mask : whitelistedMasks) {
                     String resolved = (String) gsEnvironment.resolveValue(mask);

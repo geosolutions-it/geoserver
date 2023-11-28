@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+  <bean id="wmtsCapabilitiesProvider" class="org.geoserver.gwc.wmts.WMTSCapabilitiesProvider">
+    <constructor-arg ref="geoServer"/>
+  </bean>
+
+  <bean id="wmtsLoader" class="org.geoserver.gwc.wmts.WMTSXStreamLoader">
+    <constructor-arg ref="resourceLoader"/>
+  </bean>
+  <bean id="wmtsFactoryExtension" class="org.geoserver.gwc.wmts.WMTSFactoryExtension"/>
+  
+  <bean id="gwcResourceServiceVoter" class="org.geoserver.gwc.wmts.GWCResourceServiceVoter"/>
+
+</beans>

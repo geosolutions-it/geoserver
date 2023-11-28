@@ -24,6 +24,8 @@ public class GeoIPPostProcessor implements RequestPostProcessor {
     /** cached geoip lookup service */
     static volatile LookupService geoIPLookup;
 
+    static final String PROCESSOR_NAME = "geoIp";
+
     // TODO: cache by IP address
 
     GeoServerResourceLoader loader;
@@ -33,6 +35,7 @@ public class GeoIPPostProcessor implements RequestPostProcessor {
         this.loader = loader;
     }
 
+    @Override
     public void run(RequestData data, HttpServletRequest request, HttpServletResponse response) {
         if (data.getRemoteAddr() == null) {
             LOGGER.info("Request data did not contain ip address. Unable to perform GeoIP lookup.");
@@ -88,5 +91,10 @@ public class GeoIPPostProcessor implements RequestPostProcessor {
             LOGGER.log(Level.WARNING, "Error occured looking up GeoIP database", e);
             return null;
         }
+    }
+
+    @Override
+    public String getName() {
+        return PROCESSOR_NAME;
     }
 }

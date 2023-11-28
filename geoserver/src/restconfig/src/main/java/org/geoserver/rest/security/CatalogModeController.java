@@ -44,36 +44,34 @@ public class CatalogModeController {
 
     protected void checkUserIsAdmin() {
         if (!getManager().checkAuthenticationForAdminRole()) {
-            throw new RestException("Amdinistrative priveleges required", HttpStatus.FORBIDDEN);
+            throw new RestException("Administrative privileges required", HttpStatus.FORBIDDEN);
         }
     }
 
     @GetMapping(
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     @ResponseBody
     public NamedMap mapGet() throws Exception {
         checkUserIsAdmin();
 
         CatalogMode mode = ruleDAO.getMode();
-        NamedMap modeMap = new NamedMap(XML_ROOT_ELEM);
+        NamedMap<String, String> modeMap = new NamedMap<>(XML_ROOT_ELEM);
         modeMap.put(MODE_ELEMENT, mode.toString());
         return modeMap;
     }
 
     @PutMapping(
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     protected void mapPut(@RequestBody Map map) throws Exception {
         checkUserIsAdmin();
 

@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +41,7 @@ import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.ows.util.RequestUtils;
+import org.geoserver.platform.ServiceException;
 import org.geoserver.wcs.kvp.GridCS;
 import org.geoserver.wcs.kvp.GridType;
 import org.geoserver.wcs.response.DescribeCoverageTransformer;
@@ -97,13 +97,16 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
         this.responseFactory = responseFactory;
     }
 
+    @Override
     public WCSInfo getServiceInfo() {
         return geoServer.getService(WCSInfo.class);
     }
 
+    @Override
+    @SuppressWarnings("unchecked") // EMF objects without generics
     public WCSCapsTransformer getCapabilities(GetCapabilitiesType request) {
         // do the version negotiation dance
-        List<String> provided = new ArrayList<String>();
+        List<String> provided = new ArrayList<>();
         // provided.add("1.0.0");
         provided.add("1.1.0");
         provided.add("1.1.1");
@@ -124,6 +127,7 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
         throw new WcsException("Could not understand version:" + version);
     }
 
+    @Override
     public DescribeCoverageTransformer describeCoverage(DescribeCoverageType request) {
         final String version = request.getVersion();
         if ("1.1.0".equals(version) || "1.1.1".equals(version)) {
@@ -138,7 +142,8 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
         throw new WcsException("Could not understand version:" + version);
     }
 
-    @SuppressWarnings({"deprecation", "unchecked"})
+    @Override
+    @SuppressWarnings("unchecked")
     public GridCoverage[] getCoverage(GetCoverageType request) {
         if (LOGGER.isLoggable(Level.FINEST)) {
             LOGGER.finest(
@@ -227,22 +232,22 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
             //
             // TIME Values
             //
-            final List<Date> timeValues = new LinkedList<Date>();
+            final List<Date> timeValues = new LinkedList<>();
 
             TimeSequenceType temporalSubset = request.getDomainSubset().getTemporalSubset();
 
             if (temporalSubset != null
                     && temporalSubset.getTimePosition() != null
                     && temporalSubset.getTimePosition().size() > 0) {
-                for (Iterator it = temporalSubset.getTimePosition().iterator(); it.hasNext(); ) {
-                    Date tp = (Date) it.next();
+                for (Object o : temporalSubset.getTimePosition()) {
+                    Date tp = (Date) o;
                     timeValues.add(tp);
                 }
             } else if (temporalSubset != null
                     && temporalSubset.getTimePeriod() != null
                     && temporalSubset.getTimePeriod().size() > 0) {
-                for (Iterator it = temporalSubset.getTimePeriod().iterator(); it.hasNext(); ) {
-                    TimePeriodType tp = (TimePeriodType) it.next();
+                for (Object o : temporalSubset.getTimePeriod()) {
+                    TimePeriodType tp = (TimePeriodType) o;
                     Date beginning = (Date) tp.getBeginPosition();
                     Date ending = (Date) tp.getEndPosition();
 
@@ -289,7 +294,7 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
             final List<GeneralParameterDescriptor> parameterDescriptors =
                     readParametersDescriptor.getDescriptor().descriptors();
             ParameterValue time = null;
-            boolean hasTime = timeValues.size() > 0;
+            boolean hasTime = !timeValues.isEmpty();
 
             if (hasTime) {
                 for (GeneralParameterDescriptor pd : parameterDescriptors) {
@@ -345,7 +350,7 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
             //
             // perform Read ...
             //
-            coverage = (GridCoverage2D) reader.read(readParameters);
+            coverage = reader.read(readParameters);
             if ((coverage == null) || !(coverage instanceof GridCoverage2D)) {
                 throw new IOException("The requested coverage could not be found.");
             }
@@ -357,6 +362,9 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
             // to crop
             if (!intersectionEnvelopeInSourceCRS.contains(coverage.getEnvelope2D(), true)) {
                 coverage = WCSUtils.crop(coverage, intersectionEnvelopeInSourceCRS);
+                if (coverage == null)
+                    throw new ServiceException(
+                            "Requested area incompatible with raster space, less than a pixel would be read");
             }
 
             /** Band Select (works on just one field) */
@@ -380,7 +388,7 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
                     // of a
                     // key
                     List<CoverageDimensionInfo> dimensions = meta.getDimensions();
-                    Map<String, Integer> dimensionMap = new HashMap<String, Integer>();
+                    Map<String, Integer> dimensionMap = new HashMap<>();
                     for (int i = 0; i < dimensions.size(); i++) {
                         String keyName = dimensions.get(i).getName().replace(' ', '_');
                         dimensionMap.put(keyName, i);
@@ -496,24 +504,16 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
                     //
 
                     // TODO: draft code ... it needs more study!
-                    int elevationLevels =
-                            (int)
-                                    Math.round(
-                                            requestedEnvelope.getUpperCorner().getOrdinate(2)
-                                                    - requestedEnvelope
-                                                            .getLowerCorner()
-                                                            .getOrdinate(2));
+                    double upperZ = requestedEnvelope.getUpperCorner().getOrdinate(2);
+                    double lowerZ = requestedEnvelope.getLowerCorner().getOrdinate(2);
+                    int elevationLevels = (int) Math.round(upperZ - lowerZ);
 
                     // compute the elevation levels, we have elevationLevels values
                     if (elevationLevels > 0) {
                         double[] elevations = new double[elevationLevels];
 
-                        elevations[0] =
-                                requestedEnvelope
-                                        .getLowerCorner()
-                                        .getOrdinate(2); // TODO put the extrema
-                        elevations[elevationLevels - 1] =
-                                requestedEnvelope.getUpperCorner().getOrdinate(2);
+                        elevations[0] = lowerZ; // TODO put the extrema
+                        elevations[elevationLevels - 1] = upperZ;
                         if (elevationLevels > 2) {
                             final int adjustedLevelsNum = elevationLevels - 1;
                             double step =
@@ -704,7 +704,9 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
         // check the coordinates, but make sure the case 175,-175 is handled
         // as valid for the longitude axis in a geographic coordinate system
         // see section 7.6.2 of the WCS 1.1.1 spec)
+        @SuppressWarnings("unchecked")
         List<Double> lower = bbox.getLowerCorner();
+        @SuppressWarnings("unchecked")
         List<Double> upper = bbox.getUpperCorner();
         for (int i = 0; i < lower.size(); i++) {
             if (lower.get(i) > upper.get(i)) {
@@ -754,9 +756,6 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
     /**
      * Checks that the elements of the Output part of the request do make sense by comparing them to
      * the coverage metadata
-     *
-     * @param info
-     * @param rangeSubset
      */
     private void checkOutput(CoverageInfo meta, OutputType output) {
         if (output == null) return;
@@ -785,8 +784,7 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
                 // geographic crs
                 String actualCRS = null;
                 final String gridBaseCrsCode = extractCode(gridBaseCrs);
-                for (Iterator it = meta.getResponseSRS().iterator(); it.hasNext(); ) {
-                    final String responseCRS = (String) it.next();
+                for (final String responseCRS : meta.getResponseSRS()) {
                     final String code = extractCode(responseCRS);
                     if (code.equalsIgnoreCase(gridBaseCrsCode)) {
                         actualCRS = responseCRS;
@@ -892,8 +890,6 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
     /**
      * Extracts only the final part of an EPSG code allowing for a specification independent
      * comparison (that is, it removes the EPSG:, urn:xxx:, http://... prefixes)
-     *
-     * @param srsName
      */
     private String extractCode(String srsName) {
         if (srsName.startsWith("http://www.opengis.net/gml/srs/epsg.xml#"))
@@ -907,16 +903,13 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
      * Checks if the supported format string list contains the specified format, doing a case
      * insensitive search. If found the declared output format name is returned, otherwise null is
      * returned.
-     *
-     * @param supportedFormats
-     * @param format
      */
     private String getDeclaredFormat(List supportedFormats, String format) {
         // supported formats may be setup using old style formats, first scan
         // the
         // configured list
-        for (Iterator it = supportedFormats.iterator(); it.hasNext(); ) {
-            String sf = (String) it.next();
+        for (Object supportedFormat : supportedFormats) {
+            String sf = (String) supportedFormat;
             if (sf.equalsIgnoreCase(format)) {
                 return sf;
             } else {
@@ -930,10 +923,8 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
     /**
      * Checks that the elements of the RangeSubset part of the request do make sense by comparing
      * them to the coverage metadata
-     *
-     * @param info
-     * @param rangeSubset
      */
+    @SuppressWarnings("unchecked") // EMF model without generics
     private void checkRangeSubset(CoverageInfo info, RangeSubsetType rangeSubset) {
         // quick escape if no range subset has been specified (it's legal)
         if (rangeSubset == null) return;
@@ -965,6 +956,14 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
             } else if (interpolation.equalsIgnoreCase("linear")
                     || interpolation.equalsIgnoreCase("bilinear")) {
                 interpolation = "bilinear";
+            }
+            if (interpolation.trim().isEmpty()) {
+                // ie. "contents:"  WCS Spec doesn't specify the exact error message/locator
+                //  This satisfies the WCS 1.1 CITE Tests
+                throw new WcsException(
+                        "RangeSubset parameter - InterpolationMethod is empty",
+                        InvalidParameterValue,
+                        "RangeSubset");
             }
 
             for (String method : info.getInterpolationMethods()) {
@@ -1002,9 +1001,9 @@ public class DefaultWebCoverageService111 implements WebCoverageService111 {
         // avoid issues
         // with the kvp parsing of indentifiers that include spaces)
         List<CoverageDimensionInfo> dimensions = info.getDimensions();
-        Set<String> dimensionMap = new HashSet<String>();
-        for (int i = 0; i < dimensions.size(); i++) {
-            String keyName = dimensions.get(i).getName().replace(' ', '_');
+        Set<String> dimensionMap = new HashSet<>();
+        for (CoverageDimensionInfo dimension : dimensions) {
+            String keyName = dimension.getName().replace(' ', '_');
             dimensionMap.add(keyName);
         }
 

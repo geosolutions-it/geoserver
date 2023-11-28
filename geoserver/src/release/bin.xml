@@ -8,7 +8,7 @@
   <fileSet>
    <!-- the main webapp -->
    <directory>web/app/target/geoserver</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT/webapps/geoserver</outputDirectory>
+   <outputDirectory>webapps/geoserver</outputDirectory>
    <includes>
     <include>**/*</include>
    </includes>
@@ -22,7 +22,7 @@
   <fileSet>
    <!-- the data directory -->
    <directory>web/app/target/geoserver/data</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT/data_dir</outputDirectory>
+   <outputDirectory>data_dir</outputDirectory>
    <includes>
     <include>**/*</include>
    </includes>
@@ -30,30 +30,26 @@
   <fileSet>
    <!-- the libs needed to run jetty -->
    <directory>release/target/dependency</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT/lib</outputDirectory>
+   <outputDirectory>lib</outputDirectory>
    <includes>
     <include>ant-*.jar</include>
     <include>commons-el-*.jar</include>
     <include>commons-logging-*.jar</include>
-    <include>log4j-*.jar</include>
-    <include>jasper-compiler-*.jar</include>
-    <include>jasper-compiler-jdt-*.jar</include>
-    <include>jasper-runtime-*.jar</include>
     <include>jetty-*.jar</include>
     <include>jetty-util-*.jar</include>
-    <include>jsp-api-*.jar</include>
     <include>javax.servlet-api-*.jar</include>
     <include>xmlParserAPIs-*.jar</include>
    </includes>
    <excludes>
     <exclude>log4j-over-slf4j-*.jar</exclude>
+    <exclude>jetty-start*.jar</exclude>
    </excludes>
   </fileSet>
   <fileSet>
    <!-- windows batch files -->
    <directory>release/bin</directory>
    <lineEnding>keep</lineEnding>
-   <outputDirectory>geoserver-2.16-SNAPSHOT/bin</outputDirectory>
+   <outputDirectory>bin</outputDirectory>
    <includes>
     <include>*.bat</include>
    </includes>
@@ -62,7 +58,7 @@
    <!-- unix shell scripts -->
    <directory>release/bin</directory>
    <lineEnding>unix</lineEnding>
-   <outputDirectory>geoserver-2.16-SNAPSHOT/bin</outputDirectory>
+   <outputDirectory>bin</outputDirectory>
    <fileMode>0755</fileMode>
    <directoryMode>0755</directoryMode>
    <includes>
@@ -70,27 +66,32 @@
    </includes>
   </fileSet>
   <fileSet>
-   <!-- the README and other text files -->
-   <directory>release</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT</outputDirectory>
+   <directory>release/target/html</directory>
+   <outputDirectory></outputDirectory>
    <includes>
-    <include>GPL.txt</include>
-    <include>RUNNING.txt</include>
-    <include>README.txt</include>
-    <include>RELEASE_NOTES.txt</include>
+    <include>README.html</include>
+    <include>RUNNING.html</include>
    </includes>
   </fileSet>
   <fileSet>
-   <!-- license -->
-   <directory>../</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT</outputDirectory>
-   <includes>
-    <include>LICENSE.txt</include>
-   </includes>
+    <directory>release/target/html/licenses</directory>
+    <outputDirectory>license</outputDirectory>
+    <includes>
+       <include>NOTICE.html</include>
+       <include>apache-1.1.html</include>
+       <include>apache-2.0.html</include>
+       <include>epl-1.0.html</include>
+       <include>EPSG.html</include>
+       <include>GEOTOOLS_NOTICE.html</include>
+       <include>HSQL.html</include>
+       <include>LGPL.html</include>
+       <include>OGC.html</include>
+       <include>W3C.html</include>
+    </includes>
   </fileSet>
   <fileSet>
    <directory>target</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT</outputDirectory>
+   <outputDirectory></outputDirectory>
    <includes>
     <include>VERSION.txt</include>
    </includes>
@@ -98,7 +99,7 @@
   <fileSet>
    <!-- jetty configuration -->
    <directory>release/jetty</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT</outputDirectory>
+   <outputDirectory></outputDirectory>
    <includes>
     <include>**/*</include>
    </includes>
@@ -106,7 +107,19 @@
   <fileSet>
    <!-- empty log directory -->
    <directory>release/logs</directory>
-   <outputDirectory>geoserver-2.16-SNAPSHOT</outputDirectory>
+   <outputDirectory></outputDirectory>
   </fileSet>
  </fileSets>
+ <files>
+    <file>
+      <source>../licenses/NOTICE.md</source>
+      <outputDirectory>license</outputDirectory>
+      <destName>NOTICE.txt</destName>
+    </file>
+    <file>
+      <source>release/target/dependency/jetty-start-${jetty.version}-shaded.jar</source>
+      <outputDirectory></outputDirectory>
+      <destName>start.jar</destName>
+    </file>
+ </files>
 </assembly>

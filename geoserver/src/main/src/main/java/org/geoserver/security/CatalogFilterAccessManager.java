@@ -163,8 +163,6 @@ public class CatalogFilterAccessManager extends ResourceAccessManagerWrapper {
     /**
      * Designed for testing, allows to manually configure the catalog filters bypassing the Spring
      * context lookup
-     *
-     * @param filters
      */
     public void setCatalogFilters(List<? extends CatalogFilter> filters) {
         this.filters = filters;
@@ -176,7 +174,7 @@ public class CatalogFilterAccessManager extends ResourceAccessManagerWrapper {
         if (filters == null || filters.isEmpty()) return delegate.getSecurityFilter(user, clazz);
 
         // Result is the conjunction of delegate's filter, and those of all the CatalogFilters
-        ArrayList<Filter> convertedFilters = new ArrayList<Filter>(this.filters.size() + 1);
+        ArrayList<Filter> convertedFilters = new ArrayList<>(this.filters.size() + 1);
         convertedFilters.add(delegate.getSecurityFilter(user, clazz)); // Delegate's filter
 
         for (CatalogFilter filter : getCatalogFilters()) {

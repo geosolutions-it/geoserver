@@ -50,7 +50,7 @@ public abstract class ProcessParameterIO {
     static List<ProcessParameterIO> defaults;
 
     static {
-        defaults = new ArrayList<ProcessParameterIO>();
+        defaults = new ArrayList<>();
 
         // primitives
         defaults.add(new LiteralPPIO(BigInteger.class));
@@ -84,25 +84,20 @@ public abstract class ProcessParameterIO {
         defaults.add(new GMLPPIO.GML3.Geometry());
         defaults.add(new GMLPPIO.GML2.Geometry());
         defaults.add(new WKTPPIO());
-        defaults.add(new GeoJSONPPIO.Geometries());
+        defaults.add(new EWKTPPIO());
         defaults.add(new GMLPPIO.GML3.GeometryAlternate());
         defaults.add(new GMLPPIO.GML2.GeometryAlternate());
 
         // features
         defaults.add(new WFSPPIO.WFS10());
         defaults.add(new WFSPPIO.WFS11());
-        defaults.add(new GeoJSONPPIO.FeatureCollections());
         defaults.add(new WFSPPIO.WFS10Alternate());
         defaults.add(new WFSPPIO.WFS11Alternate());
 
         // CRS
         defaults.add(new CoordinateReferenceSystemPPIO());
 
-        // grids
-        defaults.add(new GeoTiffPPIO());
-        defaults.add(new ArcGridPPIO());
-        defaults.add(new CoveragePPIO.PNGPPIO());
-        defaults.add(new CoveragePPIO.JPEGPPIO());
+        // grids - all grid PPIOs listed in the application context for backwards compatibility
 
         defaults.add(new ImagePPIO.PNGPPIO());
         defaults.add(new ImagePPIO.JPEGPPIO());
@@ -146,13 +141,13 @@ public abstract class ProcessParameterIO {
     public static List<ProcessParameterIO> findAll(Parameter<?> p, ApplicationContext context) {
         // enum special treatment
         if (p.type.isEnum()) {
-            List<ProcessParameterIO> result = new ArrayList<ProcessParameterIO>();
+            List<ProcessParameterIO> result = new ArrayList<>();
             result.add(new EnumPPIO(p.type));
             return result;
         }
 
         // load all extensions
-        List<ProcessParameterIO> l = new ArrayList<ProcessParameterIO>(defaults);
+        List<ProcessParameterIO> l = new ArrayList<>(defaults);
         if (context != null) {
             l.addAll(GeoServerExtensions.extensions(ProcessParameterIO.class, context));
         } else {
@@ -171,13 +166,13 @@ public abstract class ProcessParameterIO {
         }
 
         // find parameters that match
-        List<ProcessParameterIO> matches = new ArrayList<ProcessParameterIO>();
+        List<ProcessParameterIO> matches = new ArrayList<>();
 
         // do a two phase search, first try to match the identifier
         for (ProcessParameterIO ppio : l) {
             if (ppio.getIdentifer() != null
                     && ppio.getIdentifer().equals(p.key)
-                    && ppio.getType().isAssignableFrom(p.type)) {
+                    && typeCompatible(p, ppio)) {
                 matches.add(ppio);
             }
         }
@@ -185,7 +180,7 @@ public abstract class ProcessParameterIO {
         // if no matches, look for just those which match by type
         if (matches.isEmpty()) {
             for (ProcessParameterIO ppio : l) {
-                if (ppio.getType().isAssignableFrom(p.type)) {
+                if (typeCompatible(p, ppio)) {
                     matches.add(ppio);
                 }
             }
@@ -194,12 +189,16 @@ public abstract class ProcessParameterIO {
         return matches;
     }
 
+    private static boolean typeCompatible(Parameter<?> p, ProcessParameterIO ppio) {
+        return ppio.getType().isAssignableFrom(p.type);
+    }
+
     /*
      * Look for PPIO matching the parameter type and suitable for direction handling
      */
     private static List<ProcessParameterIO> findByDirection(
             Parameter<?> p, ApplicationContext context, PPIODirection direction) {
-        List<ProcessParameterIO> ppios = new ArrayList<ProcessParameterIO>();
+        List<ProcessParameterIO> ppios = new ArrayList<>();
         List<ProcessParameterIO> matches = findAll(p, context);
         for (ProcessParameterIO ppio : matches) {
             if (ppio.getDirection() == PPIODirection.BOTH || ppio.getDirection() == direction) {
@@ -223,12 +222,7 @@ public abstract class ProcessParameterIO {
         return findByDirection(p, context, PPIODirection.DECODING);
     }
 
-    /**
-     * Returns true if the specified parameter is a complex one
-     *
-     * @param param
-     * @param applicationContext
-     */
+    /** Returns true if the specified parameter is a complex one */
     public static boolean isComplex(Parameter<?> param, ApplicationContext applicationContext) {
         List<ProcessParameterIO> ppios = findAll(param, applicationContext);
         if (ppios.isEmpty()) {
@@ -239,19 +233,19 @@ public abstract class ProcessParameterIO {
     }
 
     /** java class of parameter when reading and writing i/o. */
-    protected final Class externalType;
+    protected final Class<?> externalType;
 
     /** java class of parameter when running internal process. */
-    protected final Class internalType;
+    protected final Class<?> internalType;
 
     /** identifier for the parameter */
     protected String identifer;
 
-    protected ProcessParameterIO(Class externalType, Class internalType) {
+    protected ProcessParameterIO(Class<?> externalType, Class<?> internalType) {
         this(externalType, internalType, null);
     }
 
-    protected ProcessParameterIO(Class externalType, Class internalType, String identifier) {
+    protected ProcessParameterIO(Class<?> externalType, Class<?> internalType, String identifier) {
         this.externalType = externalType;
         this.internalType = internalType;
         this.identifer = identifier;
@@ -262,7 +256,7 @@ public abstract class ProcessParameterIO {
      *
      * <p>The external type is used when reading and writing the parameter from an external source.
      */
-    public final Class getExternalType() {
+    public final Class<?> getExternalType() {
         return externalType;
     }
 
@@ -271,7 +265,7 @@ public abstract class ProcessParameterIO {
      *
      * <p>The internal type is used when going to and from the internal process engine.
      */
-    public final Class getType() {
+    public final Class<?> getType() {
         return internalType;
     }
 

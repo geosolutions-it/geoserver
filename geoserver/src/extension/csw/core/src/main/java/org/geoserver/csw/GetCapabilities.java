@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -45,6 +44,7 @@ import org.geoserver.csw.store.CatalogStore;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.util.InternationalStringUtils;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.filter.capability.FilterCapabilitiesImpl;
 import org.geotools.filter.capability.ScalarCapabilitiesImpl;
@@ -128,7 +128,7 @@ public class GetCapabilities {
 
             KeywordsType kw = null;
             List<KeywordInfo> keywords = csw.getKeywords();
-            if (keywords != null && keywords.size() > 0) {
+            if (keywords != null && !keywords.isEmpty()) {
                 kw = owsf.createKeywordsType();
                 for (KeywordInfo keyword : keywords) {
                     kw.getKeyword().add(keyword.getValue());
@@ -164,7 +164,13 @@ public class GetCapabilities {
 
             OnlineResourceType providerSite = owsf.createOnlineResourceType();
             sp.setProviderSite(providerSite);
-            providerSite.setHref((csw.getOnlineResource() != null ? csw.getOnlineResource() : ""));
+            providerSite.setHref(
+                    InternationalStringUtils.firstNonBlank(
+                            csw.getOnlineResource(),
+                            contact.getOnlineResource(),
+                            csw.getGeoServer().getSettings().getOnlineResource(),
+                            ResponseUtils.buildURL(
+                                    request.getBaseUrl(), null, null, URLType.SERVICE)));
 
             ResponsiblePartySubsetType serviceContact = owsf.createResponsiblePartySubsetType();
             sp.setServiceContact(serviceContact);
@@ -187,7 +193,10 @@ public class GetCapabilities {
 
             OnlineResourceType onlineResource = owsf.createOnlineResourceType();
             contactInfo.setOnlineResource(onlineResource);
-            onlineResource.setHref(contact.getOnlineResource());
+            onlineResource.setHref(
+                    InternationalStringUtils.firstNonBlank(
+                            contact.getOnlineResource(),
+                            csw.getGeoServer().getSettings().getOnlineResource()));
 
             TelephoneType telephone = owsf.createTelephoneType();
             contactInfo.setPhone(telephone);
@@ -242,18 +251,17 @@ public class GetCapabilities {
         SpatialCapabilities spatialCapabilities = new CSWSpatialCapabilities();
 
         // - Scalar Capabilities
-        Operator[] operators =
-                new Operator[] {
-                    ffFactory.operator("EqualTo"),
-                    ffFactory.operator("Like"),
-                    ffFactory.operator("LessThan"),
-                    ffFactory.operator("GreaterThan"),
-                    ffFactory.operator("LessThanEqualTo"),
-                    ffFactory.operator("GreaterThanEqualTo"),
-                    ffFactory.operator("NotEqualTo"),
-                    ffFactory.operator("Between"),
-                    ffFactory.operator("NullCheck")
-                };
+        Operator[] operators = {
+            ffFactory.operator("EqualTo"),
+            ffFactory.operator("Like"),
+            ffFactory.operator("LessThan"),
+            ffFactory.operator("GreaterThan"),
+            ffFactory.operator("LessThanEqualTo"),
+            ffFactory.operator("GreaterThanEqualTo"),
+            ffFactory.operator("NotEqualTo"),
+            ffFactory.operator("Between"),
+            ffFactory.operator("NullCheck")
+        };
         ComparisonOperators comparisonOperators = ffFactory.comparisonOperators(operators);
         ArithmeticOperators arithmeticOperators = ffFactory.arithmeticOperators(true, null);
         ScalarCapabilities scalarCapabilities =
@@ -289,11 +297,7 @@ public class GetCapabilities {
         return sectionIsRequested;
     }
 
-    /**
-     * @param owsf
-     * @param baseUrl
-     * @param operationsMetadata
-     */
+    /** */
     private void OperationMetadata_GetCapabilities(
             Ows10Factory owsf, final String baseUrl, OperationsMetadataType operationsMetadata) {
         // - GetCapabilities
@@ -308,8 +312,7 @@ public class GetCapabilities {
         getCapabilitiesDCP.setHTTP(getCapabilitiesHTTP);
 
         String getCapabilitiesHref =
-                ResponseUtils.buildURL(
-                        baseUrl, "csw", new HashMap<String, String>(), URLType.SERVICE);
+                ResponseUtils.buildURL(baseUrl, "csw", new HashMap<>(), URLType.SERVICE);
 
         RequestMethodType getCapabilitiesGet = owsf.createRequestMethodType();
         getCapabilitiesGet.setHref(getCapabilitiesHref);
@@ -334,11 +337,7 @@ public class GetCapabilities {
         }
     }
 
-    /**
-     * @param owsf
-     * @param baseUrl
-     * @param operationsMetadata
-     */
+    /** */
     private void OperationMetadata_DescribeRecord(
             Ows10Factory owsf, String baseUrl, OperationsMetadataType operationsMetadata) {
         // - DescribeRecord
@@ -353,8 +352,7 @@ public class GetCapabilities {
         describeRecordDCP.setHTTP(describeRecordHTTP);
 
         String describeRecordHref =
-                ResponseUtils.buildURL(
-                        baseUrl, "csw", new HashMap<String, String>(), URLType.SERVICE);
+                ResponseUtils.buildURL(baseUrl, "csw", new HashMap<>(), URLType.SERVICE);
 
         RequestMethodType describeRecordGet = owsf.createRequestMethodType();
         describeRecordGet.setHref(describeRecordHref);
@@ -386,11 +384,7 @@ public class GetCapabilities {
         }
     }
 
-    /**
-     * @param owsf
-     * @param baseUrl
-     * @param operationsMetadata
-     */
+    /** */
     private void OperationMetadata_GetRecords(
             Ows10Factory owsf, String baseUrl, OperationsMetadataType operationsMetadata) {
         // - GetRecords
@@ -405,8 +399,7 @@ public class GetCapabilities {
         getRecordsDCP.setHTTP(getRecordsHTTP);
 
         String getRecordsHref =
-                ResponseUtils.buildURL(
-                        baseUrl, "csw", new HashMap<String, String>(), URLType.SERVICE);
+                ResponseUtils.buildURL(baseUrl, "csw", new HashMap<>(), URLType.SERVICE);
 
         RequestMethodType getRecordsGet = owsf.createRequestMethodType();
         getRecordsGet.setHref(getRecordsHref);
@@ -442,7 +435,7 @@ public class GetCapabilities {
             for (RecordDescriptor rd : store.getRecordDescriptors()) {
                 List<Name> queriables =
                         store.getCapabilities().getQueriables(rd.getFeatureDescriptor().getName());
-                if (queriables != null && queriables.size() > 0) {
+                if (queriables != null && !queriables.isEmpty()) {
                     DomainType dt = owsf.createDomainType();
                     dt.setName(rd.getQueryablesDescription());
                     NamespaceSupport nss = rd.getNamespaceSupport();
@@ -469,11 +462,7 @@ public class GetCapabilities {
         }
     }
 
-    /**
-     * @param owsf
-     * @param baseUrl
-     * @param operationsMetadata
-     */
+    /** */
     private void OperationMetadata_GetRecordById(
             Ows10Factory owsf, String baseUrl, OperationsMetadataType operationsMetadata) {
         // - GetRecordById
@@ -488,8 +477,7 @@ public class GetCapabilities {
         getRecordByIdDCP.setHTTP(getRecordByIdHTTP);
 
         String getRecordByIdHref =
-                ResponseUtils.buildURL(
-                        baseUrl, "csw", new HashMap<String, String>(), URLType.SERVICE);
+                ResponseUtils.buildURL(baseUrl, "csw", new HashMap<>(), URLType.SERVICE);
 
         RequestMethodType getRecordByIdGet = owsf.createRequestMethodType();
         getRecordByIdGet.setHref(getRecordByIdHref);
@@ -521,11 +509,7 @@ public class GetCapabilities {
         }
     }
 
-    /**
-     * @param owsf
-     * @param baseUrl
-     * @param operationsMetadata
-     */
+    /** */
     private void OperationMetadata_GetDomain(
             Ows10Factory owsf, String baseUrl, OperationsMetadataType operationsMetadata) {
         // - GetDomain
@@ -540,8 +524,7 @@ public class GetCapabilities {
         getDomainDCP.setHTTP(getDomainHTTP);
 
         String getDomainHref =
-                ResponseUtils.buildURL(
-                        baseUrl, "csw", new HashMap<String, String>(), URLType.SERVICE);
+                ResponseUtils.buildURL(baseUrl, "csw", new HashMap<>(), URLType.SERVICE);
 
         RequestMethodType getDomainGet = owsf.createRequestMethodType();
         getDomainGet.setHref(getDomainHref);
@@ -566,13 +549,13 @@ public class GetCapabilities {
 
         // The domain queriables list from the catalog store
         try {
-            Set<String> summary = new HashSet<String>();
+            Set<String> summary = new HashSet<>();
             for (RecordDescriptor rd : store.getRecordDescriptors()) {
                 List<Name> queriables =
                         store.getCapabilities()
                                 .getDomainQueriables(rd.getFeatureDescriptor().getName());
 
-                if (queriables != null && queriables.size() > 0) {
+                if (queriables != null && !queriables.isEmpty()) {
                     NamespaceSupport nss = rd.getNamespaceSupport();
                     for (Name q : queriables) {
                         String prefix = nss.getPrefix(q.getNamespaceURI());
@@ -584,8 +567,8 @@ public class GetCapabilities {
                 }
             }
 
-            if (summary.size() > 0) {
-                List<String> sorted = new ArrayList<String>(summary);
+            if (!summary.isEmpty()) {
+                List<String> sorted = new ArrayList<>(summary);
                 Collections.sort(sorted);
                 DomainType dt = owsf.createDomainType();
                 dt.setName("PropertyName");
@@ -605,11 +588,7 @@ public class GetCapabilities {
         }
     }
 
-    /**
-     * @param owsf
-     * @param baseUrl
-     * @param operationsMetadata
-     */
+    /** */
     private void OperationMetadata_Transaction(
             Ows10Factory owsf, String baseUrl, OperationsMetadataType operationsMetadata) {
         // - Transaction
@@ -624,8 +603,7 @@ public class GetCapabilities {
         transactionDCP.setHTTP(transactionHTTP);
 
         String transactionHref =
-                ResponseUtils.buildURL(
-                        baseUrl, "csw", new HashMap<String, String>(), URLType.SERVICE);
+                ResponseUtils.buildURL(baseUrl, "csw", new HashMap<>(), URLType.SERVICE);
 
         RequestMethodType transactionGet = owsf.createRequestMethodType();
         transactionGet.setHref(transactionHref);
@@ -659,32 +637,30 @@ public class GetCapabilities {
 }
 
 class CSWSpatialCapabilities extends SpatialCapabiltiesImpl {
-    static final SpatialOperator[] spatialOperators =
-            new SpatialOperator[] {
-                spatialOperator("BBOX"),
-                spatialOperator("Equals"),
-                spatialOperator("Overlaps"),
-                spatialOperator("Disjoint"),
-                spatialOperator("Intersects"),
-                spatialOperator("Touches"),
-                spatialOperator("Crosses"),
-                spatialOperator("Within"),
-                spatialOperator("Contains"),
-                spatialOperator("Beyond"),
-                spatialOperator("DWithin")
-            };
+    static final SpatialOperator[] spatialOperators = {
+        spatialOperator("BBOX"),
+        spatialOperator("Equals"),
+        spatialOperator("Overlaps"),
+        spatialOperator("Disjoint"),
+        spatialOperator("Intersects"),
+        spatialOperator("Touches"),
+        spatialOperator("Crosses"),
+        spatialOperator("Within"),
+        spatialOperator("Contains"),
+        spatialOperator("Beyond"),
+        spatialOperator("DWithin")
+    };
 
-    static final GeometryOperand[] geometryOpertors =
-            new GeometryOperand[] {
-                GeometryOperand.get("http://www.opengis.net/gml", "Envelope"),
-                GeometryOperand.get("http://www.opengis.net/gml", "Point"),
-                GeometryOperand.get("http://www.opengis.net/gml", "LineString"),
-                GeometryOperand.get("http://www.opengis.net/gml", "Polygon")
-            };
+    static final GeometryOperand[] geometryOpertors = {
+        GeometryOperand.get("http://www.opengis.net/gml", "Envelope"),
+        GeometryOperand.get("http://www.opengis.net/gml", "Point"),
+        GeometryOperand.get("http://www.opengis.net/gml", "LineString"),
+        GeometryOperand.get("http://www.opengis.net/gml", "Polygon")
+    };
 
     volatile SpatialOperators spatialOperands = new SpatialOperatorsImpl();
 
-    List<GeometryOperand> geometryOperands = new LinkedList<GeometryOperand>();
+    List<GeometryOperand> geometryOperands = new LinkedList<>();
 
     @Override
     public Collection<GeometryOperand> getGeometryOperands() {
@@ -696,40 +672,36 @@ class CSWSpatialCapabilities extends SpatialCapabiltiesImpl {
                 }
                 Collections.sort(
                         geometryOperands,
-                        new Comparator<GeometryOperand>() {
-
-                            @Override
-                            public int compare(GeometryOperand o1, GeometryOperand o2) {
-                                if (o2.getLocalPart().contains("Envelope")) {
-                                    return -1;
-                                }
-
-                                if (o2.getLocalPart().contains("Point")) {
-                                    if (o1.getLocalPart().contains("Envelope")) {
-                                        return -1;
-                                    } else {
-                                        return 1;
-                                    }
-                                }
-
-                                if (o2.getLocalPart().contains("LineString")) {
-                                    if (o1.getLocalPart().contains("Point")) {
-                                        return -1;
-                                    } else {
-                                        return 1;
-                                    }
-                                }
-
-                                if (o2.getLocalPart().contains("Polygon")) {
-                                    if (o1.getLocalPart().contains("LineString")) {
-                                        return -1;
-                                    } else {
-                                        return 1;
-                                    }
-                                }
-
-                                return 0;
+                        (o1, o2) -> {
+                            if (o2.getLocalPart().contains("Envelope")) {
+                                return -1;
                             }
+
+                            if (o2.getLocalPart().contains("Point")) {
+                                if (o1.getLocalPart().contains("Envelope")) {
+                                    return -1;
+                                } else {
+                                    return 1;
+                                }
+                            }
+
+                            if (o2.getLocalPart().contains("LineString")) {
+                                if (o1.getLocalPart().contains("Point")) {
+                                    return -1;
+                                } else {
+                                    return 1;
+                                }
+                            }
+
+                            if (o2.getLocalPart().contains("Polygon")) {
+                                if (o1.getLocalPart().contains("LineString")) {
+                                    return -1;
+                                } else {
+                                    return 1;
+                                }
+                            }
+
+                            return 0;
                         });
             }
         }

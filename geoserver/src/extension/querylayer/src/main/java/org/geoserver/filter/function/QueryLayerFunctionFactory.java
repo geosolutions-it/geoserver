@@ -47,7 +47,7 @@ public class QueryLayerFunctionFactory implements FunctionFactory {
 
     public QueryLayerFunctionFactory() {
         FilterFactory ff = CommonFactoryFinder.getFilterFactory(null);
-        List<FunctionName> names = new ArrayList<FunctionName>();
+        List<FunctionName> names = new ArrayList<>();
         names.add(ff.functionName(QUERY_SINGLE, -1)); // 2 or 3 args
         names.add(ff.functionName(QUERY_COLLECTION, -1)); // 2 or 3 args
         names.add(ff.functionName(COLLECT_GEOMETRIES, 1));
@@ -58,11 +58,7 @@ public class QueryLayerFunctionFactory implements FunctionFactory {
         return maxFeatures;
     }
 
-    /**
-     * Sets the max number of features returned by a free query
-     *
-     * @param maxFeatures
-     */
+    /** Sets the max number of features returned by a free query */
     public void setMaxFeatures(int maxFeatures) {
         if (maxFeatures <= 0) {
             throw new IllegalArgumentException(
@@ -74,22 +70,17 @@ public class QueryLayerFunctionFactory implements FunctionFactory {
 
     /**
      * Sets the maximum number of coordinates to be collected, a non positive value implies no limit
-     *
-     * @param maxCoordinates
      */
     public void setMaxCoordinates(long maxCoordinates) {
         this.maxCoordinates = maxCoordinates;
     }
 
-    /**
-     * Initializes the catalog reference, without it the factory won't generate any function
-     *
-     * @param catalog
-     */
+    /** Initializes the catalog reference, without it the factory won't generate any function */
     public void setCatalog(Catalog catalog) {
         this.catalog = catalog;
     }
 
+    @Override
     public Function function(String name, List<Expression> args, Literal fallback) {
         return function(new NameImpl(name), args, fallback);
     }
@@ -112,6 +103,7 @@ public class QueryLayerFunctionFactory implements FunctionFactory {
         }
     }
 
+    @Override
     public List<FunctionName> getFunctionNames() {
         if (isInitialized()) {
             return functionNames;

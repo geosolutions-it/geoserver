@@ -26,11 +26,14 @@ Limitations
 The ``authkey`` module is meant to be used with OGC services. It won't work properly against the
 administration GUI, nor RESTConfig.
 
+The ``authkey`` module replaces the default basic authentication provider, therefore when editing a user
+the Enabled checkbox does not affect the ``authkey`` provider and you cannot disable users this way.
+
 Key providers
 -------------
 
 Key providers are responsible for mapping the authentication keys to a user. The authentication key
-itself is a UUID (Universal unique Identifier). A key provider needs a user/group service and it is
+itself is a UUID (Universally Unique IDentifier (UUID)). A key provider needs a user/group service and it is
 responsible for synchronizing the authentication keys with the users contained in this service.  
 
 Key provider using user properties
@@ -72,7 +75,7 @@ This key provider calls an external URL to map the authentication key to the use
 GeoServer to integrate into an existing security infrastructure, where a session token is shared
 among applications and managed through dedicated web services.
 
-The web service URL and some other parameters can be specified to configure the mapper in details:
+The web service URL and some other parameters can be specified to configure the mapper in detail:
 
 .. list-table::
    :widths: 50 50
@@ -82,7 +85,7 @@ The web service URL and some other parameters can be specified to configure the 
    * - ``Web Service URL, with key placeholder``
      - the complete URL of the key mapping webservice, with a special placeholder ({key}) that will be replaced by the current authentication key
    * - ``Web Service Response User Search Regular Expression``
-     - a regular expression used to extract the username from the webservice response; the first matched group (the part included in parentheses) in the regular expression will be used as the user name; the default (^\\s*(.*)\\s*$) takes all the response text, trimming spaces at both ends
+     - a regular expression used to extract the username from the webservice response; the first matched group (the part included in parentheses) in the regular expression will be used as the username; the default (^\\s*(.*)\\s*$) takes all the response text, trimming spaces at both ends
    * - ``Connection Timeout``
      - timeout to connect to the webservice
    * - ``Read Timeout``
@@ -92,7 +95,7 @@ The mapper will call the webservice using an HTTP GET request (webservice requir
 supported yet), replacing the {key} placeholder in the configured URL with the actual authentication
 key.
 
-If a response is received, it is parsed using the configured regular expression to extract the user name 
+If a response is received, it is parsed using the configured regular expression to extract the username 
 from it. New lines are automatically stripped from the response. Some examples of regular expression 
 that can be used are:
 
@@ -101,9 +104,9 @@ that can be used are:
 
    * - **Regular Expression**
      - **Usage**
-   * - ``^\\s*(.*)\\s*$``
+   * - ``^\s*(.*)\s*$``
      - all text trimming spaces at both ends
-   * - ``^.*?\"user\"\\s*:\\s*\"([^\"]+)\".*$``
+   * - ``^.*?\"user\"\s*:\s*\"([^\"]+)\".*$``
      - json response where the username is contained in a property named **user**
    * - ``^.*?<username>(.*?)</username>.*$``
      - xml response where the username is contained in a tag named **username**
@@ -115,7 +118,7 @@ AuthKEY WebService Body Response UserGroup Service
 
 When using an external web service to get Auth details, it is possible to define a custom ``GeoServer UserGroup Service`` being able to fetch Authorities - aka user's Roles - from the HTTP Body Response.
 
-The rationale is mostly the same; that kind of ``GeoServer UserGroup Service`` will be apply a ``rolesRegex`` - Roles Regular Expression - to the body response - which can be either XML, JSON or Plain Text/HTML - in order to fetch the list of available Authorities.
+The rationale is mostly the same; that kind of ``GeoServer UserGroup Service`` will apply a ``rolesRegex`` - Roles Regular Expression - to the body response - which can be either XML, JSON or Plain Text/HTML - in order to fetch the list of available Authorities.
 
 In order to do this, it is possible to configure instances of **AuthKEY WebService Body Response** User Group Service.
 
@@ -172,7 +175,7 @@ Once the new ``GeoServer UserGroup Service`` has been configured, it can be easi
 
     Of course the role names are known only at runtime; nevertheless it is possible to **statically** specify associated ``GeoServer User Groups`` to be mapped later to other internal ``GeoServer User Roles``.
 
-    What does this means? A ``GeoServer User Group`` can be defined on the GeoServer Catalog and can be mapped by the active ``Role Services`` to one or more specific ``GeoServer User Roles``.
+    What does this mean? A ``GeoServer User Group`` can be defined on the GeoServer Catalog and can be mapped by the active ``Role Services`` to one or more specific ``GeoServer User Roles``.
 
     This mainly depends on the ``GeoServer Role Service`` you use. By default, the internal ``GeoServer Role Service`` can map Roles and Groups through static configuration stored on the GeoServer Data Dir.
     This is possible by editing ``GeoServer User Group`` details from the ``Users, Groups, and Roles`` panel
@@ -220,11 +223,11 @@ Configuration can be done using the administrator GUI. There is a new type of au
 named **authkey** offering the following options.
 
 #. URL parameter name. This the name of URL parameter used in client HTTP requests. Default is ``authkey``.
-#. Key Provider. GeoSever offers the providers described above.
+#. Key Provider. GeoServer offers the providers described above.
 #. User/group service to be used.
 
 Some of the key providers can require additional configuration parameter. These will appear under the 
-Key Provider combobox when one of those is selected.
+Key Provider combo-box when one of those is selected.
 
 After configuring the filter it is necessary to put this filter on the authentication filter chain(s).
 
@@ -251,7 +254,7 @@ to implement
    
    /**
     * 
-    * Maps a unique authentication key to a user name. Since user names are
+    * Maps a unique authentication key to a username. Since usernames are
     * unique within a {@link GeoServerUserGroupService} an individual mapper
     * is needed for each service offering this feature.
     * 
@@ -297,8 +300,7 @@ to implement
        public GeoServerSecurityManager getSecurityManager();
        public void setSecurityManager(GeoServerSecurityManager securityManager);
        
-   
-}
+    }
    
         
 The mapper would have to be registered in the Spring application context in a ``applicationContext.xml``

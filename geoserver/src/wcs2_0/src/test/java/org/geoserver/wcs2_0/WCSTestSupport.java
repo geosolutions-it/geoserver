@@ -5,9 +5,9 @@
  */
 package org.geoserver.wcs2_0;
 
-import static junit.framework.TestCase.assertTrue;
-import static junit.framework.TestCase.fail;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.awt.geom.AffineTransform;
 import java.io.ByteArrayInputStream;
@@ -16,13 +16,11 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.imageio.metadata.IIOMetadataNode;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
-import javax.mail.Session;
 import javax.mail.internet.MimeMessage;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
@@ -56,6 +54,7 @@ import org.geotools.referencing.operation.matrix.XAffineTransform;
 import org.geotools.wcs.v2_0.WCSConfiguration;
 import org.geotools.xsd.Parser;
 import org.junit.After;
+import org.locationtech.jts.geom.CoordinateXY;
 import org.opengis.coverage.Coverage;
 import org.opengis.coverage.grid.GridCoverage;
 import org.opengis.coverage.grid.GridGeometry;
@@ -81,11 +80,14 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
 
     private static Schema WCS20_SCHEMA;
 
-    List<GridCoverage> coverages = new ArrayList<GridCoverage>();
+    List<GridCoverage> coverages = new ArrayList<>();
 
     protected static final String VERSION = WCS20Const.CUR_VERSION;
 
     protected static final QName UTM11 = new QName(MockData.WCS_URI, "utm11", MockData.WCS_PREFIX);
+
+    protected static final QName NO_NATIVE_SRS =
+            new QName(MockData.WCS_URI, "no_native_srs", MockData.WCS_PREFIX);
 
     /**
      * Small dataset that sits slightly across the dateline, enough to trigger the "across the
@@ -236,6 +238,7 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
     }
 
     /** Only setup coverages */
+    @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
         super.setUpTestData(testData);
         testData.setUpDefaultRasterLayers();
@@ -252,7 +255,7 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         super.onSetUp(testData);
 
         // init xmlunit
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("wcs", "http://www.opengis.net/wcs/2.0");
         namespaces.put("crs", "http://www.opengis.net/wcs/crs/1.0");
         namespaces.put("ows", "http://www.opengis.net/ows/2.0");
@@ -312,33 +315,23 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         return IS_WINDOWS;
     }
 
-    /**
-     * Validates a document against the
-     *
-     * @param dom
-     * @param configuration
-     */
-    @SuppressWarnings("rawtypes")
+    /** Validates a document against the */
     protected void checkValidationErrors(Document dom) throws Exception {
         Parser p = new Parser(new WCSConfiguration());
         p.setValidating(true);
         p.parse(new DOMSource(dom));
 
         if (!p.getValidationErrors().isEmpty()) {
-            for (Iterator e = p.getValidationErrors().iterator(); e.hasNext(); ) {
-                SAXParseException ex = (SAXParseException) e.next();
-                System.out.println(
+            for (Exception exception : p.getValidationErrors()) {
+                SAXParseException ex = (SAXParseException) exception;
+                LOGGER.warning(
                         ex.getLineNumber() + "," + ex.getColumnNumber() + " -" + ex.toString());
             }
             fail("Document did not validate.");
         }
     }
 
-    /**
-     * Marks the coverage to be cleaned when the test ends
-     *
-     * @param coverage
-     */
+    /** Marks the coverage to be cleaned when the test ends */
     protected void scheduleForCleaning(GridCoverage coverage) {
         if (coverage != null) {
             coverages.add(coverage);
@@ -390,22 +383,31 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         // check that the bbox in the utm11 layer is reported as configured
         String utm11Bbox =
                 "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='wcs__utm11']/ows:BoundingBox";
-        assertXpathEvaluatesTo("440562.0 3720758.0", utm11Bbox + "/ows:LowerCorner", dom);
-        assertXpathEvaluatesTo("471794.0 3750966.0", utm11Bbox + "/ows:UpperCorner", dom);
+
+        assertXpathCoordinate(
+                new CoordinateXY(440562.0, 3720758.0), utm11Bbox + "/ows:LowerCorner", dom);
+        assertXpathCoordinate(
+                new CoordinateXY(471794.0, 3750966.0), utm11Bbox + "/ows:UpperCorner", dom);
 
         // check that the bbox in the cad layer is reported as configured
         String cadPath =
                 "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='wcs__RotatedCad']/ows:BoundingBox";
-        assertXpathEvaluatesTo("1402800.0 5000000.0", cadPath + "/ows:LowerCorner", dom);
-        assertXpathEvaluatesTo("1402900.0 5000100.0", cadPath + "/ows:UpperCorner", dom);
+        assertXpathCoordinate(
+                new CoordinateXY(1402800.0, 5000000.0), cadPath + "/ows:LowerCorner", dom);
+        assertXpathCoordinate(
+                new CoordinateXY(1402900.0, 5000100.0), cadPath + "/ows:UpperCorner", dom);
 
         // check that the bbox in the usa layer has been reprojected
         String usaPath =
                 "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='cdf__usa']/ows:BoundingBox";
-        assertXpathEvaluatesTo(
-                "-1.457024062347863E7 6199732.713729635", usaPath + "/ows:LowerCorner", dom);
-        assertXpathEvaluatesTo(
-                "-1.3790593336628266E7 7197101.83024677", usaPath + "/ows:UpperCorner", dom);
+        assertXpathCoordinate(
+                new CoordinateXY(-1.457024062347863E7, 6199732.713729635),
+                usaPath + "/ows:LowerCorner",
+                dom);
+        assertXpathCoordinate(
+                new CoordinateXY(-1.3790593336628266E7, 7197101.83024677),
+                usaPath + "/ows:UpperCorner",
+                dom);
     }
 
     /**
@@ -458,6 +460,7 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
                 scaleB);
     }
 
+    @SuppressWarnings("PMD.SimplifiableTestAssertion") // equality with tolerance
     protected static void assertEnvelopeEquals(
             GeneralEnvelope expected,
             double scaleExpected,
@@ -491,7 +494,7 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
             if (geometry != null) {
                 final MathTransform gridToCRS;
                 if (geometry instanceof GridGeometry2D) {
-                    gridToCRS = ((GridGeometry2D) geometry).getGridToCRS();
+                    gridToCRS = geometry.getGridToCRS();
                 } else {
                     gridToCRS = geometry.getGridToCRS();
                 }
@@ -514,28 +517,15 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         return (gridToCRS != null) ? XAffineTransform.getScale(gridToCRS) : Double.NaN;
     }
 
-    /**
-     * Parses a multipart message from the response
-     *
-     * @param response
-     * @throws MessagingException
-     * @throws IOException
-     */
+    /** Parses a multipart message from the response */
     protected Multipart getMultipart(MockHttpServletResponse response)
             throws MessagingException, IOException {
-        MimeMessage body = new MimeMessage((Session) null, getBinaryInputStream(response));
+        MimeMessage body = new MimeMessage(null, getBinaryInputStream(response));
         Multipart multipart = (Multipart) body.getContent();
         return multipart;
     }
 
-    /**
-     * Configures the specified dimension for a coverage
-     *
-     * @param coverageName
-     * @param metadataKey
-     * @param presentation
-     * @param resolution
-     */
+    /** Configures the specified dimension for a coverage */
     protected void setupRasterDimension(
             String coverageName,
             String metadataKey,
@@ -546,21 +536,13 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         di.setEnabled(true);
         di.setPresentation(presentation);
         if (resolution != null) {
-            di.setResolution(new BigDecimal(resolution));
+            di.setResolution(BigDecimal.valueOf(resolution));
         }
         info.getMetadata().put(metadataKey, di);
         getCatalog().save(info);
     }
 
-    /**
-     * Configures the specified dimension for a coverage
-     *
-     * @param coverageName
-     * @param metadataKey
-     * @param presentation
-     * @param resolution
-     * @param unitSymbol
-     */
+    /** Configures the specified dimension for a coverage */
     protected void setupRasterDimension(
             String coverageName,
             String metadataKey,
@@ -572,7 +554,7 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         di.setEnabled(true);
         di.setPresentation(presentation);
         if (resolution != null) {
-            di.setResolution(new BigDecimal(resolution));
+            di.setResolution(BigDecimal.valueOf(resolution));
         }
         if (unitSymbol != null) {
             di.setUnitSymbol(unitSymbol);
@@ -581,14 +563,7 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         getCatalog().save(info);
     }
 
-    /**
-     * Clears dimension information from the specified coverage
-     *
-     * @param coverageName
-     * @param metadataKey
-     * @param presentation
-     * @param resolution
-     */
+    /** Clears dimension information from the specified coverage */
     protected void clearDimensions(String coverageName) {
         CoverageInfo info = getCatalog().getCoverageByName(coverageName);
         info.getMetadata().remove(ResourceInfo.TIME);

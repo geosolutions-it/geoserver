@@ -37,6 +37,7 @@ import org.geoserver.web.wicket.GeoServerAjaxFormLink;
 import org.geoserver.web.wicket.Icon;
 import org.geoserver.web.wicket.ImageAjaxLink;
 import org.geoserver.web.wicket.ParamResourceModel;
+import org.geoserver.web.wicket.Select2DropDownChoice;
 import org.geowebcache.config.XMLGridSubset;
 import org.geowebcache.grid.BoundingBox;
 import org.geowebcache.grid.GridSet;
@@ -70,7 +71,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                 return;
             }
             Set<XMLGridSubset> gridSubsets = validatable.getValue();
-            if (gridSubsets == null || gridSubsets.size() == 0) {
+            if (gridSubsets == null || gridSubsets.isEmpty()) {
                 error(validatable, "GridSubsetsEditor.validation.empty");
                 return;
             }
@@ -154,8 +155,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
         container.add(table);
 
         grids =
-                new ListView<XMLGridSubset>(
-                        "gridSubsets", new ArrayList<XMLGridSubset>(model.getObject())) {
+                new ListView<XMLGridSubset>("gridSubsets", new ArrayList<>(model.getObject())) {
 
                     private static final long serialVersionUID = 1L;
 
@@ -191,10 +191,9 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                                                 : gridSubset.getZoomStop().intValue();
                             }
                         }
-                        final Label gridSetLabel;
                         final Component gridSetBounds;
 
-                        gridSetLabel =
+                        final Label gridSetLabel =
                                 new Label(
                                         "gridSet",
                                         new PropertyModel<String>(item.getModel(), "gridSetName"));
@@ -202,7 +201,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                             gridSetLabel.add(
                                     new AttributeModifier(
                                             "style",
-                                            new Model<String>(
+                                            new Model<>(
                                                     "color:red;text-decoration:line-through;")));
                             getPage()
                                     .warn(
@@ -214,14 +213,11 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                         if (null != gridsetDescription) {
                             gridSetLabel.add(
                                     new AttributeModifier(
-                                            "title", new Model<String>(gridsetDescription)));
+                                            "title", new Model<>(gridsetDescription)));
                         }
 
-                        final Component removeLink;
-
                         final int maxZoomLevel = gridsetLevels - 1;
-                        final ArrayList<Integer> zoomLevels =
-                                new ArrayList<Integer>(maxZoomLevel + 1);
+                        final ArrayList<Integer> zoomLevels = new ArrayList<>(maxZoomLevel + 1);
                         for (int z = 0; z <= maxZoomLevel; z++) {
                             zoomLevels.add(Integer.valueOf(z));
                         }
@@ -232,43 +228,35 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                         // selection
                         // maxCachedLevel start at minCachedLevels' and ends at zoomStop's selection
 
-                        final IModel<Integer> zoomStartModel;
-                        final IModel<Integer> zoomStopModel;
-                        final IModel<Integer> minCachedLevelModel;
-                        final IModel<Integer> maxCachedLevelModel;
+                        final IModel<Integer> zoomStartModel =
+                                new PropertyModel<>(item.getModel(), "zoomStart");
+                        final IModel<Integer> zoomStopModel =
+                                new PropertyModel<>(item.getModel(), "zoomStop");
+                        final IModel<Integer> minCachedLevelModel =
+                                new PropertyModel<>(item.getModel(), "minCachedLevel");
+                        final IModel<Integer> maxCachedLevelModel =
+                                new PropertyModel<>(item.getModel(), "maxCachedLevel");
 
-                        final ZoomLevelDropDownChoice zoomStart;
-                        final ZoomLevelDropDownChoice zoomStop;
-                        final ZoomLevelDropDownChoice minCachedLevel;
-                        final ZoomLevelDropDownChoice maxCachedLevel;
-
-                        zoomStartModel = new PropertyModel<Integer>(item.getModel(), "zoomStart");
-                        zoomStopModel = new PropertyModel<Integer>(item.getModel(), "zoomStop");
-                        minCachedLevelModel =
-                                new PropertyModel<Integer>(item.getModel(), "minCachedLevel");
-                        maxCachedLevelModel =
-                                new PropertyModel<Integer>(item.getModel(), "maxCachedLevel");
-
-                        @SuppressWarnings({"rawtypes", "unchecked"})
+                        @SuppressWarnings("unchecked")
                         final IModel<List<Integer>> allLevels = new Model(zoomLevels);
 
-                        zoomStart =
+                        final ZoomLevelDropDownChoice zoomStart =
                                 new ZoomLevelDropDownChoice("zoomStart", zoomStartModel, allLevels);
                         zoomStart.setEnabled(gridsetExists);
                         item.add(zoomStart);
 
-                        zoomStop =
+                        final ZoomLevelDropDownChoice zoomStop =
                                 new ZoomLevelDropDownChoice("zoomStop", zoomStopModel, allLevels);
                         zoomStop.setEnabled(gridsetExists);
                         item.add(zoomStop);
 
-                        minCachedLevel =
+                        final ZoomLevelDropDownChoice minCachedLevel =
                                 new ZoomLevelDropDownChoice(
                                         "minCachedLevel", minCachedLevelModel, allLevels);
                         minCachedLevel.setEnabled(gridsetExists);
                         item.add(minCachedLevel);
 
-                        maxCachedLevel =
+                        final ZoomLevelDropDownChoice maxCachedLevel =
                                 new ZoomLevelDropDownChoice(
                                         "maxCachedLevel", maxCachedLevelModel, allLevels);
                         maxCachedLevel.setEnabled(gridsetExists);
@@ -312,7 +300,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                         }
                         item.add(gridSetBounds);
 
-                        removeLink =
+                        final Component removeLink =
                                 new ImageAjaxLink<Object>(
                                         "removeLink", GWCIconFactory.DELETE_ICON) {
 
@@ -321,8 +309,8 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
 
                                     @Override
                                     protected void onClick(AjaxRequestTarget target) {
-                                        List<XMLGridSubset> list;
-                                        list = new ArrayList<XMLGridSubset>(grids.getModelObject());
+                                        List<XMLGridSubset> list =
+                                                new ArrayList<>(grids.getModelObject());
                                         final XMLGridSubset subset =
                                                 (XMLGridSubset) getDefaultModelObject();
 
@@ -331,8 +319,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                                         grids.setModelObject(list);
 
                                         List<String> choices =
-                                                new ArrayList<String>(
-                                                        availableGridSets.getChoices());
+                                                new ArrayList<>(availableGridSets.getChoices());
                                         choices.add(subset.getGridSetName());
                                         Collections.sort(choices);
                                         availableGridSets.setChoices(choices);
@@ -355,7 +342,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
         grids.setReuseItems(true);
         table.add(grids);
 
-        List<String> gridSetNames = new ArrayList<String>(GWC.get().getGridSetBroker().getNames());
+        List<String> gridSetNames = new ArrayList<>(GWC.get().getGridSetBroker().getNames());
         for (XMLGridSubset gs : model.getObject()) {
             gridSetNames.remove(gs.getGridSetName());
         }
@@ -374,8 +361,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                             return;
                         }
 
-                        List<String> choices =
-                                new ArrayList<String>(availableGridSets.getChoices());
+                        List<String> choices = new ArrayList<>(availableGridSets.getChoices());
                         choices.remove(selectedGridset);
                         availableGridSets.setChoices(choices);
                         availableGridSets.setEnabled(!choices.isEmpty());
@@ -392,7 +378,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
         add(addGridsubsetLink);
 
         availableGridSets =
-                new DropDownChoice<String>("availableGridsets", new Model<String>(), gridSetNames);
+                new Select2DropDownChoice<>("availableGridsets", new Model<>(), gridSetNames);
         availableGridSets.setOutputMarkupId(true);
         add(availableGridSets);
     }
@@ -407,7 +393,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
                     }
                 });
         List<XMLGridSubset> info = grids.getModelObject();
-        HashSet<XMLGridSubset> convertedInput = new HashSet<XMLGridSubset>(info);
+        HashSet<XMLGridSubset> convertedInput = new HashSet<>(info);
         setConvertedInput(convertedInput);
     }
 
@@ -450,7 +436,7 @@ class GridSubsetsEditor extends FormComponentPanel<Set<XMLGridSubset>> {
         }
 
         private void setChoices(int min, int max) {
-            List<Integer> choices = new ArrayList<Integer>();
+            List<Integer> choices = new ArrayList<>();
             for (int i = min; i <= max; i++) {
                 choices.add(Integer.valueOf(i));
             }

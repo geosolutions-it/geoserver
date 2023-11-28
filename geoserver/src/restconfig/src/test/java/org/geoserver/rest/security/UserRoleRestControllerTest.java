@@ -4,6 +4,10 @@
  */
 package org.geoserver.rest.security;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import org.geoserver.rest.security.xml.JaxbGroupList;
 import org.geoserver.rest.security.xml.JaxbRoleList;
@@ -22,6 +26,7 @@ public class UserRoleRestControllerTest extends GeoServerTestSupport {
 
     protected RolesRestController rolesController;
 
+    @Override
     @Before
     public void oneTimeSetUp() throws Exception {
         setValidating(true);
@@ -31,7 +36,7 @@ public class UserRoleRestControllerTest extends GeoServerTestSupport {
     }
 
     @Test
-    public void test() throws PasswordPolicyException, IOException {
+    public void testRolesAndUsers() throws PasswordPolicyException, IOException {
 
         JaxbUser user = new JaxbUser();
         user.setUserName("pipo");
@@ -100,15 +105,15 @@ public class UserRoleRestControllerTest extends GeoServerTestSupport {
         assertTrue(roles.getRoles().contains("vozen"));
         assertTrue(roles.getRoles().contains("kwiestenbiebel"));
 
-        rolesController.associate("vozen", "pipo");
-        rolesController.associate("kwiestenbiebel", "pipo");
+        rolesController.associateUser("vozen", "pipo");
+        rolesController.associateUser("kwiestenbiebel", "pipo");
 
         roles = rolesController.getUser("pipo");
         assertEquals(2, roles.getRoles().size());
         assertTrue(roles.getRoles().contains("vozen"));
         assertTrue(roles.getRoles().contains("kwiestenbiebel"));
 
-        rolesController.disassociate("kwiestenbiebel", "pipo");
+        rolesController.disassociateUser("kwiestenbiebel", "pipo");
         roles = rolesController.getUser("pipo");
         assertEquals(1, roles.getRoles().size());
         assertTrue(roles.getRoles().contains("vozen"));
@@ -161,5 +166,92 @@ public class UserRoleRestControllerTest extends GeoServerTestSupport {
             notfound = true;
         }
         assertTrue(notfound);
+    }
+
+    @Test
+    public void testUserRolesEndpoint() throws Exception {
+        // validate that the user roles endpoint is returning the correct xml using admin user
+        String userXML = getAsString("rest/security/roles/user/admin.xml");
+        assertEquals(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><roles><role>ADMIN</role></roles>",
+                userXML.trim());
+    }
+
+    @Test
+    public void testRolesEndpoint() throws Exception {
+        // validate that the roles endpoint is returning the correct xml
+        String userXML = getAsString("rest/security/roles");
+        assertEquals(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><roles><role>ADMIN</role><role>GROUP_ADMIN</role></roles>",
+                userXML.trim());
+    }
+
+    @Test
+    public void testUserEndpoint() throws Exception {
+        // validate that the users endpoint is returning the correct xml
+        String userXML = getAsString("rest/security/usergroup/service/" + USER_SERVICE + "/users");
+        assertEquals(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><users><user><enabled>true</enabled><userName>admin</userName></user></users>",
+                userXML.trim());
+    }
+
+    @Test
+    public void testGroupEndpoint() throws Exception {
+        // validate that the groups endpoint is returning the correct xml
+        usersController.insertGroup(USER_SERVICE, "clowns");
+        usersController.insertGroup(USER_SERVICE, "circus");
+        String userXML = getAsString("rest/security/usergroup/service/" + USER_SERVICE + "/groups");
+        assertEquals(
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><groups><group>circus</group><group>clowns</group></groups>",
+                userXML.trim());
+    }
+
+    @Test
+    public void testGroups() throws PasswordPolicyException, IOException {
+
+        JaxbUser user = new JaxbUser();
+        user.setUserName("pipo");
+        user.setPassword("secret");
+        user.setEnabled(true);
+
+        usersController.insertUser(USER_SERVICE, user);
+        usersController.insertGroup(USER_SERVICE, "clowns");
+        usersController.insertGroup(USER_SERVICE, "circus");
+        usersController.associateUserToGroup(USER_SERVICE, "pipo", "clowns");
+        usersController.associateUserToGroup(USER_SERVICE, "pipo", "circus");
+
+        rolesController.insert("vozen");
+        rolesController.insert("kwiestenbiebel");
+        JaxbRoleList roles = rolesController.get();
+        assertTrue(roles.getRoles().contains("vozen"));
+        assertTrue(roles.getRoles().contains("kwiestenbiebel"));
+
+        rolesController.associateGroup("vozen", "clowns");
+        rolesController.associateGroup("kwiestenbiebel", "clowns");
+
+        roles = rolesController.getGroup("clowns");
+        assertEquals(2, roles.getRoles().size());
+        assertTrue(roles.getRoles().contains("vozen"));
+        assertTrue(roles.getRoles().contains("kwiestenbiebel"));
+
+        rolesController.disassociateGroup("kwiestenbiebel", "clowns");
+        roles = rolesController.getGroup("clowns");
+        assertEquals(1, roles.getRoles().size());
+        assertTrue(roles.getRoles().contains("vozen"));
+        assertFalse(roles.getRoles().contains("kwiestenbiebel"));
+
+        rolesController.associateGroup("default", "vozen", "circus");
+        rolesController.associateGroup("default", "kwiestenbiebel", "circus");
+
+        roles = rolesController.getGroup("default", "circus");
+        assertEquals(2, roles.getRoles().size());
+        assertTrue(roles.getRoles().contains("vozen"));
+        assertTrue(roles.getRoles().contains("kwiestenbiebel"));
+
+        rolesController.disassociateGroup("default", "kwiestenbiebel", "circus");
+        roles = rolesController.getGroup("default", "circus");
+        assertEquals(1, roles.getRoles().size());
+        assertTrue(roles.getRoles().contains("vozen"));
+        assertFalse(roles.getRoles().contains("kwiestenbiebel"));
     }
 }

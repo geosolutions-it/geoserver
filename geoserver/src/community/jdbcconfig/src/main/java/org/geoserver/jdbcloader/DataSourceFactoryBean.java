@@ -11,7 +11,6 @@ import java.lang.reflect.Proxy;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.naming.Context;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.apache.commons.dbcp.BasicDataSource;
@@ -26,33 +25,10 @@ public class DataSourceFactoryBean implements FactoryBean<DataSource>, Disposabl
     private static final Logger LOGGER = Logging.getLogger(DataSourceFactoryBean.class);
 
     JDBCLoaderProperties config;
-    Context jndiCtx;
     DataSource dataSource;
 
-    private static Context getJNDI(JDBCLoaderProperties config) {
-        if (config.isEnabled() && config.getJndiName().isPresent()) {
-            try {
-                return GeoTools.getInitialContext(GeoTools.getDefaultHints());
-            } catch (NamingException ex) {
-                LOGGER.log(
-                        Level.WARNING,
-                        "Could not get JNDI Context, will not use JNDI to locate DataSource",
-                        ex);
-                return null;
-            }
-        } else {
-            // Don't bother trying to get a JNDI context if JNDI lookup isn't needed.
-            return null;
-        }
-    }
-
     public DataSourceFactoryBean(JDBCLoaderProperties config) {
-        this(config, getJNDI(config));
-    }
-
-    public DataSourceFactoryBean(JDBCLoaderProperties config, Context jndiCtx) {
         this.config = config;
-        this.jndiCtx = jndiCtx;
     }
 
     @Override
@@ -119,17 +95,12 @@ public class DataSourceFactoryBean implements FactoryBean<DataSource>, Disposabl
         return new BasicDataSource();
     }
 
-    /**
-     * Try to lookup a configured DataSource using JNDI.
-     *
-     * @throws NamingException
-     */
+    /** Try to lookup a configured DataSource using JNDI. */
     protected Optional<DataSource> getJNDIDataSource(Optional<String> name) {
-        if (jndiCtx == null) return Optional.absent();
 
         if (name.isPresent()) {
             try {
-                Optional<DataSource> ds = Optional.of((DataSource) jndiCtx.lookup(name.get()));
+                Optional<DataSource> ds = Optional.of((DataSource) GeoTools.jndiLookup(name.get()));
                 if (LOGGER.isLoggable(Level.INFO)) {
                     LOGGER.log(Level.INFO, "JDBCLoader using JNDI DataSource {0}", name.get());
                 }
@@ -177,6 +148,12 @@ public class DataSourceFactoryBean implements FactoryBean<DataSource>, Disposabl
                 get(config, "pool.poolPreparedStatements", Boolean.class, false).or(true));
         dataSource.setMaxOpenPreparedStatements(
                 get(config, "pool.maxOpenPreparedStatements", Integer.class, false).or(50));
+
+        dataSource.setTestWhileIdle(
+                get(config, "pool.testWhileIdle", Boolean.class, false).or(false));
+
+        dataSource.setTimeBetweenEvictionRunsMillis(
+                get(config, "pool.timeBetweenEvictionRunsMillis", Long.class, false).or(-1L));
 
         boolean testOnBorrow = get(config, "pool.testOnBorrow", Boolean.class, false).or(false);
         if (testOnBorrow) {

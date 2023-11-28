@@ -13,16 +13,22 @@ import static org.junit.Assert.assertTrue;
 import it.geosolutions.geoserver.rest.GeoServerRESTManager;
 import it.geosolutions.geoserver.rest.decoder.RESTCoverage;
 import it.geosolutions.geoserver.rest.decoder.RESTLayer;
+import it.geosolutions.geoserver.rest.decoder.RESTStyle;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.HashMap;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.LegendInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.impl.AuthorityURL;
+import org.geoserver.catalog.impl.LayerIdentifier;
+import org.geoserver.catalog.impl.LegendInfoImpl;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.taskmanager.AbstractTaskManagerTest;
 import org.geoserver.taskmanager.data.Batch;
@@ -36,6 +42,7 @@ import org.geoserver.taskmanager.util.LookupService;
 import org.geoserver.taskmanager.util.TaskManagerDataUtil;
 import org.geoserver.taskmanager.util.TaskManagerTaskUtil;
 import org.geoserver.util.IOUtils;
+import org.geotools.util.Version;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -55,7 +62,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class MetaDataSyncTaskTest extends AbstractTaskManagerTest {
 
     /** If your target geoserver supports the metadata module. */
-    private static final boolean SUPPORTS_METADATA = true;
+    private static final boolean SUPPORTS_METADATA = false;
 
     private static final String STYLE = "grass";
     private static final String SECOND_STYLE = "second_grass";
@@ -88,12 +95,15 @@ public class MetaDataSyncTaskTest extends AbstractTaskManagerTest {
     public boolean setupDataDirectory() throws Exception {
         DATA_DIRECTORY.addStyle(STYLE, getClass().getResource(STYLE + ".sld"));
         DATA_DIRECTORY.addStyle(SECOND_STYLE, getClass().getResource(SECOND_STYLE + ".sld"));
-        try (InputStream is = getClass().getResource("grass_fill.png").openStream()) {
-            try (OutputStream os =
-                    new FileOutputStream(
-                            new File(
-                                    DATA_DIRECTORY.getDataDirectoryRoot(),
-                                    "styles/grass_fill.png"))) {
+        File imgDir = new File(DATA_DIRECTORY.getDataDirectoryRoot(), "styles/");
+        imgDir.mkdirs();
+        try (InputStream is = getClass().getResource("img/grass_fill.png").openStream()) {
+            try (OutputStream os = new FileOutputStream(new File(imgDir, "grass_fill.png"))) {
+                IOUtils.copy(is, os);
+            }
+        }
+        try (InputStream is = getClass().getResource("img/grass_fill.png").openStream()) {
+            try (OutputStream os = new FileOutputStream(new File(imgDir, "grass_bill.png"))) {
                 IOUtils.copy(is, os);
             }
         }
@@ -171,6 +181,32 @@ public class MetaDataSyncTaskTest extends AbstractTaskManagerTest {
         LayerInfo li = geoServer.getCatalog().getLayerByName("DEM");
         StyleInfo si = geoServer.getCatalog().getStyleByName(STYLE);
         li.setDefaultStyle(si);
+        LegendInfo legendInfo = new LegendInfoImpl();
+        legendInfo.setWidth(100);
+        legendInfo.setHeight(100);
+        legendInfo.setFormat("image/png");
+        legendInfo.setOnlineResource("grass_bill.png");
+        si.setLegend(legendInfo);
+        si.setFormatVersion(new Version("1.1"));
+        geoServer.getCatalog().save(si);
+
+        LayerIdentifier lid1 = new LayerIdentifier();
+        lid1.setAuthority("auth1");
+        lid1.setIdentifier("id1");
+        li.getIdentifiers().add(lid1);
+        LayerIdentifier lid2 = new LayerIdentifier();
+        lid2.setAuthority("auth2");
+        lid2.setIdentifier("id2");
+        li.getIdentifiers().add(lid2);
+        AuthorityURL url1 = new AuthorityURL();
+        url1.setName("name1");
+        url1.setHref("href1");
+        li.getAuthorityURLs().add(url1);
+        AuthorityURL url2 = new AuthorityURL();
+        url2.setName("name2");
+        url2.setHref("href2");
+        li.getAuthorityURLs().add(url2);
+
         geoServer.getCatalog().save(li);
 
         dataUtil.setConfigurationAttribute(config, ATT_LAYER, "DEM");
@@ -213,6 +249,7 @@ public class MetaDataSyncTaskTest extends AbstractTaskManagerTest {
             map.put("foo", "bar");
             map.put("boo", "far");
             ci.getMetadata().put("complex", map);
+            ci.getMetadata().put("adate", new Date());
         }
         geoServer.getCatalog().save(ci);
         li.getStyles().add(geoServer.getCatalog().getStyleByName(SECOND_STYLE));
@@ -240,14 +277,30 @@ public class MetaDataSyncTaskTest extends AbstractTaskManagerTest {
         if (SUPPORTS_METADATA) {
             assertEquals("complex", cov.getMetadataList().get(1).getKey());
             assertNotNull(cov.getMetadataList().get(1).getMetadataElem().getChild("map"));
+            assertEquals("adate", cov.getMetadataList().get(2).getKey());
+            assertNotNull(cov.getMetadataList().get(2).getMetadataElem().getChild("date"));
         }
         layer = restManager.getReader().getLayer("wcs", "DEM");
         assertEquals(STYLE, layer.getDefaultStyle());
         assertEquals(1, layer.getStyles().size());
         assertEquals(SECOND_STYLE, layer.getStyles().get(0).getName());
 
-        String style = restManager.getStyleManager().getSLD(STYLE);
-        assertTrue(style.indexOf("CHANGED VERSION") > 0);
+        RESTStyle style = restManager.getStyleManager().getStyle(STYLE);
+        assertEquals("1.1", style.getVersion());
+
+        assertEquals(2, layer.getEncodedAuthorityURLInfoList().size());
+        assertEquals("name1", layer.getEncodedAuthorityURLInfoList().get(0).getName());
+        assertEquals("href1", layer.getEncodedAuthorityURLInfoList().get(0).getHref());
+        assertEquals("name2", layer.getEncodedAuthorityURLInfoList().get(1).getName());
+        assertEquals("href2", layer.getEncodedAuthorityURLInfoList().get(1).getHref());
+        assertEquals(2, layer.getEncodedIdentifierInfoList().size());
+        assertEquals("auth1", layer.getEncodedIdentifierInfoList().get(0).getAuthority());
+        assertEquals("id1", layer.getEncodedIdentifierInfoList().get(0).getIdentifier());
+        assertEquals("auth2", layer.getEncodedIdentifierInfoList().get(1).getAuthority());
+        assertEquals("id2", layer.getEncodedIdentifierInfoList().get(1).getIdentifier());
+
+        String sld = restManager.getStyleManager().getSLD(STYLE);
+        assertTrue(sld.indexOf("CHANGED VERSION") > 0);
 
         // clean-up
 

@@ -14,16 +14,26 @@ public class OSEOInfoImpl extends ServiceInfoImpl implements OSEOInfo {
 
     String openSearchAccessStoreId;
 
-    int maximumRecords = OSEOInfo.DEFAULT_MAXIMUM_RECORDS;
+    int maximumRecords = DEFAULT_MAXIMUM_RECORDS;
 
-    int recordsPerPage = OSEOInfo.DEFAULT_RECORDS_PER_PAGE;
+    int recordsPerPage = DEFAULT_RECORDS_PER_PAGE;
+
+    Integer aggregatesCacheTTL = DEFAULT_AGGR_CACHE_TTL;
+
+    String aggregatesCacheTTLUnit = DEFAULT_AGGR_CACHE_TTL_UNIT;
 
     List<ProductClass> productClasses = new ArrayList<>(ProductClass.DEFAULT_PRODUCT_CLASSES);
 
+    String attribution;
+
+    List<String> globalQueryables = new ArrayList<>();
+
+    @Override
     public int getRecordsPerPage() {
-        return recordsPerPage == 0 ? OSEOInfo.DEFAULT_RECORDS_PER_PAGE : recordsPerPage;
+        return recordsPerPage == 0 ? DEFAULT_RECORDS_PER_PAGE : recordsPerPage;
     }
 
+    @Override
     public void setRecordsPerPage(int defaultRecords) {
         this.recordsPerPage = defaultRecords;
     }
@@ -37,14 +47,17 @@ public class OSEOInfoImpl extends ServiceInfoImpl implements OSEOInfo {
         return productClasses;
     }
 
+    @Override
     public int getMaximumRecordsPerPage() {
         return maximumRecords;
     }
 
+    @Override
     public void setMaximumRecordsPerPage(int maximumRecords) {
         this.maximumRecords = maximumRecords;
     }
 
+    @Override
     public String getOpenSearchAccessStoreId() {
         return openSearchAccessStoreId;
     }
@@ -52,5 +65,44 @@ public class OSEOInfoImpl extends ServiceInfoImpl implements OSEOInfo {
     @Override
     public void setOpenSearchAccessStoreId(String openSearchAccessStoreId) {
         this.openSearchAccessStoreId = openSearchAccessStoreId;
+    }
+
+    @Override
+    public String getAttribution() {
+        return attribution;
+    }
+
+    @Override
+    public void setAttribution(String attribution) {
+        this.attribution = attribution;
+    }
+
+    @Override
+    public List<String> getGlobalQueryables() {
+        return globalQueryables;
+    }
+
+    public void setGlobalQueryables(List<String> globalQueryables) {
+        this.globalQueryables = globalQueryables;
+    }
+
+    @Override
+    public Integer getAggregatesCacheTTL() {
+        return aggregatesCacheTTL;
+    }
+
+    @Override
+    public void setAggregatesCacheTTL(Integer aggregatesCacheTTL) {
+        this.aggregatesCacheTTL = aggregatesCacheTTL;
+    }
+
+    @Override
+    public String getAggregatesCacheTTLUnit() {
+        return aggregatesCacheTTLUnit;
+    }
+
+    @Override
+    public void setAggregatesCacheTTLUnit(String aggregatesCacheTTLUnit) {
+        this.aggregatesCacheTTLUnit = aggregatesCacheTTLUnit;
     }
 }

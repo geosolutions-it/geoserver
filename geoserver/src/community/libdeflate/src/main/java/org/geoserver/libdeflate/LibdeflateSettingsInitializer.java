@@ -1,4 +1,4 @@
-/* (c) 2020 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2022 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -10,30 +10,13 @@ import it.geosolutions.imageio.compression.DecompressorSpi;
 import it.geosolutions.imageio.compression.libdeflate.LibDeflateCompressorSpi;
 import it.geosolutions.imageio.compression.libdeflate.LibDeflateDecompressorSpi;
 import java.util.Iterator;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import me.steinborn.libdeflate.Libdeflate;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInfo;
 import org.geoserver.config.GeoServerInitializer;
-import org.geoserver.config.impl.GeoServerImpl;
-import org.geotools.util.logging.Logging;
 
 /** Simple initializer to populate the Libdeflate settings on first usage */
 public class LibdeflateSettingsInitializer implements GeoServerInitializer {
-
-    private static final Logger LOGGER = Logging.getLogger(LibdeflateSettingsInitializer.class);
-
-    static {
-        boolean isAvailable = Libdeflate.isAvailable();
-        if (isAvailable) {
-                LOGGER.log(Level.INFO, "Libdeflate library available");
-        } else {
-            LOGGER.log(Level.WARNING, "Libdeflate library is unavailable due to: " + Libdeflate.unavailabilityCause());
-        }
-    }
 
     @Override
     public void initialize(GeoServer geoServer) {

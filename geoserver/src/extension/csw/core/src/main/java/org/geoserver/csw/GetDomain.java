@@ -33,7 +33,7 @@ public class GetDomain {
 
     CatalogStore store;
 
-    Map<Name, Name> attributeTypeMap = new HashMap<Name, Name>();
+    Map<Name, Name> attributeTypeMap = new HashMap<>();
 
     NamespaceSupport ns = new NamespaceSupport();
 
@@ -61,14 +61,10 @@ public class GetDomain {
         }
     }
 
-    /**
-     * Returns the requested feature types
-     *
-     * @param request
-     */
+    /** Returns the requested feature types */
     public CloseableIterator<String> run(GetDomainType request) {
         try {
-            List<String> result = new ArrayList<String>();
+            List<String> result = new ArrayList<>();
             if (request.getParameterName() != null && !request.getParameterName().isEmpty()) {
                 String parameterName = request.getParameterName();
                 if (parameterName.indexOf(".") > 0) {
@@ -110,7 +106,7 @@ public class GetDomain {
                 }
             }
 
-            return new CloseableIteratorAdapter<String>(result.iterator());
+            return new CloseableIteratorAdapter<>(result.iterator());
         } catch (Exception e) {
             throw new ServiceException(
                     e, "Failed to retrieve the domain values", ServiceException.NO_APPLICABLE_CODE);

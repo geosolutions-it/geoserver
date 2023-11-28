@@ -33,34 +33,27 @@ public class EditGroupPage extends AbstractGroupPage {
         // name not changeable on edit
         get("form:groupname").setEnabled(false);
 
+        GeoServerDataProvider<GeoServerUser> usersDataProvider =
+                new GeoServerDataProvider<GeoServerUser>() {
+                    @Override
+                    protected List<Property<GeoServerUser>> getProperties() {
+                        return Arrays.asList(UserListProvider.USERNAME);
+                    }
+
+                    @Override
+                    protected List<GeoServerUser> getItems() {
+                        GeoServerUserGroupService ugService =
+                                getUserGroupService(EditGroupPage.this.userGroupServiceName);
+                        try {
+                            return new ArrayList<>(ugService.getUsersForGroup(group));
+                        } catch (IOException e) {
+                            throw new WicketRuntimeException(e);
+                        }
+                    }
+                };
         ((Form) get("form"))
                 .add(
-                        new UserTablePanel(
-                                        "users",
-                                        userGroupServiceName,
-                                        new GeoServerDataProvider<GeoServerUser>() {
-                                            @Override
-                                            protected List<
-                                                            GeoServerDataProvider.Property<
-                                                                    GeoServerUser>>
-                                                    getProperties() {
-                                                return Arrays.asList(UserListProvider.USERNAME);
-                                            }
-
-                                            @Override
-                                            protected List<GeoServerUser> getItems() {
-                                                GeoServerUserGroupService ugService =
-                                                        getUserGroupService(
-                                                                EditGroupPage.this
-                                                                        .userGroupServiceName);
-                                                try {
-                                                    return new ArrayList<GeoServerUser>(
-                                                            ugService.getUsersForGroup(group));
-                                                } catch (IOException e) {
-                                                    throw new WicketRuntimeException(e);
-                                                }
-                                            }
-                                        })
+                        new UserTablePanel("users", userGroupServiceName, usersDataProvider)
                                 .setFilterable(false));
     }
 
@@ -91,8 +84,8 @@ public class EditGroupPage extends AbstractGroupPage {
                 gaStore = new RoleStoreValidationWrapper(gaStore);
 
                 Set<GeoServerRole> orig = gaStore.getRolesForGroup(group.getGroupname());
-                Set<GeoServerRole> add = new HashSet<GeoServerRole>();
-                Set<GeoServerRole> remove = new HashSet<GeoServerRole>();
+                Set<GeoServerRole> add = new HashSet<>();
+                Set<GeoServerRole> remove = new HashSet<>();
                 rolePalette.diff(orig, add, remove);
 
                 for (GeoServerRole role : add)

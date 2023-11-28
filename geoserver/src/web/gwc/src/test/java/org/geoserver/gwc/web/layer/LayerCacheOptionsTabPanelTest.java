@@ -5,15 +5,14 @@
  */
 package org.geoserver.gwc.web.layer;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -56,7 +55,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
         assertTrue(CatalogConfiguration.isLayerExposable(layerInfo));
         GeoServerTileLayer tileLayer = GWC.get().getTileLayer(layerInfo);
         assertNotNull(tileLayer);
-        layerModel = new Model<LayerInfo>(layerInfo);
+        layerModel = new Model<>(layerInfo);
         tileLayerModel = new GeoServerTileLayerInfoModel(tileLayer.getInfo(), false);
         // clean up fake format added during tests
         tileLayer.getInfo().getMimeFormats().remove("foo/bar");
@@ -69,6 +68,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -5907648151984337786L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -90,7 +90,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
         assertFalse(CatalogConfiguration.isLayerExposable(geometryless));
         assertNull(GWC.get().getTileLayer(geometryless));
 
-        layerModel = new Model<LayerInfo>(geometryless);
+        layerModel = new Model<>(geometryless);
         final GWCConfig saneDefaults = GWC.get().getConfig().saneConfig();
         GeoServerTileLayerInfoImpl tileLayerInfo =
                 TileLayerInfoUtil.loadOrCreate(geometryless, saneDefaults);
@@ -101,6 +101,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -5907648151984337786L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -119,6 +120,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -6705646666953650890L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -156,6 +158,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -6705646666953650890L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -204,6 +207,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -6705646666953650890L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -250,7 +254,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
         LayerInfo layerInfo = getCatalog().getLayerByName(getLayerId(MockData.LAKES));
         GeoServerTileLayer tileLayer = GWC.get().getTileLayer(layerInfo);
         assertNotNull(tileLayer);
-        layerModel = new Model<LayerInfo>(layerInfo);
+        layerModel = new Model<>(layerInfo);
         tileLayerModel = new GeoServerTileLayerInfoModel(tileLayer.getInfo(), false);
 
         GWC mediator = GWC.get();
@@ -262,6 +266,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -6705646666953650890L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -293,6 +298,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -5907648151984337786L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);
@@ -308,7 +314,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
         // Ensure that the Component is rendered again
         tester.assertComponent("form:panel:tileLayerEditor", GeoServerTileLayerEditor.class);
         // Ensure that an Error message has been thrown
-        tester.assertErrorMessages((Serializable[]) new String[] {"Filter should not be empty"});
+        tester.assertErrorMessages(new String[] {"Filter should not be empty"});
         // Create new form tester for the final submit
         FormTester form = tester.newFormTester("form");
         // Save the changes
@@ -326,6 +332,7 @@ public class LayerCacheOptionsTabPanelTest extends GeoServerWicketTestSupport {
                         new ComponentBuilder() {
                             private static final long serialVersionUID = -6705646666953650890L;
 
+                            @Override
                             public Component buildComponent(final String id) {
                                 return new LayerCacheOptionsTabPanel(
                                         id, layerModel, tileLayerModel);

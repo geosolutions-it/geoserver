@@ -7,18 +7,32 @@ package org.geoserver.jdbcconfig.catalog;
 
 import static org.geoserver.catalog.Predicates.acceptAll;
 import static org.geoserver.catalog.Predicates.asc;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import org.geoserver.GeoServerConfigurationLock;
 import org.geoserver.GeoServerConfigurationLock.LockType;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.NamespaceInfo;
+import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WMTSLayerInfo;
+import org.geoserver.catalog.WMTSStoreInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.jdbcconfig.JDBCConfigTestSupport;
@@ -151,6 +165,46 @@ public class CatalogImplWithJDBCFacadeTest extends org.geoserver.catalog.impl.Ca
         it = catalog.list(LayerInfo.class, ff.equals(ff.property("enabled"), ff.literal(true)));
         assertTrue(it.hasNext());
         assertEquals(l1.getName(), it.next().getName());
+    }
+
+    @Test
+    public void testPrefixedName() {
+        final FilterFactory ff = CommonFactoryFinder.getFilterFactory();
+
+        addDataStore();
+        addNamespace();
+
+        FeatureTypeInfo ft1 = newFeatureType("ft1", ds);
+        ft1.setEnabled(false);
+        catalog.add(ft1);
+        StyleInfo s1;
+        catalog.add(s1 = newStyle("s1", "s1Filename"));
+        LayerInfo l1 = newLayer(ft1, s1);
+        catalog.add(l1);
+        CloseableIterator<LayerInfo> it =
+                catalog.list(
+                        LayerInfo.class,
+                        ff.equals(ff.property("prefixedName"), ff.literal("wsName:ft1")));
+        assertTrue(it.hasNext());
+        assertEquals(l1.getName(), it.next().getName());
+
+        ft1 = catalog.getFeatureTypeByName("ft1");
+        ft1.setName("renamed_ft1");
+        catalog.save(ft1);
+
+        l1 = catalog.getLayerByName("renamed_ft1");
+
+        it =
+                catalog.list(
+                        LayerInfo.class,
+                        ff.equals(ff.property("prefixedName"), ff.literal("wsName:renamed_ft1")));
+        assertTrue(it.hasNext());
+        assertEquals(l1.getName(), it.next().getName());
+        it =
+                catalog.list(
+                        LayerInfo.class,
+                        ff.equals(ff.property("prefixedName"), ff.literal("wsName:ft1")));
+        assertFalse(it.hasNext());
     }
 
     @Test
@@ -300,11 +354,96 @@ public class CatalogImplWithJDBCFacadeTest extends org.geoserver.catalog.impl.Ca
         test.testOrderBy();
     }
 
-    // not supported
     @Test
-    public void testAddIsolatedWorkspace() {}
+    public void testConcurrentListLoad() throws Exception {
+        addDataStore();
+        addNamespace();
 
-    // not supported
+        // load some layers
+        final int LAYER_COUNT = 100;
+        final int LOAD_FACTOR = Runtime.getRuntime().availableProcessors() * 2;
+        for (int i = 0; i < LAYER_COUNT; i++) {
+            FeatureTypeInfo ft = newFeatureType("ft" + i, ds);
+            catalog.add(ft);
+            StyleInfo style = newStyle("s" + i, "s" + i + "Filename");
+            catalog.add(style);
+            catalog.add(newLayer(ft, style));
+        }
+
+        // drop all caches
+        facade.getConfigDatabase().clearCache();
+
+        // catalog scan, similar to what WMS GetCapabilities does, simulating many of them in
+        // parallel
+        ExecutorService tp = Executors.newFixedThreadPool(LOAD_FACTOR);
+        List<Future<?>> futures = new ArrayList<>();
+        for (int i = 0; i < LAYER_COUNT; i++) {
+            futures.add(
+                    tp.submit(
+                            () -> {
+                                try (CloseableIterator<LayerInfo> layers =
+                                        catalog.list(LayerInfo.class, Filter.INCLUDE)) {
+                                    while (layers.hasNext()) layers.next();
+                                }
+                            }));
+        }
+        // here, it should not deadlock, nor throw exceptions
+        for (Future<?> future : futures) {
+            future.get();
+        }
+    }
+
     @Test
-    public void testAddIsolatedNamespace() {}
+    public void testWMTS() {
+        addWMTSLayer();
+        assertFalse(catalog.getResources(WMTSLayerInfo.class).isEmpty());
+        final WMTSStoreInfo store = catalog.getStore(wmtss.getId(), WMTSStoreInfo.class);
+        final WMTSLayerInfo resource = catalog.getResource(wmtsl.getId(), WMTSLayerInfo.class);
+        assertNotNull(store);
+        assertNotNull(resource);
+
+        ConfigDatabase configDb = testSupport.getDatabase();
+        configDb.clearCache(store); // GEOS-10375, don't hit the cache
+
+        String storeName = store.getName();
+        StoreInfo storeByName = catalog.getStoreByName(ws, storeName, StoreInfo.class);
+        assertEquals(store, storeByName);
+        WMTSStoreInfo wmtsStoreByName = catalog.getStoreByName(ws, storeName, WMTSStoreInfo.class);
+        assertEquals(store, wmtsStoreByName);
+
+        configDb.clearCache(resource); // GEOS-10375, don't hit the cache
+
+        NamespaceInfo ns = resource.getNamespace();
+        String layerName = resource.getName();
+        ResourceInfo resourceByName = catalog.getResourceByName(ns, layerName, ResourceInfo.class);
+        assertEquals(resource, resourceByName);
+        WMTSLayerInfo wmtsLayerByName =
+                catalog.getResourceByName(ns, layerName, WMTSLayerInfo.class);
+        assertEquals(resource, wmtsLayerByName);
+    }
+
+    @Test
+    public void testGetStyleWithoutWorkspace() {
+        final FilterFactory ff = CommonFactoryFinder.getFilterFactory();
+        addDataStore();
+        addNamespace();
+        catalog.add(wsB);
+
+        FeatureTypeInfo ft1 = newFeatureType("ft1", ds);
+        ft1.setAdvertised(false);
+        catalog.add(ft1);
+        StyleInfo s1 = newStyle("s1", "s1Filename", wsB);
+        catalog.add(s1);
+
+        StyleInfo style = catalog.getStyleByName("s1");
+        assertNotNull(style);
+    }
+
+    protected StyleInfo newStyle(String name, String fileName, WorkspaceInfo workspaceInfo) {
+        StyleInfo s2 = catalog.getFactory().createStyle();
+        s2.setName(name);
+        s2.setFilename(fileName);
+        s2.setWorkspace(workspaceInfo);
+        return s2;
+    }
 }

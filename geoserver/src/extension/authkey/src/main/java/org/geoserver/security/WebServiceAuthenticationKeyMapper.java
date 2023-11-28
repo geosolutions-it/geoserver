@@ -20,9 +20,9 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.geoserver.security.impl.GeoServerUser;
 import org.geoserver.security.validation.FilterConfigException;
-import org.geotools.data.ows.HTTPClient;
-import org.geotools.data.ows.HTTPResponse;
-import org.geotools.data.ows.SimpleHttpClient;
+import org.geotools.http.HTTPClient;
+import org.geotools.http.HTTPClientFinder;
+import org.geotools.http.HTTPResponse;
 import org.springframework.util.StringUtils;
 
 /**
@@ -40,7 +40,7 @@ import org.springframework.util.StringUtils;
 public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKeyMapper {
 
     /** Thread local holding the current response */
-    public static final ThreadLocal<String> RECORDED_RESPONSE = new ThreadLocal<String>();
+    public static final ThreadLocal<String> RECORDED_RESPONSE = new ThreadLocal<>();
 
     public static final String AUTH_KEY_WEBSERVICE_PLACEHOLDER_REQUIRED =
             "AUTH_KEY_WEBSERVICE_PLACEHOLDER_REQUIRED";
@@ -75,7 +75,7 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
 
     private HTTPClient getHttpClient() {
         if (httpClient == null) {
-            httpClient = new SimpleHttpClient();
+            httpClient = HTTPClientFinder.createClient();
         }
         return httpClient;
     }
@@ -159,6 +159,7 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
         }
     }
 
+    @Override
     public boolean supportsReadOnlyUserGroupService() {
         return true;
     }
@@ -212,8 +213,6 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
     /**
      * Calls the external web service with the given key and parses the result to extract the
      * userName.
-     *
-     * @param key
      */
     private String callWebService(String key) {
         String url = webServiceUrl.replace("{key}", key);
@@ -224,11 +223,11 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
         try {
             LOGGER.log(Level.FINE, "Issuing request to authkey webservice: " + url);
             HTTPResponse response = client.get(new URL(url));
-            BufferedReader reader = null;
-            InputStream responseStream = response.getResponseStream();
-            StringBuilder result = new StringBuilder();
-            try {
-                reader = new BufferedReader(new InputStreamReader(responseStream));
+            try (InputStream responseStream = response.getResponseStream();
+                    BufferedReader reader =
+                            new BufferedReader(new InputStreamReader(responseStream))) {
+                StringBuilder result = new StringBuilder();
+
                 String line = null;
                 while ((line = reader.readLine()) != null) {
                     result.append(line);
@@ -237,8 +236,6 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
                         Level.FINE,
                         "Response received from authkey webservice: " + result.toString());
                 return result.toString();
-            } finally {
-                reader.close();
             }
         } catch (MalformedURLException e) {
             LOGGER.log(
@@ -261,14 +258,14 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
 
         if (mapperParams != null) {
             if (mapperParams.containsKey("webServiceUrl")) {
-                setWebServiceUrl((String) mapperParams.get("webServiceUrl"));
+                setWebServiceUrl(mapperParams.get("webServiceUrl"));
             }
             if (mapperParams.containsKey("searchUser")) {
-                setSearchUser((String) mapperParams.get("searchUser"));
+                setSearchUser(mapperParams.get("searchUser"));
             }
             if (mapperParams.containsKey("connectTimeout")) {
                 try {
-                    connectTimeout = Integer.parseInt((String) mapperParams.get("connectTimeout"));
+                    connectTimeout = Integer.parseInt(mapperParams.get("connectTimeout"));
                 } catch (NumberFormatException e) {
                     LOGGER.log(
                             Level.SEVERE,
@@ -278,7 +275,7 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
             }
             if (mapperParams.containsKey("readTimeout")) {
                 try {
-                    readTimeout = Integer.parseInt((String) mapperParams.get("readTimeout"));
+                    readTimeout = Integer.parseInt(mapperParams.get("readTimeout"));
                 } catch (NumberFormatException e) {
                     LOGGER.log(
                             Level.SEVERE,
@@ -291,7 +288,7 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
 
     @Override
     public Set<String> getAvailableParameters() {
-        return new HashSet(
+        return new HashSet<>(
                 Arrays.asList("webServiceUrl", "searchUser", "connectTimeout", "readTimeout"));
     }
 
@@ -312,6 +309,7 @@ public class WebServiceAuthenticationKeyMapper extends AbstractAuthenticationKey
         return super.getDefaultParamValue(paramName);
     }
 
+    @Override
     public void validateParameter(String paramName, String value) throws FilterConfigException {
         if (value == null) {
             value = "";

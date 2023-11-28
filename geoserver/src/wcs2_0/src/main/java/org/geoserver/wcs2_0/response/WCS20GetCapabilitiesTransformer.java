@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import net.opengis.wcs20.GetCapabilitiesType;
 import org.geoserver.ExtendedCapabilitiesProvider;
 import org.geoserver.catalog.CoverageInfo;
@@ -32,6 +33,7 @@ import org.geoserver.config.ContactInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ResourceErrorHandling;
 import org.geoserver.config.SettingsInfo;
+import org.geoserver.data.InternationalContentHelper;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
@@ -89,7 +91,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
         public static final Set<String> names;
 
         static {
-            Set<String> tmp = new HashSet<String>();
+            Set<String> tmp = new HashSet<>();
             for (SECTIONS section : SECTIONS.values()) {
                 tmp.add(section.name());
             }
@@ -122,6 +124,9 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
         private List<WCSExtendedCapabilitiesProvider> extensions;
         private org.geoserver.ExtendedCapabilitiesProvider.Translator translator;
         private TranslatorHelper helper;
+
+        private InternationalContentHelper internationalContentHelper;
+        private boolean i18nRequested = false;
 
         /** Creates a new WFSCapsTranslator object. */
         public WCS20GetCapabilitiesTranslator(ContentHandler handler) {
@@ -170,14 +175,18 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
          * @param o The Object to encode.
          * @throws IllegalArgumentException if the Object is not encodeable.
          */
+        @Override
         public void encode(Object o) throws IllegalArgumentException {
             if (!(o instanceof GetCapabilitiesType)) {
                 throw new IllegalArgumentException(
                         "Not a GetCapabilitiesType: " + o != null ? o.toString() : "null");
             }
-
             this.request = (GetCapabilitiesType) o;
-
+            Set<CoverageInfo> coverageInfos = getCoverages();
+            this.i18nRequested = request.getAcceptLanguages() != null;
+            this.internationalContentHelper =
+                    new InternationalContentHelper(
+                            request.getAcceptLanguages(), wcs, new ArrayList<>(coverageInfos));
             // check the update sequence
             final long updateSequence = wcs.getGeoServer().getGlobal().getUpdateSequence();
             long requestedUpdateSequence = -1;
@@ -252,7 +261,8 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
                     handleOperationsMetadata();
                 if (allSections || sections.contains(SECTIONS.ServiceMetadata.name()))
                     handleServiceMetadata(request);
-                if (allSections || sections.contains(SECTIONS.Contents.name())) handleContents();
+                if (allSections || sections.contains(SECTIONS.Contents.name()))
+                    handleContents(coverageInfos);
                 if (allSections || sections.contains(SECTIONS.Languages.name())) handleLanguages();
             }
 
@@ -275,7 +285,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
                     || ct.getAcceptVersions().getVersion() == null
                     || ct.getAcceptVersions().getVersion().isEmpty()
                     || ct.getAcceptVersions().getVersion().contains("2.0.1")) {
-                Set<String> formats = new TreeSet<String>();
+                Set<String> formats = new TreeSet<>();
                 for (String format : responseFactory.getOutputFormats()) {
                     CoverageResponseDelegate delegate = responseFactory.encoderFor(format);
                     String mime = delegate.getMimeType(format);
@@ -327,8 +337,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
         private void handleServiceIdentification() {
             start("ows:ServiceIdentification");
 
-            element("ows:Title", wcs.getTitle());
-            element("ows:Abstract", wcs.getAbstract());
+            handleServiceTitleAndAbstract();
 
             handleKeywords(wcs.getKeywords());
 
@@ -414,11 +423,21 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             end("ows:ServiceIdentification");
         }
 
+        private void handleServiceTitleAndAbstract() {
+            if (!i18nRequested) {
+                element("ows:Title", wcs.getTitle());
+                element("ows:Abstract", wcs.getAbstract());
+            } else {
+                element("ows:Title", internationalContentHelper.getTitle(wcs));
+                element("ows:Abstract", internationalContentHelper.getAbstract(wcs));
+            }
+        }
+
         /** Handles the service provider of the capabilities document. */
         private void handleServiceProvider() {
             start("ows:ServiceProvider");
             SettingsInfo settings = wcs.getGeoServer().getSettings();
-            element("ows:ProviderName", settings.getContact().getContactOrganization());
+            handleServiceProvider(settings.getContact());
             AttributesImpl attributes = new AttributesImpl();
             attributes.addAttribute(
                     "",
@@ -427,10 +446,20 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
                     "",
                     settings.getOnlineResource() != null ? settings.getOnlineResource() : "");
             element("ows:ProviderSite", null, attributes);
-
-            handleContact();
+            final GeoServer gs = wcs.getGeoServer();
+            ContactInfo contact = gs.getSettings().getContact();
+            encodeContact(contact, gs.getSettings().getOnlineResource());
 
             end("ows:ServiceProvider");
+        }
+
+        private void handleServiceProvider(ContactInfo contactInfo) {
+            if (!i18nRequested) element("ows:ProviderName", contactInfo.getContactOrganization());
+            else
+                element(
+                        "ows:ProviderName",
+                        internationalContentHelper.getNullableString(
+                                contactInfo.getInternationalContactOrganization()));
         }
 
         /**
@@ -455,7 +484,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             end("ows:AllowedValues");
             end("ows:Constraint");
 
-            if (extensions != null && extensions.size() > 0) {
+            if (extensions != null && !extensions.isEmpty()) {
                 try {
                     for (WCSExtendedCapabilitiesProvider provider : extensions) {
                         provider.encodeExtendedOperations(translator, wcs, request);
@@ -513,6 +542,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
 
         /** */
         private void handleKeywords(List<KeywordInfo> kwords) {
+            if (i18nRequested) kwords = internationalContentHelper.filterKeywords(kwords);
             if (kwords != null && !kwords.isEmpty()) {
                 start("ows:Keywords");
                 for (KeywordInfo kword : kwords) {
@@ -522,12 +552,15 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             }
         }
 
-        /** Handles contacts. */
-        private void handleContact() {
-            final GeoServer gs = wcs.getGeoServer();
+        private void encodeContact(ContactInfo contactInfo, String onlineResource) {
             start("ows:ServiceContact");
+            if (!i18nRequested) handleContact(contactInfo, onlineResource);
+            else handleInternationalContact(contactInfo, onlineResource);
+            end("ows:ServiceContact");
+        }
 
-            ContactInfo contact = gs.getSettings().getContact();
+        /** Handles contacts. */
+        private void handleContact(ContactInfo contact, String onlineResource) {
             elementIfNotEmpty("ows:IndividualName", contact.getContactPerson());
             elementIfNotEmpty("ows:PositionName", contact.getContactPosition());
 
@@ -545,16 +578,72 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             elementIfNotEmpty("ows:ElectronicMailAddress", contact.getContactEmail());
             end("ows:Address");
 
-            String or = gs.getSettings().getOnlineResource();
-            if (isNotBlank(or)) {
+            handleSettingOnlineRes(onlineResource);
+
+            end("ows:ContactInfo");
+        }
+
+        /** Handles contacts. */
+        private void handleInternationalContact(ContactInfo contact, String onlineResource) {
+            elementIfNotEmpty(
+                    "ows:IndividualName",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactPerson()));
+            elementIfNotEmpty(
+                    "ows:PositionName",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactPosition()));
+
+            start("ows:ContactInfo");
+            start("ows:Phone");
+            elementIfNotEmpty(
+                    "ows:Voice",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactVoice()));
+            elementIfNotEmpty(
+                    "ows:Facsimile",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactFacsimile()));
+            end("ows:Phone");
+            start("ows:Address");
+            elementIfNotEmpty(
+                    "ows:DeliveryPoint",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddress()));
+            elementIfNotEmpty(
+                    "ows:City",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressCity()));
+            elementIfNotEmpty(
+                    "ows:AdministrativeArea",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressState()));
+            elementIfNotEmpty(
+                    "ows:PostalCode",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressPostalCode()));
+            elementIfNotEmpty(
+                    "ows:Country",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressCountry()));
+            elementIfNotEmpty(
+                    "ows:ElectronicMailAddress",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactEmail()));
+            end("ows:Address");
+
+            handleSettingOnlineRes(onlineResource);
+
+            end("ows:ContactInfo");
+        }
+
+        private void handleSettingOnlineRes(String onlineResource) {
+            if (isNotBlank(onlineResource)) {
                 AttributesImpl attributes = new AttributesImpl();
-                attributes.addAttribute("", "xlink:href", "xlink:href", "", or);
+                attributes.addAttribute("", "xlink:href", "xlink:href", "", onlineResource);
                 start("ows:OnlineResource", attributes);
                 end("OnlineResource");
             }
-
-            end("ows:ContactInfo");
-            end("ows:ServiceContact");
         }
 
         private void handleWGS84BoundingBox(BoundingBox envelope) {
@@ -574,21 +663,8 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             end("ows:WGS84BoundingBox");
         }
 
-        private void handleContents() {
+        private void handleContents(Set<CoverageInfo> coverages) {
             start("wcs:Contents");
-
-            @SuppressWarnings("unchecked")
-            final Set<CoverageInfo> coverages =
-                    new TreeSet<CoverageInfo>(new CoverageInfoLabelComparator());
-            coverages.addAll(wcs.getGeoServer().getCatalog().getCoverages());
-
-            // filter out disabled coverages
-            for (Iterator<CoverageInfo> it = coverages.iterator(); it.hasNext(); ) {
-                CoverageInfo cv = (CoverageInfo) it.next();
-                if (!cv.enabled()) {
-                    it.remove();
-                }
-            }
 
             for (CoverageInfo cv : coverages) {
                 try {
@@ -613,12 +689,12 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
                 }
             }
 
-            if (extensions != null && extensions.size() > 0) {
+            if (extensions != null && !extensions.isEmpty()) {
                 start("wcs:Extension");
                 try {
                     for (WCSExtendedCapabilitiesProvider provider : extensions) {
                         provider.encodeExtendedContents(
-                                translator, wcs, new ArrayList<CoverageInfo>(coverages), request);
+                                translator, wcs, new ArrayList<>(coverages), request);
                     }
                 } catch (Exception e) {
                     throw new ServiceException("Extended capabilities provider threw error", e);
@@ -629,10 +705,23 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             end("wcs:Contents");
         }
 
+        private Set<CoverageInfo> getCoverages() {
+            final Set<CoverageInfo> coverages = new TreeSet<>(new CoverageInfoLabelComparator());
+            coverages.addAll(wcs.getGeoServer().getCatalog().getCoverages());
+
+            // filter out disabled coverages
+            for (Iterator<CoverageInfo> it = coverages.iterator(); it.hasNext(); ) {
+                CoverageInfo cv = it.next();
+                if (!cv.enabled()) {
+                    it.remove();
+                }
+            }
+            return coverages;
+        }
+
         private void handleCoverageSummary(CoverageInfo cv) throws Exception {
             start("wcs:CoverageSummary");
-            elementIfNotEmpty("ows:Title", cv.getTitle());
-            elementIfNotEmpty("ows:Abstract", cv.getDescription());
+            handleTitleAndAbstract(cv);
             handleKeywords(cv.getKeywords());
             String covId = NCNameResourceCodec.encode(cv);
             element("wcs:CoverageId", covId);
@@ -647,6 +736,16 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             cv.getMetadataLinks().forEach(this::handleMetadataLink);
 
             end("wcs:CoverageSummary");
+        }
+
+        private void handleTitleAndAbstract(CoverageInfo cv) {
+            if (!i18nRequested) {
+                elementIfNotEmpty("ows:Title", cv.getTitle());
+                elementIfNotEmpty("ows:Abstract", cv.getAbstract());
+            } else {
+                elementIfNotEmpty("ows:Title", internationalContentHelper.getTitle(cv));
+                elementIfNotEmpty("ows:Abstract", internationalContentHelper.getAbstract(cv));
+            }
         }
 
         /**
@@ -701,17 +800,20 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
         }
 
         private void handleLanguages() {
-            //            start("ows:Languages");
-            //            // TODO
-            //            end("ows:Languages");
+            if (i18nRequested) {
+                start("ows:Languages");
+                List<String> languages =
+                        internationalContentHelper.getSupportedLocales().stream()
+                                .map(l -> l.toLanguageTag())
+                                .collect(Collectors.toList());
+                for (String lang : languages) {
+                    element("ows:Language", lang);
+                }
+                end("ows:Languages");
+            }
         }
 
-        /**
-         * Writes the element if and only if the content is not null and not empty
-         *
-         * @param elementName
-         * @param content
-         */
+        /** Writes the element if and only if the content is not null and not empty */
         private void elementIfNotEmpty(String elementName, String content) {
             if (isNotBlank(content)) element(elementName, content);
         }

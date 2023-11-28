@@ -22,7 +22,7 @@ set of selected attributes, and a different filter to select the documents conta
 Installing the SOLR extension
 -----------------------------------
 
-#. Download the SOLR extension from the `nightly GeoServer community module builds <https://build.geoserver.org/geoserver/master/community-latest/>`_.
+#. Download the SOLR extension from the `nightly GeoServer community module builds <https://build.geoserver.org/geoserver/main/community-latest/>`_.
 
    .. warning:: Make sure to match the version of the extension to the version of the GeoServer instance.
 
@@ -153,4 +153,4 @@ You can notice that:
 * Only the columns needed for the display (in this case, a single geometry) are retrieved
 * The bbox and layer identification filters are specified in the first ``fq``
 * The custom ``fq`` is passed as a second ``fq`` parameter (SOLR will treat it as being and-ed with
-  the previuos one)
+  the previous one)

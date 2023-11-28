@@ -33,21 +33,13 @@ public abstract class CasAuthenticationHelper {
 
     protected HttpCookie ticketGrantingCookie, warningCookie;
 
-    /**
-     * casUrlPrefix is the CAS Server URL including context root
-     *
-     * @param casUrlPrefix
-     */
+    /** casUrlPrefix is the CAS Server URL including context root */
     public CasAuthenticationHelper(URL casUrlPrefix) {
         secure = "HTTPS".equalsIgnoreCase(casUrlPrefix.getProtocol());
         this.casUrlPrefix = casUrlPrefix;
     }
 
-    /**
-     * create URL from a CAS protocol URI
-     *
-     * @param casUri
-     */
+    /** create URL from a CAS protocol URI */
     protected URL createURLFromCasURI(String casUri) {
         URL retValue = null;
         try {
@@ -65,18 +57,18 @@ public abstract class CasAuthenticationHelper {
     }
 
     protected String readResponse(HttpURLConnection conn) throws IOException {
-        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        String line = "";
-        StringBuffer buff = new StringBuffer();
-        while ((line = in.readLine()) != null) {
-            buff.append(line);
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            String line = "";
+            StringBuffer buff = new StringBuffer();
+            while ((line = in.readLine()) != null) {
+                buff.append(line);
+            }
+            return buff.toString();
         }
-        in.close();
-        return buff.toString();
     }
 
     protected List<String> getResponseHeaderValues(HttpURLConnection conn, String hName) {
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         for (int i = 0; ; i++) {
             String headerName = conn.getHeaderFieldKey(i);
             String headerValue = conn.getHeaderField(i);
@@ -93,7 +85,7 @@ public abstract class CasAuthenticationHelper {
     }
 
     protected List<HttpCookie> getCookies(HttpURLConnection conn) {
-        List<HttpCookie> result = new ArrayList<HttpCookie>();
+        List<HttpCookie> result = new ArrayList<>();
         List<String> cookieStrings = getResponseHeaderValues(conn, "Set-Cookie");
         for (String cookieString : cookieStrings) {
             result.addAll(HttpCookie.parse("Set-Cookie: " + cookieString));
@@ -114,19 +106,18 @@ public abstract class CasAuthenticationHelper {
 
     protected void writeParamsForPostAndSend(HttpURLConnection conn, Map<String, String> paramMap)
             throws IOException {
-        DataOutputStream out = new DataOutputStream(conn.getOutputStream());
+        try (DataOutputStream out = new DataOutputStream(conn.getOutputStream())) {
+            StringBuffer buff = new StringBuffer();
+            for (Entry<String, String> entry : paramMap.entrySet()) {
+                if (buff.length() > 0) buff.append("&");
+                buff.append(entry.getKey())
+                        .append("=")
+                        .append(URLEncoder.encode(entry.getValue(), "utf-8"));
+            }
 
-        StringBuffer buff = new StringBuffer();
-        for (Entry<String, String> entry : paramMap.entrySet()) {
-            if (buff.length() > 0) buff.append("&");
-            buff.append(entry.getKey())
-                    .append("=")
-                    .append(URLEncoder.encode(entry.getValue(), "utf-8"));
+            out.writeBytes(buff.toString());
+            out.flush();
         }
-
-        out.writeBytes(buff.toString());
-        out.flush();
-        out.close();
     }
 
     public HttpCookie getTicketGrantingCookie() {
@@ -137,11 +128,7 @@ public abstract class CasAuthenticationHelper {
         return warningCookie;
     }
 
-    /**
-     * Single logout from Cas server
-     *
-     * @throws IOException
-     */
+    /** Single logout from Cas server */
     public boolean ssoLogout() throws IOException {
         if (!secure) return true;
         if (ticketGrantingCookie == null) return true;
@@ -151,15 +138,10 @@ public abstract class CasAuthenticationHelper {
         addCasCookies(conn);
         conn.getInputStream().close();
         extractCASCookies(getCookies(conn), conn);
-        return getTicketGrantingCookie() != null
-                && "\"\"".equals(getTicketGrantingCookie().getValue());
+        return getTicketGrantingCookie() != null && "".equals(getTicketGrantingCookie().getValue());
     }
 
-    /**
-     * add Cas cookies to request
-     *
-     * @param conn
-     */
+    /** add Cas cookies to request */
     protected void addCasCookies(HttpURLConnection conn) {
         String cookieString = "";
         if (checkCookieForSend(warningCookie)) cookieString = warningCookie.toString();
@@ -186,8 +168,6 @@ public abstract class CasAuthenticationHelper {
     /**
      * The concrete login, after sucessful login, the cookies should be set using {@link
      * #extractCASCookies(List, HttpURLConnection)}
-     *
-     * @throws IOException
      */
     public abstract boolean ssoLogin() throws IOException;
 
@@ -195,14 +175,11 @@ public abstract class CasAuthenticationHelper {
      * Get a service ticket for the service
      *
      * <p>Precondition: successful log in wiht {@link #ssoLogin()} {@link #isSecure()} == true
-     *
-     * @param service
-     * @throws IOException
      */
     public String getServiceTicket(URL service) throws IOException {
 
         if (getTicketGrantingCookie() == null || getTicketGrantingCookie().getValue().isEmpty()) {
-            throw new IOException("na valid TGC ");
+            throw new IOException("not a valid TGC ");
         }
 
         URL loginUrl =
@@ -229,14 +206,9 @@ public abstract class CasAuthenticationHelper {
         return ticket;
     }
 
-    /**
-     * extract Cas cookies from all received cookies
-     *
-     * @param cookies
-     * @param conn
-     */
+    /** extract Cas cookies from all received cookies */
     public void extractCASCookies(List<HttpCookie> cookies, HttpURLConnection conn) {
         warningCookie = getCookieNamed(cookies, "CASPRIVACY");
-        ticketGrantingCookie = getCookieNamed(cookies, "CASTGC");
+        ticketGrantingCookie = getCookieNamed(cookies, "TGC");
     }
 }

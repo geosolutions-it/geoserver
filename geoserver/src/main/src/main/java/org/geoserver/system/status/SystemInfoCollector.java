@@ -13,6 +13,13 @@ package org.geoserver.system.status;
  */
 public interface SystemInfoCollector {
 
+    boolean ENABLED = true;
+    boolean DISABLED = false;
+
     /** @return the list of metric */
     Metrics retrieveAllSystemInfo();
+
+    void setStatisticsStatus(Boolean status);
+
+    Boolean getStatisticsStatus();
 }

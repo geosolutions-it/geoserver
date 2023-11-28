@@ -7,10 +7,10 @@
 package org.geoserver.security.ldap;
 
 import java.text.MessageFormat;
+import java.util.logging.Logger;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.SearchControls;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.geotools.util.logging.Logging;
 import org.springframework.ldap.NamingException;
 import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.ldap.core.support.BaseLdapPathContextSource;
@@ -33,7 +33,7 @@ import org.springframework.util.StringUtils;
  */
 public class GeoserverLdapBindAuthenticator extends BindAuthenticator {
 
-    private static final Log logger = LogFactory.getLog(GeoserverLdapBindAuthenticator.class);
+    private static final Logger logger = Logging.getLogger(GeoserverLdapBindAuthenticator.class);
 
     private String userFilter = "";
 
@@ -60,8 +60,6 @@ public class GeoserverLdapBindAuthenticator extends BindAuthenticator {
     /**
      * If userFilter is defined we extract user data using the filter and dnPattern (if defined) to
      * transform username for authentication.
-     *
-     * @param authentication
      */
     protected DirContextOperations authenticateUsingFilter(Authentication authentication) {
         DirContextOperations user = null;
@@ -78,7 +76,7 @@ public class GeoserverLdapBindAuthenticator extends BindAuthenticator {
             username = MessageFormat.format(userFormat, username);
         }
         if (!StringUtils.hasLength(password)) {
-            logger.debug("Rejecting empty password for user " + username);
+            logger.fine("Rejecting empty password for user " + username);
             throw new BadCredentialsException(
                     messages.getMessage("BindAuthenticator.emptyPassword", "Empty Password"));
         }
@@ -91,7 +89,7 @@ public class GeoserverLdapBindAuthenticator extends BindAuthenticator {
             // Check for password policy control
             PasswordPolicyControl ppolicy = PasswordPolicyControlExtractor.extractControl(ctx);
 
-            logger.debug("Retrieving user object using filter...");
+            logger.fine("Retrieving user object using filter...");
             SearchControls searchCtls = new SearchControls();
             searchCtls.setSearchScope(SearchControls.SUBTREE_SCOPE);
 

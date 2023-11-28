@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import net.opengis.wcs20.ExtensionItemType;
 import net.opengis.wcs20.GetCoverageType;
-import org.apache.commons.collections.map.CaseInsensitiveMap;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.geoserver.config.GeoServer;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.wcs.WCSInfo;
@@ -30,17 +30,36 @@ import org.geoserver.wcs2_0.WCSTestSupport;
 import org.geoserver.wcs2_0.WebCoverageService20;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.gce.geotiff.GeoTiffReader;
+import org.geotools.referencing.CRS;
 import org.geotools.wcs.v1_1.WCSConfiguration;
 import org.junit.Before;
 import org.opengis.coverage.grid.GridCoverage;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /** @author Simone Giannecchini, GeoSolutions SAS */
 public abstract class WCSKVPTestSupport extends WCSTestSupport {
 
-    static final double EPS = 10 - 6;
+    protected static CoordinateReferenceSystem EPSG_3857;
+    protected static CoordinateReferenceSystem EPSG_4326;
+
+    static final double EPS = 10E-6;
     WCSConfiguration configuration;
     GetCoverageRequestReader kvpreader;
     WebCoverageService20 service;
+
+    static {
+        try {
+            EPSG_3857 = CRS.decode("EPSG:3857", true);
+        } catch (FactoryException e) {
+            throw new RuntimeException("Unable to parse EPSG:3857 CRS", e);
+        }
+        try {
+            EPSG_4326 = CRS.decode("EPSG:4326", true);
+        } catch (FactoryException e) {
+            throw new RuntimeException("Unable to parse EPSG:4326 CRS", e);
+        }
+    }
 
     public WCSKVPTestSupport() {
         super();
@@ -57,7 +76,7 @@ public abstract class WCSKVPTestSupport extends WCSTestSupport {
 
     protected Map<String, Object> getExtensionsMap(GetCoverageType gc) {
         // collect extensions
-        Map<String, Object> extensions = new HashMap<String, Object>();
+        Map<String, Object> extensions = new HashMap<>();
         for (ExtensionItemType item : gc.getExtension().getContents()) {
             Object value =
                     item.getSimpleContent() != null
@@ -75,6 +94,7 @@ public abstract class WCSKVPTestSupport extends WCSTestSupport {
         return coverage;
     }
 
+    @Override
     protected void setInputLimit(int kbytes) {
         GeoServer gs = getGeoServer();
         WCSInfo info = gs.getService(WCSInfo.class);
@@ -82,6 +102,7 @@ public abstract class WCSKVPTestSupport extends WCSTestSupport {
         gs.save(info);
     }
 
+    @Override
     protected void setOutputLimit(int kbytes) {
         GeoServer gs = getGeoServer();
         WCSInfo info = gs.getService(WCSInfo.class);

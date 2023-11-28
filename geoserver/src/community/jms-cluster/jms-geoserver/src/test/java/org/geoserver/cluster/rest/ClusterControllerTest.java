@@ -8,8 +8,8 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
@@ -46,6 +46,7 @@ public class ClusterControllerTest extends GeoServerSystemTestSupport {
     public void testGetConfigurationJSON() throws Exception {
         // get JSON properties
         JSON json = getAsJSON("rest/cluster.json");
+        print(json);
         assertThat(json, notNullValue());
         assertThat(json, instanceOf(JSONObject.class));
         JSONObject jsonObject = (JSONObject) json;

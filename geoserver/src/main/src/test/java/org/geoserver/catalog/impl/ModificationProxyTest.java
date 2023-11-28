@@ -5,11 +5,11 @@
 
 package org.geoserver.catalog.impl;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -151,12 +151,7 @@ public class ModificationProxyTest {
         assertThat(newBean.getListValue(), contains("Cunning", "Plan"));
     }
 
-    /**
-     * Matches a modification proxy wrapping an object matching the given matcher
-     *
-     * @param objectMatcher
-     * @return
-     */
+    /** Matches a modification proxy wrapping an object matching the given matcher */
     public static <T> Matcher<T> modProxy(Matcher<T> objectMatcher) {
         return new BaseMatcher<T>() {
 
@@ -202,18 +197,22 @@ public class ModificationProxyTest {
             this(value, Arrays.asList(listValues));
         }
 
+        @Override
         public String getValue() {
             return value;
         }
 
+        @Override
         public void setValue(String value) {
             this.value = value;
         }
 
+        @Override
         public List<String> getListValue() {
             return listValue;
         }
 
+        @Override
         public void setListValue(List<String> listValue) {
             this.listValue = listValue;
         }

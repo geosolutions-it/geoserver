@@ -17,12 +17,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Resource;
+import org.geoserver.platform.resource.Resource.Lock;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.security.PropertyFileWatcher;
 import org.geoserver.util.IOUtils;
@@ -37,7 +38,7 @@ import org.geotools.util.logging.Logging;
  * @author Justin Deoliveira, OpenGeo
  * @param <R> The access rule class.
  */
-public abstract class AbstractAccessRuleDAO<R extends Comparable<?>> {
+public abstract class AbstractAccessRuleDAO<R extends Comparable<R>> {
     private static final Logger LOGGER = Logging.getLogger(AbstractAccessRuleDAO.class);
 
     /** Parsed rules */
@@ -72,22 +73,31 @@ public abstract class AbstractAccessRuleDAO<R extends Comparable<?>> {
         // this.dd = org.vfny.geoserver.global.GeoserverDataDirectory.accessor();
     }
 
+    public Lock lock() {
+        if (watcher == null) {
+            return new Lock() {
+                @Override
+                public void release() {}
+            };
+        }
+        return watcher.getResource().lock();
+    }
+
     /**
      * Returns the list of rules contained in the property file. The returned rules are sorted
      * against the <code>R</code> natural order
      */
     public List<R> getRules() {
         checkPropertyFile(false);
-        return new ArrayList<R>(rules);
+        return new ArrayList<>(rules);
     }
 
     /**
      * Adds/overwrites a rule in the rule set
      *
-     * @param rule
      * @return true if the set did not contain the rule already, false otherwise
      */
-    public boolean addRule(R rule) {
+    public synchronized boolean addRule(R rule) {
         lastModified = System.currentTimeMillis();
         return rules.add(rule);
     }
@@ -103,12 +113,8 @@ public abstract class AbstractAccessRuleDAO<R extends Comparable<?>> {
         lastModified = System.currentTimeMillis();
     }
 
-    /**
-     * Removes the rule from rule set
-     *
-     * @param rule
-     */
-    public boolean removeRule(R rule) {
+    /** Removes the rule from rule set */
+    public synchronized boolean removeRule(R rule) {
         lastModified = System.currentTimeMillis();
         return rules.remove(rule);
     }
@@ -125,63 +131,59 @@ public abstract class AbstractAccessRuleDAO<R extends Comparable<?>> {
         return watcher != null && watcher.isStale();
     }
 
-    /**
-     * Writes the rules back to file system
-     *
-     * @throws IOException
-     */
-    public void storeRules() throws IOException {
-        OutputStream os = null;
-        try {
-            // turn back the users into a users map
-            Properties p = toProperties();
+    /** Writes the rules back to file system */
+    public synchronized void storeRules() throws IOException {
+        // turn back the users into a users map
+        Properties p = toProperties();
 
-            // write out to the data dir
-            Resource propFile = securityDir.get(propertyFileName);
-            os = propFile.out();
+        // write out to the data dir
+        Resource propFile = securityDir.get(propertyFileName);
+        try (OutputStream os = propFile.out()) {
             p.store(os, null);
             lastModified = System.currentTimeMillis();
+            // avoid unnecessary reloads, the file just got fully written
+            if (watcher != null) watcher.setKnownLastModified(lastModified);
         } catch (Exception e) {
             if (e instanceof IOException) throw (IOException) e;
-            else
-                throw (IOException)
-                        new IOException("Could not write rules to " + propertyFileName)
-                                .initCause(e);
-        } finally {
-            if (os != null) os.close();
+            else throw new IOException("Could not write rules to " + propertyFileName, e);
         }
     }
 
-    /** Checks the property file is up to date, eventually rebuilds the tree */
+    /** Checks the property file is up-to-date, eventually rebuilds the tree */
     protected void checkPropertyFile(boolean force) {
         try {
             if (rules == null || force) {
                 // no security folder, let's work against an empty properties then
                 if (securityDir == null || securityDir.getType() == Type.UNDEFINED) {
-                    this.rules = new TreeSet<R>();
+                    this.rules = new ConcurrentSkipListSet<>();
                 } else {
                     // no security config, let's work against an empty properties then
                     Resource layers = securityDir.get(propertyFileName);
                     if (layers.getType() == Type.UNDEFINED) {
                         // try to load a template and copy it over
-                        InputStream in =
-                                getClass().getResourceAsStream(propertyFileName + ".template");
-                        if (in != null) {
-                            IOUtils.copy(in, layers.out());
+                        try (InputStream in =
+                                getClass().getResourceAsStream(propertyFileName + ".template")) {
+                            if (in != null) {
+                                IOUtils.copy(in, layers.out());
+                            }
                         }
                     }
 
                     if (layers.getType() == Type.UNDEFINED) {
-                        this.rules = new TreeSet<R>();
+                        this.rules = new ConcurrentSkipListSet<>();
                     } else {
                         // ok, something is there, let's load it
                         watcher = new PropertyFileWatcher(layers);
-                        loadRules(watcher.getProperties());
+                        synchronized (this) {
+                            loadRules(watcher.getProperties());
+                        }
                     }
                 }
                 lastModified = System.currentTimeMillis();
             } else if (isModified()) {
-                loadRules(watcher.getProperties());
+                synchronized (this) {
+                    loadRules(watcher.getProperties());
+                }
                 lastModified = System.currentTimeMillis();
             }
         } catch (Exception e) {
@@ -212,7 +214,7 @@ public abstract class AbstractAccessRuleDAO<R extends Comparable<?>> {
         // regexp: treat extra spaces as separators, ignore extra commas
         // "a,,b, ,, c" --> ["a","b","c"]
         String[] rolesArray = roleCsv.split("[\\s,]+");
-        Set<String> roles = new HashSet<String>(rolesArray.length);
+        Set<String> roles = new HashSet<>(rolesArray.length);
         roles.addAll(Arrays.asList(rolesArray));
 
         // if any of the roles is * we just remove all of the others

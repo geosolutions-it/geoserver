@@ -4,7 +4,9 @@
  */
 package org.geoserver.config;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,13 +16,16 @@ import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogFactoryImpl;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geoserver.catalog.impl.StyleInfoImpl;
+import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geotools.styling.ExternalGraphic;
 import org.geotools.styling.PointSymbolizer;
 import org.geotools.styling.Style;
 import org.geotools.styling.Symbolizer;
 import org.geotools.util.Version;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.opengis.style.GraphicalSymbol;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
@@ -30,11 +35,22 @@ public class GeoServerDataDirectoryTest {
     ClassPathXmlApplicationContext ctx;
 
     GeoServerDataDirectory dataDir;
-    CatalogFactory factory = new CatalogFactoryImpl(new CatalogImpl());
+    static CatalogFactory factory;
+
+    @BeforeClass
+    public static void beforeClass() {
+        GeoServerExtensionsHelper.setIsSpringContext(false);
+        factory = new CatalogFactoryImpl(new CatalogImpl());
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        GeoServerExtensionsHelper.init(null);
+        factory = null;
+    }
 
     @Before
     public void setUp() throws Exception {
-
         ctx =
                 new ClassPathXmlApplicationContext(
                         "GeoServerDataDirectoryTest-applicationContext.xml", getClass());
@@ -86,7 +102,7 @@ public class GeoServerDataDirectoryTest {
         GraphicalSymbol graphic =
                 ((PointSymbolizer) symbolizer).getGraphic().graphicalSymbols().get(0);
         assertTrue(graphic instanceof ExternalGraphic);
-        assertEquals(((ExternalGraphic) graphic).getLocation(), iconFile.toURI().toURL());
+        assertEquals(iconFile.toURI().toURL(), ((ExternalGraphic) graphic).getLocation());
 
         // GEOS-7025: verify the icon file is not created if it doesn't already exist
         assertFalse(iconFile.exists());
@@ -133,8 +149,6 @@ public class GeoServerDataDirectoryTest {
     /**
      * Test loading a parsed style with an external graphic URL that contains both ?queryParams and
      * a URL #fragment, and assert that those URL components are preserved.
-     *
-     * @throws IOException
      */
     @Test
     public void testParsedStyleExternalWithParamsAndFragment() throws IOException {

@@ -40,7 +40,7 @@ public abstract class GeoServerPropertyFactoryBean<T> extends AbstractFactoryBea
     @Override
     protected T createInstance() throws Exception {
         String value = GeoServerExtensions.getProperty(propertyName, applicationContext);
-        Object[] logParams = new Object[] {propertyName, value, getDefaultValue()};
+        Object[] logParams = {propertyName, value, getDefaultValue()};
         if (value == null || value.isEmpty()) {
             LOGGER.log(
                     Level.INFO,
@@ -72,12 +72,7 @@ public abstract class GeoServerPropertyFactoryBean<T> extends AbstractFactoryBea
         return defaultBean;
     }
 
-    /**
-     * Create a bean based on the given property value
-     *
-     * @param propertyValue
-     * @return
-     */
+    /** Create a bean based on the given property value */
     protected abstract T createInstance(final String propertyValue) throws Exception;
 
     @Override

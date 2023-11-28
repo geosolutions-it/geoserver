@@ -1,4 +1,4 @@
-﻿
+
 <!-- 
  Copyright (C) 2014 - 2016 Open Source Geospatial Foundation. All rights reserved.
  This code is licensed under the GPL 2.0 license, available at the root
@@ -54,7 +54,9 @@
 	</bean>
 		
 	<bean id="wmsGetFeatureInfo"
-		class="org.geoserver.wms.GetFeatureInfo"/>
+		class="org.geoserver.wms.GetFeatureInfo">
+        <constructor-arg ref="wms"/>
+    </bean>
 		
 	<bean id="wmsGetLegendGraphic"
 		class="org.geoserver.wms.GetLegendGraphic">
@@ -108,7 +110,8 @@
 	<bean id="geoJSONFeatureInfoResponse"
 		class="org.geoserver.wms.featureinfo.GeoJSONFeatureInfoResponse">
 		<constructor-arg ref="wms" />
-		<constructor-arg value="application/json" />
+        <constructor-arg ref="resourceLoader"/>
+        <constructor-arg value="application/json" />
 	</bean>
         
 	<!-- wms service + descriptor -->
@@ -232,11 +235,7 @@
     <bean id="AnimatedGIFDelayKvpParser" class="org.geoserver.ows.kvp.IntegerKvpParser">
 		<constructor-arg value="animatedGIFDelay"/>
  	</bean>
- 	
- 	<bean id="AnimatedGIFLoopContinuoslyKvpParser" class="org.geoserver.ows.kvp.BooleanKvpParser">
-		<constructor-arg value="animatedGIFLoopContinuosly"/>
- 	</bean>
- 	
+    
  	<bean id="widthKvpParser" class="org.geoserver.ows.kvp.IntegerKvpParser">
 		<constructor-arg value="width"/>
  	</bean>
@@ -280,7 +279,7 @@
  	<bean id="validateSldKvpParser" class="org.geoserver.ows.kvp.BooleanKvpParser">
  		<constructor-arg value="validateschema"/>
  	</bean>
-    <bean id="sldKvpParser" class="org.geoserver.ows.kvp.URLKvpParser">
+    <bean id="sldKvpParser" class="org.geoserver.ows.kvp.URIKvpParser">
         <constructor-arg value="sld"/>
     </bean>
  	<bean id="startIndexKvpParser" class="org.geoserver.ows.kvp.IntegerKvpParser">
@@ -407,8 +406,14 @@
 		class="org.geoserver.wms.icons.IconService">
 		<constructor-arg ref="catalog" />
 	</bean>
-  
-	<!-- http url mapping -->
+
+    <!-- cite compliance hack -->
+    <bean id="wmsCiteComplianceHack" class="org.geoserver.ows.CiteComplianceHack">
+        <constructor-arg ref="geoServer"/>
+        <constructor-arg value="org.geoserver.wms.WMSInfo"/>
+    </bean>
+
+    <!-- http url mapping -->
 	<bean id="wmsURLMapping" 
 		class="org.geoserver.ows.OWSHandlerMapping">
 		<constructor-arg ref="catalog"/>
@@ -639,6 +644,7 @@
     </bean>
 
     <bean id="PDFMapProducer" class="org.geoserver.wms.map.PDFMapOutputFormat">
+      <constructor-arg index="0" ref="wms" />
     </bean>
     <bean id="PDFMapResponse" class="org.geoserver.wms.map.PDFMapResponse">
       <constructor-arg ref="wms" />
@@ -690,8 +696,6 @@
     </constructor-arg>
   </bean>
  		
-	<bean id="animateFilter" class="org.geoserver.wms.animate.AnimatorFilter"/>
- 	
 	<bean id="animateURLMapping" 
 		class="org.geoserver.ows.OWSHandlerMapping">
 		<constructor-arg ref="catalog"/>
@@ -843,5 +847,19 @@
   <bean id="UTFGridMapProducer" class="org.geoserver.wms.utfgrid.UTFGridMapOutputFormat">
     <constructor-arg ref="wms"/>
   </bean>
-    
+  
+  <bean id="clipWMSGetMapCallBack" class="org.geoserver.wms.clip.ClipWMSGetMapCallBack"/>
+
+    <bean id="wmsDefaultLocaleCallback" class="org.geoserver.wms.WMSDefaultLocaleCallback">
+        <constructor-arg ref="geoServer"/>
+    </bean>
+
+    <bean id="wmsCiteComplianceCallback" class="org.geoserver.wms.CiteComplianceCallback">
+        <constructor-arg ref="geoServer"/>
+    </bean>
+
+    <bean id="wmsFilterKvpParser" class="org.geoserver.wms.kvp.FilterKvpParser">
+        <constructor-arg ref="entityResolverProvider"/>
+        <property name="service"><value>WMS</value></property>
+    </bean>
 </beans>

@@ -6,7 +6,7 @@ package org.geoserver.rest;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -78,31 +78,32 @@ public class RestControllerAdvice extends ResponseEntityExceptionHandler {
 
         String quietOnNotFound =
                 request.getParameter("quietOnNotFound"); // yes this is seriously a thing
-        String message = e.getMessage();
+        String message = message(e);
         if (Boolean.parseBoolean(quietOnNotFound)) {
             message = "";
         } else {
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
+            LOGGER.log(Level.SEVERE, message, e);
         }
         response.setStatus(404);
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        StreamUtils.copy(message, Charset.forName("UTF-8"), os);
+        StreamUtils.copy(message, StandardCharsets.UTF_8, os);
     }
 
     @ExceptionHandler(RestException.class)
     public void handleRestException(
             RestException e, HttpServletResponse response, WebRequest request, OutputStream os)
             throws IOException {
-        LOGGER.log(Level.SEVERE, e.getMessage(), e);
+        String message = message(e);
+        LOGGER.log(Level.SEVERE, message, e);
         notifyExceptionToCallbacks(request, response, e);
 
         if (e.getStatus().is4xxClientError()) {
-            response.sendError(e.getStatus().value(), e.getMessage());
+            response.sendError(e.getStatus().value(), message(e));
         } else {
             response.setStatus(e.getStatus().value());
         }
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        StreamUtils.copy(e.getMessage(), Charset.forName("UTF-8"), os);
+        StreamUtils.copy(message, StandardCharsets.UTF_8, os);
     }
 
     @ExceptionHandler(Exception.class)
@@ -118,11 +119,25 @@ public class RestControllerAdvice extends ResponseEntityExceptionHandler {
                 || e instanceof AccessDeniedException) {
             throw e;
         }
-        LOGGER.log(Level.SEVERE, e.getMessage(), e);
+        String message = message(e);
+        LOGGER.log(Level.SEVERE, message, e);
         notifyExceptionToCallbacks(request, response, e);
 
         response.setStatus(500);
         response.setContentType(MediaType.TEXT_PLAIN_VALUE);
-        StreamUtils.copy(e.getMessage(), Charset.forName("UTF-8"), os);
+        StreamUtils.copy(message, StandardCharsets.UTF_8, os);
+    }
+
+    /**
+     * Null safe {@code e.getMessage()} lookup, will not return {@code null}.
+     *
+     * @return Exception message, or empty string if not provided.
+     */
+    String message(Exception e) {
+        if (e != null && e.getMessage() != null) {
+            return e.getMessage();
+        } else {
+            return "";
+        }
     }
 }

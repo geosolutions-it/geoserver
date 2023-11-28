@@ -6,7 +6,9 @@
 package org.geoserver.rest.catalog;
 
 import static org.geoserver.rest.RestBaseController.ROOT_PATH;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +20,14 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 public class TemplateControllerTest extends CatalogRESTTestSupport {
 
+    @Override
     public void setUpTestData(SystemTestData testData) throws Exception {
         super.setUpTestData(testData);
 
         testData.setUpDefaultRasterLayers();
     }
 
+    @Override
     @Before
     public void login() throws Exception {
         login("admin", "geoserver", "ROLE_ADMINISTRATOR");
@@ -184,5 +188,51 @@ public class TemplateControllerTest extends CatalogRESTTestSupport {
         // GET
         assertEquals(fooContent, getAsString(fooTemplate).trim());
         assertEquals(barContent, getAsString(barTemplate).trim());
+    }
+
+    @Test
+    public void testAllPathsSequentiallyForJson() throws Exception {
+        Random random = new Random();
+        for (String path : getAllJsonTemplatePaths()) {
+            testGetPutGetDeleteGet(path, "{key: a json template} " + random.nextInt(1000));
+        }
+    }
+
+    private List<String> getAllJsonTemplatePaths() {
+        List<String> paths = new ArrayList<>();
+
+        paths.add(ROOT_PATH + "/templates/aTemplate_json.ftl");
+        paths.add(ROOT_PATH + "/templates/anotherTemplate_json.ftl");
+
+        paths.add(ROOT_PATH + "/workspaces/topp/templates/aTemplate_json.ftl");
+        paths.add(ROOT_PATH + "/workspaces/topp/templates/anotherTemplate_json.ftl");
+
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/topp/datastores/states_shapefile/templates/aTemplate_json.ftl");
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/topp/datastores/states_shapefile/templates/anotherTemplate_json.ftl");
+
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/topp/datastores/states_shapefile/featuretypes/states/templates/aTemplate_json.ftl");
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/topp/datastores/states_shapefile/featuretypes/states/templates/anotherTemplate_json.ftl");
+
+        paths.add(ROOT_PATH + "/workspaces/wcs/coveragestores/DEM/templates/aTemplate_json.ftl");
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/wcs/coveragestores/DEM/templates/anotherTemplate_json.ftl");
+
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/wcs/coveragestores/DEM/coverages/tazdem.tiff/templates/aTemplate_json.ftl");
+        paths.add(
+                ROOT_PATH
+                        + "/workspaces/wcs/coveragestores/DEM/coverages/tazdem.tiff/templates/anotherTemplate_json.ftl");
+
+        return paths;
     }
 }

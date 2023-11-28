@@ -17,6 +17,7 @@ import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.gwc.GWC;
+import org.geoserver.gwc.GWCSynchEnv;
 import org.geoserver.gwc.config.GWCConfig;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geowebcache.GeoWebCacheException;
@@ -109,9 +110,7 @@ public class CatalogConfigurationLayerConformanceTest extends LayerConfiguration
 
             @Override
             public void seedTile(ConveyorTile tile, boolean tryCache)
-                    throws GeoWebCacheException, IOException {
-                return;
-            }
+                    throws GeoWebCacheException, IOException {}
 
             @Override
             public ConveyorTile doNonMetatilingRequest(ConveyorTile tile)
@@ -132,6 +131,8 @@ public class CatalogConfigurationLayerConformanceTest extends LayerConfiguration
 
     private GWC mediator;
 
+    private GWCSynchEnv synchEnv;
+
     private Catalog catalog;
 
     private File dataDir;
@@ -141,9 +142,12 @@ public class CatalogConfigurationLayerConformanceTest extends LayerConfiguration
         catalog = EasyMock.createMock("catalog", Catalog.class);
         gsBroker = EasyMock.createMock("gsBroker", GridSetBroker.class);
         mediator = EasyMock.createMock("mediator", GWC.class);
+        synchEnv = EasyMock.createMock("synchEnv", GWCSynchEnv.class);
 
-        mediator.syncEnv();
-        EasyMock.expectLastCall().anyTimes();
+        EasyMock.expect(mediator.getGwcSynchEnv()).andReturn(synchEnv).anyTimes();
+        synchEnv.syncEnv();
+        EasyMock.expectLastCall().andVoid().anyTimes();
+
         mediator.layerAdded(EasyMock.anyObject(String.class));
         EasyMock.expectLastCall().anyTimes();
         EasyMock.expect(mediator.layerRemoved(EasyMock.anyObject(String.class)))
@@ -151,9 +155,9 @@ public class CatalogConfigurationLayerConformanceTest extends LayerConfiguration
         mediator.layerRenamed(EasyMock.anyObject(String.class), EasyMock.anyObject(String.class));
         EasyMock.expectLastCall().anyTimes();
 
-        EasyMock.replay(catalog, gsBroker, mediator);
+        EasyMock.replay(catalog, gsBroker, mediator, synchEnv);
         context.addBean("mediator", mediator, GWC.class);
-        GWC.set(mediator);
+        GWC.set(mediator, synchEnv);
 
         gwcConfig = new GWCConfig();
         dataDir = temp.newFolder();
@@ -162,13 +166,14 @@ public class CatalogConfigurationLayerConformanceTest extends LayerConfiguration
                 new XMLConfiguration(
                         context.getContextProvider(), (ConfigurationResourceProvider) null);
         TileLayerCatalog tlCatalog = new DefaultTileLayerCatalog(resourceLoader, xmlConfig);
+        tlCatalog.initialize();
 
         return new CatalogConfiguration(catalog, tlCatalog, gsBroker);
     }
 
     @After
     public void removeMediator() throws Exception {
-        GWC.set(null);
+        GWC.set(null, null);
     }
 
     @Override
@@ -179,7 +184,7 @@ public class CatalogConfigurationLayerConformanceTest extends LayerConfiguration
                 new XMLConfiguration(
                         context.getContextProvider(), (ConfigurationResourceProvider) null);
         TileLayerCatalog tlCatalog = new DefaultTileLayerCatalog(resourceLoader, xmlConfig);
-
+        tlCatalog.initialize();
         return new CatalogConfiguration(catalog, tlCatalog, gsBroker);
     }
 

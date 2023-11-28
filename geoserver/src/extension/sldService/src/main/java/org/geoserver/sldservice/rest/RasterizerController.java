@@ -94,13 +94,12 @@ public class RasterizerController extends BaseSLDServiceController {
     }
 
     @GetMapping(
-        path = "/{layerName}/rasterize",
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            path = "/{layerName}/rasterize",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public Object rasterize(
             @PathVariable String layerName,
             @RequestParam(value = "min", required = false, defaultValue = DEFAULT_MIN) double min,
@@ -125,7 +124,7 @@ public class RasterizerController extends BaseSLDServiceController {
                             .getHeaderValue());
         }
         if (layerName == null) {
-            return wrapList(new ArrayList(), ArrayList.class);
+            return wrapList(new ArrayList<>(), ArrayList.class);
         }
 
         int colormapType = DEFAULT_TYPE;
@@ -196,26 +195,17 @@ public class RasterizerController extends BaseSLDServiceController {
             }
         }
 
-        return wrapList(new ArrayList(), ArrayList.class);
+        return wrapList(new ArrayList<>(), ArrayList.class);
     }
 
     @ResponseStatus(
-        value = HttpStatus.EXPECTATION_FAILED,
-        reason = "RasterSymbolizer SLD expected!"
-    )
+            value = HttpStatus.EXPECTATION_FAILED,
+            reason = "RasterSymbolizer SLD expected!")
     private class InvalidSymbolizer extends RuntimeException {
         private static final long serialVersionUID = 5453377766415209696L;
     }
 
-    /**
-     * @param defaultStyle
-     * @param rasterSymbolizer
-     * @param layerName
-     * @param midColor
-     * @param endColor
-     * @param startColor
-     * @throws Exception
-     */
+    /** */
     private Style remapStyle(
             StyleInfo defaultStyle,
             RasterSymbolizer rasterSymbolizer,
@@ -286,7 +276,7 @@ public class RasterizerController extends BaseSLDServiceController {
             }
             colorRamp.setNumClasses(classes);
 
-            List<Color> realColorRamp = new ArrayList<Color>();
+            List<Color> realColorRamp = new ArrayList<>();
             realColorRamp.add(Color.BLACK);
             realColorRamp.addAll(colorRamp.getRamp());
 
@@ -300,7 +290,7 @@ public class RasterizerController extends BaseSLDServiceController {
         }
 
         rasterSymbolizer.setColorMap(resampledColorMap);
-        Style style = sb.createStyle(layerName, rasterSymbolizer);
+        Style style = sb.createStyle("Feature", rasterSymbolizer);
 
         return style;
     }

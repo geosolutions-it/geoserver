@@ -4,14 +4,20 @@ info:
   version: 1.0.0
   title: GeoWebCache GridSets
   description: A Grid Set is a set of tile grids associated with a coordinate reference system. 
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
 schemes:
 - http
-host: localhost:8080
 basePath: /geoserver/gwc/rest
 paths:
   /gridsets:
     get:
       operationId: gridsetsGet
+      tags:
+       - "GwcGridSets"
       summary: Get a list of configured gridsets
       description: Displays a list of all configured gridsets on the server.
       produces:
@@ -54,6 +60,8 @@ paths:
   /gridsets/{gridsetName}:
     get:
       operationId: gridsetGet
+      tags:
+       - "GwcGridSets"
       summary: Retrieve a configured gridset
       description: Retrieves a single configured gridset definition.
       produces:
@@ -146,6 +154,8 @@ paths:
 
     put:
       operationId: gridsetPut
+      tags:
+       - "GwcGridSets"
       summary: Create or update a configured gridset.
       description: Creates a new configured gridset on the server, or modifies an existing gridset.
       parameters:
@@ -170,6 +180,8 @@ paths:
           description: The gridset was successfully created.
     delete:
       operationId: gridsetDelete
+      tags:
+       - "GwcGridSets"
       summary: Delete configured gridset
       description: Deletes a configured gridset from the server.
       parameters:

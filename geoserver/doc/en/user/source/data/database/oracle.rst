@@ -14,25 +14,11 @@ Oracle
 Installing the Oracle extension
 -------------------------------
 
-.. warning:: Due to licensing requirements, not all files are included with the extension.  To install Oracle support, it is necessary to download additional files. 
+#. Visit the :website:`website download <download>` page, locate your release, and download: :download_extension:`oracle`
+   
+   .. warning:: Ensure to match plugin (example |release| above) version to the version of the GeoServer instance.
 
-#. Download the Oracle extension from the `GeoServer download page <http://geoserver.org/download>`_.
-
-   .. warning:: Make sure to match the version of the extension to the version of the GeoServer instance!
-
-#. Extract the contents of the archive into the ``WEB-INF/lib`` directory of the GeoServer installation.
-
-#. Get the Oracle JDBC driver from either your Oracle installation (e.g. ``ojdbc6.jar``, ``ojdbc7.jar``)
-   or download them from `the Oracle JDBC driver distribution page <http://www.oracle.com/technetwork/database/features/jdbc/index-091264.html>`_
-
-Consider replacing the Oracle JDBC driver
------------------------------------------
-
-The Oracle data store zip file comes with ``ojdbc4.jar``, an old, Oracle 10 compatible JDBC driver that normally works fine with 11g as well.
-However, minor glitches have been observed with 11g (issues computing layer bounds when session initiation scripts are in use) and the driver
-has not been tested with 12i.
-
-If you encounter functionality or performance issues it is advised to remove this driver and download the latest version from the Oracle web site.
+#. Extract the contents of the archive into the :file:`WEB-INF/lib` directory of the GeoServer installation.
 
 Adding an Oracle datastore
 --------------------------
@@ -79,8 +65,10 @@ Configuring an Oracle datastore
    * - ``Loose bbox``
      - 	Controls how bounding box filters are made against geometries in the database. See the :ref:`oracle_loose_bbox` section below.
    * - ``Metadata bbox``
-     - 	Flag controlling the use of MDSYS.USER_SDO_GEOM_METADATA or MDSYS.ALL_SDO_GEOM_METADATA table for bounding box calculations, this brings a better performance if the views access is fast and the bounds are configured right in the tables default is false  
-
+     - 	Flag controlling the use of MDSYS.USER_SDO_GEOM_METADATA or MDSYS.ALL_SDO_GEOM_METADATA table for bounding box calculations, this brings a better performance if the views access is fast and the bounds are configured right in the tables default is false
+   * -  ``Get remarks``
+     -  Boolean flag specifies whether REMARKS metadata will be returned.
+     
 Connecting to an Oracle cluster
 -------------------------------
 

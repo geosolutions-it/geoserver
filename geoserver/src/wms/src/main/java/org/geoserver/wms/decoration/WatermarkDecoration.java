@@ -7,7 +7,6 @@ package org.geoserver.wms.decoration;
 
 import static org.geoserver.wms.decoration.MapDecorationLayout.getOption;
 
-import java.awt.*;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Composite;
@@ -45,8 +44,7 @@ public class WatermarkDecoration implements MapDecoration {
     private float opacity = 1.0f;
 
     /** Transient cache to avoid reloading the same file over and over */
-    private static final Map<URL, LogoCacheEntry> logoCache =
-            new SoftValueHashMap<URL, LogoCacheEntry>();
+    private static final Map<URL, LogoCacheEntry> logoCache = new SoftValueHashMap<>();
 
     @Override
     public void loadOptions(Map<String, Expression> options) {
@@ -62,6 +60,7 @@ public class WatermarkDecoration implements MapDecoration {
         }
     }
 
+    @Override
     public Dimension findOptimalSize(Graphics2D g2d, WMSMapContent mapContent) {
         try {
             BufferedImage logo = getLogo();
@@ -71,15 +70,8 @@ public class WatermarkDecoration implements MapDecoration {
         }
     }
 
-    /**
-     * Print the WaterMarks into the graphic2D.
-     *
-     * @param g2D
-     * @param paintArea
-     * @throws IOException
-     * @throws ClassCastException
-     * @throws MalformedURLException
-     */
+    /** Print the WaterMarks into the graphic2D. */
+    @Override
     public void paint(Graphics2D g2D, Rectangle paintArea, WMSMapContent mapContent)
             throws MalformedURLException, ClassCastException, IOException {
         BufferedImage logo = getLogo();

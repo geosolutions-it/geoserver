@@ -55,11 +55,7 @@ public class SampleDataAccessMockData extends SystemTestData {
     /** the 'featureTypes' directory, under 'data' */
     File featureTypes;
 
-    /**
-     * Constructor. Creates empty mock data directory.
-     *
-     * @throws IOException
-     */
+    /** Constructor. Creates empty mock data directory. */
     public SampleDataAccessMockData() throws IOException {
         data = IOUtils.createRandomDirectory("./target", "sample-data-access-mock", "data");
         data.delete();
@@ -86,6 +82,7 @@ public class SampleDataAccessMockData extends SystemTestData {
      *
      * @see org.geoserver.data.test.TestData#getDataDirectoryRoot()
      */
+    @Override
     public File getDataDirectoryRoot() {
         return data;
     }
@@ -95,6 +92,7 @@ public class SampleDataAccessMockData extends SystemTestData {
      *
      * @see org.geoserver.data.test.TestData#isTestDataAvailable()
      */
+    @Override
     public boolean isTestDataAvailable() {
         return true;
     }
@@ -104,6 +102,8 @@ public class SampleDataAccessMockData extends SystemTestData {
      *
      * @see org.geoserver.data.test.TestData#setUp()
      */
+    @Override
+    @SuppressWarnings("PMD.JUnit4TestShouldUseBeforeAnnotation")
     public void setUp() throws Exception {
         setUpCatalog();
         copyTo(MockData.class.getResourceAsStream("services.xml"), "services.xml");
@@ -119,16 +119,14 @@ public class SampleDataAccessMockData extends SystemTestData {
      *
      * @see org.geoserver.data.test.TestData#tearDown()
      */
+    @Override
+    @SuppressWarnings("PMD.JUnit4TestShouldUseAfterAnnotation")
     public void tearDown() throws Exception {
         IOUtils.delete(data);
         data = null;
     }
 
-    /**
-     * Writes catalog.xml to the data directory.
-     *
-     * @throws IOException
-     */
+    /** Writes catalog.xml to the data directory. */
     @SuppressWarnings("serial")
     protected void setUpCatalog() throws IOException {
         CatalogWriter writer = new CatalogWriter();
@@ -166,21 +164,16 @@ public class SampleDataAccessMockData extends SystemTestData {
      * @param input source from which file content is copied
      * @param location path relative to mock data directory
      */
+    @Override
     public void copyTo(InputStream input, String location) throws IOException {
         IOUtils.copy(input, new File(getDataDirectoryRoot(), location));
     }
 
-    /**
-     * Stolen from {@link MockData}.
-     *
-     * @param name
-     * @param extraParams
-     * @throws IOException
-     */
+    /** Stolen from {@link MockData}. */
     public void info(String datastore, String prefix, String type) throws IOException {
 
         // prepare extra params default
-        Map<String, Object> params = new HashMap<String, Object>();
+        Map<String, Object> params = new HashMap<>();
         params.put(KEY_STYLE, "Default");
         params.put(KEY_SRS_HANDLINGS, 2);
         params.put(KEY_ALIAS, null);
@@ -196,53 +189,53 @@ public class SampleDataAccessMockData extends SystemTestData {
         info.delete();
         info.createNewFile();
 
-        FileWriter writer = new FileWriter(info);
-        writer.write("<featureType datastore=\"" + datastore + "\">");
-        writer.write("<name>" + type + "</name>");
-        if (params.get(KEY_ALIAS) != null)
-            writer.write("<alias>" + params.get(KEY_ALIAS) + "</alias>");
-        writer.write("<SRS>" + params.get(KEY_SRS_NUMBER) + "</SRS>");
-        // this mock type may have wrong SRS compared to the actual one in the property files...
-        // let's configure SRS handling not to alter the original one, and have 4326 used only
-        // for capabilities
-        writer.write("<SRSHandling>" + params.get(KEY_SRS_HANDLINGS) + "</SRSHandling>");
-        writer.write("<title>" + type + "</title>");
-        writer.write("<abstract>abstract about " + type + "</abstract>");
-        writer.write("<numDecimals value=\"8\"/>");
-        writer.write("<keywords>" + type + "</keywords>");
-        Envelope llEnvelope = (Envelope) params.get(KEY_LL_ENVELOPE);
-        if (llEnvelope == null) llEnvelope = DEFAULT_ENVELOPE;
-        writer.write(
-                "<latLonBoundingBox dynamic=\"false\" minx=\""
-                        + llEnvelope.getMinX()
-                        + "\" miny=\""
-                        + llEnvelope.getMinY()
-                        + "\" maxx=\""
-                        + llEnvelope.getMaxX()
-                        + "\" maxy=\""
-                        + llEnvelope.getMaxY()
-                        + "\"/>");
-
-        Envelope nativeEnvelope = (Envelope) params.get(KEY_NATIVE_ENVELOPE);
-        if (nativeEnvelope != null)
+        try (FileWriter writer = new FileWriter(info)) {
+            writer.write("<featureType datastore=\"" + datastore + "\">");
+            writer.write("<name>" + type + "</name>");
+            if (params.get(KEY_ALIAS) != null)
+                writer.write("<alias>" + params.get(KEY_ALIAS) + "</alias>");
+            writer.write("<SRS>" + params.get(KEY_SRS_NUMBER) + "</SRS>");
+            // this mock type may have wrong SRS compared to the actual one in the property files...
+            // let's configure SRS handling not to alter the original one, and have 4326 used only
+            // for capabilities
+            writer.write("<SRSHandling>" + params.get(KEY_SRS_HANDLINGS) + "</SRSHandling>");
+            writer.write("<title>" + type + "</title>");
+            writer.write("<abstract>abstract about " + type + "</abstract>");
+            writer.write("<numDecimals value=\"8\"/>");
+            writer.write("<keywords>" + type + "</keywords>");
+            Envelope llEnvelope = (Envelope) params.get(KEY_LL_ENVELOPE);
+            if (llEnvelope == null) llEnvelope = DEFAULT_ENVELOPE;
             writer.write(
-                    "<nativeBBox dynamic=\"false\" minx=\""
-                            + nativeEnvelope.getMinX()
+                    "<latLonBoundingBox dynamic=\"false\" minx=\""
+                            + llEnvelope.getMinX()
                             + "\" miny=\""
-                            + nativeEnvelope.getMinY()
+                            + llEnvelope.getMinY()
                             + "\" maxx=\""
-                            + nativeEnvelope.getMaxX()
+                            + llEnvelope.getMaxX()
                             + "\" maxy=\""
-                            + nativeEnvelope.getMaxY()
+                            + llEnvelope.getMaxY()
                             + "\"/>");
 
-        String style = (String) params.get(KEY_STYLE);
-        if (style == null) style = "Default";
-        writer.write("<styles default=\"" + style + "\"/>");
+            Envelope nativeEnvelope = (Envelope) params.get(KEY_NATIVE_ENVELOPE);
+            if (nativeEnvelope != null)
+                writer.write(
+                        "<nativeBBox dynamic=\"false\" minx=\""
+                                + nativeEnvelope.getMinX()
+                                + "\" miny=\""
+                                + nativeEnvelope.getMinY()
+                                + "\" maxx=\""
+                                + nativeEnvelope.getMaxX()
+                                + "\" maxy=\""
+                                + nativeEnvelope.getMaxY()
+                                + "\"/>");
 
-        writer.write("</featureType>");
+            String style = (String) params.get(KEY_STYLE);
+            if (style == null) style = "Default";
+            writer.write("<styles default=\"" + style + "\"/>");
 
-        writer.flush();
-        writer.close();
+            writer.write("</featureType>");
+
+            writer.flush();
+        }
     }
 }

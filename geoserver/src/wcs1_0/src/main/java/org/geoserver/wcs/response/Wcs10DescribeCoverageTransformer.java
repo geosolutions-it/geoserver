@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +50,6 @@ import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
 import org.opengis.coverage.grid.GridEnvelope;
 import org.opengis.coverage.grid.GridGeometry;
-import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.vfny.geoserver.util.ResponseUtils;
 import org.vfny.geoserver.wcs.WcsException;
@@ -76,7 +74,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
 
     private static final String XSI_URI = "http://www.w3.org/2001/XMLSchema-instance";
 
-    private static final Map<String, String> METHOD_NAME_MAP = new HashMap<String, String>();
+    private static final Map<String, String> METHOD_NAME_MAP = new HashMap<>();
 
     private final boolean skipMisconfigured;
 
@@ -98,6 +96,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
         setNamespaceDeclarationEnabled(false);
     }
 
+    @Override
     public Translator createTranslator(ContentHandler handler) {
         return new WCS100DescribeCoverageTranslator(handler);
     }
@@ -119,6 +118,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
          * @param o The Object to encode.
          * @throws IllegalArgumentException if the Object is not encodeable.
          */
+        @Override
         public void encode(Object o) throws IllegalArgumentException {
             // try {
             if (!(o instanceof DescribeCoverageType)) {
@@ -169,9 +169,9 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             } else {
                 skipMisconfiguredThisTime =
                         false; // NEVER skip layers when the user requested specific ones
-                coverages = new ArrayList<CoverageInfo>();
-                for (Iterator it = request.getCoverage().iterator(); it.hasNext(); ) {
-                    String coverageId = (String) it.next();
+                coverages = new ArrayList<>();
+                for (Object value : request.getCoverage()) {
+                    String coverageId = (String) value;
                     // check the coverage is known
                     LayerInfo layer = catalog.getLayerByName(coverageId);
                     if (layer == null || layer.getType() != PublishedType.RASTER) {
@@ -183,8 +183,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
                     coverages.add(catalog.getCoverageByName(coverageId));
                 }
             }
-            for (Iterator it = coverages.iterator(); it.hasNext(); ) {
-                CoverageInfo coverage = (CoverageInfo) it.next();
+            for (CoverageInfo coverage : coverages) {
                 try {
                     mark();
                     handleCoverageOffering(coverage);
@@ -250,10 +249,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             }
         }
 
-        /**
-         * @param lonLatEnvelope
-         * @throws IOException
-         */
+        /** */
         private void handleLonLatEnvelope(CoverageInfo ci, ReferencedEnvelope referencedEnvelope)
                 throws IOException {
 
@@ -316,8 +312,8 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             start("wcs:keywords");
 
             if (kwords != null) {
-                for (Iterator it = kwords.iterator(); it.hasNext(); ) {
-                    element("wcs:keyword", it.next().toString());
+                for (Object kword : kwords) {
+                    element("wcs:keyword", kword.toString());
                 }
             }
 
@@ -361,13 +357,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             end("wcs:domainSet");
         }
 
-        /**
-         * @param referencedEnvelope
-         * @param elevationMetadata
-         * @param timeMetadata
-         * @param set2
-         * @param set
-         */
+        /** */
         private void handleBoundingBox(
                 String srsName,
                 ReferencedEnvelope referencedEnvelope,
@@ -408,11 +398,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             }
         }
 
-        /**
-         * @param ci
-         * @param timeMetadata
-         * @param elevationMetadata
-         */
+        /** */
         private void handleTemporalDomain(
                 CoverageInfo ci, DimensionInfo timeInfo, ReaderDimensionsAccessor dimensions)
                 throws IOException {
@@ -456,10 +442,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             end("wcs:temporalDomain");
         }
 
-        /**
-         * @param ci
-         * @param elevationMetadata
-         */
+        /** */
         private void handleGrid(CoverageInfo ci) throws Exception {
             final GridGeometry originalGrid = ci.getGrid();
             final GridEnvelope gridRange = originalGrid.getGridRange();
@@ -520,11 +503,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             end("gml:RectifiedGrid");
         }
 
-        /**
-         * @param ci
-         * @param field
-         * @throws IOException
-         */
+        /** */
         private void handleRange(CoverageInfo ci) throws IOException {
             // rangeSet
             start("wcs:rangeSet");
@@ -591,11 +570,12 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
                     TreeSet<Object> rawElevations = dimensions.getElevationDomain();
                     // we cannot expose ranges, so if we find them, we turn them into
                     // their mid point
-                    TreeSet<Double> elevations = new TreeSet<Double>();
+                    TreeSet<Double> elevations = new TreeSet<>();
                     for (Object raw : rawElevations) {
                         if (raw instanceof Double) {
                             elevations.add((Double) raw);
                         } else {
+                            @SuppressWarnings("unchecked")
                             NumberRange<Double> range = (NumberRange<Double>) raw;
                             double midValue = (range.getMinimum() + range.getMaximum()) / 2;
                             elevations.add(midValue);
@@ -619,25 +599,16 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
 
         /** @param ci */
         private void handleSupportedCRSs(CoverageInfo ci) throws Exception {
-            Set supportedCRSs = new LinkedHashSet();
+            Set<String> supportedCRSs = new LinkedHashSet<>();
             if (ci.getRequestSRS() != null) supportedCRSs.addAll(ci.getRequestSRS());
             if (ci.getResponseSRS() != null) supportedCRSs.addAll(ci.getResponseSRS());
             start("wcs:supportedCRSs");
-            for (Iterator it = supportedCRSs.iterator(); it.hasNext(); ) {
-                String crsName = (String) it.next();
+            for (String crsName : supportedCRSs) {
                 CoordinateReferenceSystem crs = CRS.decode(crsName, true);
                 // element("requestResponseCRSs", urnIdentifier(crs));
                 element("wcs:requestResponseCRSs", CRS.lookupIdentifier(crs, false));
             }
             end("wcs:supportedCRSs");
-        }
-
-        private String urnIdentifier(final CoordinateReferenceSystem crs) throws FactoryException {
-            String authorityAndCode = CRS.lookupIdentifier(crs, false);
-            String code = authorityAndCode.substring(authorityAndCode.lastIndexOf(":") + 1);
-            // we don't specify the version, but we still need to put a space
-            // for it in the urn form, that's why we have :: before the code
-            return "urn:ogc:def:crs:EPSG::" + code;
         }
 
         /** @param ci */
@@ -652,14 +623,13 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
             attributes.addAttribute("", "nativeFormat", "nativeFormat", "", nativeFormat);
 
             // gather all the formats for this coverage
-            Set<String> formats = new HashSet<String>();
-            for (Iterator it = ci.getSupportedFormats().iterator(); it.hasNext(); ) {
-                String format = (String) it.next();
+            Set<String> formats = new HashSet<>();
+            for (String format : ci.getSupportedFormats()) {
                 formats.add(format);
             }
             // sort them
             start("wcs:supportedFormats", attributes);
-            List<String> sortedFormats = new ArrayList<String>(formats);
+            List<String> sortedFormats = new ArrayList<>(formats);
             Collections.sort(sortedFormats);
             for (String format : sortedFormats) {
                 element("wcs:formats", format.equalsIgnoreCase("GEOTIFF") ? "GeoTIFF" : format);
@@ -679,8 +649,7 @@ public class Wcs10DescribeCoverageTransformer extends TransformerBase {
                 start("wcs:supportedInterpolations");
             }
 
-            for (Iterator it = ci.getInterpolationMethods().iterator(); it.hasNext(); ) {
-                String method = (String) it.next();
+            for (String method : ci.getInterpolationMethods()) {
                 if (method != null) element("wcs:interpolationMethod", method);
             }
             end("wcs:supportedInterpolations");

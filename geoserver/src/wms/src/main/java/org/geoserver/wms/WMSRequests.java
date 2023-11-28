@@ -56,7 +56,6 @@ public class WMSRequests {
      * @param layerIndex The index of the layer in the request
      * @param bbox The bounding box of the request, may be <code>null</code>.
      * @param kvp Additional or overidding kvp parameters, may be <code>null</code>
-     * @param geoserver
      * @return The full url for a getMap request.
      */
     public static String getTiledGetMapUrl(
@@ -192,7 +191,7 @@ public class WMSRequests {
      */
     public static String getGetLegendGraphicUrl(WMSRequest req, Layer[] layers, String[] kvp) {
         // parameters
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, String> params = new HashMap<>();
 
         params.put("service", "wms");
         params.put("request", "GetLegendGraphic");
@@ -231,7 +230,6 @@ public class WMSRequests {
     }
 
     /** Helper method for encoding GetMap request parameters. */
-    @SuppressWarnings({"rawtypes", "unchecked"})
     static LinkedHashMap<String, String> getGetMapParams(
             GetMapRequest req,
             String layer,
@@ -240,7 +238,7 @@ public class WMSRequests {
             Envelope bbox,
             String[] kvp) {
         // parameters
-        LinkedHashMap<String, String> params = new LinkedHashMap<String, String>();
+        LinkedHashMap<String, String> params = new LinkedHashMap<>();
 
         params.put("service", "wms");
         params.put("request", "GetMap");
@@ -283,7 +281,7 @@ public class WMSRequests {
             // no layer specified, use layers+styles specified by request
             for (int i = 0; i < req.getLayers().size(); i++) {
                 MapLayerInfo mapLayer = req.getLayers().get(i);
-                Style s = (Style) req.getStyles().get(0);
+                Style s = req.getStyles().get(0);
 
                 layers.append(mapLayer.getName()).append(",");
                 styles.append(s.getName()).append(",");
@@ -317,26 +315,25 @@ public class WMSRequests {
             if (req.getRawKvp().get("filter") != null) {
                 // split out the filter we need
                 List filters =
-                        KvpUtils.readFlat(
-                                (String) req.getRawKvp().get("filter"), KvpUtils.OUTER_DELIMETER);
+                        KvpUtils.readFlat(req.getRawKvp().get("filter"), KvpUtils.OUTER_DELIMETER);
                 params.put("filter", (String) filters.get(index));
             } else if (req.getRawKvp().get("cql_filter") != null) {
                 // split out the filter we need
                 List filters =
                         KvpUtils.readFlat(
-                                (String) req.getRawKvp().get("cql_filter"), KvpUtils.CQL_DELIMITER);
+                                req.getRawKvp().get("cql_filter"), KvpUtils.CQL_DELIMITER);
                 params.put("cql_filter", (String) filters.get(index));
             } else if (req.getRawKvp().get("featureid") != null) {
                 // semantics of feature id slightly different, replicate entire value
                 params.put("featureid", req.getRawKvp().get("featureid"));
             }
-            if (!StringUtils.isEmpty(kvpMap.get("interpolations"))) {
+            if (StringUtils.hasText(kvpMap.get("interpolations"))) {
                 List<String> interpolations = KvpUtils.readFlat(kvpMap.get("interpolations"));
                 if (!interpolations.get(index).isEmpty()) {
                     params.put("interpolations", interpolations.get(index));
                 }
             }
-            if (!StringUtils.isEmpty(kvpMap.get("sortby"))) {
+            if (StringUtils.hasText(kvpMap.get("sortby"))) {
                 List<String> sortBy =
                         KvpUtils.readFlat(kvpMap.get("sortby"), KvpUtils.OUTER_DELIMETER);
                 if (!sortBy.get(index).isEmpty()) {
@@ -353,10 +350,10 @@ public class WMSRequests {
             } else if (req.getRawKvp().get("featureid") != null) {
                 params.put("featureid", req.getRawKvp().get("featureid"));
             }
-            if (!StringUtils.isEmpty(kvpMap.get("interpolations"))) {
+            if (StringUtils.hasText(kvpMap.get("interpolations"))) {
                 params.put("interpolations", kvpMap.get("interpolations"));
             }
-            if (!StringUtils.isEmpty(kvpMap.get("sortby"))) {
+            if (StringUtils.hasText(kvpMap.get("sortby"))) {
                 params.put("sortby", kvpMap.get("sortby"));
             }
         }
@@ -367,8 +364,7 @@ public class WMSRequests {
         if (kvpMap.get("elevation") != null) {
             params.put("elevation", kvpMap.get("elevation"));
         }
-        kvpMap.entrySet()
-                .stream()
+        kvpMap.entrySet().stream()
                 .filter(e -> e.getKey().toLowerCase().startsWith("dim_"))
                 .forEach(e -> params.put(e.getKey().toLowerCase(), e.getValue()));
 
@@ -402,7 +398,7 @@ public class WMSRequests {
         if (propertyName != null && !propertyName.isEmpty()) {
             params.put("propertyName", propertyName);
         }
-        if (!StringUtils.isEmpty(kvpMap.get("bgcolor"))) {
+        if (StringUtils.hasText(kvpMap.get("bgcolor"))) {
             params.put("bgcolor", kvpMap.get("bgcolor"));
         }
         if (!req.getExceptions().equals(GetMapRequest.SE_XML)) {
@@ -488,7 +484,6 @@ public class WMSRequests {
      * @return the layer index in the raw layers list
      * @throws IllegalArgumentException if unable to determine the raw layer index
      */
-    @SuppressWarnings("unchecked")
     private static int getRawLayerIndex(GetMapRequest req, int layerIndex) {
         List<String> names = KvpUtils.readFlat(req.getRawKvp().get("layers"));
         if (names.size() == 1) {
@@ -521,8 +516,6 @@ public class WMSRequests {
      * Copy the Entry matching the key from the kvp map and put it into the formatOptions map. If a
      * parameter is already present in formatOption map its value will be preserved.
      *
-     * @param kvp
-     * @param formatOptions
      * @param key the key to parse
      * @throws Exception - In the event of an unsuccesful parse.
      */
@@ -568,8 +561,8 @@ public class WMSRequests {
             return;
         }
 
-        for (Iterator e = formatOptions.entrySet().iterator(); e.hasNext(); ) {
-            Map.Entry entry = (Map.Entry) e.next();
+        for (Object value : formatOptions.entrySet()) {
+            Map.Entry entry = (Map.Entry) value;
             String key = (String) entry.getKey();
             Object val = entry.getValue();
 
@@ -662,7 +655,7 @@ public class WMSRequests {
         }
 
         @Override
-        protected List<?> parseLayers(
+        protected List<Object> parseLayers(
                 List<String> requestedLayerNames, URL remoteOwsUrl, String remoteOwsType) {
             try {
                 return super.parseLayers(requestedLayerNames, remoteOwsUrl, remoteOwsType);

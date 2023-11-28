@@ -4,8 +4,10 @@
  */
 package org.geoserver.wms.web.data;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -109,7 +111,7 @@ public class StylePageSecurityTest extends GeoServerWicketTestSupport {
         form.submit();
 
         tester.assertRenderedPage(StyleNewPage.class);
-        tester.executeAjaxEvent("submit", "click");
+        tester.executeAjaxEvent("save", "click");
 
         tester.assertRenderedPage(StylePage.class);
 
@@ -139,7 +141,7 @@ public class StylePageSecurityTest extends GeoServerWicketTestSupport {
         form.submit();
 
         tester.assertRenderedPage(StyleNewPage.class);
-        tester.executeAjaxEvent("submit", "click");
+        tester.executeAjaxEvent("save", "click");
 
         tester.assertErrorMessages("Field 'Workspace' is required.");
 

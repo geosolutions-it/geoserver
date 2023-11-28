@@ -8,15 +8,15 @@ package org.geoserver.web.data.store;
 import static org.geoserver.catalog.Predicates.sortBy;
 
 import com.google.common.collect.Lists;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.wicket.extensions.markup.html.repeater.util.SortParam;
+import org.apache.wicket.model.AbstractReadOnlyModel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.LoadableDetachableModel;
-import org.apache.wicket.model.Model;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.DataStoreInfo;
@@ -28,6 +28,7 @@ import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.catalog.util.CloseableIteratorAdapter;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.wicket.GeoServerDataProvider;
+import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 import org.geotools.data.DataAccessFactory;
 import org.geotools.factory.CommonFactoryFinder;
 import org.opengis.coverage.grid.Format;
@@ -42,38 +43,40 @@ public class StoreProvider extends GeoServerDataProvider<StoreInfo> {
     static final Property<StoreInfo> DATA_TYPE =
             new AbstractProperty<StoreInfo>("datatype") {
 
-                public IModel getModel(final IModel itemModel) {
-                    return new Model(itemModel) {
+                @Override
+                public IModel<String> getModel(final IModel<StoreInfo> itemModel) {
+                    return new AbstractReadOnlyModel<String>() {
 
                         @Override
-                        public Serializable getObject() {
-                            StoreInfo si = (StoreInfo) itemModel.getObject();
+                        public String getObject() {
+                            StoreInfo si = itemModel.getObject();
                             return (String) getPropertyValue(si);
                         }
                     };
                 }
 
+                @Override
                 public Object getPropertyValue(StoreInfo item) {
                     if (item instanceof DataStoreInfo) return "vector";
                     else return "raster";
                 }
             };
 
-    static final Property<StoreInfo> WORKSPACE =
-            new BeanProperty<StoreInfo>("workspace", "workspace.name");
+    static final Property<StoreInfo> WORKSPACE = new BeanProperty<>("workspace", "workspace.name");
 
-    static final Property<StoreInfo> NAME = new BeanProperty<StoreInfo>("name", "name");
+    static final Property<StoreInfo> NAME = new BeanProperty<>("name", "name");
 
-    final Property<StoreInfo> TYPE =
+    static final Property<StoreInfo> TYPE =
             new AbstractProperty<StoreInfo>("type") {
 
+                @Override
                 public Object getPropertyValue(StoreInfo item) {
                     String type = item.getType();
                     if (type != null) {
                         return type;
                     }
                     try {
-                        ResourcePool resourcePool = getCatalog().getResourcePool();
+                        ResourcePool resourcePool = item.getCatalog().getResourcePool();
                         if (item instanceof DataStoreInfo) {
                             DataStoreInfo dsInfo = (DataStoreInfo) item;
                             DataAccessFactory factory = resourcePool.getDataStoreFactory(dsInfo);
@@ -94,9 +97,15 @@ public class StoreProvider extends GeoServerDataProvider<StoreInfo> {
                 }
             };
 
-    static final Property<StoreInfo> ENABLED = new BeanProperty<StoreInfo>("enabled", "enabled");
+    static final Property<StoreInfo> ENABLED = new BeanProperty<>("enabled", "enabled");
 
-    final List<Property<StoreInfo>> PROPERTIES =
+    static final Property<StoreInfo> MODIFIED_TIMESTAMP =
+            new BeanProperty<>("datemodfied", "dateModified");
+
+    static final Property<StoreInfo> CREATED_TIMESTAMP =
+            new BeanProperty<>("datecreated", "dateCreated");
+
+    static final List<Property<StoreInfo>> PROPERTIES =
             Arrays.asList(DATA_TYPE, WORKSPACE, NAME, TYPE, ENABLED);
 
     WorkspaceInfo workspace;
@@ -117,7 +126,20 @@ public class StoreProvider extends GeoServerDataProvider<StoreInfo> {
 
     @Override
     protected List<Property<StoreInfo>> getProperties() {
-        return PROPERTIES;
+        List<Property<StoreInfo>> modifiedPropertiesList =
+                PROPERTIES.stream().map(c -> c).collect(Collectors.toList());
+        // check geoserver properties
+        if (GeoServerApplication.get()
+                .getGeoServer()
+                .getSettings()
+                .isShowCreatedTimeColumnsInAdminList())
+            modifiedPropertiesList.add(CREATED_TIMESTAMP);
+        if (GeoServerApplication.get()
+                .getGeoServer()
+                .getSettings()
+                .isShowModifiedTimeColumnsInAdminList())
+            modifiedPropertiesList.add(MODIFIED_TIMESTAMP);
+        return modifiedPropertiesList;
     }
 
     @Override
@@ -125,15 +147,16 @@ public class StoreProvider extends GeoServerDataProvider<StoreInfo> {
         return super.getComparator(sort);
     }
 
-    public IModel newModel(StoreInfo object) {
-        return new StoreInfoDetachableModel((StoreInfo) object);
+    @Override
+    public IModel<StoreInfo> newModel(StoreInfo object) {
+        return new StoreInfoDetachableModel(object);
     }
 
     /**
      * A StoreInfo detachable model that holds the store id to retrieve it on demand from the
      * catalog
      */
-    static class StoreInfoDetachableModel extends LoadableDetachableModel {
+    static class StoreInfoDetachableModel extends LoadableDetachableModel<StoreInfo> {
 
         private static final long serialVersionUID = -6829878983583733186L;
 
@@ -145,10 +168,9 @@ public class StoreProvider extends GeoServerDataProvider<StoreInfo> {
         }
 
         @Override
-        protected Object load() {
+        protected StoreInfo load() {
             Catalog catalog = GeoServerApplication.get().getCatalog();
-            StoreInfo storeInfo = catalog.getStore(id, StoreInfo.class);
-            return storeInfo;
+            return catalog.getStore(id, StoreInfo.class);
         }
     }
 
@@ -169,6 +191,7 @@ public class StoreProvider extends GeoServerDataProvider<StoreInfo> {
     }
 
     @Override
+    @SuppressWarnings("PMD.UseTryWithResources") // iterator needs to be tested
     public Iterator<StoreInfo> iterator(final long first, final long count) {
         Iterator<StoreInfo> iterator = filteredItems(first, count);
         if (iterator instanceof CloseableIterator) {

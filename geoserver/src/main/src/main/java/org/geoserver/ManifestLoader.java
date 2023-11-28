@@ -52,9 +52,9 @@ public class ManifestLoader {
 
     private static Pattern resourceNameRegex;
 
-    private static String resourceAttributeExclusions[];
+    private static String[] resourceAttributeExclusions;
 
-    private static String versionAttributeInclusions[];
+    private static String[] versionAttributeInclusions;
 
     private static ClassLoader classLoader;
 
@@ -116,7 +116,6 @@ public class ManifestLoader {
     /**
      * load an about model
      *
-     * @param loader
      * @throws IllegalArgumentException if arguments are null
      */
     private static AboutModel getAboutModel(final ClassLoader loader)
@@ -147,7 +146,7 @@ public class ManifestLoader {
             throw new IllegalArgumentException("Unable to run with null arguments");
         }
 
-        Map<String, Manifest> manifests = new HashMap<String, Manifest>();
+        Map<String, Manifest> manifests = new HashMap<>();
         try {
             Enumeration<URL> resources = loader.getResources("META-INF/MANIFEST.MF");
             while (resources.hasMoreElements()) {
@@ -229,7 +228,7 @@ public class ManifestLoader {
                             .toString();
             geoserverPath = geoserverPath + "!/META-INF/MANIFEST.MF";
 
-            Class geoserver_class = GeoServer.class;
+            Class<GeoServer> geoserver_class = GeoServer.class;
             Manifest manifest = ManifestLoader.getManifest(geoserver_class);
             if (manifest != null) {
                 model.add(
@@ -256,7 +255,7 @@ public class ManifestLoader {
                             .toString();
             path = path + "!/META-INF/MANIFEST.MF";
 
-            Class geoserver_class = GeoTools.class;
+            Class<GeoTools> geoserver_class = GeoTools.class;
             Manifest manifest = ManifestLoader.getManifest(geoserver_class);
 
             if (manifest != null) {
@@ -288,7 +287,7 @@ public class ManifestLoader {
                             .toString();
             path = path + "!/META-INF/MANIFEST.MF";
 
-            Class geoserver_class = Class.forName("org.geowebcache.GeoWebCache");
+            Class<?> geoserver_class = Class.forName("org.geowebcache.GeoWebCache");
             Manifest manifest = ManifestLoader.getManifest(geoserver_class);
             if (manifest != null) {
                 model.add(
@@ -335,18 +334,15 @@ public class ManifestLoader {
         }
 
         public AboutModel() {
-            manifests = new TreeSet<ManifestModel>(new ManifestModel.ManifestComparator());
+            manifests = new TreeSet<>(new ManifestModel.ManifestComparator());
         }
 
-        /**
-         * @param am
-         * @throws IllegalArgumentException
-         */
+        /** */
         public AboutModel(AboutModel am) throws IllegalArgumentException {
             if (am == null) {
                 throw new IllegalArgumentException("Unable to initialize model with a null model");
             }
-            manifests = new TreeSet<ManifestModel>(am.getManifests());
+            manifests = new TreeSet<>(am.getManifests());
         }
 
         private AboutModel(NavigableSet<ManifestModel> manifests) throws IllegalArgumentException {
@@ -354,7 +350,7 @@ public class ManifestLoader {
                 throw new IllegalArgumentException(
                         "Unable to initialize model with a null manifests tree");
             }
-            this.manifests = new TreeSet<ManifestModel>(manifests);
+            this.manifests = new TreeSet<>(manifests);
         }
 
         /**
@@ -363,8 +359,6 @@ public class ManifestLoader {
          * Note that objects are shared between models so changes to objects in the filtered model
          * will also affect the current model.
          *
-         * @param from
-         * @param to
          * @return the filtered model
          * @throws IllegalArgumentException if from or to are null
          */
@@ -392,9 +386,7 @@ public class ManifestLoader {
             if (regex == null) {
                 throw new IllegalArgumentException("Unable to parse regex is null");
             }
-            AboutModel am =
-                    new AboutModel(
-                            new TreeSet<ManifestModel>(new ManifestModel.ManifestComparator()));
+            AboutModel am = new AboutModel(new TreeSet<>(new ManifestModel.ManifestComparator()));
             Iterator<ManifestModel> it = manifests.iterator();
             while (it.hasNext()) {
                 ManifestModel tModel = it.next();
@@ -523,8 +515,6 @@ public class ManifestLoader {
         /**
          * Add a manifest file as resource with the given name
          *
-         * @param name
-         * @param manifest
          * @return true if this set did not already contain the specified name
          */
         public boolean add(final String name, final Manifest manifest) {
@@ -538,7 +528,6 @@ public class ManifestLoader {
         /**
          * Add a manifest file as resource
          *
-         * @param manifest
          * @return true if this set did not already contain the specified name
          */
         public boolean add(final ManifestModel manifest) {
@@ -593,7 +582,7 @@ public class ManifestLoader {
 
             public ManifestModel(final String name) {
                 this.name = name;
-                this.entries = new HashMap<String, String>();
+                this.entries = new HashMap<>();
             }
 
             public void putAllEntries(Map<String, String> entries) {
@@ -611,6 +600,7 @@ public class ManifestLoader {
              * @param manifest the manifest bean to load
              * @return the generated model
              */
+            @SuppressWarnings("PMD.UnusedPrivateMethod") // false positive
             private static ManifestModel parseManifest(
                     final String name,
                     final Manifest manifest,
@@ -670,16 +660,12 @@ public class ManifestLoader {
                     return filterIncludingAttributes(at, include);
                 }
 
-                /**
-                 * @param at
-                 * @param include
-                 * @return a map of properties
-                 */
+                /** @return a map of properties */
                 private static Map<String, String> filterIncludingAttributes(
                         final Attributes at, String[] include) {
                     if (at == null) throw new IllegalArgumentException("Null argument");
 
-                    Map<String, String> ret = new HashMap<String, String>();
+                    Map<String, String> ret = new HashMap<>();
 
                     if (include == null) {
                         if (LOGGER.isLoggable(Level.FINE))
@@ -688,7 +674,7 @@ public class ManifestLoader {
                                 at.entrySet().iterator();
                         while (it.hasNext()) {
                             java.util.Map.Entry<Object, Object> entry = it.next();
-                            String attrName = ((Attributes.Name) entry.getKey()).toString();
+                            String attrName = entry.getKey().toString();
                             ret.put(attrName, entry.getValue().toString());
                         }
                     } else {
@@ -697,13 +683,13 @@ public class ManifestLoader {
                                 at.entrySet().iterator();
                         while (it.hasNext()) {
                             java.util.Map.Entry<Object, Object> entry = it.next();
-                            String attrName = ((Attributes.Name) entry.getKey()).toString();
+                            String attrName = entry.getKey().toString();
 
                             // search into including array to filter over attributes
                             int i = 0;
                             while (i < include.length) {
                                 // split key in original_key:replace_key
-                                String key[] = include[i++].split(":");
+                                String[] key = include[i++].split(":");
                                 if (attrName.matches(key[0]) == true) {
                                     ret.put(
                                             key.length > 1 ? key[1] : key[0],
@@ -748,11 +734,11 @@ public class ManifestLoader {
                         if (LOGGER.isLoggable(Level.FINE)) LOGGER.log(Level.FINE, "No exceptions");
                         exclude = new String[0];
                     }
-                    Map<String, String> ret = new HashMap<String, String>();
+                    Map<String, String> ret = new HashMap<>();
                     // for each attribute
                     final Iterator<Object> it = at.keySet().iterator();
                     while (it.hasNext()) {
-                        String attrName = ((Attributes.Name) it.next()).toString();
+                        String attrName = it.next().toString();
                         boolean skip = false;
                         // search into including array to filter over attributes
                         int i = 0;

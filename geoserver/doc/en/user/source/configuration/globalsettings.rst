@@ -52,7 +52,7 @@ For instance, to allow different protocols (``http`` and ``https``) and differen
 The use of the ``Forwarded`` header is a tad more complex, as its components have to be referenced in templates with the dot-notation, as in: ``{Forwarded.proto}://${Forwarded.host}/geoserver``.
 
 Multiple templates can be put into the "Proxy Base URL". These templates provide fall-backs, since only the first one that is fully matched is used. 
-For instance, a Proxy Base URL of ``http://${X-Forwarded-Host}/geoserver http://www.foo.org/geoserver`` (Templates are space-separated.) can result in either: ``http://www.example.com/geoserver`` (if ``X-Forwarded-Host`` is set to ``www.example.com``.)  or ``http://www.foo.org/geoserver``  (if ``X-Forwarded-Host`` is not set.)
+For instance, a Proxy Base URL of ``http://${X-Forwarded-Host}/geoserver http://www.foo.org/geoserver`` (note: templates are space-separated) can result in either: ``http://www.example.com/geoserver`` (if ``X-Forwarded-Host`` is set to ``www.example.com``)  or ``http://www.foo.org/geoserver``  (if ``X-Forwarded-Host`` is not set.)
 
 Both header names and the appended path (e.g. ``/geoserver``) in templates are case-insensitive.
 
@@ -66,7 +66,7 @@ When environment parametrization is activated with headers support for Proxy URL
 Enable Global Services
 ''''''''''''''''''''''
 
-When enabled, allows access to both global services and :ref:`virtual services <virtual_services>`. When disabled, clients will only be able to access virtual services. Disabling is useful if GeoServer is hosting a large amount of layers and you want to ensure that client always request limited layer lists. Disabling is also useful for security reasons.
+When enabled, allows access to both global services and :ref:`virtual services <virtual_services>`. When disabled, clients will only be able to access virtual services. Disabling is useful if GeoServer is hosting a large number of layers and you want to ensure that client always request limited layer lists. Disabling is also useful for security reasons.
 
 .. _config_globalsettings_stored_queries:
 
@@ -80,8 +80,8 @@ Service Request Settings
 
 .. _config_globalsettings_external_entities:
 
-Unrestriced XML External Entity Resolution
-''''''''''''''''''''''''''''''''''''''''''
+Unrestricted XML External Entity Resolution
+'''''''''''''''''''''''''''''''''''''''''''
 
 XML Requests sent to GeoServer can include references to other XML documents. Since these files are processed by GeoServer the facility could be used to access files on the server, which is a security concern.
 
@@ -146,7 +146,7 @@ Include stack trace in service exceptions
 
 Verbose exception reporting returns service exceptions with full java stack traces (similar to how they appear in geoserver log file).
 
-By default this setting is disabled, GeoServer returns single-line error messages.
+By default, this setting is disabled, and GeoServer returns single-line error messages.
 
 This setting is only recommended for local troubleshooting and debugging. The excessive level of detail, can act as security vulnerability (for example a file not found exception revealing folder structure of your server).
 
@@ -168,7 +168,7 @@ Log Location
 
 Sets the written output location for the logs. A log location may be a directory or a file, and can be specified as an absolute path (e.g., :file:`C:\\GeoServer\\GeoServer.log`) or a relative one (for example, :file:`geoserver.log`). Relative paths are relative to the GeoServer data directory. Default is :file:`logs/geoserver.log`.
 
-This :guilabel:`Log location` setting can be overriden by ``GEOSERVER_LOG_LOCATION`` property, see :ref:`logging` for details (this setting is applied FileAppender or RollingFile ``geoserverlogfile`` appender).
+This :guilabel:`Log location` setting can be overridden by ``GEOSERVER_LOG_LOCATION`` property, see :ref:`logging` for details (this setting is applied FileAppender or RollingFile ``geoserverlogfile`` appender).
 
 .. _config_globalsettings_log_profile:
 
@@ -214,7 +214,7 @@ Standard output determines where a program writes its output data. In GeoServer,
 
 If you are running GeoServer in a large J2EE container, you might not want your container-wide logs filled with GeoServer information. Clearing this option will suppress most GeoServer logging, with only FATAL exceptions still output to the console log.
 
-This setting can be overriden by system property, see :ref:`logging` for details (this setting removes Console ``stdout`` appender).
+This setting can be overridden by system property, see :ref:`logging` for details (this setting removes Console ``stdout`` appender).
 
 .. _config_globalsettings_log_request:
 
@@ -251,7 +251,7 @@ The default value for the Feature type cache size is 100.
 File Locking
 ''''''''''''
 
-This configuration settings allows control of they type of file locking used when accessing the GeoServer Data Directory. This setting is used to protected the GeoServer configuration from being corrupted by multiple parties editing simultaneously. File locking should be employed when using the REST API to configure GeoServer, and can protected GeoServer when more than one administrator is making changes concurrently.
+This configuration settings allows control of the type of file locking used when accessing the GeoServer Data Directory. This setting is used to protect the GeoServer configuration from being corrupted by multiple parties editing simultaneously. File locking should be employed when using the REST API to configure GeoServer, and can protected GeoServer when more than one administrator is making changes concurrently.
 
 There are three options:
 
@@ -269,7 +269,7 @@ WebUI Settings
 WebUI Mode
 ''''''''''
 
-This configuration setting allows control over WebUI redirecting behaviour. By default, when the user loads a page that contains input, a HTTP 302 Redirect response is returned that causes a reload of that same with a generated session ID in the request parameter. This session ID allows the state of the page to be remembered after a refresh and prevents any occurence of the 'double submit problem'. However, this behaviour is incompatible with clustering of multiple geoserver instances.
+This configuration setting allows control over WebUI redirecting behaviour. By default, when the user loads a page that contains input, a HTTP 302 Redirect response is returned that causes a reload of that same with a generated session ID in the request parameter. This session ID allows the state of the page to be remembered after a refresh and prevents any occurrence of the 'double submit problem'. However, this behaviour is incompatible with clustering of multiple geoserver instances.
 
 There are three options:
 
@@ -312,15 +312,15 @@ This parameter is used by the RESTful API as the `Root Directory` for the newly 
 Display creation timestamps on administration lists
 '''''''''''''''''''''''''''''''''''''''''''''''''''
 
-These check boxes can be used to toggle Date of Creation on Workspaces,Stores,Layers,Layer Groups and Styles administration list pages.
+These check boxes can be used to toggle Date of Creation on Workspaces, Stores, Layers, Layer Groups and Styles administration list pages.
 
-Time of can be seen by hovering mouse over the dates.
+Time of Creation can be seen by hovering the mouse cursor over the dates.
 
 .. _config_globalsettings_display_modify:
 
 Display modification timestamps on administration lists
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-These check boxes can be used to toggle Date of Modification on Workspaces,Stores,Layers,Layer Groups and Styles administration list pages.
+These check boxes can be used to toggle Date of Modification on Workspaces, Stores, Layers, Layer Groups and Styles administration list pages.
 
-Time of can be seen by hovering mouse over the dates.
+Time of Modification can be seen by hovering the mouse cursor over the dates.

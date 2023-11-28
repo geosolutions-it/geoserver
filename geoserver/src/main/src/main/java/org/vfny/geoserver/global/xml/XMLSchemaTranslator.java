@@ -27,18 +27,16 @@ import java.util.Set;
  * @version $Id$
  */
 public class XMLSchemaTranslator extends NameSpaceTranslator {
-    private HashSet elements;
+    private HashSet<NameSpaceElement> elements;
 
     /**
      * XMLSchemaTranslator constructor.
      *
      * <p>Description
-     *
-     * @param prefix
      */
     public XMLSchemaTranslator(String prefix) {
         super(prefix);
-        elements = new HashSet();
+        elements = new HashSet<>();
         elements.add(new BooleanElement(prefix));
         elements.add(new DecimalElement(prefix));
         elements.add(new IntegerElement(prefix));
@@ -85,6 +83,7 @@ public class XMLSchemaTranslator extends NameSpaceTranslator {
      *
      * @see org.vfny.geoserver.global.xml.NameSpaceTranslator#getElements()
      */
+    @Override
     public Set getElements() {
         return elements;
     }
@@ -94,6 +93,7 @@ public class XMLSchemaTranslator extends NameSpaceTranslator {
      *
      * @see org.vfny.geoserver.global.xml.NameSpaceTranslator#getNameSpace()
      */
+    @Override
     public String getNameSpace() {
         return "http://www.w3.org/2001/XMLSchema";
     }
@@ -104,22 +104,27 @@ class BooleanElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "boolean";
     }
 
+    @Override
     public String getTypeRefName() {
         return "boolean";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":boolean";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":boolean";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":boolean";
@@ -132,6 +137,7 @@ class BooleanElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":boolean";
@@ -144,10 +150,12 @@ class BooleanElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Boolean> getJavaClass() {
         return Boolean.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -158,22 +166,27 @@ class DecimalElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "decimal";
     }
 
+    @Override
     public String getTypeRefName() {
         return "decimal";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":decimal";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":decimal";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":decimal";
@@ -186,6 +199,7 @@ class DecimalElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":decimal";
@@ -198,14 +212,17 @@ class DecimalElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<BigDecimal> getJavaClass() {
         return BigDecimal.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -216,22 +233,27 @@ class IntegerElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "integer";
     }
 
+    @Override
     public String getTypeRefName() {
         return "integer";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":integer";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":integer";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":integer";
@@ -244,6 +266,7 @@ class IntegerElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":integer";
@@ -256,10 +279,12 @@ class IntegerElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Integer> getJavaClass() {
         return Integer.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -270,22 +295,27 @@ class NegativeIntegerElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "negativeInteger";
     }
 
+    @Override
     public String getTypeRefName() {
         return "negativeInteger";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":negativeInteger";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":negativeInteger";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":negativeInteger";
@@ -298,6 +328,7 @@ class NegativeIntegerElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":negativeInteger";
@@ -310,10 +341,12 @@ class NegativeIntegerElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Integer> getJavaClass() {
         return Integer.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -324,22 +357,27 @@ class NonNegativeIntegerElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "nonNegativeInteger";
     }
 
+    @Override
     public String getTypeRefName() {
         return "nonNegativeInteger";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":nonNegativeInteger";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":nonNegativeInteger";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":nonNegativeInteger";
@@ -352,6 +390,7 @@ class NonNegativeIntegerElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":nonNegativeInteger";
@@ -364,10 +403,12 @@ class NonNegativeIntegerElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Integer> getJavaClass() {
         return Integer.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -378,22 +419,27 @@ class PositiveIntegerElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "positiveInteger";
     }
 
+    @Override
     public String getTypeRefName() {
         return "positiveInteger";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":positiveInteger";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":positiveInteger";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":positiveInteger";
@@ -406,6 +452,7 @@ class PositiveIntegerElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":positiveInteger";
@@ -418,10 +465,12 @@ class PositiveIntegerElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Integer> getJavaClass() {
         return Integer.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -432,22 +481,27 @@ class LongElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "long";
     }
 
+    @Override
     public String getTypeRefName() {
         return "long";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":long";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":long";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":long";
@@ -460,6 +514,7 @@ class LongElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":long";
@@ -472,14 +527,17 @@ class LongElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Long> getJavaClass() {
         return Long.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -490,22 +548,27 @@ class IntElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "int";
     }
 
+    @Override
     public String getTypeRefName() {
         return "int";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":int";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":int";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":int";
@@ -518,6 +581,7 @@ class IntElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":int";
@@ -530,14 +594,17 @@ class IntElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Integer> getJavaClass() {
         return Integer.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -548,22 +615,27 @@ class ShortElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "short";
     }
 
+    @Override
     public String getTypeRefName() {
         return "short";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":short";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":short";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":short";
@@ -576,6 +648,7 @@ class ShortElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":short";
@@ -588,14 +661,17 @@ class ShortElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Short> getJavaClass() {
         return Short.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -606,22 +682,27 @@ class ByteElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "byte";
     }
 
+    @Override
     public String getTypeRefName() {
         return "byte";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":byte";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":byte";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":byte";
@@ -634,6 +715,7 @@ class ByteElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":byte";
@@ -646,14 +728,17 @@ class ByteElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Byte> getJavaClass() {
         return Byte.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -664,22 +749,27 @@ class UnsignedLongElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "unsignedLong";
     }
 
+    @Override
     public String getTypeRefName() {
         return "unsignedLong";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":unsignedLong";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":unsignedLong";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedLong";
@@ -692,6 +782,7 @@ class UnsignedLongElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedLong";
@@ -704,10 +795,12 @@ class UnsignedLongElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Long> getJavaClass() {
         return Long.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -718,22 +811,27 @@ class UnsignedShortElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "unsignedShort";
     }
 
+    @Override
     public String getTypeRefName() {
         return "unsignedShort";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":unsignedShort";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":unsignedShort";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedShort";
@@ -746,6 +844,7 @@ class UnsignedShortElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedShort";
@@ -758,10 +857,12 @@ class UnsignedShortElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Short> getJavaClass() {
         return Short.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -772,22 +873,27 @@ class UnsignedIntElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "unsignedInt";
     }
 
+    @Override
     public String getTypeRefName() {
         return "unsignedInt";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":unsignedInt";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":unsignedInt";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedInt";
@@ -800,6 +906,7 @@ class UnsignedIntElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedInt";
@@ -812,10 +919,12 @@ class UnsignedIntElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Integer> getJavaClass() {
         return Integer.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -826,22 +935,27 @@ class UnsignedByteElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "unsignedByte";
     }
 
+    @Override
     public String getTypeRefName() {
         return "unsignedByte";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":unsignedByte";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":unsignedByte";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedByte";
@@ -854,6 +968,7 @@ class UnsignedByteElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":unsignedByte";
@@ -866,10 +981,12 @@ class UnsignedByteElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Byte> getJavaClass() {
         return Byte.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -880,22 +997,27 @@ class FloatElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "float";
     }
 
+    @Override
     public String getTypeRefName() {
         return "float";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":float";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":float";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":float";
@@ -908,6 +1030,7 @@ class FloatElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":float";
@@ -920,14 +1043,17 @@ class FloatElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Float> getJavaClass() {
         return Float.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -938,22 +1064,27 @@ class DoubleElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "double";
     }
 
+    @Override
     public String getTypeRefName() {
         return "double";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":double";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":double";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":double";
@@ -966,6 +1097,7 @@ class DoubleElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":double";
@@ -978,14 +1110,17 @@ class DoubleElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Double> getJavaClass() {
         return Double.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -996,22 +1131,27 @@ class DateElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "date";
     }
 
+    @Override
     public String getTypeRefName() {
         return "date";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":date";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":date";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":date";
@@ -1024,6 +1164,7 @@ class DateElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":date";
@@ -1036,10 +1177,12 @@ class DateElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1050,22 +1193,27 @@ class DateTimeElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "dateTime";
     }
 
+    @Override
     public String getTypeRefName() {
         return "dateTime";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":dateTime";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":dateTime";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":dateTime";
@@ -1078,6 +1226,7 @@ class DateTimeElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":dateTime";
@@ -1090,14 +1239,17 @@ class DateTimeElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -1108,22 +1260,27 @@ class DurationElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "duration";
     }
 
+    @Override
     public String getTypeRefName() {
         return "duration";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":duration";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":duration";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":duration";
@@ -1136,6 +1293,7 @@ class DurationElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":duration";
@@ -1148,10 +1306,12 @@ class DurationElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Long> getJavaClass() {
         return Long.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1162,22 +1322,27 @@ class GDayElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "gDay";
     }
 
+    @Override
     public String getTypeRefName() {
         return "gDay";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":gDay";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":gDay";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gDay";
@@ -1190,6 +1355,7 @@ class GDayElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gDay";
@@ -1202,10 +1368,12 @@ class GDayElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1216,22 +1384,27 @@ class GMonthElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "gMonth";
     }
 
+    @Override
     public String getTypeRefName() {
         return "gMonth";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":gMonth";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":gMonth";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gMonth";
@@ -1244,6 +1417,7 @@ class GMonthElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gMonth";
@@ -1256,10 +1430,12 @@ class GMonthElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1270,22 +1446,27 @@ class GMonthDayElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "gMonthDay";
     }
 
+    @Override
     public String getTypeRefName() {
         return "gMonthDay";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":gMonthDay";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":gMonthDay";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gMonthDay";
@@ -1298,6 +1479,7 @@ class GMonthDayElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gMonthDay";
@@ -1310,10 +1492,12 @@ class GMonthDayElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1324,22 +1508,27 @@ class GYearElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "gYear";
     }
 
+    @Override
     public String getTypeRefName() {
         return "gYear";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":gYear";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":gYear";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gYear";
@@ -1352,6 +1541,7 @@ class GYearElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gYear";
@@ -1364,10 +1554,12 @@ class GYearElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1378,22 +1570,27 @@ class GYearMonthElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "gYearMonth";
     }
 
+    @Override
     public String getTypeRefName() {
         return "gYearMonth";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":gYearMonth";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":gYearMonth";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gYearMonth";
@@ -1406,6 +1603,7 @@ class GYearMonthElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":gYearMonth";
@@ -1418,10 +1616,12 @@ class GYearMonthElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1432,22 +1632,27 @@ class TimeElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "time";
     }
 
+    @Override
     public String getTypeRefName() {
         return "time";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":time";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":time";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":time";
@@ -1460,6 +1665,7 @@ class TimeElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":time";
@@ -1472,10 +1678,12 @@ class TimeElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Date> getJavaClass() {
         return Date.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1486,22 +1694,27 @@ class IDElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "ID";
     }
 
+    @Override
     public String getTypeRefName() {
         return "ID";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":ID";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":ID";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":ID";
@@ -1514,6 +1727,7 @@ class IDElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":ID";
@@ -1526,10 +1740,12 @@ class IDElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1540,22 +1756,27 @@ class IDREFElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "IDREF";
     }
 
+    @Override
     public String getTypeRefName() {
         return "IDREF";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":IDREF";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":IDREF";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":IDREF";
@@ -1568,6 +1789,7 @@ class IDREFElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":IDREF";
@@ -1580,10 +1802,12 @@ class IDREFElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1594,22 +1818,27 @@ class IDREFSElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "IDREFS";
     }
 
+    @Override
     public String getTypeRefName() {
         return "IDREFS";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":IDREFS";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":IDREFS";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":IDREFS";
@@ -1622,6 +1851,7 @@ class IDREFSElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":IDREFS";
@@ -1634,10 +1864,12 @@ class IDREFSElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1648,22 +1880,27 @@ class ENTITYElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "ENTITY";
     }
 
+    @Override
     public String getTypeRefName() {
         return "ENTITY";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":ENTITY";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":ENTITY";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":ENTITY";
@@ -1676,6 +1913,7 @@ class ENTITYElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":ENTITY";
@@ -1688,10 +1926,12 @@ class ENTITYElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1702,22 +1942,27 @@ class ENTITIESElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "ENTITIES";
     }
 
+    @Override
     public String getTypeRefName() {
         return "ENTITIES";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":ENTITIES";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":ENTITIES";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":ENTITIES";
@@ -1730,6 +1975,7 @@ class ENTITIESElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":ENTITIES";
@@ -1742,10 +1988,12 @@ class ENTITIESElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1756,22 +2004,27 @@ class NMTOKENElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "NMTOKEN";
     }
 
+    @Override
     public String getTypeRefName() {
         return "NMTOKEN";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":NMTOKEN";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":NMTOKEN";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NMTOKEN";
@@ -1784,6 +2037,7 @@ class NMTOKENElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NMTOKEN";
@@ -1796,10 +2050,12 @@ class NMTOKENElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1810,22 +2066,27 @@ class NMTOKENSElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "NMTOKENS";
     }
 
+    @Override
     public String getTypeRefName() {
         return "NMTOKENS";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":NMTOKENS";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":NMTOKENS";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NMTOKENS";
@@ -1838,6 +2099,7 @@ class NMTOKENSElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NMTOKENS";
@@ -1850,10 +2112,12 @@ class NMTOKENSElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1864,22 +2128,27 @@ class NOTATIONElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "NOTATION";
     }
 
+    @Override
     public String getTypeRefName() {
         return "NOTATION";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":NOTATION";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":NOTATION";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NOTATION";
@@ -1892,6 +2161,7 @@ class NOTATIONElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NOTATION";
@@ -1904,10 +2174,12 @@ class NOTATIONElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -1918,22 +2190,27 @@ class StringElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "string";
     }
 
+    @Override
     public String getTypeRefName() {
         return "string";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":string";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":string";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":string";
@@ -1946,6 +2223,7 @@ class StringElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":string";
@@ -1958,14 +2236,17 @@ class StringElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<String> getJavaClass() {
         return String.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
 
+    @Override
     public boolean isDefault() {
         return true;
     }
@@ -1976,22 +2257,27 @@ class NormalizedStringElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "normalizedString";
     }
 
+    @Override
     public String getTypeRefName() {
         return "normalizedString";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":normalizedString";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":normalizedString";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":normalizedString";
@@ -2004,6 +2290,7 @@ class NormalizedStringElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":normalizedString";
@@ -2016,10 +2303,12 @@ class NormalizedStringElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<String> getJavaClass() {
         return String.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -2030,22 +2319,27 @@ class TokenElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "token";
     }
 
+    @Override
     public String getTypeRefName() {
         return "token";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":token";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":token";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":token";
@@ -2058,6 +2352,7 @@ class TokenElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":token";
@@ -2070,10 +2365,12 @@ class TokenElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -2084,22 +2381,27 @@ class QNameElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "QName";
     }
 
+    @Override
     public String getTypeRefName() {
         return "QName";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":QName";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":QName";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":QName";
@@ -2112,6 +2414,7 @@ class QNameElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":QName";
@@ -2124,10 +2427,12 @@ class QNameElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -2138,22 +2443,27 @@ class NameElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "Name";
     }
 
+    @Override
     public String getTypeRefName() {
         return "Name";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":Name";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":Name";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":Name";
@@ -2166,6 +2476,7 @@ class NameElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":Name";
@@ -2178,10 +2489,12 @@ class NameElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }
@@ -2192,22 +2505,27 @@ class NCNameElement extends NameSpaceElement {
         super(prefix);
     }
 
+    @Override
     public String getTypeDefName() {
         return "NCName";
     }
 
+    @Override
     public String getTypeRefName() {
         return "NCName";
     }
 
+    @Override
     public String getQualifiedTypeDefName() {
         return prefix + ":NCName";
     }
 
+    @Override
     public String getQualifiedTypeRefName() {
         return prefix + ":NCName";
     }
 
+    @Override
     public String getQualifiedTypeDefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NCName";
@@ -2220,6 +2538,7 @@ class NCNameElement extends NameSpaceElement {
         return null;
     }
 
+    @Override
     public String getQualifiedTypeRefName(String prefix) {
         if (prefix != null) {
             return prefix + ":NCName";
@@ -2232,10 +2551,12 @@ class NCNameElement extends NameSpaceElement {
         return null;
     }
 
-    public Class getJavaClass() {
+    @Override
+    public Class<Object> getJavaClass() {
         return Object.class;
     }
 
+    @Override
     public boolean isAbstract() {
         return false;
     }

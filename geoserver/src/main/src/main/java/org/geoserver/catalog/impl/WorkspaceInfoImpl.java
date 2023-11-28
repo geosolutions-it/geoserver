@@ -6,6 +6,7 @@
 package org.geoserver.catalog.impl;
 
 import java.io.Serializable;
+import java.util.Date;
 import org.geoserver.catalog.CatalogVisitor;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.WorkspaceInfo;
@@ -20,6 +21,11 @@ public class WorkspaceInfoImpl implements WorkspaceInfo, Serializable {
 
     private boolean isolated = false;
 
+    protected Date dateCreated;
+
+    protected Date dateModified;
+
+    @Override
     public String getId() {
         return id;
     }
@@ -36,14 +42,17 @@ public class WorkspaceInfoImpl implements WorkspaceInfo, Serializable {
         this._default = _default;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public void setName(String name) {
         this.name = name;
     }
 
+    @Override
     public MetadataMap getMetadata() {
         return metadata;
     }
@@ -52,10 +61,12 @@ public class WorkspaceInfoImpl implements WorkspaceInfo, Serializable {
         this.metadata = metadata;
     }
 
+    @Override
     public void accept(CatalogVisitor visitor) {
         visitor.visit(this);
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -64,6 +75,7 @@ public class WorkspaceInfoImpl implements WorkspaceInfo, Serializable {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null) return false;
@@ -93,7 +105,28 @@ public class WorkspaceInfoImpl implements WorkspaceInfo, Serializable {
         return isolated;
     }
 
+    @Override
     public void setIsolated(boolean isolated) {
         this.isolated = isolated;
+    }
+
+    @Override
+    public Date getDateModified() {
+        return this.dateModified;
+    }
+
+    @Override
+    public Date getDateCreated() {
+        return this.dateCreated;
+    }
+
+    @Override
+    public void setDateCreated(Date dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    @Override
+    public void setDateModified(Date dateModified) {
+        this.dateModified = dateModified;
     }
 }

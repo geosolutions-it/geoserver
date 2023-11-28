@@ -4,12 +4,15 @@
  */
 package org.geoserver.wcs2_0.xml;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import org.apache.commons.io.FileUtils;
+import org.geoserver.config.GeoServer;
+import org.geoserver.config.GeoServerInfo;
+import org.geoserver.config.SettingsInfo;
 import org.geoserver.wcs2_0.WCSTestSupport;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.gce.geotiff.GeoTiffReader;
@@ -38,6 +41,13 @@ public class ScalingExtentionTest extends WCSTestSupport {
                                 .getCoverageByName("BlueMarble")
                                 .getGridCoverageReader(null, null)
                                 .read(null);
+
+        // enable verbose exceptions to get better debugging info
+        GeoServer gs = getGeoServer();
+        GeoServerInfo gsInfo = gs.getGlobal();
+        SettingsInfo settings = gsInfo.getSettings();
+        settings.setVerboseExceptions(true);
+        gs.save(gsInfo);
     }
 
     @After
@@ -78,11 +88,17 @@ public class ScalingExtentionTest extends WCSTestSupport {
 
     @Test
     public void testScaleToSizeXML() throws Exception {
-
         final File xml = new File("./src/test/resources/requestGetCoverageScaleToSize.xml");
         final String request = FileUtils.readFileToString(xml, "UTF-8");
         MockHttpServletResponse response = postAsServletResponse("wcs", request);
 
+        if ("application/xml".equals(response.getContentType())) {
+            LOGGER.warning("Error message: " + response.getContentAsString());
+            Runtime runtime = Runtime.getRuntime();
+            LOGGER.warning("Max memory: " + runtime.maxMemory());
+            LOGGER.warning("Free memory: " + runtime.freeMemory());
+            LOGGER.warning("Total memory: " + runtime.totalMemory());
+        }
         assertEquals("image/tiff", response.getContentType());
         byte[] tiffContents = getBinary(response);
         File file = File.createTempFile("bm_gtiff", "bm_gtiff.tiff", new File("./target"));

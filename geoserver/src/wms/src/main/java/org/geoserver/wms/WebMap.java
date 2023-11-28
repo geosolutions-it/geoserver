@@ -61,13 +61,13 @@ public abstract class WebMap {
 
     public void setResponseHeader(final String name, final String value) {
         if (responseHeaders == null) {
-            responseHeaders = new HashMap<String, String>();
+            responseHeaders = new HashMap<>();
         }
         responseHeaders.put(name, value);
     }
 
     public String[][] getResponseHeaders() {
-        if (responseHeaders == null || responseHeaders.size() == 0) {
+        if (responseHeaders == null || responseHeaders.isEmpty()) {
             return null;
         }
         String[][] headers = new String[responseHeaders.size()][2];
@@ -122,11 +122,7 @@ public abstract class WebMap {
         return filename;
     }
 
-    /**
-     * Returns the filename with no extension
-     *
-     * @return
-     */
+    /** Returns the filename with no extension */
     public String getSimpleAttachmentFileName() {
         // see if we can get the original request, before the group expansion happened
         Request request = Dispatcher.REQUEST.get();
@@ -156,5 +152,9 @@ public abstract class WebMap {
             filename = filename.replace(":", "-");
         }
         return filename;
+    }
+
+    public WMSMapContent getMapContent() {
+        return mapContent;
     }
 }

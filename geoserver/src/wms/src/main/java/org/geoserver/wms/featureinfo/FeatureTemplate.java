@@ -5,6 +5,8 @@
  */
 package org.geoserver.wms.featureinfo;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -14,7 +16,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -74,6 +75,9 @@ public class FeatureTemplate {
         // TODO: this may be somethign we want to configure/change
         templateConfig.setLocale(Locale.US);
         templateConfig.setNumberFormat("0.###########");
+
+        // encoding
+        templateConfig.setDefaultEncoding("UTF-8");
     }
 
     /** The pattern used by DATETIME_FORMAT */
@@ -86,7 +90,7 @@ public class FeatureTemplate {
     public static String TIME_FORMAT_PATTERN = "HH:mm:ss";
 
     /** Template cache used to avoid paying the cost of template lookup for each feature */
-    Map templateCache = new HashMap();
+    Map<TemplateKey, Template> templateCache = new HashMap<>();
 
     /**
      * Cached writer used for plain conversion from Feature to String. Improves performance
@@ -106,7 +110,7 @@ public class FeatureTemplate {
      * @throws IOException Any errors that occur during execution of the template.
      */
     public void title(SimpleFeature feature, OutputStream output) throws IOException {
-        title(feature, new OutputStreamWriter(output, Charset.forName("UTF-8")));
+        title(feature, new OutputStreamWriter(output, UTF_8));
     }
 
     /**
@@ -121,7 +125,7 @@ public class FeatureTemplate {
      * @throws IOException Any errors that occur during execution of the template.
      */
     public void link(SimpleFeature feature, OutputStream output) throws IOException {
-        link(feature, new OutputStreamWriter(output, Charset.forName("UTF-8")));
+        link(feature, new OutputStreamWriter(output, UTF_8));
     }
 
     /**
@@ -136,7 +140,7 @@ public class FeatureTemplate {
      * @throws IOException Any errors that occur during execution of the template.
      */
     public void description(SimpleFeature feature, OutputStream output) throws IOException {
-        description(feature, new OutputStreamWriter(output, Charset.forName("UTF-8")));
+        description(feature, new OutputStreamWriter(output, UTF_8));
     }
 
     /**
@@ -224,7 +228,7 @@ public class FeatureTemplate {
      * @param template The template name.
      * @param lookup The class to lookup the template relative to.
      */
-    public void template(SimpleFeature feature, Writer writer, String template, Class lookup)
+    public void template(SimpleFeature feature, Writer writer, String template, Class<?> lookup)
             throws IOException {
         execute(feature, feature.getFeatureType(), writer, template, lookup);
     }
@@ -242,7 +246,8 @@ public class FeatureTemplate {
      * @param template The template name.
      * @param lookup The class to lookup the template relative to.
      */
-    public void template(SimpleFeature feature, OutputStream output, String template, Class lookup)
+    public void template(
+            SimpleFeature feature, OutputStream output, String template, Class<?> lookup)
             throws IOException {
         template(feature, new OutputStreamWriter(output), template, lookup);
     }
@@ -259,7 +264,7 @@ public class FeatureTemplate {
      * @param template The template name.
      * @param lookup The class to lookup the template relative to.
      */
-    public String template(SimpleFeature feature, String template, Class lookup)
+    public String template(SimpleFeature feature, String template, Class<?> lookup)
             throws IOException {
         caw.reset();
         template(feature, caw, template, lookup);
@@ -275,11 +280,10 @@ public class FeatureTemplate {
             SimpleFeatureType featureType,
             Writer writer,
             String template,
-            Class lookup)
+            Class<?> lookup)
             throws IOException {
-        Template t = null;
 
-        t = lookupTemplate(featureType, template, lookup);
+        Template t = lookupTemplate(featureType, template, lookup);
 
         try {
             t.process(feature, writer);
@@ -293,13 +297,12 @@ public class FeatureTemplate {
      * Returns the template for the specified feature type. Looking up templates is pretty
      * expensive, so we cache templates by feture type and template.
      */
-    private Template lookupTemplate(SimpleFeatureType featureType, String template, Class lookup)
+    private Template lookupTemplate(SimpleFeatureType featureType, String template, Class<?> lookup)
             throws IOException {
-        Template t;
 
         // lookup the cache first
         TemplateKey key = new TemplateKey(featureType, template);
-        t = (Template) templateCache.get(key);
+        Template t = templateCache.get(key);
         if (t != null) return t;
 
         // otherwise, build a loader and do the lookup
@@ -314,20 +317,12 @@ public class FeatureTemplate {
         synchronized (templateConfig) {
             templateConfig.setTemplateLoader(templateLoader);
             t = templateConfig.getTemplate(template);
-            t.setEncoding("UTF-8");
         }
         templateCache.put(key, t);
         return t;
     }
 
-    /**
-     * Returns true if the required template is empty or has its default content
-     *
-     * @param featureType
-     * @param template
-     * @param lookup
-     * @throws IOException
-     */
+    /** Returns true if the required template is empty or has its default content */
     public boolean isTemplateEmpty(
             SimpleFeatureType featureType,
             String template,
@@ -357,6 +352,7 @@ public class FeatureTemplate {
             this.template = template;
         }
 
+        @Override
         public int hashCode() {
             final int PRIME = 31;
             int result = 1;
@@ -365,6 +361,7 @@ public class FeatureTemplate {
             return result;
         }
 
+        @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
             if (obj == null) return false;

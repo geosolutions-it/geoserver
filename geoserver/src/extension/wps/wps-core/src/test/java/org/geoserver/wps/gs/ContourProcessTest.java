@@ -38,7 +38,7 @@ public class ContourProcessTest extends BaseRasterToVectorTest {
         GridCoverage2D gc = extractCoverageSubset();
 
         // extract just two isolines
-        final double levels[] = new double[2];
+        final double[] levels = new double[2];
         levels[0] = 1500;
         levels[1] = 1700;
         final ContourProcess process = new ContourProcess();
@@ -49,13 +49,13 @@ public class ContourProcessTest extends BaseRasterToVectorTest {
         assertNotNull(fc);
         assertTrue(fc.size() > 0);
 
-        SimpleFeatureIterator fi = fc.features();
-        while (fi.hasNext()) {
-            SimpleFeature sf = fi.next();
-            Double value = (Double) sf.getAttribute("value");
-            assertTrue(value == 1500.0 || value == 1700.0);
+        try (SimpleFeatureIterator fi = fc.features()) {
+            while (fi.hasNext()) {
+                SimpleFeature sf = fi.next();
+                Double value = (Double) sf.getAttribute("value");
+                assertTrue(value == 1500.0 || value == 1700.0);
+            }
         }
-        fi.close();
     }
 
     private GridCoverage2D extractCoverageSubset() throws IOException {
@@ -102,12 +102,12 @@ public class ContourProcessTest extends BaseRasterToVectorTest {
         assertNotNull(fc);
         assertTrue(fc.size() > 0);
 
-        SimpleFeatureIterator fi = fc.features();
-        while (fi.hasNext()) {
-            SimpleFeature sf = fi.next();
-            Double value = (Double) sf.getAttribute("value");
-            assertTrue(value > 0);
+        try (SimpleFeatureIterator fi = fc.features()) {
+            while (fi.hasNext()) {
+                SimpleFeature sf = fi.next();
+                Double value = (Double) sf.getAttribute("value");
+                assertTrue(value > 0);
+            }
         }
-        fi.close();
     }
 }

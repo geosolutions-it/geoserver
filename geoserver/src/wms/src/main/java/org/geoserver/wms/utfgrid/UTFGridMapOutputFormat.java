@@ -65,7 +65,7 @@ public class UTFGridMapOutputFormat extends AbstractMapOutputFormat {
      * </ol>
      */
     private static MapProducerCapabilities CAPABILITIES =
-            new MapProducerCapabilities(false, false, false, true, null);
+            new MapProducerCapabilities(false, false, true);
 
     private WMS wms;
 
@@ -74,6 +74,7 @@ public class UTFGridMapOutputFormat extends AbstractMapOutputFormat {
         this.wms = wms;
     }
 
+    @Override
     public MapProducerCapabilities getCapabilities(String format) {
         return CAPABILITIES;
     }
@@ -103,7 +104,7 @@ public class UTFGridMapOutputFormat extends AbstractMapOutputFormat {
                                         RenderingHints.KEY_ANTIALIASING,
                                         RenderingHints.VALUE_ANTIALIAS_OFF);
 
-                        Map hints = renderer.getRendererHints();
+                        Map<Object, Object> hints = renderer.getRendererHints();
                         double dpi = RendererUtilities.getDpi(hints);
                         dpi = dpi / DEFAULT_UTFRESOLUTION;
                         hints.put(StreamingRenderer.DPI_KEY, dpi);
@@ -151,7 +152,7 @@ public class UTFGridMapOutputFormat extends AbstractMapOutputFormat {
                 // copy making sure we retain all attributes
                 FeatureLayer fl =
                         new FeatureLayer(
-                                new UTFGridFeatureSource(layer.getFeatureSource(), null), copy);
+                                new UTFGridFeatureSource<>(layer.getFeatureSource(), null), copy);
                 fl.setQuery(layer.getQuery());
                 sl = fl;
             } else if (layer instanceof GridCoverageLayer) {

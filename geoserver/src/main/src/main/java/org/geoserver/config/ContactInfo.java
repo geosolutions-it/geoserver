@@ -6,6 +6,7 @@
 package org.geoserver.config;
 
 import org.geoserver.catalog.Info;
+import org.opengis.util.InternationalString;
 
 /**
  * GeoServer contact information.
@@ -15,6 +16,7 @@ import org.geoserver.catalog.Info;
 public interface ContactInfo extends Info {
 
     /** Identifier. */
+    @Override
     String getId();
 
     /** @uml.property name="address" */
@@ -35,10 +37,18 @@ public interface ContactInfo extends Info {
     /** @uml.property name="addressCountry" */
     void setAddressCountry(String addressCountry);
 
-    /** @uml.property name="addressDeliveryPoint" */
+    /**
+     * Synonym with {@code address}, see {@link #getAddress()}.
+     *
+     * @uml.property name="addressDeliveryPoint"
+     */
     String getAddressDeliveryPoint();
 
-    /** @uml.property name="addressDeliveryPoint" */
+    /**
+     * Synonym with {@code address}, see {@link #setAddress(String)}}.
+     *
+     * @uml.property name="addressDeliveryPoint"
+     */
     void setAddressDeliveryPoint(String addressDeliveryPoint);
 
     /** @uml.property name="addressPostalCode" */
@@ -98,4 +108,105 @@ public interface ContactInfo extends Info {
     String getOnlineResource();
 
     void setOnlineResource(String onlineResource);
+
+    /**
+     * Introduction message.
+     *
+     * @return introduction message
+     */
+    String getWelcome();
+
+    /**
+     * Define introduction message
+     *
+     * @param welcome Introduction message
+     */
+    void setWelcome(String welcome);
+
+    // i18n fields
+    /** @uml.property name="internationalAddress" */
+    InternationalString getInternationalAddress();
+
+    /** @uml.property name="internationalAddress" */
+    void setInternationalAddress(InternationalString address);
+
+    /** @uml.property name="internationalAddressCity" */
+    InternationalString getInternationalAddressCity();
+
+    /** @uml.property name="internationalAddressCity" */
+    void setInternationalAddressCity(InternationalString addressCity);
+
+    /** @uml.property name="internationalAddressCountry" */
+    InternationalString getInternationalAddressCountry();
+
+    /** @uml.property name="internationalAddressCountry" */
+    void setInternationalAddressCountry(InternationalString addressCountry);
+
+    /** @uml.property name="internationalAddressDeliveryPoint" */
+    InternationalString getInternationalAddressDeliveryPoint();
+
+    /** @uml.property name="internationalAddressDeliveryPoint" */
+    void setInternationalAddressDeliveryPoint(InternationalString addressDeliveryPoint);
+
+    /** @uml.property name="internationalAddressPostalCode" */
+    InternationalString getInternationalAddressPostalCode();
+
+    /** @uml.property name="internationalAddressPostalCode" */
+    void setInternationalAddressPostalCode(InternationalString addressPostalCode);
+
+    /** @uml.property name="internationalAddressState" */
+    InternationalString getInternationalAddressState();
+
+    /** @uml.property name="internationalAddressState" */
+    void setInternationalAddressState(InternationalString addressState);
+
+    /** @uml.property name="internationalAddressType" */
+    InternationalString getInternationalAddressType();
+
+    /** @uml.property name="internationalAddressType" */
+    void setInternationalAddressType(InternationalString addressType);
+
+    /** @uml.property name="internationalContactEmail" */
+    InternationalString getInternationalContactEmail();
+
+    /** @uml.property name="internationalContactEmail" */
+    void setInternationalContactEmail(InternationalString contactEmail);
+
+    /** @uml.property name="internationalContactFacsimile" */
+    InternationalString getInternationalContactFacsimile();
+
+    /** @uml.property name="internationalContactFacsimile" */
+    void setInternationalContactFacsimile(InternationalString contactFacsimile);
+
+    /** @uml.property name="internationalContactOrganization" */
+    InternationalString getInternationalContactOrganization();
+
+    /** @uml.property name="internationalContactOrganization" */
+    void setInternationalContactOrganization(InternationalString contactOrganization);
+
+    /** @uml.property name="internationalContactPerson" */
+    InternationalString getInternationalContactPerson();
+
+    /** @uml.property name="internationalContactPerson" */
+    void setInternationalContactPerson(InternationalString contactPerson);
+
+    /** @uml.property name="internationalContactPosition" */
+    InternationalString getInternationalContactPosition();
+
+    /** @uml.property name="internationalContactPosition" */
+    void setInternationalContactPosition(InternationalString contactPosition);
+
+    /** @uml.property name="internationalContactVoice" */
+    InternationalString getInternationalContactVoice();
+
+    /** @uml.property name="internationalContactVoice" */
+    void setInternationalContactVoice(InternationalString contactVoice);
+
+    InternationalString getInternationalOnlineResource();
+
+    void setInternationalOnlineResource(InternationalString onlineResource);
+
+    InternationalString getInternationalWelcome();
+
+    void setInternationalWelcome(InternationalString onlineResource);
 }

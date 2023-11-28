@@ -12,9 +12,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
+import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.AjaxSelfUpdatingTimerBehavior;
-import org.apache.wicket.datetime.markup.html.basic.DateLabel;
+import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.form.CheckBox;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.panel.Panel;
@@ -26,6 +28,7 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.system.status.MetricValue;
 import org.geoserver.system.status.Metrics;
 import org.geoserver.system.status.SystemInfoCollector;
+import org.geoserver.web.wicket.DateLabel;
 import org.geotools.util.logging.Logging;
 
 /** Panel displaying system resources monitoring values that is refreshed periodically. */
@@ -44,10 +47,23 @@ public class RefreshedPanel extends Panel {
 
         final SystemInfoCollector systemInfoCollector =
                 GeoServerExtensions.bean(SystemInfoCollector.class);
-        final IModel<Date> timeMdl = Model.of(new Date());
         final IModel<List<MetricValue>> metricMdl = Model.ofList(Collections.emptyList());
+        final IModel<Boolean> statisticsIModel =
+                Model.of(systemInfoCollector.getStatisticsStatus());
 
-        Label time = DateLabel.forDatePattern("time", timeMdl, datePattern);
+        final CheckBox statisticsCheckBox = new CheckBox("statistics", statisticsIModel);
+        statisticsCheckBox.add(
+                new AjaxFormComponentUpdatingBehavior("click") {
+                    @Override
+                    protected void onUpdate(AjaxRequestTarget ajaxRequestTarget) {
+                        systemInfoCollector.setStatisticsStatus(
+                                statisticsCheckBox.getModelObject());
+                    }
+                });
+        statisticsCheckBox.setOutputMarkupId(true);
+        add(statisticsCheckBox);
+
+        DateLabel time = new DateLabel("time", Model.of(new Date()), datePattern);
         time.setOutputMarkupId(true);
         add(time);
 
@@ -87,18 +103,25 @@ public class RefreshedPanel extends Panel {
         list.setOutputMarkupId(true);
         add(list);
 
+        // Check every 5 seconds, or less frequently if metrics collection is slow
+        long start = System.currentTimeMillis();
+        systemInfoCollector.retrieveAllSystemInfo();
+        long complete = System.currentTimeMillis();
+        long sampleTime = complete - start;
+        Duration updateInternval = Duration.milliseconds(Math.max(5000, sampleTime * 5));
+
         /*
          * Refresh every seconds
          */
         this.add(
-                new AjaxSelfUpdatingTimerBehavior(Duration.seconds(1)) {
+                new AjaxSelfUpdatingTimerBehavior(updateInternval) {
                     private static final long serialVersionUID = -7009847252782601466L;
 
                     @Override
                     public void onConfigure(Component component) {
                         Metrics metrics = systemInfoCollector.retrieveAllSystemInfo();
                         metricMdl.setObject(metrics.getMetrics());
-                        timeMdl.setObject(new Date());
+                        time.setDefaultModel(Model.of(new Date()));
                     }
                 });
     }

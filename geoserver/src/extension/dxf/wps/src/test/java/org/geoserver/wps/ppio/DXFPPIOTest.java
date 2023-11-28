@@ -5,12 +5,14 @@
 package org.geoserver.wps.ppio;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import org.geoserver.wps.WPSTestSupport;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
@@ -44,7 +46,7 @@ public class DXFPPIOTest extends WPSTestSupport {
 
         features = new DefaultFeatureCollection(null, b.getFeatureType());
         for (int numFeatures = 0; numFeatures < 5; numFeatures++) {
-            Coordinate array[] = new Coordinate[4];
+            Coordinate[] array = new Coordinate[4];
             int j = 0;
             for (int i = 0 + numFeatures; i < 4 + numFeatures; i++) {
                 array[j] = new Coordinate(i, i);
@@ -61,7 +63,7 @@ public class DXFPPIOTest extends WPSTestSupport {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         ppio.encode(features, os);
         assertNotNull(os.toByteArray());
-        String dxf = new String(os.toByteArray(), "UTF-8");
+        String dxf = new String(os.toByteArray(), StandardCharsets.UTF_8);
         checkSequence(dxf, new String[] {"BLOCKS", "LWPOLYLINE"}, 0);
     }
 
@@ -106,7 +108,7 @@ public class DXFPPIOTest extends WPSTestSupport {
     private void checkSequence(String dxf, String[] sequence, int pos) {
         for (String item : sequence) {
             pos = dxf.indexOf(item, pos + 1);
-            assertTrue(pos != -1);
+            assertNotEquals(pos, -1);
         }
     }
 }

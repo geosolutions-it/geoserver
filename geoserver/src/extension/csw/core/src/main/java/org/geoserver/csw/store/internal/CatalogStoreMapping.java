@@ -4,6 +4,7 @@
  */
 package org.geoserver.csw.store.internal;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,6 +14,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.csw.records.RecordDescriptor;
 import org.geotools.data.complex.util.XPathUtil;
@@ -44,7 +46,7 @@ public class CatalogStoreMapping {
 
         protected boolean required = false;
 
-        protected int splitIndex = -1;
+        protected int[] splitIndex = {};
 
         /**
          * Create new Mapping Element
@@ -87,17 +89,18 @@ public class CatalogStoreMapping {
          *
          * @return splitIndex
          */
-        public int getSplitIndex() {
+        public int[] getSplitIndex() {
             return splitIndex;
         }
     }
+
+    protected String mappingName;
 
     protected static final Logger LOGGER = Logging.getLogger(CatalogStoreMapping.class);
 
     protected static final FilterFactory ff = CommonFactoryFinder.getFilterFactory();
 
-    protected Map<String, CatalogStoreMappingElement> mappingElements =
-            new HashMap<String, CatalogStoreMappingElement>();
+    protected Map<String, CatalogStoreMappingElement> mappingElements = new HashMap<>();
 
     protected CatalogStoreMappingElement identifier = null;
 
@@ -141,7 +144,7 @@ public class CatalogStoreMapping {
      * @param rd Record Descriptor
      */
     public CatalogStoreMapping subMapping(List<PropertyName> properties, RecordDescriptor rd) {
-        Set<String> paths = new HashSet<String>();
+        Set<String> paths = new HashSet<>();
         for (PropertyName prop : properties) {
             paths.add(
                     toDotPath(
@@ -183,7 +186,7 @@ public class CatalogStoreMapping {
      * if the key starts with @ it also defines the ID element and if the key starts with $ it is a
      * required property.
      */
-    public static CatalogStoreMapping parse(Map<String, String> mappingSource) {
+    public static CatalogStoreMapping parse(Map<String, String> mappingSource, String mappingName) {
 
         CatalogStoreMapping mapping = new CatalogStoreMapping();
         for (Map.Entry<String, String> mappingEntry : mappingSource.entrySet()) {
@@ -191,7 +194,6 @@ public class CatalogStoreMapping {
             String key = mappingEntry.getKey();
             boolean required = false;
             boolean id = false;
-            int splitIndex = -1;
             if ("$".equals(key.substring(0, 1))) {
                 key = key.substring(1);
                 required = true;
@@ -200,9 +202,16 @@ public class CatalogStoreMapping {
                 key = key.substring(1);
                 id = true;
             }
-            if (key.contains("%.")) {
-                splitIndex = StringUtils.countMatches(key.substring(0, key.indexOf("%.")), ".");
-                key = key.replace("%.", ".");
+            if ("\\".equals(key.substring(0, 1))) {
+                // escape character
+                // can be used to avoid attribute @ being confused with id @
+                key = key.substring(1);
+            }
+            List<Integer> splitIndexes = new ArrayList<>();
+            while (key.contains("%.")) {
+                splitIndexes.add(
+                        StringUtils.countMatches(key.substring(0, key.indexOf("%.")), "."));
+                key = key.replaceFirst(Pattern.quote("%."), ".");
             }
 
             CatalogStoreMappingElement element = mapping.mappingElements.get(key);
@@ -213,10 +222,20 @@ public class CatalogStoreMapping {
 
             element.content = parseOgcCqlExpression(mappingEntry.getValue());
             element.required = required;
-            element.splitIndex = splitIndex;
+            element.splitIndex = new int[splitIndexes.size()];
+            for (int i = 0; i < splitIndexes.size(); i++) {
+                element.splitIndex[i] = splitIndexes.get(i);
+            }
             if (id) {
                 mapping.identifier = element;
             }
+        }
+
+        int index = mappingName.indexOf('-');
+        if (index >= 0) {
+            mapping.setMappingName(mappingName.substring(index + 1));
+        } else {
+            mapping.setMappingName("");
         }
 
         return mapping;
@@ -242,7 +261,6 @@ public class CatalogStoreMapping {
                                 + ":\n"
                                 + formattedErrorMessage);
             } catch (Exception e) {
-                e.printStackTrace();
                 String msg = "parsing expression " + sourceExpr;
                 LOGGER.log(Level.SEVERE, msg, e);
                 throw new IllegalArgumentException(msg + ": " + e.getMessage(), e);
@@ -261,11 +279,19 @@ public class CatalogStoreMapping {
     public static String toDotPath(XPathUtil.StepList steps) {
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < steps.size(); i++) {
-            sb.append(steps.get(i).getName().getLocalPart());
+        for (XPathUtil.Step step : steps) {
+            sb.append(step.getName().getLocalPart());
             sb.append(".");
         }
         sb.deleteCharAt(sb.length() - 1);
         return sb.toString();
+    }
+
+    public String getMappingName() {
+        return mappingName;
+    }
+
+    public void setMappingName(String mappingName) {
+        this.mappingName = mappingName;
     }
 }

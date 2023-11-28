@@ -4,10 +4,11 @@
  */
 package org.geoserver.wcs2_0.xml;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
 import static org.geoserver.wcs2_0.exception.WCS20Exception.WCS20ExceptionCode.InvalidSubsetting;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.awt.image.Raster;
 import java.awt.image.RenderedImage;
@@ -88,19 +89,14 @@ public class GetCoverageTest extends WCSTestSupport {
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
+        System.setProperty("user.timezone", "UTC");
         testData.addRasterLayer(
                 WATTEMP, "watertemp.zip", null, null, SystemTestData.class, getCatalog());
         GeoServerDataDirectory dataDirectory = getDataDirectory();
         Resource watertemp = dataDirectory.getResourceLoader().get("watertemp");
         File data = watertemp.dir();
         FilenameFilter groundElevationFilter =
-                new FilenameFilter() {
-
-                    @Override
-                    public boolean accept(File dir, String name) {
-                        return name.matches(".*_000_.*tiff") || name.matches("watertemp\\..*");
-                    }
-                };
+                (dir, name) -> name.matches(".*_000_.*tiff") || name.matches("watertemp\\..*");
         for (File file : data.listFiles(groundElevationFilter)) {
             file.delete();
         }
@@ -189,6 +185,10 @@ public class GetCoverageTest extends WCSTestSupport {
                 "//gml:rangeSet/gml:File/gml:fileReference",
                 gml);
         XMLAssert.assertXpathEvaluatesTo("image/tiff", "//gml:rangeSet/gml:File/gml:mimeType", gml);
+        XMLAssert.assertXpathEvaluatesTo(
+                "RED_BAND",
+                "//gmlcov:rangeType/swe:DataRecord/swe:field[@name='RED_BAND']/swe:Quantity/swe:description",
+                gml);
 
         BodyPart coveragePart = multipart.getBodyPart(1);
         assertEquals("/coverages/wcs__BlueMarble.tif", coveragePart.getHeader("Content-ID")[0]);
@@ -472,8 +472,8 @@ public class GetCoverageTest extends WCSTestSupport {
             // 1 dimensional slice along latitude
             final GeneralEnvelope expectedEnvelope =
                     new GeneralEnvelope(
-                            new double[] {146.49999999999477, -43.5},
-                            new double[] {146.99999999999477, -43.49583333333119});
+                            new double[] {146.49999999999477, -43.504166666664524},
+                            new double[] {146.99999999999477, -43.49999999999786});
             expectedEnvelope.setCoordinateReferenceSystem(CRS.decode("EPSG:4326", true));
 
             final double scale = getScale(targetCoverage);
@@ -514,6 +514,7 @@ public class GetCoverageTest extends WCSTestSupport {
     }
 
     @Test
+    @SuppressWarnings("PMD.SimplifiableTestAssertion")
     public void testCoverageTrimmingBordersOverlap() throws Exception {
         final File xml =
                 new File(
@@ -533,6 +534,7 @@ public class GetCoverageTest extends WCSTestSupport {
     }
 
     @Test
+    @SuppressWarnings("PMD.SimplifiableTestAssertion")
     public void testCoverageTrimmingBordersOverlapVertical() throws Exception {
         final File xml =
                 new File(
@@ -552,6 +554,7 @@ public class GetCoverageTest extends WCSTestSupport {
     }
 
     @Test
+    @SuppressWarnings("PMD.SimplifiableTestAssertion")
     public void testCoverageTrimmingBordersOverlapOutside() throws Exception {
         final File xml =
                 new File(
@@ -573,11 +576,11 @@ public class GetCoverageTest extends WCSTestSupport {
     }
 
     @FunctionalInterface
-    public interface GridTester {
+    public interface GridChecker {
         void test(GridCoverage2D coverage) throws Exception;
     }
 
-    void testCoverageResult(File xml, GridTester tester) throws Exception {
+    void testCoverageResult(File xml, GridChecker tester) throws Exception {
         final String request = FileUtils.readFileToString(xml, "UTF-8");
         MockHttpServletResponse response = postAsServletResponse("wcs", request);
 
@@ -683,8 +686,8 @@ public class GetCoverageTest extends WCSTestSupport {
             // 1 dimensional slice along latitude
             final GeneralEnvelope expectedEnvelope =
                     new GeneralEnvelope(
-                            new double[] {146.49999999999477, -43.499999999997854},
-                            new double[] {147.99999999999474, -43.49583333333119});
+                            new double[] {146.49999999999477, -43.504166666664524},
+                            new double[] {147.99999999999474, -43.49999999999786});
             expectedEnvelope.setCoordinateReferenceSystem(CRS.decode("EPSG:4326", true));
 
             final double scale = getScale(targetCoverage);
@@ -736,8 +739,14 @@ public class GetCoverageTest extends WCSTestSupport {
         String request = FileUtils.readFileToString(xml, "UTF-8");
         request = request.replace("${coverageId}", "sf__watertemp");
         request = request.replace("${slicePoint}", "2000-10-31T00:00:00.000Z");
-        // nearest neighbor match, lowest time returned
-        checkWaterTempValue(request, 14.89799975766800344);
+        checkWaterTempValue(request, null);
+
+        try {
+            setupNearestMatch(WATTEMP, ResourceInfo.TIME, true, "P8Y", true);
+            checkWaterTempValue(request, 14.89799975766800344);
+        } finally {
+            setupNearestMatch(WATTEMP, ResourceInfo.TIME, false);
+        }
     }
 
     @Test
@@ -756,13 +765,19 @@ public class GetCoverageTest extends WCSTestSupport {
     public void testCoverageTimeSlicingTimeClosest() throws Exception {
         setupRasterDimension(
                 getLayerId(WATTEMP), ResourceInfo.TIME, DimensionPresentation.LIST, null);
+        // Enable nearest match
         final File xml =
                 new File("./src/test/resources/trimming/requestGetCoverageTimeSlicingXML.xml");
         String request = FileUtils.readFileToString(xml, "UTF-8");
         request = request.replace("${coverageId}", "sf__watertemp");
-        request = request.replace("${slicePoint}", "2000-10-31T11:30:00.000Z");
-        // nearest neighbor match, lowest time returned
-        checkWaterTempValue(request, 14.89799975766800344);
+        request = request.replace("${slicePoint}", "2008-10-31T11:30:00.000Z");
+        checkWaterTempValue(request, null);
+        try {
+            setupNearestMatch(WATTEMP, ResourceInfo.TIME, true, "P8Y", true);
+            checkWaterTempValue(request, 14.89799975766800344);
+        } finally {
+            setupNearestMatch(WATTEMP, ResourceInfo.TIME, false);
+        }
     }
 
     @Test
@@ -787,8 +802,14 @@ public class GetCoverageTest extends WCSTestSupport {
         String request = FileUtils.readFileToString(xml, "UTF-8");
         request = request.replace("${coverageId}", "sf__watertemp");
         request = request.replace("${slicePoint}", "2011-11-01T00:00:00.000Z");
-        // nearest neighbor match, highest time returned
-        checkWaterTempValue(request, 14.52999974018894136);
+        checkWaterTempValue(request, null);
+
+        try {
+            setupNearestMatch(WATTEMP, ResourceInfo.TIME, true, "P4Y", true);
+            checkWaterTempValue(request, 14.52999974018894136);
+        } finally {
+            setupNearestMatch(WATTEMP, ResourceInfo.TIME, false);
+        }
     }
 
     @Test
@@ -817,8 +838,14 @@ public class GetCoverageTest extends WCSTestSupport {
         String request = FileUtils.readFileToString(xml, "UTF-8");
         request = request.replace("${coverageId}", "sf__timeranges");
         request = request.replace("${slicePoint}", "2008-11-04T11:00:00.000Z");
-        // timeranges is really just an expanded watertemp, and we expect NN
-        checkWaterTempValue(request, 14.52999974018894136);
+        checkWaterTempValue(request, null);
+
+        try {
+            setupNearestMatch(TIMERANGES, ResourceInfo.TIME, true, "PT20H", true);
+            checkWaterTempValue(request, 18.10899991018232);
+        } finally {
+            setupNearestMatch(TIMERANGES, ResourceInfo.TIME, false);
+        }
     }
 
     @Test
@@ -944,10 +971,16 @@ public class GetCoverageTest extends WCSTestSupport {
                 null);
     }
 
-    private void checkWaterTempValue(String request, double expectedValue)
+    private void checkWaterTempValue(String request, Double expectedValue)
             throws Exception, IOException, DataSourceException {
         MockHttpServletResponse response = postAsServletResponse("wcs", request);
 
+        if (expectedValue == null) {
+            // we expect a WCS Exception
+            assertNotEquals(response.getStatus(), 200);
+            assertEquals("application/xml", response.getContentType());
+            return;
+        }
         assertEquals("image/tiff", response.getContentType());
         byte[] tiffContents = getBinary(response);
         File file = File.createTempFile("bm_gtiff", "bm_gtiff.tiff", new File("./target"));

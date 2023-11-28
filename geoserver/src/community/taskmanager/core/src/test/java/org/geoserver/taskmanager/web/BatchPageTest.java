@@ -1,3 +1,7 @@
+/* (c) 2017-2018 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.taskmanager.web;
 
 import static org.junit.Assert.assertEquals;
@@ -38,6 +42,7 @@ public class BatchPageTest extends AbstractWicketTaskManagerTest {
     private TaskManagerTaskUtil tutil;
     private Scheduler scheduler;
 
+    @Override
     protected boolean setupDataDirectory() throws Exception {
         return true;
     }
@@ -235,13 +240,13 @@ public class BatchPageTest extends AbstractWicketTaskManagerTest {
                 ((CheckBox)
                         tester.getComponentFromLastRenderedPage(
                                 "batchForm:tasksPanel:listContainer:items:7:selectItemContainer:selectItem"));
-        tester.getRequest().setParameter(selector.getInputName(), "true");
+        tester.getRequest().getPostParameters().addParameterValue(selector.getInputName(), "true");
         tester.executeAjaxEvent(selector, "click");
         selector =
                 ((CheckBox)
                         tester.getComponentFromLastRenderedPage(
                                 "batchForm:tasksPanel:listContainer:items:9:selectItemContainer:selectItem"));
-        tester.getRequest().setParameter(selector.getInputName(), "true");
+        tester.getRequest().getPostParameters().addParameterValue(selector.getInputName(), "true");
         tester.executeAjaxEvent(selector, "click");
         tester.clickLink("batchForm:removeSelected");
         tester.executeAjaxEvent("dialog:dialog:content:form:submit", "click");

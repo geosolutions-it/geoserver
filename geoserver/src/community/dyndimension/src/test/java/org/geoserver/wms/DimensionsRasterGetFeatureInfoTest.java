@@ -33,7 +33,7 @@ public class DimensionsRasterGetFeatureInfoTest extends WMSDynamicDimensionTestS
 
     @Override
     protected String getLogConfiguration() {
-        return "/DEFAULT_LOGGING.properties";
+        return "DEFAULT_LOGGING";
     }
 
     @Before
@@ -54,8 +54,6 @@ public class DimensionsRasterGetFeatureInfoTest extends WMSDynamicDimensionTestS
      * Ensures there is at most one feature at the specified location, and returns its feature id
      *
      * @param baseFeatureInfo The GetFeatureInfo request, minus x and y
-     * @param x
-     * @param y
      * @param layerName TODO
      */
     Double getValueAt(String baseFeatureInfo, int x, int y) throws Exception {

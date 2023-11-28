@@ -224,11 +224,7 @@ public class CSWRecordDescriptor extends AbstractRecordDescriptor {
                         "dc:rights");
     }
 
-    /**
-     * Checks if a field is public static final
-     *
-     * @param field
-     */
+    /** Checks if a field is public static final */
     static boolean isConstant(Field field) {
         int modifier = field.getModifiers();
         return Modifier.isStatic(modifier)
@@ -315,6 +311,7 @@ public class CSWRecordDescriptor extends AbstractRecordDescriptor {
                 .extendProperty(buildPropertyName(NAMESPACES, name), FF, NAMESPACES);
     }
 
+    @Override
     public void verifySpatialFilters(Filter filter) {
         filter.accept(new SpatialFilterChecker(getFeatureType()), null);
     }

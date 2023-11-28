@@ -9,6 +9,7 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import javax.xml.namespace.QName;
@@ -27,7 +28,7 @@ public class DescribeRecordTest extends CSWSimpleTestSupport {
 
     @Test
     public void testKVPReaderNS() throws Exception {
-        Map<String, Object> raw = new HashMap<String, Object>();
+        Map<String, Object> raw = new HashMap<>();
         raw.put("service", "CSW");
         raw.put("version", "2.0.2");
         raw.put("request", "DescribeRecord");
@@ -59,7 +60,7 @@ public class DescribeRecordTest extends CSWSimpleTestSupport {
 
     @Test
     public void testKVPReaderNoNamespace() throws Exception {
-        Map<String, Object> raw = new HashMap<String, Object>();
+        Map<String, Object> raw = new HashMap<>();
         raw.put("service", "CSW");
         raw.put("version", "2.0.2");
         raw.put("request", "DescribeRecord");
@@ -76,7 +77,7 @@ public class DescribeRecordTest extends CSWSimpleTestSupport {
 
     @Test
     public void testKVPReaderDefaultNamespace() throws Exception {
-        Map<String, Object> raw = new HashMap<String, Object>();
+        Map<String, Object> raw = new HashMap<>();
         raw.put("service", "CSW");
         raw.put("version", "2.0.2");
         raw.put("request", "DescribeRecord");
@@ -104,7 +105,7 @@ public class DescribeRecordTest extends CSWSimpleTestSupport {
                         EntityResolverProvider.RESOLVE_DISABLED_PROVIDER);
         DescribeRecordType dr =
                 (DescribeRecordType)
-                        reader.read(null, getResourceAsReader("DescribeRecord.xml"), (Map) null);
+                        reader.read(null, getResourceAsReader("DescribeRecord.xml"), null);
         assertDescribeRecordValid(dr);
     }
 
@@ -133,7 +134,10 @@ public class DescribeRecordTest extends CSWSimpleTestSupport {
         MockHttpServletResponse response =
                 getAsServletResponse("/schemas/csw/2.0.2/rec-dcterms.xsd");
         assertEquals(200, response.getStatus());
-        dom = dom(new ByteArrayInputStream(response.getContentAsString().getBytes("UTF-8")));
+        dom =
+                dom(
+                        new ByteArrayInputStream(
+                                response.getContentAsString().getBytes(StandardCharsets.UTF_8)));
         assertXpathEvaluatesTo("dc:SimpleLiteral", "//xs:element[@name='abstract']/@type", dom);
     }
 

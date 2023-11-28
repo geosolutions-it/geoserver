@@ -5,10 +5,24 @@
  */
 package org.geoserver.platform.resource;
 
-import static org.geoserver.platform.resource.ResourceMatchers.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+import static org.geoserver.platform.resource.ResourceMatchers.defined;
+import static org.geoserver.platform.resource.ResourceMatchers.directory;
+import static org.geoserver.platform.resource.ResourceMatchers.resource;
+import static org.geoserver.platform.resource.ResourceMatchers.undefined;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.arrayContainingInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,11 +32,11 @@ import java.io.OutputStream;
 import java.util.Collection;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.geoserver.platform.resource.Resource.Type;
-import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 /**
@@ -33,8 +47,6 @@ import org.junit.runner.RunWith;
  */
 @RunWith(Theories.class)
 public abstract class ResourceTheoryTest {
-
-    @Rule public ExpectedException exception = ExpectedException.none();
 
     protected abstract Resource getResource(String path) throws Exception;
 
@@ -116,15 +128,15 @@ public abstract class ResourceTheoryTest {
     }
 
     @Theory
-    public void theoryUndefinedHaveIstreamAndBecomeResource(String path) throws Exception {
+    public void theoryUndefinedHaveNoIstreams(String path) throws Exception {
         Resource res = getResource(path);
 
         assumeThat(res, is(undefined()));
 
-        try (InputStream result = res.in()) {
-            assertThat(result, notNullValue());
-            assertThat(res, is(resource()));
-        }
+        assertThrows(IllegalStateException.class, () -> res.in().close());
+
+        // must not be created unintentionally.
+        assertThat(res, is(undefined()));
     }
 
     @Theory
@@ -165,8 +177,7 @@ public abstract class ResourceTheoryTest {
         Resource res = getResource(path);
         assumeThat(res, is(directory()));
 
-        exception.expect(IllegalStateException.class);
-        res.in().close();
+        assertThrows(IllegalStateException.class, () -> res.in().close());
     }
 
     @Theory
@@ -174,8 +185,7 @@ public abstract class ResourceTheoryTest {
         Resource res = getResource(path);
         assumeThat(res, is(directory()));
 
-        exception.expect(IllegalStateException.class);
-        res.out().close();
+        assertThrows(IllegalStateException.class, () -> res.out().close());
     }
 
     @Theory
@@ -399,9 +409,7 @@ public abstract class ResourceTheoryTest {
         assertThat(result, equalTo(testFile));
     }
 
-    // This is the behaviour of the file based implementation. Should this be required or left
-    // undefined with clear documentation indicating that it's implementation dependent?
-    // @Ignore
+    // This is the behaviour of the file based implementation is required
     @Theory
     public void theoryAddingFileToDirectoryAddsResource(String path) throws Exception {
         Resource res = getResource(path);
@@ -414,7 +422,7 @@ public abstract class ResourceTheoryTest {
 
         assumeTrue(file.createNewFile());
 
-        Resource child = getResource(Paths.path(res.path(), "newFileCreatedDirectly"));
+        Resource child = getResource(Paths.path(res.name(), "newFileCreatedDirectly"));
         Collection<Resource> children = res.list();
 
         assertThat(child, is(defined()));
@@ -454,6 +462,7 @@ public abstract class ResourceTheoryTest {
     }
 
     @Theory
+    @SuppressWarnings("PMD.CloseResource")
     public void theoryDoubleClose(String path) throws Exception {
         final Resource res = getResource(path);
         assumeThat(res, is(resource()));
@@ -476,10 +485,31 @@ public abstract class ResourceTheoryTest {
     }
 
     @Theory
-    public void theoryRootSlashIsIgnored(String path) throws Exception {
-        final Resource res = getResource(path);
-        final Resource res2 = getResource("/" + path);
-        assertTrue(res.equals(res2));
-        assertTrue(res.path().equals(res2.path()));
+    public void theoryRootIsAbsolute(String path) throws Exception {
+        File home = new File(System.getProperty("user.home")).getCanonicalFile();
+        File file = Paths.toFile(home, path);
+
+        final Resource res = getResource(Paths.convert(file.getPath()));
+        assertTrue(Paths.isAbsolute(res.path()));
+    }
+
+    @Test
+    public void testPathTraversal() {
+        assertInvalidPath("..");
+        assertInvalidPath("../foo/bar");
+        assertInvalidPath("foo/../bar");
+        assertInvalidPath("foo/bar/..");
+    }
+
+    @Test
+    public void testPathTraversalWindows() {
+        assumeTrue(SystemUtils.IS_OS_WINDOWS);
+        assertInvalidPath("..\\foo\\bar");
+        assertInvalidPath("foo\\..\\bar");
+        assertInvalidPath("foo\\bar\\..");
+    }
+
+    protected final void assertInvalidPath(String path) {
+        assertThrows(IllegalArgumentException.class, () -> getResource(path));
     }
 }

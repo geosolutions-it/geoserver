@@ -5,6 +5,9 @@
  */
 package org.geoserver.catalog;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 
 import java.awt.image.ColorModel;
@@ -31,7 +34,6 @@ import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.parameter.Parameter;
-import org.junit.Assert;
 import org.junit.Test;
 import org.opengis.coverage.grid.GridCoverage;
 import org.opengis.coverage.grid.GridCoverageReader;
@@ -118,7 +120,7 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
                         "v-component_of_current_surface@0",
                         1,
                         CompositionType.BAND_SELECT);
-        final List<CoverageBand> coverageBands = new ArrayList<CoverageBand>(2);
+        final List<CoverageBand> coverageBands = new ArrayList<>(2);
         coverageBands.add(outputBand_u);
         coverageBands.add(outputBand_v);
         coverageView = new CoverageView("regional_currents", coverageBands);
@@ -165,7 +167,7 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
                         1,
                         CompositionType.BAND_SELECT);
 
-        final List<CoverageBand> coverageBands = new ArrayList<CoverageBand>(1);
+        final List<CoverageBand> coverageBands = new ArrayList<>(1);
         coverageBands.add(b0);
         coverageBands.add(b1);
         coverageBands.add(b2);
@@ -230,7 +232,6 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
 
         final Catalog cat = getCatalog();
         final CoverageInfo coverageInfo = cat.getCoverageByName("multiband_select");
-        final MetadataMap metadata = coverageInfo.getMetadata();
 
         final ResourcePool resPool = cat.getResourcePool();
         final ReferencedEnvelope bbox = coverageInfo.getLatLonBoundingBox();
@@ -242,7 +243,7 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
         ((GridCoverage2D) coverage).dispose(true);
         final GridCoverageReader reader =
                 resPool.getGridCoverageReader(coverageInfo, "multiband_select", null);
-        int[] bandIndices = new int[] {2, 0, 1, 0, 2, 2, 2, 3};
+        int[] bandIndices = {2, 0, 1, 0, 2, 2, 2, 3};
         Parameter<int[]> bandIndicesParam = null;
 
         if (bandIndices != null) {
@@ -256,7 +257,7 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
         assertEquals(5, sampleModel.getNumBands());
         reader.dispose();
 
-        List<GeneralParameterValue> paramList = new ArrayList<GeneralParameterValue>();
+        List<GeneralParameterValue> paramList = new ArrayList<>();
         paramList.addAll(Arrays.asList(bandIndicesParam));
         GeneralParameterValue[] readParams =
                 paramList.toArray(new GeneralParameterValue[paramList.size()]);
@@ -282,17 +283,16 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
         int[] srcImageRowBand0 = new int[sWidth * sHeight];
         int[] srcImageRowBand1 = new int[srcImageRowBand0.length];
         int[] srcImageRowBand2 = new int[srcImageRowBand0.length];
-        int[] srcImageRowBand3 = new int[srcImageRowBand0.length];
 
         srcImage.getData().getSamples(0, 0, sWidth, sHeight, 0, srcImageRowBand0);
         srcImage.getData().getSamples(0, 0, sWidth, sHeight, 1, srcImageRowBand1);
         srcImage.getData().getSamples(0, 0, sWidth, sHeight, 2, srcImageRowBand2);
 
-        Assert.assertTrue(Arrays.equals(destImageRowBand0, srcImageRowBand2));
-        Assert.assertTrue(Arrays.equals(destImageRowBand1, srcImageRowBand0));
-        Assert.assertTrue(Arrays.equals(destImageRowBand2, srcImageRowBand1));
-        Assert.assertTrue(Arrays.equals(destImageRowBand3, srcImageRowBand0));
-        Assert.assertFalse(Arrays.equals(destImageRowBand0, srcImageRowBand0));
+        assertThat(destImageRowBand0, equalTo(srcImageRowBand2));
+        assertThat(destImageRowBand1, equalTo(srcImageRowBand0));
+        assertThat(destImageRowBand2, equalTo(srcImageRowBand1));
+        assertThat(destImageRowBand3, equalTo(srcImageRowBand0));
+        assertThat(destImageRowBand0, not(equalTo(srcImageRowBand0)));
     }
 
     /**
@@ -304,19 +304,17 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
 
         final Catalog cat = getCatalog();
         final CoverageInfo coverageInfo = cat.getCoverageByName("multiband_select");
-        final MetadataMap metadata = coverageInfo.getMetadata();
 
         final ResourcePool resPool = cat.getResourcePool();
         final ReferencedEnvelope bbox = coverageInfo.getLatLonBoundingBox();
         final GridCoverage coverage =
                 resPool.getGridCoverage(coverageInfo, "multiband_select", bbox, null);
-        RenderedImage srcImage = coverage.getRenderedImage();
 
         assertEquals(coverage.getNumSampleDimensions(), 5);
         ((GridCoverage2D) coverage).dispose(true);
         final GridCoverageReader reader =
                 resPool.getGridCoverageReader(coverageInfo, "multiband_select", null);
-        int[] bandIndices = new int[] {2, 0, 1, 0, 2, 2, 2, 3, 4, 0, 1, 0, 4, 2, 3};
+        int[] bandIndices = {2, 0, 1, 0, 2, 2, 2, 3, 4, 0, 1, 0, 4, 2, 3};
         Parameter<int[]> bandIndicesParam = null;
 
         if (bandIndices != null) {
@@ -330,7 +328,7 @@ public class CoverageViewReaderTest extends GeoServerSystemTestSupport {
         assertEquals(5, sampleModel.getNumBands());
         reader.dispose();
 
-        List<GeneralParameterValue> paramList = new ArrayList<GeneralParameterValue>();
+        List<GeneralParameterValue> paramList = new ArrayList<>();
         paramList.addAll(Arrays.asList(bandIndicesParam));
         GeneralParameterValue[] readParams =
                 paramList.toArray(new GeneralParameterValue[paramList.size()]);

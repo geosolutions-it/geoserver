@@ -6,15 +6,23 @@
 package org.geoserver.web.data.store;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.List;
 import org.apache.wicket.Component;
-import org.geoserver.catalog.Catalog;
+import org.apache.wicket.markup.html.form.CheckBox;
+import org.apache.wicket.util.tester.FormTester;
+import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.web.GeoServerWicketTestSupport;
+import org.geoserver.web.data.layer.NewLayerPage;
 import org.geoserver.web.data.store.panel.FileParamPanel;
 import org.geoserver.web.data.store.panel.WorkspacePanel;
 import org.geotools.data.property.PropertyDataStoreFactory;
@@ -125,8 +133,6 @@ public class DataAccessNewPageTest extends GeoServerWicketTestSupport {
      */
     @Test
     public void testInitCreateNewDataStoreSetsNamespaceParam() {
-        final Catalog catalog = getGeoServerApplication().getCatalog();
-
         final AbstractDataAccessPage page = startPage();
 
         page.get(null);
@@ -151,5 +157,68 @@ public class DataAccessNewPageTest extends GeoServerWicketTestSupport {
                 tester.getComponentFromLastRenderedPage(
                         "dataStoreForm:parametersPanel:parameters:1:parameterPanel");
         assertThat(component, instanceOf(FileParamPanel.class));
+    }
+
+    @Test
+    public void testNewDataStoreSave() {
+        startPage();
+        FormTester ft = tester.newFormTester("dataStoreForm");
+
+        ft.setValue(
+                "parametersPanel:parameters:0:parameterPanel:fileInput:border:border_body:paramValue",
+                "file:cdf");
+        ft.setValue("dataStoreNamePanel:border:border_body:paramValue", "cdf2");
+        ft.submit("save");
+
+        tester.assertNoErrorMessage();
+        tester.assertRenderedPage(NewLayerPage.class);
+        DataStoreInfo store = getCatalog().getDataStoreByName("cdf2");
+        assertNotNull(store);
+        assertEquals("file:cdf", store.getConnectionParameters().get("directory"));
+    }
+
+    @Test
+    public void testNewDataStoreApply() {
+        startPage();
+        FormTester ft = tester.newFormTester("dataStoreForm");
+
+        ft.setValue(
+                "parametersPanel:parameters:0:parameterPanel:fileInput:border:border_body:paramValue",
+                "file:cdf");
+        ft.setValue("dataStoreNamePanel:border:border_body:paramValue", "cdf3");
+        ft.submit("apply");
+
+        tester.assertNoErrorMessage();
+        tester.assertRenderedPage(DataAccessEditPage.class);
+        DataStoreInfo store = getCatalog().getDataStoreByName("cdf3");
+        assertNotNull(store);
+        assertEquals("file:cdf", store.getConnectionParameters().get("directory"));
+    }
+
+    @Test
+    public void testDisableOnConnFailureCheckbox() {
+        String name = "autodisablingStore";
+        startPage();
+        FormTester ft = tester.newFormTester("dataStoreForm");
+
+        ft.setValue(
+                "parametersPanel:parameters:0:parameterPanel:fileInput:border:border_body:paramValue",
+                "file:cdf");
+        ft.setValue("dataStoreNamePanel:border:border_body:paramValue", name);
+
+        Component component =
+                tester.getComponentFromLastRenderedPage(
+                        "dataStoreForm:disableOnConnFailurePanel:paramValue");
+        CheckBox checkBox = (CheckBox) component;
+        assertFalse(Boolean.valueOf(checkBox.getInput()).booleanValue());
+
+        ft.setValue("disableOnConnFailurePanel:paramValue", true);
+
+        ft.submit("save");
+
+        tester.assertNoErrorMessage();
+        DataStoreInfo store = getCatalog().getDataStoreByName(name);
+        assertNotNull(store);
+        assertTrue(store.isDisableOnConnFailure());
     }
 }

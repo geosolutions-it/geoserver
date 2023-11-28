@@ -12,7 +12,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -39,7 +43,7 @@ public class SpatialFile extends FileData {
     File styleFile;
 
     /** supplementary files, like indexes, etc... */
-    List<File> suppFiles = new ArrayList<File>();
+    List<File> suppFiles = new ArrayList<>();
 
     /**
      * Create from file system
@@ -69,7 +73,7 @@ public class SpatialFile extends FileData {
     }
 
     public List<File> allFiles() {
-        ArrayList<File> all = new ArrayList<File>();
+        ArrayList<File> all = new ArrayList<>();
         all.add(file);
         if (prjFile != null) {
             all.add(prjFile);
@@ -84,7 +88,7 @@ public class SpatialFile extends FileData {
     @Override
     public void prepare(ProgressMonitor m) throws IOException {
         // round up all the files with the same name
-        suppFiles = new ArrayList();
+        suppFiles = new ArrayList<>();
         prjFile = null;
         styleFile = null;
 
@@ -224,7 +228,7 @@ public class SpatialFile extends FileData {
     }
 
     protected Object readResolve() {
-        suppFiles = suppFiles == null ? new ArrayList<File>() : suppFiles;
+        suppFiles = suppFiles == null ? new ArrayList<>() : suppFiles;
         return this;
     }
 

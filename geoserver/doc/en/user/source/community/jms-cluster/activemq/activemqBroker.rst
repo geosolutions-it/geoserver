@@ -1,7 +1,7 @@
 HOWTO configure ActiveMQ broker
 ===============================
 
-Deploy the produced activemqBroker.war in your tomcat instance and check the extracted webapp. You may locate a file called activemq-jmx.properties which will help you to configure your instance with the most important paramenters.
+Deploy the produced activemqBroker.war in your tomcat instance and check the extracted webapp. You may locate a file called activemq-jmx.properties which will help you to configure your instance with the most important parameters.
 Anyhow it is only an example and we encourage you to also check the ApplicationContext.xml file deployed to activemq/WEB-INF/classes/ApplicationContext.xml which is the complete configuration:
 
 .. code-block:: xml
@@ -30,7 +30,7 @@ To configure the persistence for the messages to deliver you need to setup the <
   </persistenceAdapter>
   ...
 
-In the above section we defined a jdbcPersistenceAdapter connected to a dataSource called #postgres-ds that forces the broker to use PostgreSQL for persisting its messages when the delivery cannot be guaranteed (e.g. a slave goes down unexpectedly).
+In the above section we defined a jdbcPersistenceAdapter connected to a dataSource called #postgres-ds that forces the broker to use PostgreSQL for persisting its messages when the delivery cannot be guaranteed (e.g. a replica goes down unexpectedly).
 You now need to configure your own datasource as specified in the following section which are specific for different DBMS.
 
 Oracle datasource
@@ -71,6 +71,8 @@ Configuring PostgreSQL as the datasource to use for the persistence of the messa
 	  <property name="maxConnections" value="30"/>
   </bean>
   ...
+
+In addition, you need to make sure that the jar containing the driver for PostgreSQL is correctly deployed inside the WEB-INF/lib for the activemq war file. At the same time the database referred in provided instructions as well as the user must be already present.
 
 .. note::
   The above ApplicationContext.xml file contains some unused sections which are intentionally commented out to show different types of configurations [Ref. ActiveMQ].

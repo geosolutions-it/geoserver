@@ -5,223 +5,197 @@
  */
 package org.geoserver.logging;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Properties;
 import javax.servlet.ServletContext;
-import org.apache.log4j.Appender;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.PropertyConfigurator;
+import org.geoserver.config.LoggingInfo;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
-import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
-import org.geoserver.platform.resource.Resource.Type;
 import org.vfny.geoserver.global.ConfigurationException;
 
+/**
+ * Used to manage GeoServer logging facilities.
+ *
+ * <p>GeoTools logging is configured following {@link GeoToolsLoggingRedirection} policy, mapping
+ * {@link #GT2_LOGGING_REDIRECTION} policy to appropriate LoggingFactory responsible for routing
+ * java util logging api.
+ *
+ * <p>Use {@code -DGT2_LOGGING_REDIRECTION=Log4j} {@code -DRELINQUISH_LOG4J_CONTROL=true} {@code
+ * -Dlog4j.configuration=log4j.properties} to redirect GeoServer to use LOG4J API with
+ * log4j.properties configuration.
+ *
+ * <p>Prior to GeoSerer 2.21 the LOG4J library was included as the application default, to maintain
+ * an older data directory use {@code -DGT2_LOGGING_REDIRECTION=Log4j2
+ * -DRELINQUISH_LOG4J_CONTROL=true -Dlog4j.configuration=CUSTOM_LOGGING.properties}. This forces
+ * GeoServer to read your {@code CUSTOM_LOGGING.properties} Log4J 1.2 configuration (via Log4J
+ * bridge).
+ *
+ * <p>To troubleshoot use {@code org.apache.logging.log4j.simplelog.StatusLogger.level=DEBUG}, or
+ * adjust {@code log4j2.xml} file {@code <Configuration status="trace">}.
+ *
+ * @see org.geoserver.config.LoggingInfo
+ */
 public class LoggingUtils {
 
+    /**
+     * Property used to disable {@link LoggingInfo#getLevel()}, when managing logging configuration
+     * manually.
+     *
+     * <p>Successful use of this setting requires selection {@link #GT2_LOGGING_REDIRECTION} policy,
+     * and logging configuration.
+     */
     public static final String RELINQUISH_LOG4J_CONTROL = "RELINQUISH_LOG4J_CONTROL";
+
+    /** Logging redirection value established by {@link LoggingStartupContextListener}. */
+    static boolean relinquishLog4jControl = false;
+
+    /**
+     * Property used to enable update of built-in logging profiles on startup.
+     *
+     * <p>Use {@code -DUPDATE_BUILT_IN_LOGGING_PROFILES=true} to allow GeoServer to update built-in
+     * logging profiles during startup.
+     */
+    public static final String UPDATE_BUILT_IN_LOGGING_PROFILES =
+            "UPDATE_BUILT_IN_LOGGING_PROFILES";
+
+    /** Logging profile update policy established by {@link LoggingStartupContextListener}. */
+    static boolean updateBuiltInLoggingProfiles = false;
+
+    /**
+     * Property used override Log4J default, and force use of another logging framework.
+     *
+     * <p>Successful use of this setting requires use of {@link #RELINQUISH_LOG4J_CONTROL}, and a
+     * custom WAR with the logging framework jars used. Use {@code
+     * -DGT2_LOGGING_REDIRECTION=Logback} {@code -DRELINQUISH_LOG4J_CONTROL=true} {@code
+     * -Dlog4j.configuration=logback.xml} to redirect GeoServer to use SLF4J API with logback.xml
+     * configuration.
+     */
     public static final String GT2_LOGGING_REDIRECTION = "GT2_LOGGING_REDIRECTION";
+
+    /** Flag used to override {@link LoggingInfo#getLocation()} */
     public static final String GEOSERVER_LOG_LOCATION = "GEOSERVER_LOG_LOCATION";
 
+    /** Policy settings for {@link LoggingUtils#GEOSERVER_LOG_LOCATION} configuration. */
     public static enum GeoToolsLoggingRedirection {
+        Logback,
         JavaLogging,
         CommonsLogging,
-        Log4J;
+        Log4J,
+        Log4J2;
 
         /**
          * Returns the enum value corresponding to the name (using case insensitive comparison) or
-         * Log4j if no match is found
-         *
-         * @param name
+         * Log4J2 if no match is found.
          */
         public static GeoToolsLoggingRedirection findValue(String name) {
             for (GeoToolsLoggingRedirection value : values()) {
                 if (value.name().equalsIgnoreCase(name)) return value;
             }
-            return Log4J;
+            return Log4J2;
         }
     }
 
+    /** Built-in logging configurations. */
+    public static final String[] STANDARD_LOGGING_CONFIGURATIONS = {
+        "DEFAULT_LOGGING",
+        "GEOSERVER_DEVELOPER_LOGGING",
+        "GEOTOOLS_DEVELOPER_LOGGING",
+        "PRODUCTION_LOGGING",
+        "QUIET_LOGGING",
+        "TEST_LOGGING",
+        "VERBOSE_LOGGING",
+    };
+
+    /** Default logging if configResource unavailable */
+    public static void configureGeoServerLogging(String level) {}
+
+    /**
+     * Reconfigures GeoServer logging using the provided loggingConfigStream, which is interpreted
+     * as a property file or xml.
+     *
+     * <p>A number of overrides are provided to postprocess indicated configuration.
+     *
+     * <p>The actual implementation was moved into a separate class to prevent unnecessarily loading
+     * any log4j-core classes from LoggingUtils when RELINQUISH_LOG4J_CONTROL is true which can
+     * potentially interfere with the application server's logging.
+     *
+     * @param loader GeoServerResource loader used to access directory for logFileName
+     * @param configResource Logging configuration (to be read as property file or xml)
+     * @param suppressStdOutLogging Flag requesting that standard output logging be suppressed
+     * @param suppressFileLogging Flag indicating that file output should be suppressed
+     * @param logFileName Logfile name override (replacing geoserver.log default)
+     * @throws FileNotFoundException
+     * @throws IOException
+     * @throws ConfigurationException
+     */
     public static void configureGeoServerLogging(
             GeoServerResourceLoader loader,
-            InputStream loggingConfigStream,
+            Resource configResource,
             boolean suppressStdOutLogging,
             boolean suppressFileLogging,
             String logFileName)
             throws FileNotFoundException, IOException, ConfigurationException {
-        // JD: before we wipe out the logging configuration, save any appenders that are not
-        // console or file based. This allows for other types of appenders to remain in tact
-        // when geoserver is reloaded.
-        List<Appender> appenders = new ArrayList();
-        Enumeration a = LogManager.getRootLogger().getAllAppenders();
-        while (a.hasMoreElements()) {
-            Appender appender = (Appender) a.nextElement();
-            if (!(appender instanceof ConsoleAppender || appender instanceof FileAppender)) {
-                // save it
-                appenders.add(appender);
-            }
+        if (!relinquishLog4jControl) {
+            LoggingUtilsDelegate.configureGeoServerLogging(
+                    loader,
+                    configResource,
+                    suppressStdOutLogging,
+                    suppressFileLogging,
+                    logFileName);
         }
-
-        Properties lprops = new Properties();
-        lprops.load(loggingConfigStream);
-        LogManager.resetConfiguration();
-        //        LogLog.setQuietMode(true);
-        PropertyConfigurator.configure(lprops);
-        //        LogLog.setQuietMode(false);
-
-        // configuring the log4j file logger
-        if (!suppressFileLogging) {
-            Appender gslf = org.apache.log4j.Logger.getRootLogger().getAppender("geoserverlogfile");
-            if (gslf instanceof org.apache.log4j.FileAppender) {
-                if (logFileName == null) {
-                    logFileName = loader.get("logs").get("geoserver.log").file().getAbsolutePath();
-                } else {
-                    if (!new File(logFileName).isAbsolute()) {
-                        logFileName =
-                                new File(loader.getBaseDirectory(), logFileName).getAbsolutePath();
-                        LoggingInitializer.LOGGER.fine(
-                                "Non-absolute pathname detected for logfile.  Setting logfile relative to data dir.");
-                    }
-                }
-                lprops.setProperty("log4j.appender.geoserverlogfile.File", logFileName);
-                PropertyConfigurator.configure(lprops);
-                LoggingInitializer.LOGGER.fine("Logging output to file '" + logFileName + "'");
-            } else if (gslf != null) {
-                LoggingInitializer.LOGGER.warning(
-                        "'log4j.appender.geoserverlogfile' appender is defined, but isn't a FileAppender.  GeoServer won't control the file-based logging.");
-            } else {
-                LoggingInitializer.LOGGER.warning(
-                        "'log4j.appender.geoserverlogfile' appender isn't defined.  GeoServer won't control the file-based logging.");
-            }
-        }
-
-        // ... and the std output logging too
-        if (suppressStdOutLogging) {
-            LoggingInitializer.LOGGER.info(
-                    "Suppressing StdOut logging.  If you want to see GeoServer logs, be sure to look in '"
-                            + logFileName
-                            + "'");
-            Enumeration allAppenders = org.apache.log4j.Logger.getRootLogger().getAllAppenders();
-            Appender curApp;
-            while (allAppenders.hasMoreElements()) {
-                curApp = (Appender) allAppenders.nextElement();
-                if (curApp instanceof org.apache.log4j.ConsoleAppender) {
-                    org.apache.log4j.Logger.getRootLogger().removeAppender(curApp);
-                }
-            }
-        }
-
-        // add the appenders we saved above
-        for (Appender appender : appenders) {
-            LogManager.getRootLogger().addAppender(appender);
-        }
-        LoggingInitializer.LOGGER.fine(
-                "FINISHED CONFIGURING GEOSERVER LOGGING -------------------------");
     }
 
+    /**
+     * Initial setup of the logging system and handling of built-in configuration.
+     *
+     * <p>A number of overrides are provided to postprocess indicated configuration.
+     *
+     * <p>The actual implementation was moved into a separate class to prevent unnecessarily loading
+     * any log4j-core classes from LoggingUtils when RELINQUISH_LOG4J_CONTROL is true which can
+     * potentially interfere with the application server's logging.
+     *
+     * @param resourceLoader GeoServerResource loader used to access directory for logFileName
+     * @param configFileName Logging configuration filename (default is "DEFAULT_LOGGING");
+     * @param suppressStdOutLogging Flag requesting that standard output logging be * suppressed
+     *     param boolean suppressFileLogging
+     * @param logFileName Logfile name override (replacing geoserver.log default)
+     * @throws Exception
+     */
     public static void initLogging(
             GeoServerResourceLoader resourceLoader,
             String configFileName,
             boolean suppressStdOutLogging,
+            boolean suppressFileLogging,
             String logFileName)
             throws Exception {
-        // to initialize logging we need to do a couple of things:
-        // 1)  Figure out whether the user has 'overridden' some configuration settings
-        // in the logging system (not using log4j in commons-logging.properties or perhaps
-        // has set up their own 'custom' log4j.properties file.
-        // 2)  If they *have*, then we don't worry about configuring logging
-        // 3)  If they haven't, then we configure logging to use the log4j config file
-        // specified, and remove console appenders if the suppressstdoutlogging is true.
-        LoggingInitializer.LOGGER.fine("CONFIGURING GEOSERVER LOGGING -------------------------");
-
-        if (configFileName == null) {
-            configFileName = "DEFAULT_LOGGING.properties";
-            LoggingInitializer.LOGGER.warning(
-                    "No log4jConfigFile defined in services.xml:  using 'DEFAULT_LOGGING.properties'");
-        }
-        Resource resource = resourceLoader.get(Paths.path("logs", configFileName));
-        if (resource == null || resource.getType() == Type.UNDEFINED) {
-            // hmm, well, we don't have a log4j config file and this could be due to the fact
-            // that this is a data-dir upgrade.  We can count on the DEFAULT_LOGGING.properties file
-            // being present on the classpath, so we'll upgrade their data_dir and then use the
-            // default DEFAULT_LOGGING.properties configuration.
-            LoggingInitializer.LOGGER.warning(
-                    "log4jConfigFile '"
-                            + configFileName
-                            + "' couldn't be found in the data dir, so GeoServer will "
-                            + "install the various logging config file into the data dir, and then try to find it again.");
-
-            Resource logs = resourceLoader.get("logs");
-            File lcdir = logs.dir();
-
-            // now we copy in the various logging config files from the base repo location on the
-            // classpath
-            final String[] lcfiles =
-                    new String[] {
-                        "DEFAULT_LOGGING.properties",
-                        "GEOSERVER_DEVELOPER_LOGGING.properties",
-                        "GEOTOOLS_DEVELOPER_LOGGING.properties",
-                        "PRODUCTION_LOGGING.properties",
-                        "QUIET_LOGGING.properties",
-                        "TEST_LOGGING.properties",
-                        "VERBOSE_LOGGING.properties"
-                    };
-
-            for (int i = 0; i < lcfiles.length; i++) {
-                File target = new File(lcdir.getAbsolutePath(), lcfiles[i]);
-                if (!target.exists()) {
-                    resourceLoader.copyFromClassPath(lcfiles[i], target);
-                }
-            }
-
-            // ok, the possibly-new 'logs' directory is in-place, with all the various configs
-            // there.
-            // Is the originally configured log4jconfigfile there now?
-            if (resource == null || resource.getType() != Type.RESOURCE) {
-                LoggingInitializer.LOGGER.warning(
-                        "Still couldn't find log4jConfigFile '"
-                                + configFileName
-                                + "'.  Using DEFAULT_LOGGING.properties instead.");
-            }
-
-            resource = resourceLoader.get(Paths.path("logs", "DEFAULT_LOGGING.properties"));
-        }
-
-        if (resource == null || resource.getType() != Type.RESOURCE) {
-            throw new ConfigurationException(
-                    "Unable to load logging configuration '"
-                            + configFileName
-                            + "'.  In addition, an attempt "
-                            + "was made to create the 'logs' directory in your data dir, and to use the DEFAULT_LOGGING configuration, but"
-                            + "this failed as well.  Is your data dir writeable?");
-        }
-
-        // reconfiguring log4j logger levels by resetting and loading a new set of configuration
-        // properties
-        try (InputStream loggingConfigStream = resource.in()) {
-            if (loggingConfigStream == null) {
-                LoggingInitializer.LOGGER.warning(
-                        "Couldn't open Log4J configuration file '" + resource);
-                return;
-            } else {
-                LoggingInitializer.LOGGER.fine(
-                        "GeoServer logging profile '" + resource.name() + "' enabled.");
-            }
-
-            configureGeoServerLogging(
-                    resourceLoader, loggingConfigStream, suppressStdOutLogging, false, logFileName);
+        if (!relinquishLog4jControl) {
+            LoggingUtilsDelegate.initLogging(
+                    resourceLoader,
+                    configFileName,
+                    suppressStdOutLogging,
+                    suppressFileLogging,
+                    logFileName);
         }
     }
 
+    /**
+     * Used by modules to register additional built-in logging profiles during startup, confirming
+     * logConfigFile is available (and updating if needed).
+     *
+     * <p>This method will check resource loader logConfigFile profile against the internal
+     * templates and only update the xml file if needed. If the file is updated the previous
+     * definition is available as a {@code xml.bak} file allowing.
+     *
+     * @param resourceLoader GeoServer resource access
+     * @param logConfigFile Logging profile matching a built-in template on the classpath
+     */
+    public static void checkBuiltInLoggingConfiguration(
+            GeoServerResourceLoader resourceLoader, String logConfigFile) {
+        if (!relinquishLog4jControl) {
+            LoggingUtilsDelegate.checkBuiltInLoggingConfiguration(resourceLoader, logConfigFile);
+        }
+    }
     /**
      * Finds the log location in the "context" (system variable, env variable, servlet context) or
      * uses the provided base location otherwise
@@ -240,7 +214,7 @@ public class LoggingUtils {
     public static String getLogFileLocation(String baseLocation, ServletContext context) {
         // accept a servlet context directly in the case of startup where the application context
         // is not yet available, in other cases (like a logging change) we can fall back on the
-        // app context and dervive the servlet context from that
+        // app context and derive the servlet context from that
         String location =
                 context != null
                         ? GeoServerExtensions.getProperty(

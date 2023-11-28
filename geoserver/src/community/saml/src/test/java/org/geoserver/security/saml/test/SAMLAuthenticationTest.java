@@ -10,17 +10,18 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.StringWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ import org.geoserver.security.filter.GeoServerLogoutFilter;
 import org.geoserver.security.impl.GeoServerUser;
 import org.geoserver.security.saml.SAMLAuthenticationFilter;
 import org.geoserver.security.saml.SAMLAuthenticationFilterConfig;
-import org.geotools.data.Base64;
+import org.geotools.util.Base64;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -132,7 +133,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
         MockFilterChain chain = new MockFilterChain();
         getProxy().doFilter(request, response, chain);
 
-        assertTrue(response.getStatus() == MockHttpServletResponse.SC_MOVED_TEMPORARILY);
+        assertEquals(response.getStatus(), MockHttpServletResponse.SC_MOVED_TEMPORARILY);
         String redirectURL = response.getHeader("Location");
 
         assertThat(redirectURL, CoreMatchers.containsString(REDIRECT_URL));
@@ -193,7 +194,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
         String metadata =
                 IOUtils.toString(
                         getClass().getResourceAsStream("/__files/metadata_signed.xml"),
-                        Charset.forName("UTF-8"));
+                        StandardCharsets.UTF_8);
         configureFilter(PreAuthenticatedUserNameRoleSource.UserGroupService, metadata, true);
         MockHttpServletRequest request = createRequest("/foo/bar");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -201,7 +202,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
         getProxy().doFilter(request, response, chain);
 
         assertNotNull(response.getHeader("Location"));
-        assertTrue(response.getHeader("Location").indexOf("&Signature=") != -1);
+        assertNotEquals(-1, response.getHeader("Location").indexOf("&Signature="));
     }
 
     @Test
@@ -209,7 +210,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
         String metadata =
                 IOUtils.toString(
                         getClass().getResourceAsStream("/__files/metadata.xml"),
-                        Charset.forName("UTF-8"));
+                        StandardCharsets.UTF_8);
         configureFilter(PreAuthenticatedUserNameRoleSource.UserGroupService, metadata, false);
         MockHttpServletRequest request = createRequest("/foo/bar");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -217,7 +218,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
         getProxy().doFilter(request, response, chain);
 
         assertNotNull(response.getHeader("Location"));
-        assertTrue(response.getHeader("Location").indexOf("&Signature=") == -1);
+        assertEquals(-1, response.getHeader("Location").indexOf("&Signature="));
     }
 
     @Test
@@ -269,7 +270,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
         String metadata =
                 IOUtils.toString(
                         getClass().getResourceAsStream("/__files/metadata.xml"),
-                        Charset.forName("UTF-8"));
+                        StandardCharsets.UTF_8);
         configureFilter(PreAuthenticatedUserNameRoleSource.UserGroupService, metadata, false);
         MockHttpServletRequest request = createRequest("/foo/bar");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -400,7 +401,7 @@ public class SAMLAuthenticationTest extends AbstractAuthenticationProviderTest {
                                 .loadFilter(GeoServerSecurityFilterChain.FORM_LOGOUT_FILTER);
         logoutFilter.doFilter(request, response, chain);
 
-        assertTrue(response.getStatus() == MockHttpServletResponse.SC_MOVED_TEMPORARILY);
+        assertEquals(response.getStatus(), MockHttpServletResponse.SC_MOVED_TEMPORARILY);
         String redirectURL = response.getHeader("Location");
 
         /*

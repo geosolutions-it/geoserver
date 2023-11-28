@@ -5,9 +5,9 @@
  */
 package org.geoserver.flow.config;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -35,6 +35,7 @@ import org.geoserver.security.PropertyFileWatcher;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 
+@SuppressWarnings("PMD.AvoidUsingHardCodedIP")
 public class DefaultControlFlowConfigurationTest {
 
     @Test
@@ -64,7 +65,7 @@ public class DefaultControlFlowConfigurationTest {
 
         assertEquals(10, controllers.size());
 
-        System.out.println(controllers);
+        // System.out.println(controllers);
 
         assertTrue(controllers.get(0) instanceof RateFlowController);
         RateFlowController rfc = (RateFlowController) controllers.get(0);
@@ -202,7 +203,7 @@ public class DefaultControlFlowConfigurationTest {
         Properties properties;
 
         public FixedWatcher(Properties properties) {
-            super((Resource) null);
+            super(null);
             this.properties = properties;
         }
 

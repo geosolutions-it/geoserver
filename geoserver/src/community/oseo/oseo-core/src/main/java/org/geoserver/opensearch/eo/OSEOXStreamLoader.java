@@ -5,6 +5,7 @@
 package org.geoserver.opensearch.eo;
 
 import com.thoughtworks.xstream.XStream;
+import java.util.ArrayList;
 import java.util.List;
 import org.geoserver.catalog.Keyword;
 import org.geoserver.catalog.KeywordInfo;
@@ -24,10 +25,12 @@ public class OSEOXStreamLoader extends XStreamServiceLoader<OSEOInfo> {
         super(resourceLoader, "oseo");
     }
 
+    @Override
     public Class<OSEOInfo> getServiceClass() {
         return OSEOInfo.class;
     }
 
+    @Override
     protected OSEOInfo createServiceFromScratch(GeoServer gs) {
         OSEOInfo oseo = new OSEOInfoImpl();
         oseo.setName("OSEO");
@@ -36,6 +39,8 @@ public class OSEOXStreamLoader extends XStreamServiceLoader<OSEOInfo> {
         oseo.setTitle("OpenSearch for Earth Observation");
         oseo.setMaximumRecordsPerPage(OSEOInfo.DEFAULT_MAXIMUM_RECORDS);
         oseo.setRecordsPerPage(OSEOInfo.DEFAULT_RECORDS_PER_PAGE);
+        oseo.setAggregatesCacheTTL(OSEOInfo.DEFAULT_AGGR_CACHE_TTL);
+        oseo.setAggregatesCacheTTLUnit(OSEOInfo.DEFAULT_AGGR_CACHE_TTL_UNIT);
         final List<KeywordInfo> keywords = oseo.getKeywords();
         keywords.add(new Keyword("EarthObservation"));
         keywords.add(new Keyword("OGC"));
@@ -48,11 +53,7 @@ public class OSEOXStreamLoader extends XStreamServiceLoader<OSEOInfo> {
         initXStreamPersister(xp);
     }
 
-    /**
-     * Sets up aliases and allowed types for the xstream persister
-     *
-     * @param xs
-     */
+    /** Sets up aliases and allowed types for the xstream persister */
     public static void initXStreamPersister(XStreamPersister xp) {
         XStream xs = xp.getXStream();
         xs.alias("oseo", OSEOInfo.class, OSEOInfoImpl.class);
@@ -67,6 +68,16 @@ public class OSEOXStreamLoader extends XStreamServiceLoader<OSEOInfo> {
         if (!service.getVersions().contains(OSEOInfo.VERSION_1_0_0)) {
             service.getVersions().add(OSEOInfo.VERSION_1_0_0);
         }
+        if (service.getGlobalQueryables() == null) {
+            ((OSEOInfoImpl) service).setGlobalQueryables(new ArrayList<>());
+        }
+        if (service.getAggregatesCacheTTLUnit() == null) {
+            service.setAggregatesCacheTTLUnit(OSEOInfo.DEFAULT_AGGR_CACHE_TTL_UNIT);
+        }
+        if (service.getAggregatesCacheTTL() == null) {
+            service.setAggregatesCacheTTL(OSEOInfo.DEFAULT_AGGR_CACHE_TTL);
+        }
+
         return service;
     }
 }

@@ -5,9 +5,12 @@
  */
 package org.geoserver.wms;
 
+import static org.geoserver.catalog.DimensionInfo.CUSTOM_DIM_PREFIX;
+
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.awt.image.IndexColorModel;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +29,9 @@ import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
 import org.geotools.util.Version;
 import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.Geometry;
 import org.opengis.filter.Filter;
+import org.opengis.filter.identity.FeatureId;
 import org.opengis.filter.sort.SortBy;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
@@ -50,10 +55,10 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
     private OptionalParameters optionalParams = new OptionalParameters();
 
     /** format options */
-    private Map<String, Object> formatOptions = new CaseInsensitiveMap(new HashMap());
+    private Map<String, Object> formatOptions = new CaseInsensitiveMap<>(new HashMap<>());
 
     /** SLD replacement */
-    private Map /* <String,Object> */ env = new HashMap();
+    private Map<String, Object> env = new HashMap<>();
 
     /** sql view parameters */
     private List<Map<String, String>> viewParams = null;
@@ -99,12 +104,12 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
     /**
      * Map of String,Object which contains kvp's which are specific to a particular output format.
      */
-    public Map getFormatOptions() {
-        return formatOptions == null ? Collections.EMPTY_MAP : formatOptions;
+    public Map<String, Object> getFormatOptions() {
+        return formatOptions == null ? Collections.emptyMap() : formatOptions;
     }
 
     /** Map of strings that make up the SLD enviroment for variable substitution */
-    public Map getEnv() {
+    public Map<String, Object> getEnv() {
         return env;
     }
 
@@ -142,11 +147,11 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
     }
 
     /**
-     * Gets the url specified by the "SLD" parameter.
+     * Gets the uri specified by the "SLD" parameter.
      *
      * <p>This parameter is an alias for "STYLE_URL".
      */
-    public URL getSld() {
+    public URI getSld() {
         return getStyleUrl();
     }
 
@@ -155,7 +160,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * <p>This parameter is used to point to a remote style via url.
      */
-    public URL getStyleUrl() {
+    public URI getStyleUrl() {
         return this.optionalParams.styleUrl;
     }
 
@@ -208,8 +213,8 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
     }
 
     /**
-     * Gets the value of the "VALIDATESCHEMA" parameter which controls wether the value of the "SLD
-     * paramter is schema validated.
+     * Gets the value of the "VALIDATESCHEMA" parameter which controls wether the value of the
+     * "SLD_BODY" paramter is schema validated.
      */
     public Boolean getValidateSchema() {
         return this.optionalParams.validateSLD;
@@ -220,7 +225,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @return A list of {@link Filter}.
      */
-    public List getFilter() {
+    public List<Filter> getFilter() {
         return this.optionalParams.filters;
     }
 
@@ -229,7 +234,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @return A list of {@link Filter}.
      */
-    public List getCQLFilter() {
+    public List<Filter> getCQLFilter() {
         return this.optionalParams.cqlFilters;
     }
 
@@ -238,7 +243,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @return A list of {@link String}.
      */
-    public List getFeatureId() {
+    public List<FeatureId> getFeatureId() {
         return this.optionalParams.featureIds;
     }
 
@@ -335,24 +340,16 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      * @param formatOptions A map of String,Object
      * @see #getFormatOptions()
      */
-    public void setFormatOptions(Map formatOptions) {
+    public void setFormatOptions(Map<String, Object> formatOptions) {
         this.formatOptions = formatOptions;
     }
 
-    /**
-     * Sets the SLD environment substitution
-     *
-     * @param enviroment
-     */
-    public void setEnv(Map enviroment) {
+    /** Sets the SLD environment substitution */
+    public void setEnv(Map<String, Object> enviroment) {
         this.env = enviroment;
     }
 
-    /**
-     * Sets the SQL views parameters
-     *
-     * @param viewParams
-     */
+    /** Sets the SQL views parameters */
     public void setViewParams(List<Map<String, String>> viewParams) {
         this.viewParams = viewParams;
     }
@@ -366,40 +363,64 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
     }
 
     public void setLayers(List<MapLayerInfo> layers) {
-        this.mandatoryParams.layers = layers == null ? Collections.EMPTY_LIST : layers;
+        this.mandatoryParams.layers = layers == null ? Collections.emptyList() : layers;
     }
 
     public void setStyles(List<Style> styles) {
         this.mandatoryParams.styles =
-                styles == null ? Collections.EMPTY_LIST : new ArrayList<Style>(styles);
+                styles == null ? Collections.emptyList() : new ArrayList<>(styles);
+    }
+
+    /** Sets interpolations methods for layers. */
+    public void setInterpolations(List<Interpolation> interpolations) {
+        this.optionalParams.interpolationMethods =
+                interpolations == null ? Collections.emptyList() : interpolations;
     }
 
     /**
-     * Sets interpolations methods for layers.
+     * Style resource defined by the "SLD" parameter.
      *
-     * @param interpolations
+     * <p>The style resource can be provided by either {@link #setSld(URI)} or {@link
+     * #setStyleUrl(URI)}.
+     *
+     * @param sld Style resource defined by "SLD" parameter.
      */
-    public void setInterpolations(List<Interpolation> interpolations) {
-        this.optionalParams.interpolationMethods =
-                interpolations == null ? Collections.EMPTY_LIST : interpolations;
-    }
-
-    /** Sets the url specified by the "SLD" parameter. */
-    public void setSld(URL sld) {
+    public void setSld(URI sld) {
         setStyleUrl(sld);
     }
 
-    /** Sets the url specified by the "STYLE_URL" parameter. */
-    public void setStyleUrl(URL styleUrl) {
-        this.optionalParams.styleUrl = styleUrl;
+    /**
+     * Style resource defined by the "STYLE_URL" parameter.
+     *
+     * <p>The style resource can be provided by either {@link #setSld(URI)} or {@link
+     * #setStyleUrl(URI)}.
+     *
+     * @param styleUri Style resource defined by "STYLE_URL" parameter.
+     */
+    public void setStyleUrl(URI styleUri) {
+        this.optionalParams.styleUrl = styleUri;
     }
 
-    /** Sets the string specified by the "SLD_BODY" parameter */
+    /**
+     * Style document defined by the "SLD_BODY" parameter.
+     *
+     * <p>The sld document contents can be provided by either {@link #setSldBody(String)} or {@link
+     * #setStyleBody(String)}.
+     *
+     * @param sldBody Contents forming SLD document to use
+     */
     public void setSldBody(String sldBody) {
         setStyleBody(sldBody);
     }
 
-    /** Sets the url specified by the "STYLE_BODY" parameter. */
+    /**
+     * Style documented defined by the "STYLE_BODY" parameter.
+     *
+     * <p>The style document contents can be provided by either {@link #setSldBody(String)} or
+     * {@link #setStyleBody(String)}.
+     *
+     * @param styleBody Contents forming style document to use
+     */
     public void setStyleBody(String styleBody) {
         this.optionalParams.styleBody = styleBody;
     }
@@ -409,17 +430,21 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         setStyleVersion(sldVersion);
     }
 
-    /** Sets the url specified by the "STYLE_VERSION" parameter. */
+    /** Sets the style document version specified by the "STYLE_VERSION" parameter. */
     public void setStyleVersion(String styleVersion) {
         this.optionalParams.styleVersion = styleVersion;
     }
 
-    /** Sets the string specified by the "STYLE_FORMAT" parameter */
+    /** Sets the style document format specified by the "STYLE_FORMAT" parameter */
     public void setStyleFormat(String styleFormat) {
         this.optionalParams.styleFormat = styleFormat;
     }
 
-    /** Sets the flag to validate the "SLD" parameter or not. //TODO */
+    /**
+     * Sets the flag to validate the style document.
+     *
+     * @param validateSLD Use true to enable style document validation
+     */
     public void setValidateSchema(Boolean validateSLD) {
         this.optionalParams.validateSLD = validateSLD;
     }
@@ -429,7 +454,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @param filters A list of {@link Filter}.
      */
-    public void setFilter(List filters) {
+    public void setFilter(List<Filter> filters) {
         this.optionalParams.filters = filters;
     }
 
@@ -438,7 +463,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @param cqlFilters A list of {@link Filter}.
      */
-    public void setCQLFilter(List cqlFilters) {
+    public void setCQLFilter(List<Filter> cqlFilters) {
         this.optionalParams.cqlFilters = cqlFilters;
     }
 
@@ -447,7 +472,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @param featureIds A list of {@link String}.
      */
-    public void setFeatureId(List featureIds) {
+    public void setFeatureId(List<FeatureId> featureIds) {
         this.optionalParams.featureIds = featureIds;
     }
 
@@ -494,25 +519,21 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
 
     /** Sets the time request parameter (a list of Date or DateRange objects) */
     public void setTime(List<Object> time) {
-        this.optionalParams.time = new ArrayList<Object>(time);
+        this.optionalParams.time = new ArrayList<>(time);
     }
 
     /** Sets the elevation request parameter. */
     public void setElevation(double elevation) {
-        this.optionalParams.elevation = new ArrayList<Object>();
+        this.optionalParams.elevation = new ArrayList<>();
         this.optionalParams.elevation.add(elevation);
     }
 
     /** Sets the elevation set as a request parameter. */
     public void setElevation(List<Object> elevation) {
-        this.optionalParams.elevation = new ArrayList<Object>(elevation);
+        this.optionalParams.elevation = new ArrayList<>(elevation);
     }
 
-    /**
-     * Sets the feature version optional param
-     *
-     * @param featureVersion
-     */
+    /** Sets the feature version optional param */
     public void setFeatureVersion(String featureVersion) {
         this.optionalParams.featureVersion = featureVersion;
     }
@@ -558,11 +579,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         return this.optionalParams.angle;
     }
 
-    /**
-     * Sets the map rotation
-     *
-     * @param rotation
-     */
+    /** Sets the map rotation */
     public void setAngle(double rotation) {
         this.optionalParams.angle = rotation;
     }
@@ -575,9 +592,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         if (this.optionalParams.sortBy == null) {
             return null;
         } else {
-            return this.optionalParams
-                    .sortBy
-                    .stream()
+            return this.optionalParams.sortBy.stream()
                     .map(l -> l.toArray(new SortBy[l.size()]))
                     .collect(Collectors.toList());
         }
@@ -591,13 +606,19 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         return this.optionalParams.scaleMethod;
     }
 
-    /**
-     * Sets the scale computation method ({@link ScaleComputationMethod#OGC} by default)
-     *
-     * @param rotation
-     */
+    /** Sets the scale computation method ({@link ScaleComputationMethod#OGC} by default) */
     public void setScaleMethod(ScaleComputationMethod scaleMethod) {
         this.optionalParams.scaleMethod = scaleMethod;
+    }
+
+    /** @return the clip */
+    public Geometry getClip() {
+        return this.optionalParams.clip;
+    }
+
+    /** @param clip the clip to set */
+    public void setClip(Geometry clip) {
+        this.optionalParams.clip = clip;
     }
 
     private class MandatoryParameters implements Cloneable {
@@ -626,20 +647,6 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
 
     private class OptionalParameters implements Cloneable {
 
-        /**
-         * Tells us whether or not we should loop forever in an ani,mated gif
-         *
-         * <p>Defaults to true
-         */
-        Boolean animatedGIFLoopContinuosly;
-
-        /**
-         * Tells us the delay in ms between two frames of an animated gif.
-         *
-         * <p>Default to 1s
-         */
-        Integer animatedGIFDelay;
-
         /** the map's background color requested, or the default (white) if not specified */
         Color bgColor = DEFAULT_BG;
 
@@ -650,13 +657,13 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         String srs;
 
         /** vendor extensions, allows to filter each layer with a user defined filter */
-        List filters;
+        List<Filter> filters;
 
         /** cql filters */
-        List cqlFilters;
+        List<Filter> cqlFilters;
 
         /** feature id filters */
-        List featureIds;
+        List<FeatureId> featureIds;
 
         /** Layer sorting */
         List<List<SortBy>> sortBy;
@@ -697,10 +704,10 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
          */
         List<Object> elevation = Collections.emptyList();
 
-        /** STYLE_URL parameter */
-        URL styleUrl;
+        /** URI provided by STYLE_URL parameter or (SLD_URL parameter). */
+        URI styleUrl;
 
-        /** STYLE_BODY parameter */
+        /** Style document provided by STYLE_BODY parameter (or SLD_BODY parameter). */
         String styleBody;
 
         /** STYLE_VERSION parameter */
@@ -733,7 +740,10 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         ScaleComputationMethod scaleMethod;
 
         /** by layer interpolation methods * */
-        List<Interpolation> interpolationMethods = Collections.EMPTY_LIST;
+        List<Interpolation> interpolationMethods = Collections.emptyList();
+
+        /** polgon wkt to clip WMS response * */
+        Geometry clip;
 
         @Override
         public Object clone() throws CloneNotSupportedException {
@@ -746,6 +756,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
      *
      * @return a String representation of this request.
      */
+    @Override
     public String toString() {
         StringBuffer returnString = new StringBuffer("\nGetMap Request");
         returnString.append("\n version: " + version);
@@ -764,8 +775,8 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
 
         returnString.append("\n styles: ");
 
-        for (Iterator it = mandatoryParams.styles.iterator(); it.hasNext(); ) {
-            Style s = (Style) it.next();
+        for (Iterator<Style> it = mandatoryParams.styles.iterator(); it.hasNext(); ) {
+            Style s = it.next();
             returnString.append(s.getName());
 
             if (it.hasNext()) {
@@ -781,10 +792,9 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
         return httpRequestHeaders == null ? null : httpRequestHeaders.get(headerName);
     }
 
-    @SuppressWarnings("unchecked")
     public void putHttpRequestHeader(String headerName, String value) {
         if (httpRequestHeaders == null) {
-            httpRequestHeaders = new CaseInsensitiveMap(new HashMap<String, String>());
+            httpRequestHeaders = new CaseInsensitiveMap<>(new HashMap<>());
         }
         httpRequestHeaders.put(headerName, value);
     }
@@ -804,16 +814,16 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
 
     public List<String> getCustomDimension(String dimensionName) {
         if (getRawKvp() != null) {
-            String key = "DIM_" + dimensionName;
-            String value = getRawKvp().get(key);
-            if (value != null) {
-
-                final ArrayList<String> values = new ArrayList<String>(1);
-                if (value.indexOf(",") > 0) {
-                    String[] elements = value.split("\\s*,\\s*");
+            String key = CUSTOM_DIM_PREFIX + dimensionName;
+            Object value = getRawKvp().get(key);
+            if (value instanceof String) {
+                String s = (String) value;
+                final ArrayList<String> values = new ArrayList<>(1);
+                if (s.indexOf(",") > 0) {
+                    String[] elements = s.split("\\s*,\\s*");
                     values.addAll(Arrays.asList(elements));
                 } else {
-                    values.add(value);
+                    values.add(s);
                 }
                 return values;
             }

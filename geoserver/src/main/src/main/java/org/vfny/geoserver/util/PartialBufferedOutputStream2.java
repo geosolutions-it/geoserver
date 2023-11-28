@@ -62,11 +62,7 @@ public class PartialBufferedOutputStream2 extends OutputStream {
     /** Set to true when close() is called to prevent further writing */
     private boolean closed = false;
 
-    /**
-     * Constructor Defaults buffer size to 50KB
-     *
-     * @param response
-     */
+    /** Constructor Defaults buffer size to 50KB */
     public PartialBufferedOutputStream2(HttpServletResponse response) throws IOException {
         this(response, DEFAULT_BUFFER_SIZE); // default to 50KB
     }
@@ -118,6 +114,7 @@ public class PartialBufferedOutputStream2 extends OutputStream {
      * Remember that b is treated as a byte, the 8 low-order bits are read,
      * and the 24 remaining high-order bits of b are ignored.
      */
+    @Override
     public synchronized void write(int b) throws IOException {
         if (closed) {
             return;
@@ -127,6 +124,7 @@ public class PartialBufferedOutputStream2 extends OutputStream {
         currentStream.write(b);
     }
 
+    @Override
     public void write(byte[] b) throws IOException {
         if (closed) {
             return;
@@ -136,6 +134,7 @@ public class PartialBufferedOutputStream2 extends OutputStream {
         currentStream.write(b);
     }
 
+    @Override
     public void write(byte[] b, int off, int len) throws IOException {
         if (closed) {
             return;
@@ -164,6 +163,7 @@ public class PartialBufferedOutputStream2 extends OutputStream {
      * If the buffer is not maxed yet, it won't flush. If this is really needed,
      * call forceFlush
      */
+    @Override
     public synchronized void flush() throws IOException {
         if (closed) {
             return;
@@ -185,6 +185,7 @@ public class PartialBufferedOutputStream2 extends OutputStream {
      * Closes the stream. If we're still working against the in memory buffer that will be written
      * out before close occurs
      */
+    @Override
     public void close() throws IOException {
         if (closed) {
             return;
@@ -210,8 +211,6 @@ public class PartialBufferedOutputStream2 extends OutputStream {
      * real stream. This is why we have a buffer. Abort will succeed if the buffer is not full yet.
      * If that is true, then the buffer is cleared and closed. It does NOT close the response's
      * OutputStream
-     *
-     * @throws IOException
      */
     public boolean abort() throws IOException {
         if ((out_buffer != null) && (out_buffer.size() < BUFFER_SIZE)) {

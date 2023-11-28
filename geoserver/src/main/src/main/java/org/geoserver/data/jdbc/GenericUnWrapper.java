@@ -53,7 +53,7 @@ public class GenericUnWrapper implements UnWrapper {
     static final Map<Class<?>, Method> CONNECTION_METHODS;
 
     static {
-        CONNECTION_METHODS = new ConcurrentHashMap<Class<?>, Method>();
+        CONNECTION_METHODS = new ConcurrentHashMap<>();
 
         // if the environment does not contain the classes ... skip
         methodSearch(
@@ -81,7 +81,7 @@ public class GenericUnWrapper implements UnWrapper {
     static final Map<Class<?>, Method> STATEMENT_METHODS;
 
     static {
-        STATEMENT_METHODS = new ConcurrentHashMap<Class<?>, Method>();
+        STATEMENT_METHODS = new ConcurrentHashMap<>();
         methodSearch(
                 "JBoss Resource Adapter",
                 STATEMENT_METHODS,
@@ -89,14 +89,7 @@ public class GenericUnWrapper implements UnWrapper {
                 "getUnderlyingStatement");
     }
 
-    /**
-     * Look up method used for unwrapping (if supported in the application container).
-     *
-     * @param env
-     * @param methods
-     * @param className
-     * @param methodName
-     */
+    /** Look up method used for unwrapping (if supported in the application container). */
     private static void methodSearch(
             String env, Map<Class<?>, Method> methods, String className, String methodName) {
         try {
@@ -116,11 +109,13 @@ public class GenericUnWrapper implements UnWrapper {
         // this space is intentionally left blank
     }
 
+    @Override
     public boolean canUnwrap(Connection conn) {
         Connection unwrapped = unwrapInternal(Connection.class, conn, CONNECTION_METHODS);
         return unwrapped != null;
     }
 
+    @Override
     public Connection unwrap(Connection conn) {
         Connection unwrapped = unwrapInternal(Connection.class, conn, CONNECTION_METHODS);
         if (unwrapped != null) {
@@ -132,11 +127,13 @@ public class GenericUnWrapper implements UnWrapper {
         }
     }
 
+    @Override
     public boolean canUnwrap(Statement statement) {
         Statement unwrapped = unwrapInternal(Statement.class, statement, STATEMENT_METHODS);
         return unwrapped != null;
     }
 
+    @Override
     public Statement unwrap(Statement statement) {
         Statement unwrapped = unwrapInternal(Statement.class, statement, STATEMENT_METHODS);
         if (unwrapped != null) {
@@ -153,10 +150,6 @@ public class GenericUnWrapper implements UnWrapper {
      * is provided, or null is sentinel (indicating no method is available). For classes that do not
      * provide an unwrapping method reflection is tried once (resulting in either a cached method to
      * next time, or null for use as a sentinel
-     *
-     * @param target
-     * @param conn
-     * @param methods
      */
     @SuppressWarnings(
             "deprecation") // Method.isAccessible is deprecated but replacement not available in
@@ -208,10 +201,6 @@ public class GenericUnWrapper implements UnWrapper {
      *
      * <p>All errors are logged at finest detail, and null is returned.
      *
-     * @param target
-     * @param conn
-     * @param wrapper
-     * @param accessMethod
      * @return unwrapped instance of target class, or null if not available
      */
     private <T> T unwrapInternal(Class<T> target, T conn, Class<?> wrapper, Method accessMethod) {
@@ -261,7 +250,7 @@ public class GenericUnWrapper implements UnWrapper {
                 return null;
             }
             return target.cast(result);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | InvocationTargetException | IllegalAccessException e) {
             LOGGER.log(
                     Level.FINEST,
                     "Using "
@@ -273,30 +262,8 @@ public class GenericUnWrapper implements UnWrapper {
                             + " failed: "
                             + e);
             return null; // unexpected with no arguments
-        } catch (IllegalAccessException e) {
-            LOGGER.log(
-                    Level.FINEST,
-                    "Using "
-                            + wrapper.getName()
-                            + "."
-                            + accessMethod.getName()
-                            + "() to unwrap "
-                            + target.getSimpleName()
-                            + " failed: "
-                            + e);
-            return null; // could be a visibility issue
-        } catch (InvocationTargetException e) {
-            LOGGER.log(
-                    Level.FINEST,
-                    "Using "
-                            + wrapper.getName()
-                            + "."
-                            + accessMethod.getName()
-                            + "() to unwrap "
-                            + target.getSimpleName()
-                            + " failed: "
-                            + e);
-            return null; // abort abort
-        }
+        } // could be a visibility issue
+        // abort abort
+
     }
 }

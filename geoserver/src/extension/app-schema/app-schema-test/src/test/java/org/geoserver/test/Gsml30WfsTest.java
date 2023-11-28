@@ -6,8 +6,10 @@
 
 package org.geoserver.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.geotools.wfs.v2_0.WFS;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -76,7 +78,6 @@ public class Gsml30WfsTest extends AbstractAppSchemaTestSupport {
         Document doc = getAsDOM(path);
         LOGGER.info("Response for " + path + " :" + newline + prettyString(doc));
         assertXpathEvaluatesTo("2", "/wfs:FeatureCollection/@numberReturned", doc);
-        assertXpathEvaluatesTo("unknown", "/wfs:FeatureCollection/@numberMatched", doc);
         assertXpathCount(2, "//gsml:MappedFeature", doc);
         // test names
         assertXpathEvaluatesTo("First", "//gsml:MappedFeature[@gml:id='mf.1']/gml:name", doc);
@@ -101,10 +102,9 @@ public class Gsml30WfsTest extends AbstractAppSchemaTestSupport {
         Document doc = getAsDOM(path);
         LOGGER.info("Response for " + path + " :" + newline + prettyString(doc));
         assertXpathEvaluatesTo("2", "/wfs:FeatureCollection/@numberReturned", doc);
-        assertXpathEvaluatesTo("unknown", "/wfs:FeatureCollection/@numberMatched", doc);
         assertXpathCount(2, "/wfs:FeatureCollection/wfs:member", doc);
         // test that all namespaces are present on the root element
-        for (String prefix : getNamespaces().keySet()) {
+        for (String prefix : getRequiredNamespaces().keySet()) {
             assertEquals(
                     getNamespace(prefix),
                     doc.getFirstChild()
@@ -115,5 +115,15 @@ public class Gsml30WfsTest extends AbstractAppSchemaTestSupport {
         // test that no namespaces are present on the wfs:member elements
         assertEquals(0, doc.getFirstChild().getChildNodes().item(0).getAttributes().getLength());
         assertEquals(0, doc.getFirstChild().getChildNodes().item(1).getAttributes().getLength());
+    }
+
+    private Map<String, String> getRequiredNamespaces() {
+        final Map<String, String> requiredNamespaces = new HashMap<>();
+        requiredNamespaces.put("gsml", "urn:cgi:xmlns:CGI:GeoSciML-Core:3.0.0");
+        requiredNamespaces.put("gmd", "http://www.isotc211.org/2005/gmd");
+        requiredNamespaces.put("gco", "http://www.isotc211.org/2005/gco");
+        requiredNamespaces.put("cgu", "urn:cgi:xmlns:CGI:Utilities:3.0.0");
+        requiredNamespaces.put("swe", "http://www.opengis.net/swe/1.0/gml32");
+        return requiredNamespaces;
     }
 }

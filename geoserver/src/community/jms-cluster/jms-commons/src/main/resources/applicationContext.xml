@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd" -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -77,6 +77,9 @@
 	<bean id="JMSQueueListener" class="org.geoserver.cluster.client.JMSQueueListener">
 		<constructor-arg index="0" ref="JMSManager" />
 	</bean>
+
+	<bean id="JMSXStreamInitializer"
+		  class="org.geoserver.cluster.JMSXStreamPersisterInitializer" />
 
     <!-- turn of default webui redirect -->
     <bean class="org.springframework.beans.factory.config.PropertyOverrideConfigurer" >

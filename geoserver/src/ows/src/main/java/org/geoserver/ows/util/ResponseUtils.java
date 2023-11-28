@@ -8,7 +8,10 @@ package org.geoserver.ows.util;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -155,7 +158,7 @@ public class ResponseUtils {
     /**
      * Returns the query string part of a request url.
      *
-     * <p>If the url does not have a query string compopnent, the empty string is returned.
+     * <p>If the url does not have a query string component, the empty string is returned.
      *
      * @param url The url.
      * @return The query string part of the url.
@@ -168,6 +171,23 @@ public class ResponseUtils {
         }
 
         return url.substring(index + 1);
+    }
+
+    /**
+     * Returns the path portion of a request uri.
+     *
+     * <p>If the uri does not have a query string component, it is returned as-is
+     *
+     * @param uri The uri.
+     * @return The path portion of the uri.
+     */
+    public static String getPath(String uri) {
+        try {
+            return new URI(uri).getPath();
+        } catch (URISyntaxException e) {
+            // unexpected, URI is pretty forgiving
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -364,7 +384,7 @@ public class ResponseUtils {
         // prepare modifiable parameters
         StringBuilder baseURLBuffer = new StringBuilder(baseURL);
         StringBuilder pathBuffer = new StringBuilder(path != null ? path : "");
-        Map<String, String> kvpBuffer = new LinkedHashMap<String, String>();
+        Map<String, String> kvpBuffer = new LinkedHashMap<>();
         if (kvp != null) kvpBuffer.putAll(kvp);
 
         // run all of the manglers
@@ -425,7 +445,7 @@ public class ResponseUtils {
      * @param parameters sequence of keys and values
      */
     public static Map<String, String> params(String... parameters) {
-        Map<String, String> result = new LinkedHashMap<String, String>();
+        Map<String, String> result = new LinkedHashMap<>();
         if (parameters.length % 2 != 0)
             throw new IllegalArgumentException(
                     "The parameters sequence should be "
@@ -450,12 +470,7 @@ public class ResponseUtils {
     public static String urlEncode(String value, char... exclude) {
         StringBuilder resultStr = new StringBuilder();
         byte[] encArray;
-        try {
-            encArray = value.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(
-                    "This is unexpected", e); /* should not happen¸ UTF-8 is always supported */
-        }
+        encArray = value.getBytes(StandardCharsets.UTF_8);
         for (byte enc : encArray) {
             if (enc >= 'A' && enc <= 'Z'
                     || enc >= 'a' && enc <= 'z'

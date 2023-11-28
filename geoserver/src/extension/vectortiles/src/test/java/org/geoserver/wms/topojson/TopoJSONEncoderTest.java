@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.output.NullOutputStream;
 import org.geoserver.wms.topojson.TopoGeom.GeometryColleciton;
 import org.junit.Test;
 import org.locationtech.jts.geom.LineString;
@@ -38,8 +39,9 @@ public class TopoJSONEncoderTest {
         layers.put("topp:states", layer);
 
         Topology topology = new Topology(identity, arcs, layers);
-        Writer writer = new OutputStreamWriter(System.out);
-        encoder.encode(topology, writer);
+        try (Writer writer = new OutputStreamWriter(NullOutputStream.NULL_OUTPUT_STREAM)) {
+            encoder.encode(topology, writer);
+        }
     }
 
     @Test
@@ -67,8 +69,9 @@ public class TopoJSONEncoderTest {
         layers.put("topp:states", layer);
         Topology topology = new Topology(tx, arcs, layers);
 
-        Writer writer = new OutputStreamWriter(System.out);
-        encoder.encode(topology, writer);
+        try (Writer writer = new OutputStreamWriter(NullOutputStream.NULL_OUTPUT_STREAM)) {
+            encoder.encode(topology, writer);
+        }
     }
 
     private List<LineString> arcs(String... WKT) throws ParseException {

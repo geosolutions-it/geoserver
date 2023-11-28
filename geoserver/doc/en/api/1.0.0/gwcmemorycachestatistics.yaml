@@ -4,14 +4,20 @@ info:
   version: 1.0.0
   title: GeoWebCache Memory Cache Statistics
   description: A response contains memory cache statistics
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
 schemes:
 - http
-host: localhost:8080
 basePath: /geoserver/gwc/rest
 paths:
   /statistics:
     get:
       operationId: statisticsGet
+      tags:
+       - "GwcMemoryCacheStatistics"
       summary: Returns XML or JSON response with memory cache statistics
       description: When appended with .json or .xml will respond with memory caches statistics in the requested format if
                    the blobstore used is an instance of MemoryBlobStore.

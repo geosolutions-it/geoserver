@@ -6,10 +6,12 @@
 
 package org.geoserver.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
 import org.geoserver.wfs.xml.v1_1_0.WFS;
 import org.geotools.data.complex.AppSchemaDataAccess;
 import org.junit.Test;
@@ -55,7 +57,6 @@ public class WebServiceBackendWfsTest extends AbstractAppSchemaTestSupport {
      * type name specified, it should return imports for all name spaces involved. If type name is
      * specified, it should return imports of GML type and the type's top level schema.
      *
-     * @throws IOException
      */
     @Test
     public void testDescribeFeatureType() throws IOException {
@@ -354,7 +355,6 @@ public class WebServiceBackendWfsTest extends AbstractAppSchemaTestSupport {
     /**
      * Check schema location
      *
-     * @param doc
      */
     private void checkSchemaLocation(Document doc) {
         String schemaLocation = evaluate("/wfs:FeatureCollection/@xsi:schemaLocation", doc);
@@ -378,8 +378,6 @@ public class WebServiceBackendWfsTest extends AbstractAppSchemaTestSupport {
     /**
      * Check mf1 content are encoded correctly
      *
-     * @param id
-     * @param doc
      */
     private void checkMf1Content(String id, Document doc) {
         assertXpathEvaluatesTo(
@@ -471,8 +469,6 @@ public class WebServiceBackendWfsTest extends AbstractAppSchemaTestSupport {
     /**
      * Check mf2 content are encoded correctly
      *
-     * @param id
-     * @param doc
      */
     private void checkMf2Content(String id, Document doc) {
         assertXpathEvaluatesTo(
@@ -586,8 +582,6 @@ public class WebServiceBackendWfsTest extends AbstractAppSchemaTestSupport {
     /**
      * Check mf3 content are encoded correctly
      *
-     * @param id
-     * @param doc
      */
     private void checkMf3Content(String id, Document doc) {
         assertXpathEvaluatesTo(
@@ -607,8 +601,6 @@ public class WebServiceBackendWfsTest extends AbstractAppSchemaTestSupport {
     /**
      * Check mf4 content are encoded correctly
      *
-     * @param id
-     * @param doc
      */
     private void checkMf4Content(String id, Document doc) {
         assertXpathEvaluatesTo(

@@ -29,7 +29,7 @@ public abstract class AbstractAuthenticationKeyMapper implements AuthenticationK
     private String userGroupServiceName;
     private GeoServerSecurityManager securityManager;
 
-    private Map<String, String> parameters = new HashMap<String, String>();
+    private Map<String, String> parameters = new HashMap<>();
 
     public AbstractAuthenticationKeyMapper() {
         super();
@@ -41,22 +41,27 @@ public abstract class AbstractAuthenticationKeyMapper implements AuthenticationK
         beanName = name;
     }
 
+    @Override
     public String getBeanName() {
         return beanName;
     }
 
+    @Override
     public String getUserGroupServiceName() {
         return userGroupServiceName;
     }
 
+    @Override
     public void setUserGroupServiceName(String userGroupServiceName) {
         this.userGroupServiceName = userGroupServiceName;
     }
 
+    @Override
     public GeoServerSecurityManager getSecurityManager() {
         return securityManager;
     }
 
+    @Override
     public void setSecurityManager(GeoServerSecurityManager securityManager) {
         this.securityManager = securityManager;
     }
@@ -84,8 +89,9 @@ public abstract class AbstractAuthenticationKeyMapper implements AuthenticationK
     }
 
     /** Returns the list of configuration parameters supported by the mapper. */
+    @Override
     public Set<String> getAvailableParameters() {
-        return new HashSet<String>();
+        return new HashSet<>();
     }
 
     /**
@@ -93,6 +99,7 @@ public abstract class AbstractAuthenticationKeyMapper implements AuthenticationK
      *
      * @param parameters mapper parameters
      */
+    @Override
     public void configureMapper(Map<String, String> parameters) {
         this.parameters = parameters;
         fillDefaultParameters();
@@ -110,26 +117,21 @@ public abstract class AbstractAuthenticationKeyMapper implements AuthenticationK
     /**
      * Gets the default value for the given parameter. Default implementation always returns an
      * empty string.
-     *
-     * @param paramName
      */
     protected String getDefaultParamValue(String paramName) {
         return "";
     }
 
+    @Override
     public Map<String, String> getMapperConfiguration() {
         return parameters;
     }
 
     /** Validates the given parameter (used by the filter validator). */
+    @Override
     public void validateParameter(String paramName, String value) throws FilterConfigException {}
 
-    /**
-     * Creates a validation exception (used by inheriting mappers).
-     *
-     * @param errorid
-     * @param args
-     */
+    /** Creates a validation exception (used by inheriting mappers). */
     protected AuthenticationKeyFilterConfigException createFilterException(
             String errorid, Object... args) {
         return new AuthenticationKeyFilterConfigException(errorid, args);

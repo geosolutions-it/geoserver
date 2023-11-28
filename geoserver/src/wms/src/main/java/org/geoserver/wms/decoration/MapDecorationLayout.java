@@ -5,6 +5,7 @@
  */
 package org.geoserver.wms.decoration;
 
+import com.google.common.collect.Streams;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -13,15 +14,20 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.apache.commons.collections4.iterators.NodeListIterator;
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
@@ -31,11 +37,11 @@ import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.text.ecql.ECQL;
 import org.geotools.util.logging.Logging;
-import org.jdom2.Document;
-import org.jdom2.Element;
-import org.jdom2.input.SAXBuilder;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.Expression;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.InputSource;
 
 /**
  * The MapDecorationLayout class describes a set of overlays to be used to enhance a WMS response.
@@ -95,6 +101,7 @@ public class MapDecorationLayout {
                 return null;
             }
         }
+
         /**
          * Given the configuration and the geometry of a particular WMS response, determine the
          * appropriate space into which a MapDecoration should draw itself.
@@ -160,7 +167,8 @@ public class MapDecorationLayout {
                     x = (int) (container.getMaxX() - o.x - dim.width);
             }
 
-            // in the event that this block does not fit in the container, resize each dimension
+            // in the event that this block does not fit in the container, resize each
+            // dimension
             // independently to fit (with space for the offset parameter)
             if ((dim.width + (2 * o.x)) > container.width) {
                 x = (int) container.getMinX() + o.x;
@@ -249,7 +257,7 @@ public class MapDecorationLayout {
 
     /** Create a new MapDecorationLayout with no decorations in it yet. */
     public MapDecorationLayout() {
-        this.blocks = new ArrayList<Block>();
+        this.blocks = new ArrayList<>();
     }
 
     /**
@@ -265,8 +273,11 @@ public class MapDecorationLayout {
         MapDecorationLayout dl =
                 tiled ? new MetatiledMapDecorationLayout() : new MapDecorationLayout();
 
-        Document confFile = new SAXBuilder().build(f.file());
-
+        DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        Document confFile;
+        try (InputStream in = f.in()) {
+            confFile = builder.parse(in);
+        }
         return fromDocument(dl, confFile);
     }
 
@@ -284,24 +295,38 @@ public class MapDecorationLayout {
         MapDecorationLayout dl =
                 tiled ? new MetatiledMapDecorationLayout() : new MapDecorationLayout();
 
-        Document confFile = new SAXBuilder().build(new StringReader(definition));
+        DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        InputSource source = new InputSource(new StringReader(definition));
+        Document confFile = builder.parse(source);
 
         return fromDocument(dl, confFile);
     }
 
+    private static Iterator<Element> getChildren(Element parent, String childName) {
+        NodeListIterator iterator = new NodeListIterator(parent);
+        return Streams.stream(iterator)
+                .filter(Element.class::isInstance)
+                .filter(e -> childName.equals(e.getNodeName()))
+                .map(Element.class::cast)
+                .iterator();
+    }
+
     private static MapDecorationLayout fromDocument(MapDecorationLayout dl, Document confFile)
             throws Exception {
-        for (Element e : (List<Element>) confFile.getRootElement().getChildren("decoration")) {
+        Iterator<Element> decorations = getChildren(confFile.getDocumentElement(), "decoration");
+        while (decorations.hasNext()) {
+            Element e = decorations.next();
             Map<String, Expression> m = new HashMap<>();
-            String decorationType = e.getAttributeValue("type");
-            for (Element option : (List<Element>) e.getChildren("option")) {
-                String name = option.getAttributeValue("name");
-                String value = option.getAttributeValue("value");
-                if (value == null) {
+            String decorationType = e.getAttribute("type");
+            Iterator<Element> options = getChildren(e, "option");
+            while (options.hasNext()) {
+                Element option = options.next();
+                String name = option.getAttribute("name");
+                String value = option.getAttribute("value");
+                if (value == null || value.isEmpty()) {
                     // pick from body, useful if the content is large
-                    value = option.getValue();
+                    value = option.getTextContent();
                 }
-
                 if (value != null) {
                     Expression expression;
                     if (isTextMessage(name, decorationType)) {
@@ -324,11 +349,10 @@ public class MapDecorationLayout {
             decoration.loadOptions(m);
 
             Block.Position pos = Block.Position.fromString(evaluateAttribute(e, "affinity"));
-
             if (pos == null) {
                 LOGGER.log(
                         Level.WARNING,
-                        "Unknown affinity: " + e.getAttributeValue("affinity") + " requested.");
+                        "Unknown affinity: " + e.getAttribute("affinity") + " requested.");
                 continue;
             }
 
@@ -345,10 +369,10 @@ public class MapDecorationLayout {
                 LOGGER.log(Level.WARNING, "Couldn't interpret size parameter: " + theSize, e);
             }
 
-            Point offset = null;
+            Point offset;
             String theOffset = evaluateAttribute(e, "offset");
             try {
-                if (theOffset != null) {
+                if (!StringUtils.isEmpty(theOffset)) {
                     String[] offsetArr = theOffset.split(",");
                     offset =
                             new Point(Integer.valueOf(offsetArr[0]), Integer.valueOf(offsetArr[1]));
@@ -367,7 +391,7 @@ public class MapDecorationLayout {
     }
 
     private static String evaluateAttribute(Element e, String name) throws CQLException {
-        String attribute = e.getAttributeValue(name);
+        String attribute = e.getAttribute(name);
         if (attribute == null) return null;
         return parseExpression(attribute).evaluate(null, String.class);
     }
@@ -427,8 +451,6 @@ public class MapDecorationLayout {
     /**
      * Resets the graphics to most of its default values, making each block paint independent of
      * what happened before the decoration layout was called, and from each other
-     *
-     * @param g2d
      */
     private void resetGraphics(Graphics2D g2d) {
         g2d.setComposite(AlphaComposite.SrcOver);

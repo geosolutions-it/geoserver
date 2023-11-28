@@ -5,8 +5,10 @@
  */
 package org.vfny.geoserver.util;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertEquals;
 
 import org.geoserver.catalog.DataLinkInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
@@ -27,6 +29,7 @@ public class ResponseUtilsTest {
     void createAppContext(String proxyBaseUrl) {
         SettingsInfo settings = createNiceMock(SettingsInfo.class);
         expect(settings.getProxyBaseUrl()).andReturn(proxyBaseUrl).anyTimes();
+        expect(settings.isUseHeadersProxyURL()).andReturn(null).anyTimes();
         replay(settings);
 
         GeoServer geoServer = createNiceMock(GeoServer.class);

@@ -95,12 +95,7 @@ public class GeoServerRoleConverterImpl implements GeoServerRoleConverter {
         return buff.toString();
     }
 
-    /**
-     * internal helper method
-     *
-     * @param buff
-     * @param role
-     */
+    /** internal helper method */
     protected void writeRole(StringBuffer buff, GeoServerRole role) {
         buff.append(role.getAuthority());
         Properties props = role.getProperties();
@@ -137,15 +132,10 @@ public class GeoServerRoleConverterImpl implements GeoServerRoleConverter {
         return buff.toString();
     }
 
-    /**
-     * internal helper method to split strings based on delimiter strings
-     *
-     * @param theString
-     * @param delim
-     */
+    /** internal helper method to split strings based on delimiter strings */
     protected List<String> splitString(String theString, String delim) {
 
-        List<String> result = new ArrayList<String>();
+        List<String> result = new ArrayList<>();
         int startIndex = 0;
         while (true) {
             int index = theString.indexOf(delim, startIndex);
@@ -167,7 +157,7 @@ public class GeoServerRoleConverterImpl implements GeoServerRoleConverter {
     public Collection<GeoServerRole> convertRolesFromString(String rolesString, String userName) {
 
         checkDelimiters();
-        List<GeoServerRole> roles = new ArrayList<GeoServerRole>();
+        List<GeoServerRole> roles = new ArrayList<>();
         List<String> working = splitString(rolesString, getRoleDelimiterString());
         for (String roleString : working) {
             GeoServerRole role = convertRoleFromString(roleString, userName);
@@ -228,7 +218,7 @@ public class GeoServerRoleConverterImpl implements GeoServerRoleConverter {
         if (roleParameterAssignmentString == null || roleParameterAssignmentString.isEmpty())
             throw createExcpetion("Missing roleParameterAssignmentString");
 
-        Set<String> set = new HashSet<String>();
+        Set<String> set = new HashSet<>();
         set.add(roleDelimiterString);
         set.add(roleParameterDelimiterString);
         set.add(roleParameterStartString);

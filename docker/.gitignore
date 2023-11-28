@@ -1,0 +1,11 @@
+# resources
+docker/resources/
+
+# bck files
+*.bck
+
+# war files
+*.war
+
+# zip files
+*.zip

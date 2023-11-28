@@ -237,16 +237,30 @@
     <bean id="loggingFilter" class="org.geoserver.filters.LoggingFilter">
         <constructor-arg ref="geoServer"/>
     </bean>
+
+    <!-- This filter restricts the HTTP methods that can be used to access GeoServer
+        to: GET, POST, PUT, DELETE, HEAD, PATCH, OPTIONS -->
+    <bean id="methodFilter" class="org.geoserver.filters.HTTPMethodFilter" />
+
   
-  <!-- the proxyfing URL mangler -->
+  <!-- the proxyfing URL mangler, along with machinery to support headers expansion usage in asynch requests -->
   <bean id="proxyfier" class="org.geoserver.ows.ProxifyingURLMangler">
     <constructor-arg index="0" ref="geoServer"/>
   </bean>
-  
-  <!-- URL mangler for workspace/layers accessed through the /ows?service=... service end points -->
+  <bean id="proxyfierHeaderCollector" class="org.geoserver.ows.HTTPHeadersCollector"/>
+  <bean id="proxyfierHeaderTransfer" class="org.geoserver.threadlocals.PublicThreadLocalTransfer">
+      <constructor-arg index="0" value="org.geoserver.ows.HTTPHeadersCollector"/>
+      <constructor-arg index="1" value="HEADERS"/>
+  </bean>
+
+
+    <!-- URL mangler for workspace/layers accessed through the /ows?service=... service end points -->
   <bean id="owsDispatcherLocalWorkspaceURLManger" class="org.geoserver.ows.LocalWorkspaceURLMangler">
     <constructor-arg value="ows"/>
   </bean>
+
+  <!-- URL mangler for handling Languange and AcceptLanguages parameters -->
+  <bean id="languageURLMangler" class="org.geoserver.ows.LanguageURLMangler"/>
 
   <!-- xstream persister factory -->
   <bean id="xstreamPersisterFactory" class="org.geoserver.config.util.XStreamPersisterFactory"/>
@@ -311,11 +325,36 @@
     <constructor-arg ref="geoServer"/>
   </bean>
   
+  <bean id="fileItemCleanupCallback" class="org.geoserver.ows.FileItemCleanupCallback"/>
+
   <bean id="serviceResourceProvider" class="org.geoserver.catalog.ServiceResourceProvider">
   	<constructor-arg ref="geoServer"/>
   </bean>
   
+  <!-- handle time stamping of layer/style creation/modification -->
+  <bean id="catalogTimeStampUpdater" class="org.geoserver.config.CatalogTimeStampUpdater">
+  	<constructor-arg ref="catalog"/>
+  </bean>
 
   <bean id="httpWarningAppender" class="org.geoserver.util.HTTPWarningAppender"/>
+
+  <bean id="coverageReaderFileConverter" class="org.geoserver.catalog.CoverageReaderFileConverter">
+    <constructor-arg ref="catalog"/>
+  </bean>
+
+  <bean id="defaultResourceAccessManager" class="org.geoserver.security.impl.DefaultResourceAccessManager">
+    <constructor-arg ref="accessRulesDao"/>
+    <constructor-arg ref="rawCatalog"/>
+    <property name="groupsCache" ref="layerGroupContainmentCache"/>
+  </bean>
+
+  <bean id="layerGroupContainmentCache" class="org.geoserver.security.impl.LayerGroupContainmentCache">
+    <constructor-arg ref="rawCatalog"/>
+  </bean>
+
+  <bean id="charSeparatedViewParamsFormatParser" class="org.geoserver.ows.kvp.CharSeparatedViewParamsFormatParser">
+  </bean>
+  <bean id="xmlViewParamsFormatParser" class="org.geoserver.ows.kvp.XMLViewParamsFormatParser">
+  </bean>
 
 </beans>

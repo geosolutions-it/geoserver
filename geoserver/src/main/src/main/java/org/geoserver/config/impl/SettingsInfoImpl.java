@@ -6,6 +6,7 @@
 package org.geoserver.config.impl;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.WorkspaceInfo;
@@ -38,9 +39,17 @@ public class SettingsInfoImpl implements SettingsInfo {
 
     protected MetadataMap metadata = new MetadataMap();
 
-    protected Map<Object, Object> clientProperties = new HashMap<Object, Object>();
+    protected Map<Object, Object> clientProperties = new HashMap<>();
 
     private boolean localWorkspaceIncludesPrefix = false;
+
+    private boolean showCreatedTimeColumnsInAdminList = false;
+
+    private boolean showModifiedTimeColumnsInAdminList = false;
+
+    protected Locale defaultLocale;
+
+    protected Boolean useHeadersProxyURL;
 
     @Override
     public String getId() {
@@ -169,6 +178,17 @@ public class SettingsInfoImpl implements SettingsInfo {
         this.clientProperties = properties;
     }
 
+    @Override
+    public Boolean isUseHeadersProxyURL() {
+        return useHeadersProxyURL;
+    }
+
+    @Override
+    public void setUseHeadersProxyURL(Boolean useHeadersProxyURL) {
+        this.useHeadersProxyURL = useHeadersProxyURL;
+    }
+
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -187,6 +207,7 @@ public class SettingsInfoImpl implements SettingsInfo {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null) return false;
@@ -239,5 +260,39 @@ public class SettingsInfoImpl implements SettingsInfo {
     @Override
     public void setLocalWorkspaceIncludesPrefix(boolean removePrefix) {
         localWorkspaceIncludesPrefix = removePrefix;
+    }
+
+    /** @return the showCreatedTimeColumnsInAdminList */
+    @Override
+    public boolean isShowCreatedTimeColumnsInAdminList() {
+        return showCreatedTimeColumnsInAdminList;
+    }
+
+    /** @param showCreatedTimeColumnsInAdminList the showCreatedTimeColumnsInAdminList to set */
+    @Override
+    public void setShowCreatedTimeColumnsInAdminList(boolean showCreatedTimeColumnsInAdminList) {
+        this.showCreatedTimeColumnsInAdminList = showCreatedTimeColumnsInAdminList;
+    }
+
+    /** @return the showModifiedTimeColumnsInAdminList */
+    @Override
+    public boolean isShowModifiedTimeColumnsInAdminList() {
+        return showModifiedTimeColumnsInAdminList;
+    }
+
+    /** @param showModifiedTimeColumnsInAdminList the showModifiedTimeColumnsInAdminList to set */
+    @Override
+    public void setShowModifiedTimeColumnsInAdminList(boolean showModifiedTimeColumnsInAdminList) {
+        this.showModifiedTimeColumnsInAdminList = showModifiedTimeColumnsInAdminList;
+    }
+
+    @Override
+    public Locale getDefaultLocale() {
+        return defaultLocale;
+    }
+
+    @Override
+    public void setDefaultLocale(Locale defaultLocale) {
+        this.defaultLocale = defaultLocale;
     }
 }

@@ -6,6 +6,7 @@
 package org.geoserver.security.filter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -20,6 +21,7 @@ import org.geoserver.security.impl.GeoServerRole;
 import org.geoserver.security.impl.GeoServerUser;
 import org.springframework.security.authentication.AuthenticationDetailsSource;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
@@ -72,17 +74,12 @@ public abstract class GeoServerPreAuthenticationFilter extends GeoServerSecurity
 
     /**
      * subclasses should return the principal, <code>null</code> if no principal was authenticated
-     *
-     * @param request
      */
     protected abstract String getPreAuthenticatedPrincipal(HttpServletRequest request);
 
     /**
      * subclasses should return the roles for the principal obtained by {@link
      * #getPreAuthenticatedPrincipal(HttpServletRequest)}
-     *
-     * @param request
-     * @param principal
      */
     protected abstract Collection<GeoServerRole> getRoles(
             HttpServletRequest request, String principal) throws IOException;
@@ -90,9 +87,6 @@ public abstract class GeoServerPreAuthenticationFilter extends GeoServerSecurity
     /**
      * Try to authenticate and adds {@link GeoServerRole#AUTHENTICATED_ROLE} Takes care of the
      * special user named {@link GeoServerUser#ROOT_USERNAME}
-     *
-     * @param request
-     * @param response
      */
     protected void doAuthenticate(HttpServletRequest request, HttpServletResponse response) {
 
@@ -108,22 +102,33 @@ public abstract class GeoServerPreAuthenticationFilter extends GeoServerSecurity
         PreAuthenticatedAuthenticationToken result = null;
         if (GeoServerUser.ROOT_USERNAME.equals(principal)) {
             result =
-                    new PreAuthenticatedAuthenticationToken(
+                    createPreAuthenticatedAuthenticationToken(
                             principal, null, Collections.singleton(GeoServerRole.ADMIN_ROLE));
         } else {
             Collection<GeoServerRole> roles = null;
             try {
-                roles = getRoles(request, principal);
+                roles = new ArrayList<>(getRoles(request, principal));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             if (roles.contains(GeoServerRole.AUTHENTICATED_ROLE) == false)
                 roles.add(GeoServerRole.AUTHENTICATED_ROLE);
-            result = new PreAuthenticatedAuthenticationToken(principal, null, roles);
+            result = createPreAuthenticatedAuthenticationToken(principal, null, roles);
         }
 
         result.setDetails(authenticationDetailsSource.buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(result);
+    }
+
+    /**
+     * @param principal
+     * @param credentials
+     * @param roles
+     * @return a new token, setup with the given parameters.
+     */
+    protected PreAuthenticatedAuthenticationToken createPreAuthenticatedAuthenticationToken(
+            String principal, Object credentials, Collection<? extends GrantedAuthority> roles) {
+        return new PreAuthenticatedAuthenticationToken(principal, credentials, roles);
     }
 
     public AuthenticationDetailsSource<HttpServletRequest, WebAuthenticationDetails>

@@ -21,12 +21,7 @@ public class FixedValueStrategyImpl extends AbstractDefaultValueSelectionStrateg
     private Object value;
     private String fixedCapabilitiesValue;
 
-    /**
-     * Constructs a
-     *
-     * @param value
-     * @param fixedCapabilitiesValue
-     */
+    /** Constructs a */
     public FixedValueStrategyImpl(Object value) {
         this.value = value;
     }
@@ -37,8 +32,9 @@ public class FixedValueStrategyImpl extends AbstractDefaultValueSelectionStrateg
     }
 
     @Override
+    @SuppressWarnings("unchecked") // we don't know the type of Range at compile time
     public Object getDefaultValue(
-            ResourceInfo resource, String dimensionName, DimensionInfo dimension, Class clz) {
+            ResourceInfo resource, String dimensionName, DimensionInfo dimension, Class<?> clz) {
         if (value instanceof Range) {
             Range r = (Range) value;
             if (clz.isAssignableFrom(r.getElementClass())) {

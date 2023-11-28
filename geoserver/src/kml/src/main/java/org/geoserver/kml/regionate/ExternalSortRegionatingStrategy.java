@@ -47,8 +47,8 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
     /** The feature type for the features that we'll return back from the index */
     static final SimpleFeatureType IDX_FEATURE_TYPE;
 
-    /** Java type to H2 type map (covers only types that do not have a size) */
-    static Map<Class<?>, String> CLASS_MAPPINGS = new LinkedHashMap<Class<?>, String>();
+    /** Java type to HSQL type map (covers only types that do not have a size) */
+    static Map<Class<?>, String> CLASS_MAPPINGS = new LinkedHashMap<>();
 
     static {
         CLASS_MAPPINGS.put(Boolean.class, "BOOLEAN");
@@ -77,7 +77,7 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
 
     FeatureSource fs;
 
-    String h2Type;
+    String hsqlType;
 
     public ExternalSortRegionatingStrategy(GeoServer gs) {
         super(gs);
@@ -117,9 +117,9 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
                             + featureType.getName());
         }
 
-        // Make sure we know how to turn that attribute into a H2 type
-        h2Type = getH2DataType(ad);
-        if (h2Type == null)
+        // Make sure we know how to turn that attribute into a HSQL type
+        hsqlType = getHSQLDataType(ad);
+        if (hsqlType == null)
             throw new ServiceException(
                     "Attribute type "
                             + ad.getType()
@@ -142,22 +142,18 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
             Connection cacheConn)
             throws Exception {
         // first of all, let's check if the geometry index table is there
-        Statement st = null;
-        try {
-            st = cacheConn.createStatement();
+        try (Statement st = cacheConn.createStatement()) {
             try {
                 st.executeQuery("SELECT * FROM FEATUREIDX LIMIT 1");
             } catch (SQLException e) {
                 buildIndex(cacheConn);
             }
-        } finally {
-            JDBCUtils.close(st);
         }
 
         return new IndexFeatureIterator(cacheConn, latLongEnvelope);
     }
 
-    protected String getH2DataType(AttributeDescriptor ad) {
+    protected String getHSQLDataType(AttributeDescriptor ad) {
         if (String.class.equals(ad.getType().getBinding())) {
             int length = FeatureTypes.getFieldLength(ad);
             if (length <= 0) length = 255;
@@ -168,28 +164,25 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
     }
 
     void buildIndex(Connection conn) throws Exception {
-        Statement st = null;
-        PreparedStatement ps = null;
-        FeatureIterator fi = null;
-        try {
-            st = conn.createStatement();
+        try (Statement st = conn.createStatement()) {
             st.execute(
-                    "CREATE TABLE FEATUREIDX(" //
-                            + "X NUMBER, " //
-                            + "Y NUMBER, " //
+                    "CREATE CACHED TABLE FEATUREIDX(" //
+                            + "X DOUBLE, " //
+                            + "Y DOUBLE, " //
                             + "FID VARCHAR(64), " //
                             + "ORDER_FIELD "
-                            + h2Type
+                            + hsqlType
                             + ")");
             st.execute("CREATE INDEX FEATUREIDX_COORDS ON FEATUREIDX(X, Y)");
             st.execute("CREATE INDEX FEATUREIDX_ORDER_FIELD ON FEATUREIDX(ORDER_FIELD)");
+        }
 
-            // prepare this statement so that the sql parser has to deal
-            // with it just once
-            ps =
-                    conn.prepareStatement(
-                            "INSERT INTO "
-                                    + "FEATUREIDX(X, Y, FID, ORDER_FIELD) VALUES (?, ?, ?, ?)");
+        // prepare this statement so that the sql parser has to deal
+        // with it just once
+        try (PreparedStatement ps =
+                conn.prepareStatement(
+                        "INSERT INTO "
+                                + "FEATUREIDX(X, Y, FID, ORDER_FIELD) VALUES (?, ?, ?, ?)")) {
 
             // build an optimized query, loading only the necessary attributes
             GeometryDescriptor geom = fs.getSchema().getGeometryDescriptor();
@@ -197,9 +190,9 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
             Query q = new Query();
 
             if (geom.getLocalName().equals(attribute)) {
-                q.setPropertyNames(new String[] {geom.getLocalName()});
+                q.setPropertyNames(geom.getLocalName());
             } else {
-                q.setPropertyNames(new String[] {attribute, geom.getLocalName()});
+                q.setPropertyNames(attribute, geom.getLocalName());
             }
 
             // setup the eventual transform
@@ -211,57 +204,51 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
             // read all the features and fill the index table
             // make it so the insertion is a single big transaction, should
             // be faster,
-            // provided it does not kill H2...
+            // provided it does not kill HSQL...
             conn.setAutoCommit(false);
-            fi = fs.getFeatures(q).features();
-            while (fi.hasNext()) {
-                // grab the centroid and transform it in 4326 if necessary
-                SimpleFeature f = (SimpleFeature) fi.next();
-                Geometry g = (Geometry) f.getDefaultGeometry();
-                if (g.isEmpty()) {
-                    continue;
+            try (FeatureIterator fi = fs.getFeatures(q).features()) {
+                while (fi.hasNext()) {
+                    // grab the centroid and transform it in 4326 if necessary
+                    SimpleFeature f = (SimpleFeature) fi.next();
+                    Geometry g = (Geometry) f.getDefaultGeometry();
+                    if (g.isEmpty()) {
+                        continue;
+                    }
+                    Point centroid = g.getCentroid();
+
+                    // robustness check for bad geometries
+                    if (Double.isNaN(centroid.getX()) || Double.isNaN(centroid.getY())) {
+                        LOGGER.warning(
+                                "Could not calculate centroid for feature "
+                                        + f.getID()
+                                        + "; g =  "
+                                        + g.toText());
+                        continue;
+                    }
+
+                    coords[0] = centroid.getX();
+                    coords[1] = centroid.getY();
+                    if (tx != null) tx.transform(coords, 0, coords, 0, 1);
+
+                    // insert
+                    ps.setDouble(1, coords[0]);
+                    ps.setDouble(2, coords[1]);
+                    ps.setString(3, f.getID());
+                    ps.setObject(4, getSortAttributeValue(f));
+                    ps.execute();
                 }
-                Point centroid = g.getCentroid();
-
-                // robustness check for bad geometries
-                if (Double.isNaN(centroid.getX()) || Double.isNaN(centroid.getY())) {
-                    LOGGER.warning(
-                            "Could not calculate centroid for feature "
-                                    + f.getID()
-                                    + "; g =  "
-                                    + g.toText());
-                    continue;
-                }
-
-                coords[0] = centroid.getX();
-                coords[1] = centroid.getY();
-                if (tx != null) tx.transform(coords, 0, coords, 0, 1);
-
-                // insert
-                ps.setDouble(1, coords[0]);
-                ps.setDouble(2, coords[1]);
-                ps.setString(3, f.getID());
-                ps.setObject(4, getSortAttributeValue(f));
-                ps.execute();
             }
             // todo: commit every 1000 features or so. No transaction is
             // slower, but too big transaction imposes a big overhead on the db
             conn.commit();
 
-            // hum, shall we kick H2 so that it updates the statistics?
+            // hum, shall we kick HSQL so that it updates the statistics?
         } finally {
             conn.setAutoCommit(true);
-            JDBCUtils.close(st);
-            JDBCUtils.close(ps);
-            if (fi != null) fi.close();
         }
     }
 
-    /**
-     * Returns the value that will be inserted into the H2 index as the sorting field
-     *
-     * @param f
-     */
+    /** Returns the value that will be inserted into the HSQL index as the sorting field */
     protected Object getSortAttributeValue(SimpleFeature f) {
         return f.getAttribute(attribute);
     }
@@ -285,20 +272,22 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
 
             try {
                 st = cacheConn.createStatement();
+                // we are using Math.nextDown and Math.nextUp methods to prevent double precision
+                // problems
                 String sql =
                         "SELECT X, Y, FID \n"
                                 + "FROM FEATUREIDX\n" //
-                                + "WHERE X >= "
-                                + envelope.getMinX()
+                                + "WHERE X > "
+                                + Math.nextDown(envelope.getMinX())
                                 + "\n"
-                                + "AND X <= "
-                                + envelope.getMaxX()
+                                + "AND X < "
+                                + Math.nextUp(envelope.getMaxX())
                                 + "\n"
-                                + "AND Y >= "
-                                + envelope.getMinY()
+                                + "AND Y > "
+                                + Math.nextDown(envelope.getMinY())
                                 + "\n"
-                                + "AND Y <= "
-                                + envelope.getMaxY()
+                                + "AND Y < "
+                                + Math.nextUp(envelope.getMaxY())
                                 + "\n"
                                 + "ORDER BY ORDER_FIELD DESC";
                 rs = st.executeQuery(sql);
@@ -313,11 +302,13 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
             gf = new GeometryFactory();
         }
 
+        @Override
         public void close() {
             JDBCUtils.close(rs);
             JDBCUtils.close(st);
         }
 
+        @Override
         public boolean hasNext() {
             // the contract of the iterator does not say this will be
             // called just once, we have to guard against multiple calls
@@ -333,6 +324,7 @@ public class ExternalSortRegionatingStrategy extends CachedHierarchyRegionatingS
             return next;
         }
 
+        @Override
         public Feature next() throws NoSuchElementException {
             if (!nextCalled) hasNext();
             nextCalled = false;

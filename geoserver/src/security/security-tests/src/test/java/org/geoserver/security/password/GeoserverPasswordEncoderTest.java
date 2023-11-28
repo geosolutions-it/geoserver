@@ -5,10 +5,18 @@
  */
 package org.geoserver.security.password;
 
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import org.geoserver.platform.GeoServerExtensions;
@@ -24,7 +32,7 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
 
     protected String testPassword = "geoserver";
     protected char[] testPasswordArray = testPassword.toCharArray();
-    protected char[] emptyArray = new char[] {};
+    protected char[] emptyArray = {};
     protected static Logger LOGGER = Logging.getLogger("org.geoserver.security");
 
     @Test
@@ -49,9 +57,9 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
         assertFalse(encoder.isPasswordValid(enc2, "plain:blabla".toCharArray(), null));
 
         assertEquals(testPassword, encoder.decode(enc));
-        assertTrue(Arrays.equals(testPasswordArray, encoder.decodeToCharArray(enc)));
+        assertArrayEquals(testPasswordArray, encoder.decodeToCharArray(enc));
         assertEquals(testPassword, encoder.decode(enc2));
-        assertTrue(Arrays.equals(testPasswordArray, encoder.decodeToCharArray(enc2)));
+        assertArrayEquals(testPasswordArray, encoder.decodeToCharArray(enc2));
 
         enc = encoder.encodePassword("", null);
         assertTrue(encoder.isPasswordValid(enc, "", null));
@@ -93,14 +101,14 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
         assertFalse(encoder2.isPasswordValid(enc2, "plain:blabla".toCharArray(), null));
 
         assertEquals(testPassword, encoder.decode(enc));
-        assertTrue(Arrays.equals(testPasswordArray, encoder.decodeToCharArray(enc)));
+        assertArrayEquals(testPasswordArray, encoder.decodeToCharArray(enc));
         assertEquals(testPassword, encoder.decode(enc2));
-        assertTrue(Arrays.equals(testPasswordArray, encoder.decodeToCharArray(enc2)));
+        assertArrayEquals(testPasswordArray, encoder.decodeToCharArray(enc2));
 
         assertEquals(testPassword, encoder2.decode(enc));
-        assertTrue(Arrays.equals(testPasswordArray, encoder2.decodeToCharArray(enc)));
+        assertArrayEquals(testPasswordArray, encoder2.decodeToCharArray(enc));
         assertEquals(testPassword, encoder2.decode(enc2));
-        assertTrue(Arrays.equals(testPasswordArray, encoder2.decodeToCharArray(enc2)));
+        assertArrayEquals(testPasswordArray, encoder2.decodeToCharArray(enc2));
 
         enc = encoder.encodePassword("", null);
         assertTrue(encoder.isPasswordValid(enc, "", null));
@@ -237,7 +245,7 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
     }
 
     protected List<GeoServerPasswordEncoder> getConfigPBEEncoders() {
-        List<GeoServerPasswordEncoder> result = new ArrayList<GeoServerPasswordEncoder>();
+        List<GeoServerPasswordEncoder> result = new ArrayList<>();
         result.add(getPBEPasswordEncoder());
         if (getSecurityManager().isStrongEncryptionAvailable()) {
             result.add(getStrongPBEPasswordEncoder());
@@ -289,14 +297,14 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
             assertFalse(encoder2.isPasswordValid(enc2, "crypt1:blabla".toCharArray(), null));
 
             assertEquals(testPassword, encoder.decode(enc));
-            assertTrue(Arrays.equals(testPasswordArray, encoder.decodeToCharArray(enc)));
+            assertArrayEquals(testPasswordArray, encoder.decodeToCharArray(enc));
             assertEquals(testPassword, encoder.decode(enc2));
-            assertTrue(Arrays.equals(testPasswordArray, encoder.decodeToCharArray(enc2)));
+            assertArrayEquals(testPasswordArray, encoder.decodeToCharArray(enc2));
 
             assertEquals(testPassword, encoder2.decode(enc));
-            assertTrue(Arrays.equals(testPasswordArray, encoder2.decodeToCharArray(enc)));
+            assertArrayEquals(testPasswordArray, encoder2.decodeToCharArray(enc));
             assertEquals(testPassword, encoder2.decode(enc2));
-            assertTrue(Arrays.equals(testPasswordArray, encoder2.decodeToCharArray(enc2)));
+            assertArrayEquals(testPasswordArray, encoder2.decodeToCharArray(enc2));
 
             enc = encoder.encodePassword("", null);
             assertTrue(encoder.isPasswordValid(enc, "", null));
@@ -308,7 +316,7 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
     }
 
     protected List<GeoServerPBEPasswordEncoder> getPBEEncoders() {
-        List<GeoServerPBEPasswordEncoder> result = new ArrayList<GeoServerPBEPasswordEncoder>();
+        List<GeoServerPBEPasswordEncoder> result = new ArrayList<>();
         result.add(getPBEPasswordEncoder());
         if (getSecurityManager().isStrongEncryptionAvailable()) {
             result.add(getStrongPBEPasswordEncoder());
@@ -355,7 +363,7 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
                             getSecurityManager().loadPasswordEncoder(encoder.getName());
             encoder2.initializeFor(service);
 
-            assertFalse(encoder == encoder2);
+            assertNotSame(encoder, encoder2);
             String enc = encoder.encodePassword(password, null);
             assertTrue(
                     enc.startsWith(
@@ -367,8 +375,8 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
                             encoder.getPrefix()
                                     + AbstractGeoserverPasswordEncoder.PREFIX_DELIMTER));
 
-            assertFalse(enc.equals(password));
-            assertFalse(Arrays.equals(encFromArray.toCharArray(), passwordArray));
+            assertNotEquals(enc, password);
+            assertThat(encFromArray.toCharArray(), not(equalTo(passwordArray)));
 
             assertTrue(encoder2.isPasswordValid(enc, password, null));
             assertTrue(encoder2.isPasswordValid(encFromArray, password, null));
@@ -384,26 +392,27 @@ public class GeoserverPasswordEncoderTest extends GeoServerMockTestSupport {
             assertEquals(password, encoder3.decode(enc));
             assertEquals(password, encoder.decode(enc));
             assertEquals(password, encoder.decode(encFromArray));
-            assertTrue(Arrays.equals(passwordArray, encoder.decodeToCharArray(enc)));
-            assertTrue(Arrays.equals(passwordArray, encoder.decodeToCharArray(encFromArray)));
+            assertArrayEquals(passwordArray, encoder.decodeToCharArray(enc));
+            assertArrayEquals(passwordArray, encoder.decodeToCharArray(encFromArray));
         }
     }
 
     @Test
     public void testCustomPasswordProvider() {
-        ClassPathXmlApplicationContext appContext =
-                new ClassPathXmlApplicationContext("classpath*:/passwordSecurityContext.xml");
-        appContext.refresh();
+        try (ClassPathXmlApplicationContext appContext =
+                new ClassPathXmlApplicationContext("classpath*:/passwordSecurityContext.xml")) {
+            appContext.refresh();
 
-        List<GeoServerPasswordEncoder> encoders =
-                GeoServerExtensions.extensions(GeoServerPasswordEncoder.class, appContext);
-        boolean found = false;
-        for (GeoServerPasswordEncoder enc : encoders) {
-            if (enc.getPrefix() != null && enc.getPrefix().equals("plain4711")) {
-                found = true;
-                break;
+            List<GeoServerPasswordEncoder> encoders =
+                    GeoServerExtensions.extensions(GeoServerPasswordEncoder.class, appContext);
+            boolean found = false;
+            for (GeoServerPasswordEncoder enc : encoders) {
+                if (enc.getPrefix() != null && enc.getPrefix().equals("plain4711")) {
+                    found = true;
+                    break;
+                }
             }
+            assertTrue(found);
         }
-        assertTrue(found);
     }
 }

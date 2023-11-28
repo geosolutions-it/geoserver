@@ -31,6 +31,10 @@ Configuration files
 
 Within each store there are multiple configuration files that determine how the mosaic is rendered.
 
+.. note:: The property file syntax uses a few reserved chars that need escaping in order to be used for keys or values. For example, the ``#`` character is used to comment out lines, in order to use it in values it needs to be escaped, like this: ``\#``. The same applies to the ``=`` character, which is used to separate the property name from its value: it should be specified as ``\=``. Finally, if there is a need to use the ``\`` itself, it will have to be escaped as well: ``\\``.
+
+
+
 Primary configuration file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -73,6 +77,9 @@ The table below describes the various elements in this configuration file.
    * - SuggestedSPI
      - Y
      - Suggested plugin for reading the image files.
+   * - SuggestedFormat
+     - N
+     - Suggested GridFormat for reading the image files.
    * - Envelope2D
      - N
      - Envelope for the mosaic formatted as ``LLX,LLY URX,URY`` (notice the space between the lower left and upper right coordinate pairs).
@@ -96,10 +103,13 @@ A sample configuration file follows::
   ExpandToRGB=false
   LocationAttribute=location
   SuggestedSPI=it.geosolutions.imageioimpl.plugins.tiff.TIFFImageReaderSpi
+  SuggestedFormat=org.geotools.gce.geotiff.GeoTiffFormat
   CheckAuxiliaryMetadata=false
   LevelsNum=1
    
 
+.. _mosaic_datastore_properties:   
+   
 :file:`datastore.properties`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -109,7 +119,7 @@ If needed, different storage can be used for the index — like a spatial DBMS, 
 
 .. note:: A shapefile is created automagically if it does not exist or if there is no :file:`datastore.properties` file.
 
-.. warning:: At the time of writing the following spatial DBMS have been tested successfully: Oracle, PostgreSQL, H2. SQl Server is not yet supported.
+.. warning:: At the time of writing the following spatial DBMS have been tested successfully: Oracle, PostgreSQL, H2, SQLServer.
 
 
 .. list-table::
@@ -139,6 +149,7 @@ If needed, different storage can be used for the index — like a spatial DBMS, 
        * PostGIS: ``org.geotools.data.postgis.PostgisNGDataStoreFactory`` 
        * Oracle: ``org.geotools.data.oracle.OracleNGDataStoreFactory`` 
        * H2: ``org.geotools.data.h2.H2DataStoreFactory``
+       * SQLServer: ``org.geotools.data.sqlserver.SQLServerDataStoreFactory``
 
        :ref:`JNDI <tomcat_jndi>` can also be used with any of these stores. If JNDI is used, the DataStoreFactory name will differ from the above.
 
@@ -146,9 +157,10 @@ If needed, different storage can be used for the index — like a spatial DBMS, 
      - Y
      - The connection parameters used by the specified SPI. The list of these connection parameters can be found in the GeoTools documentation on the relevant store:
 
-       * `PostGIS <http://docs.geotools.org/latest/userguide/library/jdbc/postgis.html>`_
-       * `Oracle <http://docs.geotools.org/latest/userguide/library/jdbc/oracle.html>`_
-       * `H2 <http://docs.geotools.org/latest/userguide/library/jdbc/h2.html>`_
+       * :geotools:`PostGIS <library/jdbc/postgis.html>`
+       * :geotools:`Oracle <library/jdbc/oracle.html>`
+       * :geotools:`H2 <library/jdbc/h2.html>`
+       * :geotools:`SQLServer <library/jdbc/sqlserver.html>`
 
        If JNDI is used, the connection parameters will include ``jndiReferenceName`` instead of ``host``, ``port``, etc.
        Note that for any connection parameters that include a space (such as ``loose bbox``), the space must be escaped by preceding it with a backslash (``loose\ bbox``).
@@ -253,13 +265,20 @@ In addition to the required envelope and location attributes, the schema for the
      - Boolean flag used for enabling/disabling the use of existing schemas. When enabled, the ImageMosaic will start indexing granules using the existing database schema (from :file:`datastore.properties`) instead of populating it. This is useful when you already have a database with a valid mosaic schema (the_geom, location and other attributes, take a look at gdalindex) or when you do not want to rename the images to add times and dimensions (you should simply add them to the table, to AdditionalDomainAttributes and to PropertyCollectors). Default is ``false``.
    * - Wildcard
      - N
-     - Wildcard used to specify which files should be scanned by the indexer. (For instance: ".")
+     - Wildcard used to specify which files should be scanned by the indexer. (For instance: "\*.tif"). Currently, logic operators and lists aren't supported, so this field is limited to a single wildcard element with no support for AND/OR operators combinations.
    * - WrapStore
      - N
      - By default, Postgresql identifiers can't be longer than 63 chars. Longer names will be truncated to that fixed length. When dealing with multidimensional datasets (for instance: NetCDFs, GRIBs) each variable (NetCDF) or parameter (GRIB) is indexed into a table with the same name. Therefore an atmosphere-absorption-optical-thickness-due-to-particulate-organic-matter-ambient-aerosol-particles NetCDF CF variable will be associated to a table with the same name. Postgresql will truncate that to atmosphere-absorption-optical-thickness-due-to-particulate-orga breaking the one-to-one mapping and therefore breaking the proper functioning. Setting the WrapStore flag to ``true`` will establish a hidden mapping between full long names and truncated table names to support proper working.
    * - MosaicCRS
      - N
      - The "native" CRS of the mosaic, that is, the one in which footprints are collected. Useful when dealing with granules in multiple CRSs (see tutorial)
+   * - AdditionalDomainAttributes
+     - N
+     - Comma separate list of custom dimensions to be exposed. Each custom dimension declaration can be a simple attribute name from the
+       schema, e.g., ``runtime``, a mapping from dimension name to attribute name, e.g. ``time2(runtime)``, or a mapping from a range dimension name to two attributes, e.g., ``timerange(timeStart,timeEnd)`` 
+   * - PropertySelection
+     - N
+     - Boolean value to enable/disable selection of properties from the mosaic index. Default is ``false``. When enabled, the ImageMosaic will try to load in memory only the properties needed to perform mosaicking. A typical use case is using a STAC API as a mosaic index, a STAC item typically contains many complex properties, and the API might be remote, reducing the payload improves both query time and memory usage.
 
 Here is a sample :file:`indexer.properties` file::
 
@@ -275,7 +294,8 @@ An example of optional CoverageNameCollectorSPI could be::
     CoverageNameCollectorSPI=org.geotools.gce.imagemosaic.namecollector.FileNameRegexNameCollectorSPI:regex=^([a-zA-Z0-9]+)
     
 This defines a regex-based name collector which extracts the coverage name from the prefix of the file name, so that an ImageMosaic with temperature_2015.tif, temperature_2016.tif, pressure_2015.tif, pressure_2016.tif will put temperature* granules on a ``temperature`` coverage and pressure* granules on a ``pressure`` coverage.
-    
+
+.. note:: The extraction works from the match of the full regular expression, if there are no capturing groups. If there are capturing groups instead, the match will be the concatenation of the text matched by all the capturing groups. This can be used to simplify the regular expression, for example, in order to match a string surrounded by underscores, ``regex=.*_(\\w+)_.*`` can be used instead of the more complex ``regex=(?<\=_)\\w+(?\=_)`` (using non capturing groups instead).
 
 Property collectors
 ~~~~~~~~~~~~~~~~~~~
@@ -311,7 +331,7 @@ The following table enumerates the available property collectors
        ResolutionYExtractorSPI
      - Returns the native resolution of the raster being harvested. ResolutionExtractorSPI and ResolutionXExtractorSPI return the x resolution of the raster, ResolutionYExtractorSPI returns the resolution on the Y axis instead
    * - CRSExtractorSPI
-     - Returns the code of the the raster coordinate reference system, as a string, e.g. "EPSG:4326" 
+     - Returns the code of the raster coordinate reference system, as a string, e.g. "EPSG:4326" 
 
 The ``PropertyCollectors`` parameter in the example above indicates two additional ``.properties`` files used to populate the ``ingestion`` and ``elevation`` attributes:
 
@@ -331,6 +351,28 @@ In case of custom format datetimes in filename, an additional *format* element s
 | In that case, the timeregex.properties file should be like this:
 
     regex=.*([0-9]{10}).*,format=yyyyMMddHH
+
+In case of reduced precision of temporal information, where there is the need to get the higher time included in that reduced value, an additional *,useHighTime=true* element should be added.
+
+| Example:
+| Temperature_2017111319.tif
+| an hourly Temperature file with datetime = November, 13 2017 at 19h 00m 00s 000ms
+| You want to get the max time included in that reduced precision, which is November, 13 2017 at 19h 59m 59s 999ms 
+|
+| In that case, the timeregex.properties file should be like this:
+
+    regex=.*([0-9]{10}).*,format=yyyyMMddHH,useHighTime=true
+
+In case the temporal information is spread along the whole file path, an additional *,fullPath=true* element should be added.
+
+| Example:
+| /data/20120202/Temperature.T1800.tif
+| an hourly Temperature tif file with Year,Month and Day specified in the parent folder (20120202) and time value embedded in the name (Temperature.T1800.tif)
+|
+| In that case, the timeregex.properties file should be like this:
+
+    regex=(?:\/)(\\d{8})(?:\/)(?:Temperature.)(T\\d{4})(?:.tif),fullPath=true
+
 
 
 :file:`elevationregex.properties`::

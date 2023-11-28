@@ -71,69 +71,95 @@ Release in JIRA
 If you are cutting the first RC of a series, create the stable branch
 ---------------------------------------------------------------------
 
-When creating the first release candidate of a series, there are some extra steps to create the new stable branch and update the version on master.
+When creating the first release candidate of a series, there are some extra steps to create the new stable branch and update the version on the main development branch.
 
-* Checkout the master branch and make sure it is up to date and that there are no changes in your local workspace::
+* Checkout the main development branch and make sure it is up to date and that there are no changes in your local workspace::
 
-    git checkout master
+    git checkout main
     git pull
     git status
 
-* Create the new stable branch and push it to GitHub; for example, if master is ``2.11-SNAPSHOT`` and the remote for the official GeoServer is called ``geoserver``::
+* Create the new stable branch and push it to GitHub; for example, if the main development branch is ``2.11-SNAPSHOT`` and the remote for the official GeoServer is called ``geoserver``::
 
     git checkout -b 2.11.x
     git push geoserver 2.11.x
 
 * Enable `GitHub branch protection <https://github.com/geoserver/geoserver/settings/branches>`_ for the new stable branch: tick "Protect this branch" (only) and press "Save changes".
 
-* Checkout the master branch and update the version in all pom.xml files; for example, if changing master from ``2.11-SNAPSHOT`` to ``2.12-SNAPSHOT``::
+* Checkout the main development branch::
 
-    git checkout master
-    find . -name pom.xml -exec sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' {} \;
+    git checkout main
+    
+* Update the version in all pom.xml files; for example, if changing the main development branch from ``2.17-SNAPSHOT`` to ``2.18-SNAPSHOT``.
+  
+  Edit :file:`build/rename.xml` to update GeoServer, GeoTools and GeoWebCache version numbers::
+  
+     <property name="current" value="2.17"/>
+     <property name="release" value="2.18"/>
+     ..
+     <replacefilter token="23-SNAPSHOT" value="24-SNAPSHOT"/>
+     <replacefilter token="1.17-SNAPSHOT" value="1.18-SNAPSHOT"/>
 
-  .. note:: ``sed`` behaves differently on Linux vs. Mac OS X. If running on OS X, the ``-i`` should be followed by ``'' -e`` for each of these ``sed`` commands.
+     
+  And then run::
+    
+    ant -f build/rename.xml 
+    
+  .. note:: use of sed
+     
+     To update these files using sed::
+  
+      find . -name pom.xml -exec sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' {} \;
 
-* Update release artifact paths and labels, for example, if changing master from ``2.11-SNAPSHOT`` to ``2.12-SNAPSHOT``::
+     .. note:: ``sed`` behaves differently on Linux vs. Mac OS X. If running on OS X, the ``-i`` should be followed by ``'' -e`` for each of these ``sed`` commands.
 
-    sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' src/release/bin.xml
-    sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' src/release/installer/win/GeoServerEXE.nsi
-    sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' src/release/installer/win/wrapper.conf
+     Update release artifact paths and labels, for example, if changing the main development branch from ``2.11-SNAPSHOT`` to ``2.12-SNAPSHOT``::
 
-  .. note:: These can be written as a single ``sed`` command with multiple files.
+       sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' src/release/bin.xml
+       sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' src/release/installer/win/GeoServerEXE.nsi
+       sed -i 's/2.11-SNAPSHOT/2.12-SNAPSHOT/g' src/release/installer/win/wrapper.conf
 
-* Update GeoTools dependency; for example if changing from ``17-SNAPSHOT`` to ``18-SNAPSHOT``::
+     .. note:: These can be written as a single ``sed`` command with multiple files.
 
-    sed -i 's/17-SNAPSHOT/18-SNAPSHOT/g' src/pom.xml
+     Update GeoTools dependency; for example if changing from ``17-SNAPSHOT`` to ``18-SNAPSHOT``::
 
-* Update GeoWebCache dependency; for example if changing from ``1.11-SNAPSHOT`` to ``1.12-SNAPSHOT``::
+       sed -i 's/17-SNAPSHOT/18-SNAPSHOT/g' src/pom.xml
 
-    sed -i 's/1.11-SNAPSHOT/1.12-SNAPSHOT/g' src/pom.xml
+     Update GeoWebCache dependency; for example if changing from ``1.11-SNAPSHOT`` to ``1.12-SNAPSHOT``::
 
-* Manually update hardcoded versions in configuration files:
+       sed -i 's/1.11-SNAPSHOT/1.12-SNAPSHOT/g' src/pom.xml
 
-    * ``doc/en/developer/source/conf.py``
-    * ``doc/en/docguide/source/conf.py``
-    * ``doc/en/user/source/conf.py``
-    * ``doc/es/user/source/conf.py``
-    * ``doc/fr/user/source/conf.py``
+     Manually update hardcoded versions in configuration files:
 
-* Commit the changes and push to the master branch on GitHub::
+     * ``doc/en/developer/source/conf.py``
+     * ``doc/en/docguide/source/conf.py``
+     * ``doc/en/user/source/conf.py``
+
+* Add the new version to the documentation index (``doc/en/index.html``) just after line 105, e.g.::
+
+    <tr>
+      <td><strong><a href="http://geoserver.org/release/2.12.x/">2.12.x</a></strong></td>
+      <td><a href="2.12.x/en/user/">User Manual</a></td>
+      <td><a href="2.12.x/en/developer/">Developer Manual</a></td>
+    </tr>
+
+* Commit the changes and push to the main development branch on GitHub::
 
       git commit -am "Updated version to 2.12-SNAPSHOT, updated GeoTools dependency to 18-SNAPSHOT, updated GeoWebCache dependency to 1.12-SNAPSHOT, and related changes"
-      git push geoserver master
+      git push geoserver main
       
-* Create the new RC version in `JIRA <https://osgeo-org.atlassian.net/projects/GEOS>`_ for issues on master; for example, if master is now ``2.12-SNAPSHOT``, create a Jira version ``2.12-RC1`` for the first release of the ``2.12.x`` series
+* Create the new RC version in `JIRA <https://osgeo-org.atlassian.net/projects/GEOS>`_ for issues on the main development branch; for example, if the main development branch is now ``2.12-SNAPSHOT``, create a Jira version ``2.12-RC1`` for the first release of the ``2.12.x`` series
 
-* Update the main, nightly, geogig-plugin and live-docs jobs on build.geoserver.org:
+* Update the main, nightly and live-docs jobs on build.geoserver.org:
   
   * disable the maintenance jobs, and remove them from the geoserver view
   * create new jobs, copying from the existing stable jobs, and edit the branch.
-  * modify the last line of the live-docs builds, changing ``stable`` to ``maintain`` for the previous stable branch. The new job you created should publish to ``stable``, and master will continue to publish to ``latest``.
+  * modify the last line of the live-docs builds, changing ``stable`` to ``maintain`` for the previous stable branch. The new job you created should publish to ``stable``, and the main development branch will continue to publish to ``latest``.
 
 * Update the cite tests on build.geoserver.org:
 
   * disable the maintenance jobs, and remove them from the geoserver view
-  * create new jobs, copying from the existing master jobs, editing the branch in the build command.
+  * create new jobs, copying from the existing main development branch jobs, editing the branch in the build command.
 
 * Announce on the developer mailing list that the new stable branch has been created.
 
@@ -150,7 +176,7 @@ Run the `geoserver-release <https://build.geoserver.org/view/geoserver/job/geose
 
 **BRANCH**
 
-  The branch to release from, "2.2.x", "2.1.x", etc... This must be a stable branch. Releases are not performed from master.
+  The branch to release from, "2.2.x", "2.1.x", etc... This must be a stable branch. Releases are not performed from the main development branch.
 
 **REV**
 
@@ -162,7 +188,7 @@ Run the `geoserver-release <https://build.geoserver.org/view/geoserver/job/geose
 
 **GT_VERSION**
 
-  The GeoTools version to include in the release. This may be specified as a version number such as "8.0" or "2.7.5". Alternatively the version may be specified as a Git branch/revision pair in the form ``<branch>@<revision>``. For example "master@36ba65jg53.....". Finally this value may be left blank in which the version currently declared in the geoserver pom will be used (usually a SNAPSHOT). Again, this version must be a version number corresponding to an official GeoTools release.
+  The GeoTools version to include in the release. This may be specified as a version number such as "8.0" or "2.7.5". Alternatively the version may be specified as a Git branch/revision pair in the form ``<branch>@<revision>``. For example "main@36ba65jg53.....". Finally this value may be left blank in which the version currently declared in the geoserver pom will be used (usually a SNAPSHOT). Again, this version must be a version number corresponding to an official GeoTools release.
 
 **GWC_VERSION**
 
@@ -209,10 +235,70 @@ This job will rsync all the artifacts located at::
 
 to the SourceForge FRS server. Navigate to `Sourceforge <http://sourceforge.net/projects/geoserver/>`__ and verify that the artifacts have been uploaded properly. If this is the latest stable release, set the necessary flags on the ``.exe``, ``.dmg`` and ``.bin`` artifacts so that they show up as the appropriate default for users downloading on the Windows, OSX, and Linux platforms.
 
+Release notes
+-------------
+
+This job will tag the release located in::
+   
+   https://github.com/geoserver/geoserver/tags/<RELEASE>
+
+Publish JIRA markdown release notes to github tag:
+
+#. Select the correct release from `JIRA Releases <https://osgeo-org.atlassian.net/projects/GEOS?orderField=RANK&selectedItem=com.atlassian.jira.jira-projects-plugin%3Arelease-page&status=released>`__ page.
+
+#. From the release page, locate the :guilabel:`Release notes` button at the top of the page to open the release notes edit
+  
+#. Generate release notes as markdown:
+   
+   * Select format `Markdown`
+   * Layout: Issue key with link
+   * Issue types: `Bug` and `Improvement`
+   
+   Change the heading to :kbd:`Release notes`, and apply the change with :guilabel:`Done`.
+
+   Use :guilabel:`Copy to clipboard` to obtain the markdown, similar to the following:
+   
+   .. code-block:: text
+   
+      # Release notes
+
+      ### Bug
+
+      [GEOS-10264](https://osgeo-org.atlassian.net/browse/GEOS-10264) Address startup warning File option not set for appender \[geoserverlogfile\]
+
+      [GEOS-10263](https://osgeo-org.atlassian.net/browse/GEOS-10263) WPSRequestBuilderTest assumes that JTS:area is the first process in the list
+
+      [GEOS-10255](https://osgeo-org.atlassian.net/browse/GEOS-10255) i18n user interface inconsistent layout with br tags used for layout
+
+      [GEOS-10245](https://osgeo-org.atlassian.net/browse/GEOS-10245) jdbcconfig: prefixedName filter field not updated
+
+      [GEOS-9950](https://osgeo-org.atlassian.net/browse/GEOS-9950) MapPreviewPage logs unable to find property: format.wfs.text/csv continuously
+
+      ### Improvement
+
+      [GEOS-10246](https://osgeo-org.atlassian.net/browse/GEOS-10246) jdbcconfig: performance slow-down from unnecessary transactions
+
+      ### New Feature
+
+      [GEOS-10223](https://osgeo-org.atlassian.net/browse/GEOS-10223) Support MBTiles in OGC Tiles API
+
+      ### Task
+
+      [GEOS-10247](https://osgeo-org.atlassian.net/browse/GEOS-10247) Reuse of service documentation references for workspace, metadata and default language
+
+#. Navigate to github tags https://github.com/geoserver/geoserver/tags
+   
+   Locate the new tag from the list, and use :menuselection:`... --> Create release`
+   
+   * Release title: `GeoServer 2.20.0`
+   * Write: Paste the markdown from Jira release notes editor
+   
+   Use :guilabel:`Publish release` button to publish the release notes.
+   
 Create the download page
 ------------------------
 
-The `GeoServer web site <http://geoserver.org/>`_ is managed as a `GitHub Pages repository <https://github.com/geoserver/geoserver.github.io>`_. Follow the `instructions <https://github.com/geoserver/geoserver.github.io#releases>`_ in the repository to create a download page for the release. This requires the url of the blog post announcing the release, so wait until after you have posted the announcement to do this.
+The `GeoServer website <http://geoserver.org/>`_ is managed as a `GitHub Pages repository <https://github.com/geoserver/geoserver.github.io>`_. Follow the `instructions <https://github.com/geoserver/geoserver.github.io#releases>`_ in the repository to create a download page for the release. This requires the url of the blog post announcing the release, so wait until after you have posted the announcement to do this.
 
 Post the Documentation
 ----------------------
@@ -295,7 +381,7 @@ GeoServer Blog
          <li>Thanks to <a href="http://www.warwickshire.gov.uk/">Warwickshire County Council</a>
              for some great GeoWebCache integration work:
             <ul>
-               <li>GeoWebCache tile layer HTTP cache headers are now taken from GeoServer layer configration</li>
+               <li>GeoWebCache tile layer HTTP cache headers are now taken from GeoServer layer configuration</li>
                <li>GeoWebCache settings are now correctly saved on Windows</li>
             </ul>
          </li>

@@ -12,9 +12,11 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.net.URLStreamHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,10 +64,8 @@ public class Resources {
      * @return true If resource is not UNDEFINED
      */
     public static boolean canRead(Resource resource) {
-        try {
-            InputStream is = resource.in();
+        try (InputStream is = resource.in()) {
             is.read();
-            is.close();
             return true;
         } catch (IOException | IllegalStateException e) {
             return false;
@@ -295,7 +295,7 @@ public class Resources {
      */
     public static List<Resource> search(Resource resource, long lastModified) {
         if (resource.getType() == Type.DIRECTORY) {
-            ArrayList<Resource> results = new ArrayList<Resource>();
+            ArrayList<Resource> results = new ArrayList<>();
             for (Resource child : resource.list()) {
                 switch (child.getType()) {
                     case RESOURCE:
@@ -399,7 +399,7 @@ public class Resources {
      * @return filtered list
      */
     public static List<Resource> list(Resource dir, Filter<Resource> filter, boolean recursive) {
-        List<Resource> res = new ArrayList<Resource>();
+        List<Resource> res = new ArrayList<>();
         for (Resource child : dir.list()) {
             if (filter.accept(child)) {
                 res.add(child);
@@ -443,7 +443,7 @@ public class Resources {
          * @param extensions in upper case
          */
         public ExtensionFilter(String... extensions) {
-            this.extensions = new HashSet<String>(Arrays.asList(extensions));
+            this.extensions = new HashSet<>(Arrays.asList(extensions));
         }
 
         @Override
@@ -507,6 +507,16 @@ public class Resources {
         }
     }
 
+    /**
+     * Used to generate resource based on {@link UUID#randomUUID()} with the provided prefix and
+     * suffix (primiarly for test cases).
+     *
+     * @param prefix name prefix
+     * @param suffix name suffix, often an extension
+     * @param dir location
+     * @return resouce with randomly generated name
+     * @throws IOException
+     */
     public static Resource createRandom(String prefix, String suffix, Resource dir)
             throws IOException {
         // Use only the file name from the supplied prefix
@@ -550,16 +560,16 @@ public class Resources {
     }
 
     /**
-     * Used to look up resources based on user provided url (or path).
+     * Used to look up resources based on user provided {@code url} (or path).
      *
-     * <p>This method is used to process a URL provided by a user: <i>iven a path, tries to
-     * interpret it as a file into the data directory, or as an absolute location, and returns the
+     * <p>This method is used to process a URL provided by a user: <i>given a path, tries to
+     * interpret it as a file into the data directory, or as an absolute location, to return the
      * actual absolute location of the file.</i>
      *
      * <p>Over time this url method has grown in the telling to support:
      *
      * <ul>
-     *   <li>Actual URL to external resoruce using http or ftp protocol - will return null
+     *   <li>Actual URL to external resource using http or ftp protocol - will return null
      *   <li>Resource URL - will support resources from resource store
      *   <li>File URL - will support absolute file references
      *   <li>File URL - will support relative file references - this is deprecated, use resource:
@@ -594,6 +604,12 @@ public class Resources {
         // pgraster://user:pass@server:port or similar custom store URLs.
         if (url.startsWith("file:")) {
             url = url.substring(5); // remove 'file:' prefix
+
+            // revert encoded special characters and spaces
+            try {
+                url = URLDecoder.decode(url, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+            }
 
             File f = new File(url);
 
@@ -695,7 +711,7 @@ public class Resources {
                     "resource",
                     null,
                     -1,
-                    String.format(res.getType() == Type.DIRECTORY ? "/%s/" : "/%s", res.path()),
+                    String.format(res.getType() == Type.DIRECTORY ? "%s/" : "%s", res.path()),
                     new URLStreamHandler() {
 
                         @Override
@@ -809,7 +825,7 @@ public class Resources {
 
         @Override
         public List<Resource> list() {
-            List<Resource> children = new ArrayList<Resource>();
+            List<Resource> children = new ArrayList<>();
             for (Resource child : delegate.list()) {
                 children.add(new SerializableResourceWrapper(child));
             }

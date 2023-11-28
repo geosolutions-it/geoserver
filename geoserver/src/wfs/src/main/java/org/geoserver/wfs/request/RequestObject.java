@@ -37,10 +37,7 @@ public abstract class RequestObject {
         return adaptee.eClass().getEPackage().getEFactoryInstance();
     }
 
-    //
     // Some common properties that many request objects share
-    //
-
     public String getBaseURL() {
         return getBaseUrl();
     }
@@ -73,7 +70,8 @@ public abstract class RequestObject {
         return eGet(adaptee, "extendedProperties", Map.class);
     }
 
-    public Map getFormatOptions() {
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getFormatOptions() {
         return eGet(adaptee, "formatOptions", Map.class);
     }
 
@@ -93,12 +91,14 @@ public abstract class RequestObject {
         eSet(adaptee, "typeName", typeName);
     }
 
+    @SuppressWarnings("unchecked")
     public List<QName> getTypeNames() {
         return eGet(adaptee, "typeName", List.class);
     }
 
     public void setTypeNames(List<QName> typeNames) {
-        List l = eGet(adaptee, "typeName", List.class);
+        @SuppressWarnings("unchecked")
+        List<QName> l = eGet(adaptee, "typeName", List.class);
         l.clear();
         l.addAll(typeNames);
     }
@@ -123,9 +123,7 @@ public abstract class RequestObject {
         eSet(adaptee, "outputFormat", outputFormat);
     }
 
-    //
     // helpers
-    //
     protected <T> T eGet(Object obj, String property, Class<T> type) {
         String[] props = property.split("\\.");
         for (String prop : props) {
@@ -137,7 +135,7 @@ public abstract class RequestObject {
             }
             obj = EMFUtils.get((EObject) obj, prop);
         }
-        return (T) obj;
+        return type.cast(obj);
     }
 
     protected void eSet(Object obj, String property, Object value) {

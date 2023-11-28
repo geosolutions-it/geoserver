@@ -9,7 +9,7 @@ What are Paletted Images?
 -------------------------
 Some image formats, such as GIF or PNG, can use a palette, which is a table of (usually) 256 colors to allow for better compression. Basically, instead of representing each pixel with its full color triplet, which takes 24bits (plus eventual 8 more for transparency), they use a 8 bit index that represent the position inside the palette, and thus the color.
 
-This allows for images that are 3-4 times smaller than the standard images, with the limitation that only 256 different colors can appear on the image itself. Depending of the actual map, this may be a very stringent limitation, visibly degrading the image quality, or it may be that the output cannot be told from a full color image.  But for many maps one can easily find 256 representative colors.
+This allows for images that are 3-4 times smaller than the standard images, with the limitation that only 256 different colors can appear on the image itself. Depending of the actual map, this may be a very stringent limitation, visibly degrading the image quality, or it may be that the output cannot be differentiated from a full color image. For many maps, one can easily find 256 representative colors.
 
 In the latter case, the smaller footprint of paletted images is usually a big gain in both performance and costs, because more data can be served with the same internet connection, and the clients will obtain responses faster.
 
@@ -85,7 +85,7 @@ And we'll change various parameters in order to play with formats and palettes. 
 
 The attachments include also the GIF outputs, whose size, appearance and generation time does not differ significantly from the PNG outputs.
 
-As we can see, depending on the choice we have a variation on the image quality, size and generation time (which has been recorded using the FasterFox Firefox extension timer, with the browser sitting on the same box as the server). Using ``palette=xxx`` provides the best match in speed and size, thought using the built in internet safe palette altered the colors. Then again, the real gain can be seen only by assuming a certain connection speed between the server and the client, and adding the time required to move the image to the client. The following table provides some results:
+As we can see, depending on the choice we have a variation on the image quality, size and generation time (which has been recorded using the FasterFox Firefox extension timer, with the browser sitting on the same box as the server). Using ``palette=xxx`` provides the best match in speed and size, though using the built-in internet safe palette altered the colors. Then again, the real gain can be seen only by assuming a certain connection speed between the server and the client, and adding the time required to move the image to the client. The following table provides some results:
 
 .. list-table::
    :widths: 28 12 12 12 12 12 12  
@@ -129,13 +129,14 @@ As we can see, depending on the choice we have a variation on the image quality,
 Legend:
 
 * ``GT``: map generation time on the same box
-* ``TT <speed>``: total time needed for a client to show the image, assuming an internet connection of the given speed. This time is a sum of of the image generation time and the transfer time, that is, ``GT + sizeInKbytes * 8/ speedInKbits``.
+* ``TT <speed>``: total time needed for a client to show the image, assuming an internet connection of the given speed. This time is a sum of the image generation time and the transfer time, that is, ``GT + sizeInKbytes * 8/ speedInKbits``.
 
 As the table shows, the full color PNG image takes usually a lot more time than other formats, unless it's being served over a fast network (and even in this case, one should consider network congestion as well). The png8 output format proves to be a good choice if the connection is slow, whilst the extra work done in looking up an optimal palette always pays back in faster map delivery.
 
 Generating the custom palette
 -----------------------------
-The `nyp.pal <http://geoserver.org/download/attachments/1278244/nyp.pal?version=1>`_ file has been generated using IrfanView, on Windows. The steps are simple:
+
+The :file:`nyp.pal` file has been generated using IrfanView, on Windows:
 
 * open the png 24 bit version of the image
 * use Image/Decrease Color Depth and set 256 colors

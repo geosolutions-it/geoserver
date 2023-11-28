@@ -67,6 +67,10 @@ public class GetFeatureInfoKvpReader extends KvpRequestReader {
             super(key, wms);
         }
 
+        public GetFeatureInfoKvpParser(String key, WMS wms, String stylesRaw) {
+            super(key, wms, stylesRaw);
+        }
+
         @Override
         protected boolean skipResource(Object theResource) {
             if (theResource instanceof LayerGroupInfo) {
@@ -108,7 +112,7 @@ public class GetFeatureInfoKvpReader extends KvpRequestReader {
         return wms;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     @Override
     public Object read(Object req, Map kvp, Map rawKvp) throws Exception {
         GetFeatureInfoRequest request = (GetFeatureInfoRequest) super.read(req, kvp, rawKvp);
@@ -138,7 +142,7 @@ public class GetFeatureInfoKvpReader extends KvpRequestReader {
             request.setQueryLayers(getMapLayers);
         } else {
             request.setQueryLayers(
-                    new GetFeatureInfoKvpParser("QUERY_LAYERS", wms)
+                    new GetFeatureInfoKvpParser("QUERY_LAYERS", wms, (String) rawKvp.get("STYLES"))
                             .parse((String) rawKvp.get("QUERY_LAYERS")));
         }
 
@@ -170,9 +174,9 @@ public class GetFeatureInfoKvpReader extends KvpRequestReader {
         }
 
         // make sure they are a subset of layers
-        List<MapLayerInfo> queryLayers = new ArrayList<MapLayerInfo>(request.getQueryLayers());
+        List<MapLayerInfo> queryLayers = new ArrayList<>(request.getQueryLayers());
         queryLayers.removeAll(getMapLayers);
-        if (queryLayers.size() > 0) {
+        if (!queryLayers.isEmpty()) {
             // we've already expanded base layers so let's avoid list the names, they are not
             // the original ones anymore
             throw new ServiceException(

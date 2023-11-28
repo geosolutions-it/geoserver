@@ -10,20 +10,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.namespace.QName;
 import net.opengis.wfs.TransactionType;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.ows.Dispatcher;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
-import org.geoserver.security.SecurityUtils;
+import org.geoserver.wfs.request.Delete;
+import org.geoserver.wfs.request.Insert;
 import org.geoserver.wfs.request.TransactionElement;
 import org.geoserver.wfs.request.TransactionRequest;
 import org.geoserver.wfs.request.TransactionResponse;
@@ -35,8 +37,6 @@ import org.opengis.feature.Feature;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.filter.FilterFactory;
 import org.springframework.context.ApplicationContext;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Web Feature Service Transaction operation.
@@ -46,6 +46,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class Transaction {
     /** logger */
     static Logger LOGGER = org.geotools.util.logging.Logging.getLogger("org.geoserver.wfs");
+
+    private static final int DELETE_BATCH_SIZE =
+            Integer.getInteger("org.geoserver.wfs.deleteBatchSize", 100);
 
     /** WFS configuration */
     protected WFSInfo wfs;
@@ -117,9 +120,6 @@ public class Transaction {
      * <p>The specification allows a WFS to implement PARTIAL sucess if it is unable to rollback all
      * the requested changes. This implementation is able to offer full Rollback support and will
      * not require the use of PARTIAL success.
-     *
-     * @param transactionRequest
-     * @throws WfsException
      */
     protected TransactionResponse execute(TransactionRequest request) throws Exception {
         // some defaults
@@ -143,16 +143,17 @@ public class Transaction {
         // gathering all the FeatureSources we need
         //
         // Map of required FeatureStores by typeName
-        Map stores = new HashMap();
+        Map<QName, FeatureStore> stores = new HashMap<>();
 
         // Map of required FeatureStores by typeRef (dataStoreId:typeName)
         // (This will be added to the contents are harmed)
-        Map stores2 = new HashMap();
+        Map<String, FeatureSource> stores2 = new HashMap<>();
 
         // List of type names, maintain this list because of the insert hack
         // described below
         // List typeNames = new ArrayList();
-        Map elementHandlers = gatherElementHandlers(request);
+        Map<TransactionElement, TransactionElementHandler> elementHandlers =
+                gatherElementHandlers(request);
 
         // Gather feature types required by transaction elements and validate
         // the elements
@@ -161,16 +162,16 @@ public class Transaction {
         //
         // (I am using element rather than transaction sub request
         // to agree with the spec docs)
-        for (Iterator it = elementHandlers.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry entry = (Map.Entry) it.next();
+        for (Entry<TransactionElement, TransactionElementHandler>
+                elementTransactionElementHandlerEntry : elementHandlers.entrySet()) {
+            Entry entry = elementTransactionElementHandlerEntry;
             TransactionElement element = (TransactionElement) entry.getKey();
             TransactionElementHandler handler = (TransactionElementHandler) entry.getValue();
-            Map featureTypeInfos = new HashMap();
+            Map<QName, FeatureTypeInfo> featureTypeInfos = new HashMap<>();
 
             QName[] typeNames = handler.getTypeNames(request, element);
 
-            for (int i = 0; i < typeNames.length; i++) {
-                final QName typeName = typeNames[i];
+            for (final QName typeName : typeNames) {
                 final String name = typeName.getLocalPart();
                 final String namespaceURI;
 
@@ -199,8 +200,7 @@ public class Transaction {
 
             // go through all feature type infos data objects, and load feature
             // stores
-            for (Iterator m = featureTypeInfos.values().iterator(); m.hasNext(); ) {
-                FeatureTypeInfo meta = (FeatureTypeInfo) m.next();
+            for (FeatureTypeInfo meta : featureTypeInfos.values()) {
                 String typeRef = meta.getStore().getName() + ":" + meta.getName();
 
                 String URI = meta.getNamespace().getURI();
@@ -228,13 +228,13 @@ public class Transaction {
                             meta.getFeatureSource(null, null);
 
                     if (source instanceof FeatureStore) {
-                        FeatureStore<? extends FeatureType, ? extends Feature> store;
-                        store = (FeatureStore<? extends FeatureType, ? extends Feature>) source;
+                        FeatureStore<? extends FeatureType, ? extends Feature> store =
+                                (FeatureStore<? extends FeatureType, ? extends Feature>) source;
                         store.setTransaction(transaction);
-                        stores.put(elementName, source);
+                        stores.put(elementName, (FeatureStore) source);
 
                         if (elementNameDefault != null) {
-                            stores.put(elementNameDefault, source);
+                            stores.put(elementNameDefault, (FeatureStore) source);
                         }
 
                         stores2.put(typeRef, source);
@@ -291,15 +291,16 @@ public class Transaction {
         Exception exception = null;
 
         try {
-            for (Iterator it = elementHandlers.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry entry = (Map.Entry) it.next();
-                TransactionElement element = (TransactionElement) entry.getKey();
-                TransactionElementHandler handler = (TransactionElementHandler) entry.getValue();
-
-                handler.execute(element, request, stores, result, multiplexer);
-            }
+            BatchManager batchManager =
+                    createBatchManager(request, multiplexer, stores, elementHandlers, result);
+            batchManager.run();
         } catch (WFSTransactionException e) {
             LOGGER.log(Level.SEVERE, "Transaction failed", e);
+
+            // don't process security exceptions, we want them to go up and change the way the
+            // response is presented to the user, e.g., challenge authentication or describe access
+            // was denied
+            if (Dispatcher.isSecurityException(e.getCause())) throw e;
 
             exception = e;
 
@@ -320,7 +321,7 @@ public class Transaction {
         // commit
         boolean committed = false;
 
-        try {
+        try { // NOPMD - Transaction is a field, cannot use TryWithResources
             if (exception != null) {
                 transaction.rollback();
             } else {
@@ -418,6 +419,24 @@ public class Transaction {
         // response = build;
     }
 
+    /**
+     * @param request
+     * @param multiplexer
+     * @param stores
+     * @param elementHandlers
+     * @param result
+     * @return a new {@link BatchManager} batching INSERT and DELETE operations where possible.
+     */
+    protected BatchManager createBatchManager(
+            TransactionRequest request,
+            TransactionListenerMux multiplexer,
+            Map<QName, FeatureStore> stores,
+            Map<TransactionElement, TransactionElementHandler> elementHandlers,
+            TransactionResponse result) {
+        return new BatchManager(
+                request, multiplexer, stores, result, elementHandlers, DELETE_BATCH_SIZE);
+    }
+
     private TransactionRequest fireBeforeTransaction(TransactionRequest request) {
         for (TransactionCallback tp : transactionCallbacks) {
             request = tp.beforeTransaction(request);
@@ -440,15 +459,12 @@ public class Transaction {
         }
     }
 
-    /**
-     * Looks up the element handlers to be used for each element
-     *
-     * @param group
-     */
-    private Map gatherElementHandlers(TransactionRequest request) throws WFSTransactionException {
+    /** Looks up the element handlers to be used for each element */
+    private Map<TransactionElement, TransactionElementHandler> gatherElementHandlers(
+            TransactionRequest request) throws WFSTransactionException {
         // JD: use a linked hashmap since the order of elements in a transaction
         // must be respected
-        Map map = new LinkedHashMap();
+        Map<TransactionElement, TransactionElementHandler> map = new LinkedHashMap<>();
 
         List<TransactionElement> elements = request.getElements();
         for (TransactionElement element : elements) {
@@ -461,16 +477,12 @@ public class Transaction {
     /**
      * Finds the best transaction element handler for the specified element type (the one matching
      * the most specialized superclass of type)
-     *
-     * @param type
      */
-    protected final TransactionElementHandler findElementHandler(Class type)
+    protected final TransactionElementHandler findElementHandler(Class<?> type)
             throws WFSTransactionException {
-        List matches = new ArrayList();
+        List<TransactionElementHandler> matches = new ArrayList<>();
 
-        for (Iterator it = transactionElementHandlers.iterator(); it.hasNext(); ) {
-            TransactionElementHandler handler = (TransactionElementHandler) it.next();
-
+        for (TransactionElementHandler handler : transactionElementHandlers) {
             if (handler.getElementClass().isAssignableFrom(type)) {
                 matches.add(handler);
             }
@@ -484,24 +496,19 @@ public class Transaction {
 
         if (matches.size() > 1) {
             // sort by class hierarchy
-            Comparator comparator =
-                    new Comparator() {
-                        public int compare(Object o1, Object o2) {
-                            TransactionElementHandler h1 = (TransactionElementHandler) o1;
-                            TransactionElementHandler h2 = (TransactionElementHandler) o2;
-
-                            if (h2.getElementClass().isAssignableFrom(h1.getElementClass())) {
-                                return -1;
-                            }
-
-                            return 1;
+            Comparator<TransactionElementHandler> comparator =
+                    (h1, h2) -> {
+                        if (h2.getElementClass().isAssignableFrom(h1.getElementClass())) {
+                            return -1;
                         }
+
+                        return 1;
                     };
 
             Collections.sort(matches, comparator);
         }
 
-        return (TransactionElementHandler) matches.get(0);
+        return matches.get(0);
     }
 
     /**
@@ -522,17 +529,6 @@ public class Transaction {
     protected DefaultTransaction getDatastoreTransaction(TransactionRequest request)
             throws IOException {
         DefaultTransaction transaction = new DefaultTransaction();
-        // use handle as the log messages
-        String username = "anonymous";
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null) {
-            username = SecurityUtils.getUsername(authentication.getPrincipal());
-        }
-
-        // Ok, this is a hack. We assume there is only one versioning datastore, the postgis one,
-        // and that we can the following properties won't hurt transactio processing anyways...
-        transaction.putProperty("VersioningCommitAuthor", username);
-        transaction.putProperty("VersioningCommitMessage", request.getHandle());
 
         // transfer any tx extended property down to the geotools transaction.
         // TransactionPlugins can contribute such info in their beforeTransaction()
@@ -593,7 +589,6 @@ public class Transaction {
     /**
      * Implement lockExists.
      *
-     * @param lockID
      * @return true if lockID exists
      * @see org.geotools.data.Data#lockExists(java.lang.String)
      */
@@ -607,8 +602,6 @@ public class Transaction {
      * Refresh lock by authorization
      *
      * <p>Should use your own transaction?
-     *
-     * @param lockID
      */
     private void lockRefresh(String lockId) throws Exception {
         LockFeature lockFeature = new LockFeature(wfs, catalog);
@@ -621,17 +614,149 @@ public class Transaction {
      *
      * @author Andrea Aime - TOPP
      */
-    private class TransactionListenerMux implements TransactionListener {
+    class TransactionListenerMux implements TransactionListener {
         public void dataStoreChange(List listeners, TransactionEvent event) throws WFSException {
-            for (Iterator it = listeners.iterator(); it.hasNext(); ) {
-                TransactionListener listener = (TransactionListener) it.next();
+            for (Object o : listeners) {
+                TransactionListener listener = (TransactionListener) o;
                 listener.dataStoreChange(event);
             }
         }
 
+        @Override
         public void dataStoreChange(TransactionEvent event) throws WFSException {
             dataStoreChange(transactionCallbacks, event);
             dataStoreChange(transactionListeners, event);
+        }
+    }
+
+    /**
+     * {@link BatchManager} restructures the contents of the transaction in order to enable batched
+     * execution in the data stores. When processing the {@link TransactionElement}s it aggregates
+     * INSERT and DELETE operations where possible before calling the corresponding {@link
+     * TransactionElementHandler}s.
+     */
+    protected static class BatchManager {
+        private TransactionRequest request;
+        private TransactionListener multiplexer;
+        private Map<QName, FeatureStore> stores;
+        private TransactionResponse result;
+        private Map<TransactionElement, TransactionElementHandler> elementHandlers;
+        private int maxDeleteCount;
+
+        /**
+         * Creates a new {@link BatchManager}, ready to {@link #run()} and process the transactions
+         * content.
+         *
+         * @param request The current request
+         * @param multiplexer the current transaction listener
+         * @param stores The map of stores
+         * @param result The result
+         * @param elementHandlers Mapping of {@link TransactionElement} to its corresponding {@link
+         *     TransactionElementHandler}
+         * @param maxDeleteCount Maximum number of deletes to be aggregated into and existing delete
+         */
+        public BatchManager(
+                TransactionRequest request,
+                TransactionListener multiplexer,
+                Map<QName, FeatureStore> stores,
+                TransactionResponse result,
+                Map<TransactionElement, TransactionElementHandler> elementHandlers,
+                int maxDeleteCount) {
+            this.request = request;
+            this.multiplexer = multiplexer;
+            this.stores = stores;
+            this.result = result;
+            this.elementHandlers = elementHandlers;
+            this.maxDeleteCount = maxDeleteCount;
+        }
+
+        private TransactionElement aggrTargetElement;
+        private TransactionElementHandler aggrTargetHandler;
+        private int aggrDeleteCount = 0;
+
+        /**
+         * Runs the aggregation of the {@link TransactionElement}s and invokes the required {@link
+         * TransactionElementHandler}s.
+         */
+        public void run() {
+            Set<Entry<TransactionElement, TransactionElementHandler>> lEntries =
+                    elementHandlers.entrySet();
+
+            for (Entry<TransactionElement, TransactionElementHandler> lEntry : lEntries) {
+                TransactionElement lCurrentElem = lEntry.getKey();
+                TransactionElementHandler lCurrentHandler = lEntry.getValue();
+                if (aggrTargetElement == null) {
+                    aggrTargetElement = lCurrentElem;
+                    aggrTargetHandler = lCurrentHandler;
+                } else if (canAggregate(lCurrentElem)) {
+                    aggregate(lCurrentElem);
+                } else {
+                    runAggregated();
+                    aggrTargetElement = lCurrentElem;
+                    aggrTargetHandler = lCurrentHandler;
+                }
+            }
+
+            if (aggrTargetElement != null) {
+                runAggregated();
+            }
+        }
+
+        /**
+         * @param pElem
+         * @return true, if the current target element for aggregation can accept the given element
+         *     to aggregate
+         */
+        private boolean canAggregate(TransactionElement pElem) {
+            if (aggrTargetElement instanceof Insert && pElem instanceof Insert) {
+                return true;
+            }
+            if (aggrTargetElement instanceof Delete && pElem instanceof Delete) {
+                if (aggrDeleteCount >= maxDeleteCount - 1) {
+                    return false;
+                }
+                Delete lTarget = (Delete) aggrTargetElement;
+                Delete lElem = (Delete) pElem;
+                QName lTargetType = lTarget.getTypeName();
+                QName lElemType = lElem.getTypeName();
+                if (lTargetType != null && lTargetType.equals(lElemType)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Aggregates the given element into the current aggregation target.
+         *
+         * @param pElem
+         */
+        private void aggregate(TransactionElement pElem) {
+            boolean lRemoveFromRequest = false;
+            if (aggrTargetElement instanceof Insert) {
+                Insert lTarget = (Insert) aggrTargetElement;
+                Insert lElem = (Insert) pElem;
+                lTarget.addFeatures(lElem.getFeatures());
+                lRemoveFromRequest = true;
+            } else if (aggrTargetElement instanceof Delete) {
+                Delete lTarget = (Delete) aggrTargetElement;
+                Delete lElem = (Delete) pElem;
+                lTarget.addFilter(lElem.getFilter());
+                aggrDeleteCount++;
+                lRemoveFromRequest = true;
+            }
+            if (lRemoveFromRequest) {
+                // contents of the element have been added to target element. To avoid contents
+                // being at multiple locations in the request, remove prior element. Otherwise
+                // potential transactionListeners etc will receive inconsistent request.
+                request.remove(pElem);
+            }
+        }
+
+        /** Calls the current handler with the current element, resetting the delete counter. */
+        private void runAggregated() {
+            aggrTargetHandler.execute(aggrTargetElement, request, stores, result, multiplexer);
+            aggrDeleteCount = 0;
         }
     }
 }

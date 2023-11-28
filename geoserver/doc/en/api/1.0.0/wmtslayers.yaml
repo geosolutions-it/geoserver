@@ -4,13 +4,20 @@ info:
   version: 1.0.0
   title: GeoServer WMTS Store Layers
   description: A WMTS store is a store whose source is a remote WMTS service. Also known as "Cascading WMTS". A WMTS store layer is a layer from this store.
-
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
+basePath: /geoserver/rest
 
 paths:
   /workspaces/{workspace}/wmtslayers:
 
     get:
       operationId: getWMTSStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Retrieves the WMTS layers available on the server. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/workspaces/{workspace}/wmtslayers" for XML).
       parameters:
         - name: workspace
@@ -69,6 +76,8 @@ paths:
 
     post:
       operationId: postWMTSStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Publishes a new WMTS store layer.
       parameters:
         - name: workspace
@@ -95,6 +104,8 @@ paths:
 
     put:
       operationId: putWMTSStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Invalid. Use POST for adding a new layer, or PUT on an individual layer to edit it.
       responses:
         405:
@@ -102,6 +113,8 @@ paths:
 
     delete:
       operationId: deleteWMTSStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Invalid. Can only delete an individual layer.
       responses:
         405:
@@ -112,6 +125,8 @@ paths:
 
     get:
       operationId: getWMTSStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Retrieves an individual WMTS layer. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/workspaces/{workspace}/wmtslayers/{wmtslayer}.xml" for XML).
       produces:
         - application/xml
@@ -194,6 +209,8 @@ paths:
 
     post:
       operationId: postWMTSStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Invalid. Use PUT to edit a layer, or POST on the /wmtslayers endpoint to add a new layer.
       responses:
         405:
@@ -201,6 +218,8 @@ paths:
 
     put:
       operationId: putWMTSStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Edits an existing WMTS store layer.
       parameters:
         - name: workspace
@@ -243,6 +262,8 @@ paths:
 
     delete:
       operationId: deleteWMTSStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Deletes a layer from the server.
       parameters:
         - name: workspace
@@ -266,10 +287,12 @@ paths:
           description: OK
  
 
-  /workspaces/{workspace}/wmtsstores/{wmtsstore}/wmtslayers:
+  /workspaces/{workspace}/wmtsstores/{wmtsstore}/layers:
 
     get:
       operationId: getWMTSStoreStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Retrieves the WMTS store layers available in the given store. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/workspaces/{workspace}/wmtsstores/{wmtsstore}/wmtslayers.xml" for XML).
       parameters:
         - name: workspace
@@ -333,6 +356,8 @@ paths:
 
     post:
       operationId: postWMTSStoreStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Publishes a new WMTS store layer in the given store.
       parameters:
         - name: workspace
@@ -364,6 +389,8 @@ paths:
 
     put:
       operationId: putWMTSStoreStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Invalid. Use POST for adding a new layer, or PUT on an individual layer to edit it.
       responses:
         405:
@@ -371,16 +398,20 @@ paths:
 
     delete:
       operationId: deleteWMTSStoreStoreLayers
+      tags:
+       - "WMTSLayers"
       description: Invalid. Can only delete an individual layer.
       responses:
         405:
           description: Method Not Allowed
 
 
-  /workspaces/{workspace}/wmtsstores/{wmtsstore}/wmtslayers/{wmtslayer}:
+  /workspaces/{workspace}/wmtsstores/{wmtsstore}/layers/{wmtslayer}:
 
     get:
       operationId: getWMTSStoreStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Retrieves an individual WMTS store layer for a given store. Use the "Accept:" header to specify format or append an extension to the endpoint (example "/workspaces/{workspace}/wmtsstores/{wmtsstore}/wmtslayers/{wmtslayer}.xml" for XML).
       produces:
         - application/xml
@@ -468,6 +499,8 @@ paths:
 
     post:
       operationId: postWMTSStoreStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Invalid. Use PUT to edit a layer, or POST on the /wmtslayers endpoint to add a new layer.
       responses:
         405:
@@ -475,6 +508,8 @@ paths:
 
     put:
       operationId: putWMTSStoreStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Edits an existing WMTS store layer.
       parameters:
         - name: workspace
@@ -522,6 +557,8 @@ paths:
 
     delete:
       operationId: deleteWMTSStoreStoreLayer
+      tags:
+       - "WMTSLayers"
       description: Deletes a layer from the server.
       parameters:
         - name: workspace

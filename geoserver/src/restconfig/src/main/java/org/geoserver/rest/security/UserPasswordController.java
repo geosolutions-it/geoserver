@@ -43,13 +43,12 @@ public class UserPasswordController extends RestBaseController {
     }
 
     @PutMapping(
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE
-        }
-    )
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE
+            })
     public void passwordPut(@RequestBody Map<String, String> putMap) {
         if (!getManager()
                 .checkAuthenticationForRole(
@@ -57,7 +56,7 @@ public class UserPasswordController extends RestBaseController {
                         GeoServerRole.AUTHENTICATED_ROLE))
             // yes, for backwards compat, it's really METHOD_NOT_ALLOWED
             throw new RestException(
-                    "Amdinistrative privelges required", HttpStatus.METHOD_NOT_ALLOWED);
+                    "Administrative privileges required", HttpStatus.METHOD_NOT_ALLOWED);
 
         try {
             // Look for the service that handles the current user

@@ -48,7 +48,7 @@ Within this repository are the various branches and tags associated with release
 
 For example, the path review the English docs is::
 
-   https://github.com/geoserver/geoserver/tree/master/doc/en
+   https://github.com/geoserver/geoserver/tree/main/doc/en
 
 Inside this directory, there are four directories::
 
@@ -75,35 +75,59 @@ Inside this directory, there are four directories::
 Make changes
 ------------
 
-Documentation in Sphinx is written in `reStructuredText <http://docutils.sourceforge.net/rst.htm>`_, a lightweight markup syntax.  For suggestions on writing reStructuredText for use with Sphinx, please see the section on :ref:`sphinx`.  For suggestions about writing style, please see the :ref:`style_guidelines`.
+Documentation in Sphinx is written in `reStructuredText <https://docutils.sourceforge.io/rst.html>`_, a lightweight markup syntax.  For suggestions on writing reStructuredText for use with Sphinx, please see the section on :ref:`sphinx`.  For suggestions about writing style, please see the :ref:`style_guidelines`.
 
 
 Build and test locally
 ----------------------
 
-You should install Sphinx on your local system (see :ref:`install_sphinx`) to build the documentation locally and view any changes made.  Sphinx builds the reStructuredText files into HTML pages and PDF files.
+You should install Sphinx on your local system (see the next page on :ref:`install_sphinx`) to build the documentation locally and view any changes made.  Sphinx builds the reStructuredText files into HTML pages and PDF files.
+
+#. Confirm availability of Python 3:
+
+   .. code-block:: bash
+
+      python --version
+
+#. Install sphinx and sphinx-autobuild:
+
+   .. code-block:: bash
+   
+      cd doc\en
+      pip3 install -r requirements.txt
 
 HTML
 ````
 
-#. On a terminal, navigate to your GeoServer source checkout and change to the :file:`doc/en/user` directory (or whichever project you wish to build).
+#. On a terminal, navigate to your GeoServer source checkout and change to the :file:`doc/en` directory (or whichever project you wish to build).
 
-#. Run the following command::
+#. Run the following command to build the docs and open the browser with a live preview:
+   
+   .. code-block:: bash
+   
+      ant user-site
+      
+   The documentation will refresh as you edit individual files.
 
+#. Run the following command to only build the docs:
+
+   .. code-block:: bash
+   
       ant user
 
    The resulting HTML pages will be contained in :file:`doc/en/target/user/html`.
 
-#. Watch the output of the above command for any errors and warnings.  These could be indicative of problems with your markup.  Please fix any errors and warnings before continuing.
+#. Watch the output of the above commands for any errors and warnings.  These could be indicative of problems with your markup.  Please fix any errors and warnings before continuing.
 
 PDF
 ```
 
-#. On a terminal, navigate to your GeoServer source checkout and change to the :file:`doc/en/user` directory (or whichever project you wish to build).
+#. On a terminal, navigate to your GeoServer source checkout and change to the :file:`doc/en` directory (or whichever project you wish to build).
 
-#. Run the following command::
+#. Run the following command:
 
-    
+   .. code-block:: bash
+   
       ant user-pdf
 
    This will create a PDF file called :file:`{GeoServerProject}.pdf` in the same directory
@@ -149,4 +173,4 @@ When ready return to the GitHub website and submit a pull request:
 
 * https://help.github.com/articles/using-pull-requests
 
-The GitHub website provides a link to `CONTRIBUTING.md <https://github.com/geoserver/geoserver/blob/master/CONTRIBUTING.md>`_ outlining how we can accept your patch. Small fixes may be contributed on your behalf, changes larger than a file (such as a tutorial) may require some paperwork.
+The GitHub website provides a link to `CONTRIBUTING.md <https://github.com/geoserver/geoserver/blob/main/CONTRIBUTING.md>`_ outlining how we can accept your patch. Small fixes may be contributed on your behalf, changes larger than a file (such as a tutorial) may require some paperwork.

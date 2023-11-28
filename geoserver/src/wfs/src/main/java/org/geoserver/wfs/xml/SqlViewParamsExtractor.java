@@ -30,6 +30,7 @@ public class SqlViewParamsExtractor {
      * Fix the node object to store a parsed list of viewParams instead of a raw string. This
      * prevents the parse() method choking later on...
      */
+    @SuppressWarnings("unchecked") // no generics in EMF model
     public static void fixNodeObject(Node node) throws Exception {
         List viewParams = null;
         if (node.hasAttribute("viewParams")) {
@@ -43,13 +44,7 @@ public class SqlViewParamsExtractor {
         }
     }
 
-    /**
-     * Set the viewParams in the binding class manually
-     *
-     * @param object
-     * @param node
-     * @throws Exception
-     */
+    /** Set the viewParams in the binding class manually */
     public static void viewParams(EObject object, Node node) throws Exception {
         if (node.hasAttribute("viewParams")) {
             String rawViewParams = (String) node.getAttributeValue("viewParams");
