@@ -164,7 +164,7 @@ OSI-430-a extends OSI-450-a from 2021 onwards. It uses SSMIS data from NOAA CLAS
     </entry>
     <entry>
       <string>MaxAllowedTiles</string>
-      <int>-1</int>
+      <int>1</int>
     </entry>
     <entry>
       <string>ExcessGranuleRemoval</string>
@@ -204,7 +204,7 @@ OSI-430-a extends OSI-450-a from 2021 onwards. It uses SSMIS data from NOAA CLAS
     </entry>
     <entry>
       <string>SORTING</string>
-      <null/>
+      <string>fid D</string>
     </entry>
     <entry>
       <string>FootprintBehavior</string>
