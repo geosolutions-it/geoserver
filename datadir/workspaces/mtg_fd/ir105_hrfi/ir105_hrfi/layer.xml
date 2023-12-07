@@ -5,6 +5,14 @@
   <defaultStyle>
     <id>StyleInfoImpl-2081132f:155a14b55d1:-7ffd</id>
   </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-7e9fa1f3:18c16899c42:-8000</id>
+    </style>
+    <style>
+      <id>StyleInfoImpl-7e9fa1f3:18c16899c42:-7fff</id>
+    </style>
+  </styles>
   <resource class="coverage">
     <id>CoverageInfoImpl-1e3d726a:189f3949016:-7ffb</id>
   </resource>
@@ -12,4 +20,5 @@
     <logoWidth>0</logoWidth>
     <logoHeight>0</logoHeight>
   </attribution>
+  <dateModified>2023-11-28 15:28:10.529 UTC</dateModified>
 </layer>
