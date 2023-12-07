@@ -16,7 +16,6 @@ import org.geoserver.platform.ServiceException;
 import org.geotools.csw.CSW;
 import org.geotools.util.Converters;
 import org.opengis.feature.Feature;
-import org.opengis.feature.FeatureVisitor;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
 import org.xml.sax.helpers.NamespaceSupport;
@@ -123,13 +122,7 @@ public abstract class AbstractRecordTransformer extends AbstractCSWTransformer {
                 try {
                     response.getRecords()
                             .accepts(
-                                    new FeatureVisitor() {
-
-                                        @Override
-                                        public void visit(Feature feature) {
-                                            encode(response, feature);
-                                        }
-                                    },
+                                    feature -> encode(response, feature),
                                     new LoggingProgressListener());
                 } catch (IOException e) {
                     throw new ServiceException("Failed to encoder records", e);
@@ -137,12 +130,7 @@ public abstract class AbstractRecordTransformer extends AbstractCSWTransformer {
             }
         }
 
-        /**
-         * Encodes the feature in the desired xml format (e.g., csw:Record, ISO, ebRIM)
-         *
-         * @param response
-         * @param f
-         */
+        /** Encodes the feature in the desired xml format (e.g., csw:Record, ISO, ebRIM) */
         protected abstract void encode(CSWRecordsResult response, Feature f);
     }
 }

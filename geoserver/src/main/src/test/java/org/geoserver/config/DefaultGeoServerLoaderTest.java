@@ -5,7 +5,11 @@
  */
 package org.geoserver.config;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +42,12 @@ public class DefaultGeoServerLoaderTest {
 
     static interface HelloServiceInfo extends ServiceInfo {}
 
-    static final class HelloServiceInfoImpl extends ServiceInfoImpl implements HelloServiceInfo {}
+    static final class HelloServiceInfoImpl extends ServiceInfoImpl implements HelloServiceInfo {
+        @Override
+        public String getType() {
+            return "Hello";
+        }
+    }
 
     static final class HelloServiceXStreamLoader extends XStreamServiceLoader<HelloServiceInfo> {
 

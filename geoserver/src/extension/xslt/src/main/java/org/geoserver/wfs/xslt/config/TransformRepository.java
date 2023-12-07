@@ -86,8 +86,7 @@ public class TransformRepository {
                         Source xslSource = new StreamSource(fis);
 
                         TransformerFactory tf = TransformerFactory.newInstance();
-                        final List<TransformerException> errors =
-                                new ArrayList<TransformerException>();
+                        final List<TransformerException> errors = new ArrayList<>();
                         tf.setErrorListener(
                                 new ErrorListener() {
 
@@ -114,7 +113,7 @@ public class TransformRepository {
                                 });
                         Templates template = tf.newTemplates(xslSource);
 
-                        if (errors.size() > 0) {
+                        if (!errors.isEmpty()) {
                             StringBuilder sb = new StringBuilder("Errors found in the template");
                             for (TransformerException e : errors) {
                                 sb.append("\n").append(e.getMessageAndLocation());
@@ -136,11 +135,7 @@ public class TransformRepository {
         initXStream(catalog);
     }
 
-    /**
-     * Sets up xstream to get nice xml output
-     *
-     * @param catalog
-     */
+    /** Sets up xstream to get nice xml output */
     private void initXStream(Catalog catalog) {
         xs = new SecureXStream();
         xs.allowTypes(new Class[] {TransformInfo.class});
@@ -153,11 +148,7 @@ public class TransformRepository {
         xs.addDefaultImplementation(FeatureTypeInfoImpl.class, FeatureTypeInfo.class);
     }
 
-    /**
-     * The transform name is the same as the config file, minus the extension
-     *
-     * @param file
-     */
+    /** The transform name is the same as the config file, minus the extension */
     protected String getTransformName(Resource file) {
         String name = file.name();
         int idx = name.indexOf(".");
@@ -171,7 +162,7 @@ public class TransformRepository {
     /** Returns all the transform (either global or feature type specific) */
     public List<TransformInfo> getAllTransforms() throws IOException {
         Resource root = dataDir.get(Paths.path("wfs", "transform"));
-        List<TransformInfo> result = new ArrayList<TransformInfo>();
+        List<TransformInfo> result = new ArrayList<>();
         for (Resource f : Resources.list(root, CONFIG_NAME_FILTER)) {
             try {
                 TransformInfo tx = infoCache.getItem(f);
@@ -187,7 +178,7 @@ public class TransformRepository {
     /** Returns all the global transformations (not attached to a particular layer) */
     public List<TransformInfo> getGlobalTransforms() throws IOException {
         List<TransformInfo> allTransformations = getAllTransforms();
-        List<TransformInfo> result = new ArrayList<TransformInfo>();
+        List<TransformInfo> result = new ArrayList<>();
         for (TransformInfo ti : allTransformations) {
             if (ti.getFeatureType() == null) {
                 result.add(ti);
@@ -197,14 +188,10 @@ public class TransformRepository {
         return result;
     }
 
-    /**
-     * Returns transformations associated to a specific feature type
-     *
-     * @param featureType
-     */
+    /** Returns transformations associated to a specific feature type */
     public List<TransformInfo> getTypeTransforms(FeatureTypeInfo featureType) throws IOException {
         List<TransformInfo> allTransformations = getAllTransforms();
-        List<TransformInfo> result = new ArrayList<TransformInfo>();
+        List<TransformInfo> result = new ArrayList<>();
         for (TransformInfo ti : allTransformations) {
             if (ti.getFeatureType() != null
                     && ti.getFeatureType().getId().equals(featureType.getId())) {
@@ -215,11 +202,7 @@ public class TransformRepository {
         return result;
     }
 
-    /**
-     * Returns a specific transformation by hand
-     *
-     * @param name
-     */
+    /** Returns a specific transformation by hand */
     public TransformInfo getTransformInfo(String name) throws IOException {
         Resource infoFile = getTransformInfoFile(name);
         return infoCache.getItem(infoFile);
@@ -228,9 +211,6 @@ public class TransformRepository {
     /**
      * Deletes a transformation definition and its associated XSLT file (assuming the latter is not
      * shared with other transformations)
-     *
-     * @param info
-     * @throws IOException
      */
     public boolean removeTransformInfo(TransformInfo info) throws IOException {
         Resource infoFile = getTransformInfoFile(info.getName());
@@ -257,11 +237,7 @@ public class TransformRepository {
         return result;
     }
 
-    /**
-     * Returns the XSLT transformer for a specific {@link TransformInfo}
-     *
-     * @param name
-     */
+    /** Returns the XSLT transformer for a specific {@link TransformInfo} */
     public Transformer getTransformer(TransformInfo info) throws IOException {
         Resource txFile = getTransformFile(info);
 
@@ -280,8 +256,6 @@ public class TransformRepository {
     /**
      * Returns the stylesheet of a transformation. It is the duty of the caller to close the input
      * stream after reading it.
-     *
-     * @throws IOException
      */
     public InputStream getTransformSheet(TransformInfo info) throws IOException {
         Resource txFile = getTransformFile(info);
@@ -291,11 +265,8 @@ public class TransformRepository {
 
     /**
      * Writes the stylesheet of a transformation. This method will close the provided input stream.
-     *
-     * @param info
-     * @param sheet
-     * @throws IOException
      */
+    @SuppressWarnings("PMD.UseTryWithResources")
     public void putTransformSheet(TransformInfo info, InputStream sheet) throws IOException {
         Resource txFile = getTransformFile(info);
 
@@ -306,12 +277,7 @@ public class TransformRepository {
         }
     }
 
-    /**
-     * Saves/updates the specified transformation
-     *
-     * @param transform
-     * @throws IOException
-     */
+    /** Saves/updates the specified transformation */
     public void putTransformInfo(TransformInfo transform) throws IOException {
         if (transform.getName() == null) {
             throw new IllegalArgumentException("Transformation does not have a name set");

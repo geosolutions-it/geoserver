@@ -22,12 +22,7 @@ public class ValidatingInputProvider implements InputProvider {
 
     Collection<Validator> validators;
 
-    /**
-     * Adds validation around the input provider as needed
-     *
-     * @param delegate
-     * @param validators
-     */
+    /** Adds validation around the input provider as needed */
     public static InputProvider wrap(InputProvider delegate, Collection<Validator> validators) {
         if (validators == null || validators.isEmpty()) {
             return delegate;
@@ -40,6 +35,7 @@ public class ValidatingInputProvider implements InputProvider {
         this.validators = validators;
     }
 
+    @Override
     public Object getValue(ProgressListener subListener) throws Exception {
         Object value = delegate.getValue(subListener);
         Errors errors = new BeanPropertyBindingResult(value, getInputId());
@@ -56,14 +52,17 @@ public class ValidatingInputProvider implements InputProvider {
         return value;
     }
 
+    @Override
     public String getInputId() {
         return delegate.getInputId();
     }
 
+    @Override
     public boolean resolved() {
         return delegate.resolved();
     }
 
+    @Override
     public int longStepCount() {
         return delegate.longStepCount();
     }

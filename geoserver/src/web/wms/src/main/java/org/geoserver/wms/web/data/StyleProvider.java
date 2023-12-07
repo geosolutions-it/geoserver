@@ -11,13 +11,14 @@ import com.google.common.collect.Lists;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.wicket.extensions.markup.html.repeater.util.SortParam;
 import org.apache.wicket.model.IModel;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.util.CloseableIterator;
-import org.geoserver.catalog.util.CloseableIteratorAdapter;
+import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.data.style.StyleDetachableModel;
 import org.geoserver.web.wicket.GeoServerDataProvider;
 import org.opengis.filter.Filter;
@@ -27,15 +28,25 @@ import org.opengis.filter.sort.SortBy;
 @SuppressWarnings("serial")
 public class StyleProvider extends GeoServerDataProvider<StyleInfo> {
 
-    public static Property<StyleInfo> NAME = new BeanProperty<StyleInfo>("name", "name");
+    public static Property<StyleInfo> NAME = new BeanProperty<>("name", "name");
 
-    public static Property<StyleInfo> WORKSPACE =
-            new BeanProperty<StyleInfo>("workspace", "workspace.name");
+    public static Property<StyleInfo> WORKSPACE = new BeanProperty<>("workspace", "workspace.name");
 
-    static List<Property<StyleInfo>> PROPERTIES = Arrays.asList(NAME, WORKSPACE);
+    static final Property<StyleInfo> MODIFIED_TIMESTAMP =
+            new BeanProperty<>("datemodfied", "dateModified");
+
+    static final Property<StyleInfo> CREATED_TIMESTAMP =
+            new BeanProperty<>("datecreated", "dateCreated");
+
+    static final Property<StyleInfo> FORMAT = new BeanProperty<>("format", "format");
+
+    static final Property<StyleInfo> FORMAT_VERSION =
+            new BeanProperty<>("formatversion", "formatVersion");
+
+    static List<Property<StyleInfo>> PROPERTIES = Arrays.asList(NAME, FORMAT, WORKSPACE);
 
     public StyleProvider() {
-        setSort(new SortParam<Object>(NAME.getName(), true));
+        setSort(new SortParam<>(NAME.getName(), true));
     }
 
     @Override
@@ -46,9 +57,23 @@ public class StyleProvider extends GeoServerDataProvider<StyleInfo> {
 
     @Override
     protected List<Property<StyleInfo>> getProperties() {
-        return PROPERTIES;
+        List<Property<StyleInfo>> modifiedPropertiesList =
+                PROPERTIES.stream().map(c -> c).collect(Collectors.toList());
+        // check geoserver properties
+        if (GeoServerApplication.get()
+                .getGeoServer()
+                .getSettings()
+                .isShowCreatedTimeColumnsInAdminList())
+            modifiedPropertiesList.add(CREATED_TIMESTAMP);
+        if (GeoServerApplication.get()
+                .getGeoServer()
+                .getSettings()
+                .isShowModifiedTimeColumnsInAdminList())
+            modifiedPropertiesList.add(MODIFIED_TIMESTAMP);
+        return modifiedPropertiesList;
     }
 
+    @Override
     public IModel<StyleInfo> newModel(StyleInfo object) {
         return new StyleDetachableModel(object);
     }
@@ -69,17 +94,10 @@ public class StyleProvider extends GeoServerDataProvider<StyleInfo> {
 
     @Override
     public Iterator<StyleInfo> iterator(final long first, final long count) {
-        Iterator<StyleInfo> iterator = filteredItems((int) first, (int) count);
-        if (iterator instanceof CloseableIterator) {
+        try (CloseableIterator<StyleInfo> iterator = filteredItems((int) first, (int) count)) {
             // don't know how to force wicket to close the iterator, lets return
             // a copy. Shouldn't be much overhead as we're paging
-            try {
-                return Lists.newArrayList(iterator).iterator();
-            } finally {
-                CloseableIteratorAdapter.close(iterator);
-            }
-        } else {
-            return iterator;
+            return Lists.newArrayList(iterator).iterator();
         }
     }
 
@@ -87,7 +105,7 @@ public class StyleProvider extends GeoServerDataProvider<StyleInfo> {
      * Returns the requested page of layer objects after applying any keyword filtering set on the
      * page
      */
-    private Iterator<StyleInfo> filteredItems(Integer first, Integer count) {
+    private CloseableIterator<StyleInfo> filteredItems(Integer first, Integer count) {
         final Catalog catalog = getCatalog();
 
         // global sorting
@@ -104,8 +122,6 @@ public class StyleProvider extends GeoServerDataProvider<StyleInfo> {
 
         final Filter filter = getFilter();
         // our already filtered and closeable iterator
-        Iterator<StyleInfo> items = catalog.list(StyleInfo.class, filter, first, count, sortOrder);
-
-        return items;
+        return catalog.list(StyleInfo.class, filter, first, count, sortOrder);
     }
 }

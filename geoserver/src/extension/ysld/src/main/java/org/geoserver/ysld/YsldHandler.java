@@ -6,6 +6,8 @@
 
 package org.geoserver.ysld;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
@@ -36,33 +38,30 @@ public class YsldHandler extends StyleHandler {
     public static final String FORMAT = "ysld";
     public static final String MIMETYPE = "application/vnd.geoserver.ysld+yaml";
 
-    static final Map<StyleType, String> TEMPLATES = new HashMap<StyleType, String>();
+    static final Map<StyleType, String> TEMPLATES = new HashMap<>();
 
     static {
         try {
             TEMPLATES.put(
                     StyleType.POINT,
                     IOUtils.toString(
-                            YsldHandler.class.getResourceAsStream("template_point.ysld"), "UTF-8"));
+                            YsldHandler.class.getResourceAsStream("template_point.ysld"), UTF_8));
             TEMPLATES.put(
                     StyleType.POLYGON,
                     IOUtils.toString(
-                            YsldHandler.class.getResourceAsStream("template_polygon.ysld"),
-                            "UTF-8"));
+                            YsldHandler.class.getResourceAsStream("template_polygon.ysld"), UTF_8));
             TEMPLATES.put(
                     StyleType.LINE,
                     IOUtils.toString(
-                            YsldHandler.class.getResourceAsStream("template_line.ysld"), "UTF-8"));
+                            YsldHandler.class.getResourceAsStream("template_line.ysld"), UTF_8));
             TEMPLATES.put(
                     StyleType.RASTER,
                     IOUtils.toString(
-                            YsldHandler.class.getResourceAsStream("template_raster.ysld"),
-                            "UTF-8"));
+                            YsldHandler.class.getResourceAsStream("template_raster.ysld"), UTF_8));
             TEMPLATES.put(
                     StyleType.GENERIC,
                     IOUtils.toString(
-                            YsldHandler.class.getResourceAsStream("template_generic.ysld"),
-                            "UTF-8"));
+                            YsldHandler.class.getResourceAsStream("template_generic.ysld"), UTF_8));
         } catch (IOException e) {
             throw new RuntimeException("Error loading up the style templates", e);
         }
@@ -131,7 +130,7 @@ public class YsldHandler extends StyleHandler {
         Ysld.encode(sld, output, uomMapper);
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     @Override
     public List<Exception> validate(Object input, Version version, EntityResolver entityResolver)
             throws IOException {

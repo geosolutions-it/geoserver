@@ -61,7 +61,7 @@ Run the `geoserver-release <http://hudson.opengeo.org/hudson/job/geoserver-relea
 
 **BRANCH**
 
-  The branch to release from, "2.2.x", "2.1.x", etc... This must be a stable branch. Releases are not performed from master.
+  The branch to release from, "2.2.x", "2.1.x", etc... This must be a stable branch. Releases are not performed from the main development branch.
 
 **REV**
 
@@ -73,7 +73,7 @@ Run the `geoserver-release <http://hudson.opengeo.org/hudson/job/geoserver-relea
 
 **GT_VERSION**
 
-  The GeoTools version to include in the release. This may be specified as a version number such as "8.0" or "2.7.5". Alternatively the version may be specified as a Git branch/revision pair in the form ``<branch>@<revision>``. For example "master@36ba65jg53.....". Finally this value may be left blank in which the version currently declared in the geoserver pom will be used (usually a SNAPSHOT). Again if performing a non-beta release this version must be a version number corresponding to an official GeoTools release.
+  The GeoTools version to include in the release. This may be specified as a version number such as "8.0" or "2.7.5". Alternatively the version may be specified as a Git branch/revision pair in the form ``<branch>@<revision>``. For example "main@36ba65jg53.....". Finally this value may be left blank in which the version currently declared in the geoserver pom will be used (usually a SNAPSHOT). Again if performing a non-beta release this version must be a version number corresponding to an official GeoTools release.
 
 **GWC_VERSION**
 
@@ -127,13 +127,12 @@ Run the `geoserver-release-jira <http://hudson.opengeo.org/hudson/job/geoserver-
 
   The password for the ``JIRA_USER``.
 
-This job will perform the tasks in JIRA to release ``VERSION``. Navigate to `JIRA <http://jira.codehaus.org/browse/GEOS>`_ and verify that the version has actually been released.
-
+This job will perform the tasks in JIRA to release ``VERSION``. Navigate to `JIRA <https://osgeo-org.atlassian.net/projects/GEOS>`__ and verify that the version has actually been released.
 
 Publish the Release
 -------------------
 
-Run the `geoserver-release-publish <http://hudson.opengeo.org/hudson/job/geoserver-release-publish/>`_ in Hudson. The job takes the following parameters:
+Run the `geoserver-release-publish <https://build.geoserver.org/view/release/job/geoserver-release-publish/>`__ in Jenkins. The job takes the following parameters:
 
 **VERSION**
 
@@ -163,7 +162,7 @@ release. The message should be relatively short. The following is an example::
    Subject: GeoServer 1.7.1 Released
 
    The GeoServer team is happy to announce the release of GeoServer 1.7.1.
-   The release is available for download from http://geoserver.org/download
+   The release is available for download from http://geoserver.org/release/1.7.1/
 
    This release comes with some exciting new features. The new and
    noteworthy include:
@@ -179,9 +178,9 @@ release. The message should be relatively short. The following is an example::
       * Default Templates per Namespace
 
    Along with many other improvements and bug fixes. The entire change log
-   for the 1.7.1 series is available in the issue tracker:
+   for the 1.7.1 series is available in GitHub:
 
-   http://jira.codehaus.org/browse/GEOS/fixforversion/14502
+   https://github.com/geoserver/geoserver/releases/tag/1.7.1
 
    A very special thanks to all those who contributed bug fixes, new
    features, bug reports, and testing to this release.

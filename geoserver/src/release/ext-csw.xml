@@ -24,7 +24,18 @@
             </includes>
             <excludes>
                 <exclude>*-tests.jar</exclude>
+                <exclude>gs-csw-iso*.jar</exclude>
             </excludes>
+        </fileSet>
+        <fileSet>
+            <directory>release/target/html/licenses</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>LGPL.html</include>
+                <include>GEOTOOLS_NOTICE.html</include>
+                <include>GPL.html</include>
+                <include>NOTICE.html</include>
+            </includes>
         </fileSet>
     </fileSets>
 </assembly>

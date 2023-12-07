@@ -18,7 +18,7 @@ import org.geotools.util.Converters;
  */
 public class LiteralPPIO extends ProcessParameterIO {
 
-    public LiteralPPIO(Class type) {
+    public LiteralPPIO(Class<?> type) {
         super(type, type);
     }
 

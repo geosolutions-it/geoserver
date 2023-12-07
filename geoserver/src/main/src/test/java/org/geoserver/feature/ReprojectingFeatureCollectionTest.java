@@ -5,7 +5,7 @@
  */
 package org.geoserver.feature;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.FeatureIterator;
@@ -34,22 +34,14 @@ public class ReprojectingFeatureCollectionTest {
         DefaultFeatureCollection features = new DefaultFeatureCollection(null, b.getFeatureType());
         features.add(f);
 
-        FeatureIterator it = features.features();
-
-        try {
+        try (FeatureIterator it = features.features()) {
             assertEquals("bar", it.next().getUserData().get("foo"));
-        } finally {
-            it.close();
         }
 
         ReprojectingFeatureCollection reprojected =
                 new ReprojectingFeatureCollection(features, CRS.decode("EPSG:3005"));
-        it = reprojected.features();
-
-        try {
+        try (FeatureIterator it = reprojected.features()) {
             assertEquals("bar", it.next().getUserData().get("foo"));
-        } finally {
-            it.close();
         }
     }
 }

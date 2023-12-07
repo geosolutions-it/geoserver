@@ -4,7 +4,7 @@
  */
 package org.geoserver.wps.hz;
 
-import static org.geoserver.wps.hz.HazelcastStatusStore.*;
+import static org.geoserver.wps.hz.HazelcastStatusStore.EXECUTION_STATUS_MAP;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
@@ -36,12 +36,7 @@ public class HazelcastLoader implements DisposableBean {
     /** Hazelcast instance to pass to the {@link HazelcastCacheProvider} class */
     private HazelcastInstance instance;
 
-    /**
-     * Loads a new {@link HazelcastInstance} from the data directory, and
-     *
-     * @param dd
-     * @throws IOException
-     */
+    /** Loads a new {@link HazelcastInstance} from the data directory, and */
     public HazelcastLoader(ResourceStore store) throws IOException {
         // see if we have the hazelcast configuration ready, otherwise create one from the classpath
         Resource resource = store.get(HAZELCAST_NAME);
@@ -58,12 +53,7 @@ public class HazelcastLoader implements DisposableBean {
         }
     }
 
-    /**
-     * Starts with a given Hazelcast instance.
-     *
-     * @param dd
-     * @throws IOException
-     */
+    /** Starts with a given Hazelcast instance. */
     HazelcastLoader(HazelcastInstance instance) {
         this.instance = instance;
         this.validateConfiguration(instance.getConfig());

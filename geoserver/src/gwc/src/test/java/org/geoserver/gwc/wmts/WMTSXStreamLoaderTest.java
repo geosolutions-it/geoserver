@@ -4,8 +4,8 @@
  */
 package org.geoserver.gwc.wmts;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.io.InputStream;
 import org.geoserver.config.util.XStreamPersister;
@@ -28,7 +28,8 @@ public class WMTSXStreamLoaderTest extends GeoServerSystemTestSupport {
             WMTSInfo serviceInfo = loader.initialize(xp.load(is, WMTSInfo.class));
             assertThat(serviceInfo.getId(), is("WMTS-TEST"));
             assertThat(serviceInfo.isEnabled(), is(false));
-            assertThat(serviceInfo.getName(), is("WMTS"));
+            assertThat(serviceInfo.getType(), is("WMTS"));
+            assertThat(serviceInfo.getName(), is("GeoServer WMTS"));
             assertThat(serviceInfo.getTitle(), is("GeoServer Web Map Tile Service"));
             assertThat(serviceInfo.getMaintainer(), is("geoserver"));
             assertThat(serviceInfo.getAbstract(), is("Testing the WMTS service."));

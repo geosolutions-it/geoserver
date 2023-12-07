@@ -66,10 +66,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @ControllerAdvice
 @RequestMapping(
-    path =
-            RestBaseController.ROOT_PATH
-                    + "/workspaces/{workspaceName}/coveragestores/{storeName}/coverages/{coverageName}/index"
-)
+        path =
+                RestBaseController.ROOT_PATH
+                        + "/workspaces/{workspaceName}/coveragestores/{storeName}/coverages/{coverageName}/index")
 public class StructuredCoverageController extends AbstractCatalogController {
 
     private static final Logger LOGGER = Logging.getLogger(StructuredCoverageController.class);
@@ -95,12 +94,11 @@ public class StructuredCoverageController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        produces = {
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE
-        }
-    )
+            produces = {
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE
+            })
     public RestWrapper<IndexSchema> indexGet(
             @PathVariable String workspaceName,
             @PathVariable String storeName,
@@ -117,14 +115,13 @@ public class StructuredCoverageController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        path = "/granules",
-        produces = {
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE
-        }
-    )
+            path = "/granules",
+            produces = {
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE
+            })
     @ResponseBody
     public SimpleFeatureCollection granulesGet(
             @PathVariable String workspaceName,
@@ -150,10 +147,14 @@ public class StructuredCoverageController extends AbstractCatalogController {
             @PathVariable String storeName,
             @PathVariable String coverageName,
             @RequestParam(name = "filter", required = false) String filter,
-            @RequestParam(name = "purge", required = false, defaultValue = "none") String purge)
+            @RequestParam(name = "purge", required = false, defaultValue = "none") String purge,
+            @RequestParam(name = "updateBBox", required = false) Boolean updateBBox)
             throws IOException {
+
+        if (updateBBox == null) updateBBox = false;
         Query q = toQuery(filter, 0, 1);
-        granulesDeleteInternal(workspaceName, storeName, coverageName, purge, q.getFilter());
+        granulesDeleteInternal(
+                workspaceName, storeName, coverageName, purge, q.getFilter(), updateBBox);
     }
 
     /*
@@ -161,9 +162,8 @@ public class StructuredCoverageController extends AbstractCatalogController {
      * interpreted as format extension
      */
     @GetMapping(
-        path = "/granules/{granuleId:.+}",
-        produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE}
-    )
+            path = "/granules/{granuleId:.+}",
+            produces = {MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public FormatCollectionWrapper granuleGet(
             @PathVariable String workspaceName,
@@ -219,13 +219,15 @@ public class StructuredCoverageController extends AbstractCatalogController {
             @PathVariable String storeName,
             @PathVariable String coverageName,
             @PathVariable String granuleId,
-            @RequestParam(name = "purge", required = false, defaultValue = "none") String purge)
+            @RequestParam(name = "purge", required = false, defaultValue = "none") String purge,
+            @RequestParam(name = "updateBBox", required = false) Boolean updateBBox)
             throws IOException {
 
+        if (updateBBox == null) updateBBox = false;
         // gsConfig allows for weird calls, like granules/granule.id/.json
         Filter filter = getGranuleIdFilter(granuleId);
 
-        granulesDeleteInternal(workspaceName, storeName, coverageName, purge, filter);
+        granulesDeleteInternal(workspaceName, storeName, coverageName, purge, filter, updateBBox);
     }
 
     private void granulesDeleteInternal(
@@ -233,7 +235,8 @@ public class StructuredCoverageController extends AbstractCatalogController {
             String storeName,
             String coverageName,
             String purge,
-            Filter filter)
+            Filter filter,
+            boolean updateBBox)
             throws IOException {
         GranuleStore store = getGranuleStore(workspaceName, storeName, coverageName);
         if (purge != null) {
@@ -242,6 +245,12 @@ public class StructuredCoverageController extends AbstractCatalogController {
             store.removeGranules(filter, hints);
         } else {
             store.removeGranules(filter);
+        }
+        if (updateBBox) {
+            // before updating checks that the delete request
+            // has not been performed over all granules
+            if (filter == null || (!filter.equals(Filter.INCLUDE)))
+                new MosaicInfoBBoxHandler(catalog).updateNativeBBox(workspaceName, storeName, null);
         }
     }
 
@@ -378,8 +387,7 @@ public class StructuredCoverageController extends AbstractCatalogController {
             throw new ResourceNotFoundException("No such coverage store: " + storeName);
         }
         Optional<CoverageInfo> optCoverage =
-                catalog.getCoveragesByStore(store)
-                        .stream()
+                catalog.getCoveragesByStore(store).stream()
                         .filter(si -> coverageName.equals(si.getName()))
                         .findFirst();
         if (!optCoverage.isPresent()) {

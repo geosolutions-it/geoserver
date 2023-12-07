@@ -9,9 +9,9 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.geoserver.data.test.MockData.TASMANIA_BM;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.awt.image.RenderedImage;
@@ -125,7 +125,7 @@ public class GetCoverageTest extends WCSTestSupport {
     }
 
     private Map<String, Object> baseMap() {
-        Map<String, Object> raw = new HashMap<String, Object>();
+        Map<String, Object> raw = new HashMap<>();
         raw.put("service", "WCS");
         raw.put("version", "1.0.0");
         raw.put("request", "GetCoverage");
@@ -173,7 +173,7 @@ public class GetCoverageTest extends WCSTestSupport {
 
         final GridCoverage[] coverages = executeGetCoverageKvp(raw);
         final GridCoverage2D result = (GridCoverage2D) coverages[0];
-        assertTrue(coverages.length == 1);
+        assertEquals(1, coverages.length);
         final AffineTransform2D tx = (AffineTransform2D) result.getGridGeometry().getGridToCRS();
         assertEquals("resx", expectedTx.getScaleX(), tx.getScaleX(), 1E-6);
         assertEquals("resx", Math.abs(expectedTx.getScaleY()), Math.abs(tx.getScaleY()), 1E-6);
@@ -540,12 +540,7 @@ public class GetCoverageTest extends WCSTestSupport {
         assertEquals(0, pixel[2]);
     }
 
-    /**
-     * Parses teh TIFF contained in the response as a {@link RenderedImage}
-     *
-     * @param response
-     * @throws IOException
-     */
+    /** Parses teh TIFF contained in the response as a {@link RenderedImage} */
     RenderedImage readTiff(MockHttpServletResponse response) throws IOException {
         ImageReader reader = ImageIO.getImageReadersByFormatName("tiff").next();
         reader.setInput(ImageIO.createImageInputStream(getBinaryInputStream(response)));
@@ -594,7 +589,7 @@ public class GetCoverageTest extends WCSTestSupport {
                             + "&coverage="
                             + getLayerId(WATTEMP);
             MockHttpServletResponse response = getAsServletResponse("wcs?" + queryString);
-            assertEquals("application/vnd.ogc.se_xml", response.getContentType());
+            assertEquals("application/vnd.ogc.se_xml;charset=UTF-8", response.getContentType());
             Document dom = dom(response, true);
             // print(dom);
             String text =
@@ -756,7 +751,7 @@ public class GetCoverageTest extends WCSTestSupport {
                             + "&elevation=0.0/1000.0/1.0&coverage="
                             + getLayerId(WATTEMP);
             MockHttpServletResponse response = getAsServletResponse("wcs?" + queryString);
-            assertEquals("application/vnd.ogc.se_xml", response.getContentType());
+            assertEquals("application/vnd.ogc.se_xml;charset=UTF-8", response.getContentType());
             Document dom = dom(response, true);
             print(dom);
             String text =

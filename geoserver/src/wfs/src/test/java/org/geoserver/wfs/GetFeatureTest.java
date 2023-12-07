@@ -6,13 +6,14 @@
 package org.geoserver.wfs;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import javax.xml.namespace.QName;
 import org.custommonkey.xmlunit.XMLAssert;
@@ -47,8 +48,8 @@ public class GetFeatureTest extends WFSTestSupport {
         wfs.setFeatureBounding(true);
         getGeoServer().save(wfs);
 
-        data.addVectorLayer(NULL_GEOMETRIES, Collections.EMPTY_MAP, getClass(), getCatalog());
-        data.addVectorLayer(FIFTEEN_DUPLICATE, Collections.EMPTY_MAP, getClass(), getCatalog());
+        data.addVectorLayer(NULL_GEOMETRIES, Collections.emptyMap(), getClass(), getCatalog());
+        data.addVectorLayer(FIFTEEN_DUPLICATE, Collections.emptyMap(), getClass(), getCatalog());
     }
 
     @Before
@@ -67,7 +68,7 @@ public class GetFeatureTest extends WFSTestSupport {
         String body = "request=GetFeature&typename=cdf:Fifteen&version=1.0.0&service=wfs";
         MockHttpServletRequest request = createRequest("wfs");
         request.setMethod("POST");
-        request.setContent(body.getBytes("UTF-8"));
+        request.setContent(body.getBytes(StandardCharsets.UTF_8));
         // this is normally done by the servlet container, but the mock system won't do it
         request.addParameter("request", "GetFeature");
         request.addParameter("typename", "cdf:Fifteen");
@@ -95,6 +96,12 @@ public class GetFeatureTest extends WFSTestSupport {
     public void testGetFilterEmpty() throws Exception {
         testGetFifteenAll(
                 "wfs?request=GetFeature&typename=cdf:Fifteen&version=1.0.0&service=wfs&filter=");
+    }
+
+    @Test
+    public void testGetCqlFilterEmpty() throws Exception {
+        testGetFifteenAll(
+                "wfs?request=GetFeature&typename=cdf:Fifteen&version=1.0.0&service=wfs&cql_filter=");
     }
 
     @Test
@@ -136,8 +143,7 @@ public class GetFeatureTest extends WFSTestSupport {
 
     @Test
     public void testGetNullGeometies() throws Exception {
-        Document doc;
-        doc =
+        Document doc =
                 getAsDOM(
                         "wfs?request=GetFeature&typeName="
                                 + getLayerId(NULL_GEOMETRIES)
@@ -158,10 +164,10 @@ public class GetFeatureTest extends WFSTestSupport {
     @Test
     public void testGetWithFeatureId() throws Exception {
 
-        Document doc;
-        doc =
+        Document doc =
                 getAsDOM(
-                        "wfs?request=GetFeature&typeName=cdf:Fifteen&version=1.0.0&service=wfs&featureid=Fifteen.2");
+                        "wfs?request=GetFeature&typeName=cdf:Fifteen&version=1.0"
+                                + ".0&service=wfs&featureid=Fifteen.2");
 
         // super.print(doc);
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
@@ -205,7 +211,7 @@ public class GetFeatureTest extends WFSTestSupport {
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
 
         NodeList featureMembers = doc.getElementsByTagName("gml:featureMember");
-        assertFalse(featureMembers.getLength() == 0);
+        assertNotEquals(0, featureMembers.getLength());
     }
 
     @Test
@@ -238,7 +244,7 @@ public class GetFeatureTest extends WFSTestSupport {
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
 
         NodeList featureMembers = doc.getElementsByTagName("gml:featureMember");
-        assertFalse(featureMembers.getLength() == 0);
+        assertNotEquals(0, featureMembers.getLength());
     }
 
     @Test
@@ -286,7 +292,7 @@ public class GetFeatureTest extends WFSTestSupport {
         assertEquals("wfs:FeatureCollection", doc.getDocumentElement().getNodeName());
 
         NodeList featureMembers = doc.getElementsByTagName("gml:featureMember");
-        assertFalse(featureMembers.getLength() == 0);
+        assertNotEquals(0, featureMembers.getLength());
     }
 
     @Test
@@ -470,6 +476,6 @@ public class GetFeatureTest extends WFSTestSupport {
 
         doc = getAsDOM(request);
         featureMembers = doc.getElementsByTagName("gml:featureMember");
-        assertTrue(featureMembers.getLength() == 0);
+        assertEquals(0, featureMembers.getLength());
     }
 }

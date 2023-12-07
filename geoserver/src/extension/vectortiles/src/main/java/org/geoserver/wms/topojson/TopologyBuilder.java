@@ -105,30 +105,30 @@ public class TopologyBuilder implements VectorTileBuilder {
         Topology topology = new Topology(screenToWorld, arcs, layers);
 
         final int threshold = 8096;
-        DeferredFileOutputStream out =
-                new DeferredFileOutputStream(threshold, "topology", ".topojson", null);
-        TopoJSONEncoder encoder = new TopoJSONEncoder();
+        try (DeferredFileOutputStream out =
+                        new DeferredFileOutputStream(threshold, "topology", ".topojson", null);
+                Writer writer = new OutputStreamWriter(out, Charsets.UTF_8)) {
+            TopoJSONEncoder encoder = new TopoJSONEncoder();
 
-        Writer writer = new OutputStreamWriter(out, Charsets.UTF_8);
-        encoder.encode(topology, writer);
-        writer.flush();
-        writer.close();
-        out.close();
+            encoder.encode(topology, writer);
+            writer.flush();
+            writer.close();
 
-        long length;
-        RawMap map;
-        if (out.isInMemory()) {
-            byte[] data = out.getData();
-            length = data.length;
-            map = new RawMap(mapContent, data, MIME_TYPE);
-        } else {
-            File f = out.getFile();
-            length = f.length();
-            map = new DeferredFileOutputStreamWebMap(mapContent, out, MIME_TYPE);
+            long length;
+            RawMap map;
+            if (out.isInMemory()) {
+                byte[] data = out.getData();
+                length = data.length;
+                map = new RawMap(mapContent, data, MIME_TYPE);
+            } else {
+                File f = out.getFile();
+                length = f.length();
+                map = new DeferredFileOutputStreamWebMap(mapContent, out, MIME_TYPE);
+            }
+
+            map.setResponseHeader("Content-Length", String.valueOf(length));
+            return map;
         }
-        map.setResponseHeader("Content-Length", String.valueOf(length));
-
-        return map;
     }
 
     @Nullable

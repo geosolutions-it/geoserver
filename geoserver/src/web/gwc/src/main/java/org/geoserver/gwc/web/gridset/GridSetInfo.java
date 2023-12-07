@@ -52,17 +52,14 @@ class GridSetInfo implements Serializable {
 
     public GridSetInfo() {
         this.internal = false;
-        this.levels = new ArrayList<Grid>();
+        this.levels = new ArrayList<>();
         this.tileWidth = 256;
         this.tileHeight = 256;
         this.pixelSize = GridSetFactory.DEFAULT_PIXEL_SIZE_METER;
         this.resolutionsPreserved = true;
     }
 
-    /**
-     * @param gridset
-     * @param internal whether this gridset is one of the GWC internally defined ones
-     */
+    /** @param internal whether this gridset is one of the GWC internally defined ones */
     public GridSetInfo(final GridSet gridset, final boolean internal) {
         this.internal = internal;
 
@@ -89,7 +86,7 @@ class GridSetInfo implements Serializable {
         this.alignTopLeft = gridset.isTopLeftAligned();
         this.resolutionsPreserved = gridset.isResolutionsPreserved();
 
-        this.levels = new ArrayList<Grid>();
+        this.levels = new ArrayList<>();
 
         if (gridset.getNumLevels() > 0) {
             for (int i = 0; i < gridset.getNumLevels(); i++) {
@@ -213,11 +210,7 @@ class GridSetInfo implements Serializable {
         return metersPerUnit;
     }
 
-    /**
-     * @param crs
-     * @return
-     * @throws IllegalArgumentException if the equivalence can't be established
-     */
+    /** @throws IllegalArgumentException if the equivalence can't be established */
     public Double getMetersPerUnit(CoordinateReferenceSystem crs) {
         if (crs == null) {
             return null;
@@ -229,11 +222,7 @@ class GridSetInfo implements Serializable {
         return metersPerUnit(unit);
     }
 
-    /**
-     * @param crs
-     * @return
-     * @throws IllegalArgumentException if the provided unit can't be converted to meters
-     */
+    /** @throws IllegalArgumentException if the provided unit can't be converted to meters */
     static Double metersPerUnit(final Unit<?> unit) {
         double meters;
         final Unit<Angle> degree = NonSI.DEGREE_ANGLE;

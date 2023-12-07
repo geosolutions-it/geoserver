@@ -5,7 +5,8 @@
  */
 package org.geoserver.web;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.catalog.NamespaceInfo;
@@ -48,11 +49,10 @@ public class RESTPanelTest extends GeoServerWicketTestSupport {
         tester.startPage(new WorkspaceEditPage(citeWorkspace));
         tester.assertRenderedPage(WorkspaceEditPage.class);
         tester.assertNoErrorMessage();
-
         // Setting of the "settings" parameter to true
         FormTester form = tester.newFormTester("form");
-        form.setValue("settings:enabled", true);
-        form.submit();
+        form.setValue("tabs:panel:settings:enabled", true);
+        form.submit("save");
         // Check if no error has been found
         tester.assertNoErrorMessage();
         // Get GeoServer object for retrieving the settings associated to the workspace
@@ -67,8 +67,9 @@ public class RESTPanelTest extends GeoServerWicketTestSupport {
         // Set the root directory
         FormTester form2 = tester.newFormTester("form");
         form2.setValue(
-                "settings:settingsContainer:otherSettings:extensions:0:content:rootdir", root);
-        form2.submit();
+                "tabs:panel:settings:settingsContainer:otherSettings:extensions:0:content:rootdir",
+                root);
+        form2.submit("save");
         // Check if no error has been found
         tester.assertNoErrorMessage();
         // Control if the defined root has been correctly set

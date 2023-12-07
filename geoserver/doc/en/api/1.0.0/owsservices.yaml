@@ -4,6 +4,12 @@ info:
   version: 1.0.0
   title: OWS Services
   description: An OWS service refers to any of the OGC services that GeoServer supports, such as WFS, WMS, and WCS. These endpoints controls the settings of these services.
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
+basePath: /geoserver/rest
 
 paths:
 
@@ -11,6 +17,8 @@ paths:
 
     get:
       operationId: getWMSSettings
+      tags:
+       - "OWSServices"
       description: Retrieves Web Map Service settings globally for the server.
       produces:
         - application/xml
@@ -129,6 +137,8 @@ paths:
 
     post:
       operationId: postWMSSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit a service setting.
       responses:
         405:
@@ -136,6 +146,8 @@ paths:
 
     put:
       operationId: putWMSSettings
+      tags:
+       - "OWSServices"
       description: Edits a global WMS setting.
       parameters:
         - name: WMSSettingsBody
@@ -153,6 +165,8 @@ paths:
 
     delete:
       operationId: deleteWMSSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit settings.
       responses:
         405:
@@ -168,6 +182,8 @@ paths:
         description: The workspace name
     get:
       operationId: getWMSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Retrieves Web Map Service settings for a given workspace.
       produces:
         - application/xml
@@ -292,6 +308,8 @@ paths:
 
     post:
       operationId: postWMSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit a service setting.
       responses:
         405:
@@ -299,6 +317,8 @@ paths:
 
     put:
       operationId: putWMSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Edits a workspace-specific WMS setting.
       parameters:
         - name: WMSSettingsBody
@@ -316,6 +336,8 @@ paths:
 
     delete:
       operationId: deleteWMSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Deletes a workspace-specific WMS setting.
       responses:
         200:
@@ -326,6 +348,8 @@ paths:
 
     get:
       operationId: getWFSSettings
+      tags:
+       - "OWSServices"
       description: Retrieves Web Feature Service settings globally for the server.
       produces:
         - application/xml
@@ -474,6 +498,8 @@ paths:
 
     post:
       operationId: postWFSSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit a service setting.
       responses:
         405:
@@ -481,6 +507,8 @@ paths:
 
     put:
       operationId: putWFSSettings
+      tags:
+       - "OWSServices"
       description: Edits a global WFS setting.
       parameters:
         - name: WFSSettingsBody
@@ -498,6 +526,8 @@ paths:
 
     delete:
       operationId: deleteWFSSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit settings.
       responses:
         405:
@@ -513,6 +543,8 @@ paths:
         description: The workspace name
     get:
       operationId: getWFSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Retrieves Web Feature Service settings for a given workspace.
       produces:
         - application/xml
@@ -667,6 +699,8 @@ paths:
 
     post:
       operationId: postWFSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit a service setting.
       responses:
         405:
@@ -674,6 +708,8 @@ paths:
 
     put:
       operationId: putWFSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Edits a workspace-specific WFS setting.
       parameters:
         - name: WFSSettingsBody
@@ -691,6 +727,8 @@ paths:
 
     delete:
       operationId: deleteWFSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Deletes a workspace-specific WFS setting.
       responses:
         200:
@@ -701,6 +739,8 @@ paths:
 
     get:
       operationId: getWCSSettings
+      tags:
+       - "OWSServices"
       description: Retrieves Web Coverage Service settings globally for the server.
       produces:
         - application/xml
@@ -802,6 +842,8 @@ paths:
 
     post:
       operationId: postWCSSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit a service setting.
       responses:
         405:
@@ -809,6 +851,8 @@ paths:
 
     put:
       operationId: putWCSSettings
+      tags:
+       - "OWSServices"
       description: Edits a global WCS setting.
       parameters:
         - name: WCSSettingsBody
@@ -826,6 +870,8 @@ paths:
 
     delete:
       operationId: deleteWCSSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit settings.
       responses:
         405:
@@ -841,6 +887,8 @@ paths:
         description: The workspace name
     get:
       operationId: getWCSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Retrieves Web Coverage Service settings for a given workspace.
       produces:
         - application/xml
@@ -951,6 +999,8 @@ paths:
 
     post:
       operationId: postWCSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Invalid. Use PUT to edit a service setting.
       responses:
         405:
@@ -958,6 +1008,8 @@ paths:
 
     put:
       operationId: putWCSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Edits a workspace-specific WCS setting.
       parameters:
         - name: WCSSettingsBody
@@ -975,10 +1027,446 @@ paths:
 
     delete:
       operationId: deleteWCSWorkspaceSettings
+      tags:
+       - "OWSServices"
       description: Deletes a workspace-specific WCS setting.
       responses:
         200:
           description: OK
+
+  /services/wmts/settings:
+    get:
+      operationId: getWMTSSettings
+      tags:
+       - "OWSServices"
+      description: Retrieves Web Map Tile Service settings globally for the server.
+      produces:
+        - application/xml
+        - application/json
+        - text/html
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/WMTSInfo"
+          examples:
+            application/xml: |
+              <wmts>
+                <enabled>true</enabled>
+                <name>WMTS</name>
+                <title>Web Map Tile Service</title>
+                <maintainer>http://geoserver.org/comm</maintainer>
+                <abstrct>This server implements the WMTS specification 1.0</abstrct>
+                <accessConstraints>NONE</accessConstraints>
+                <fees>NONE</fees>
+                <versions>
+                  <org.geotools.util.Version>
+                    <version>1.0.0</version>
+                  </org.geotools.util.Version>
+                </versions>
+                <keywords>
+                  <string>WMTS</string>
+                  <string>GEOSERVER</string>
+                </keywords>
+                <metadataLink>
+                  <type>undef</type>
+                  <about>http://geoserver.sourceforge.net/html/index.php</about>
+                  <metadataType>other</metadataType>
+                </metadataLink>
+                <citeCompliant>false</citeCompliant>
+                <onlineResource>http://geoserver.org</onlineResource>
+                <schemaBaseURL>http://schemas.opengis.net</schemaBaseURL>
+                <verbose>false</verbose>
+              </wmts>
+
+            application/json: |
+              {
+                "wmts": {
+                  "enabled": true,
+                  "name": "WMTS",
+                  "title": "Web Map Tile Service",
+                  "maintainer": "http://geoserver.org/comm",
+                  "abstrct": "This server implements the WMTS specification 1.0",
+                  "accessConstraints": "NONE",
+                  "fees": "NONE",
+                  "versions": {
+                    "org.geotools.util.Version": [
+                      {
+                        "version": "1.0.0"
+                      }
+                    ]
+                  },
+                  "keywords": {
+                    "string": [
+                      "WMTS",
+                      "GEOSERVER"
+                    ]
+                  },
+                  "metadataLink": {
+                    "type": "undef",
+                    "about": "http://geoserver.sourceforge.net/html/index.php",
+                    "metadataType": "other"
+                  },
+                  "citeCompliant": false,
+                  "onlineResource": "http://geoserver.org",
+                  "schemaBaseURL": "http://schemas.opengis.net",
+                  "verbose": false
+                }
+              }
+    post:
+      operationId: postWMTSSettings
+      tags:
+       - "OWSServices"
+      description: Invalid. Use PUT to edit a service setting.
+      responses:
+        405:
+          description: Method Not Allowed
+    put:
+      operationId: putWMTSSettings
+      tags:
+       - "OWSServices"
+      description: Edits a global WMTS setting.
+      parameters:
+        - name: WMTSSettingsBody
+          in: body
+          description: Body of the WMTS settings
+          required: true
+          schema:
+            $ref: "#/definitions/WMTSInfo"
+      consumes:
+        - application/xml
+        - application/json
+      responses:
+        201:
+          description: Created
+
+    delete:
+      operationId: deleteWMTSSettings
+      tags:
+       - "OWSServices"
+      description: Invalid. Use PUT to edit settings.
+      responses:
+        405:
+          description: Method Not Allowed
+
+
+  /services/wmts/workspaces/{workspace}/settings:
+    parameters:
+      - name: workspace
+        in: path
+        required: true
+        type: string
+        description: The workspace name
+    get:
+      operationId: getWMTSWorkspaceSettings
+      tags:
+       - "OWSServices"
+      description: Retrieves Web Map Tile Service settings for a given workspace.
+      produces:
+        - application/xml
+        - application/json
+        - text/html
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/WMTSInfo"
+          examples:
+            application/xml: |
+              <wmts>
+                <workspace>
+                  <name>nurc</name>
+                </workspace>
+                <enabled>true</enabled>
+                <name>WMTS</name>
+                <title>Web Map Tile Service</title>
+                <maintainer>http://geoserver.org/comm</maintainer>
+                <abstrct>This server implements the WMTS specification 1.0</abstrct>
+                <accessConstraints>NONE</accessConstraints>
+                <fees>NONE</fees>
+                <versions>
+                  <org.geotools.util.Version>
+                    <version>1.0.0</version>
+                  </org.geotools.util.Version>
+                </versions>
+                <keywords>
+                  <string>WMTS</string>
+                  <string>GEOSERVER</string>
+                </keywords>
+                <metadataLink>
+                  <type>undef</type>
+                  <about>http://geoserver.sourceforge.net/html/index.php</about>
+                  <metadataType>other</metadataType>
+                </metadataLink>
+                <citeCompliant>false</citeCompliant>
+                <onlineResource>http://geoserver.org</onlineResource>
+                <schemaBaseURL>http://schemas.opengis.net</schemaBaseURL>
+                <verbose>false</verbose>
+              </wmts>
+            application/json: |
+              {
+                "wmts": {
+                  "workspace": {
+                    "name": "nurc"
+                  },
+                  "enabled": true,
+                  "name": "WMTS",
+                  "title": "Web Map Tile Service",
+                  "maintainer": "http://geoserver.org/comm",
+                  "abstrct": "This server implements the WMTS specification 1.0",
+                  "accessConstraints": "NONE",
+                  "fees": "NONE",
+                  "versions": {
+                    "org.geotools.util.Version": [
+                      {
+                        "version": "1.0.0"
+                      }
+                    ]
+                  },
+                  "keywords": {
+                    "string": [
+                      "WMTS",
+                      "GEOSERVER"
+                    ]
+                  },
+                  "metadataLink": {
+                    "type": "undef",
+                    "about": "http://geoserver.sourceforge.net/html/index.php",
+                    "metadataType": "other"
+                  },
+                  "citeCompliant": false,
+                  "onlineResource": "http://geoserver.org",
+                  "schemaBaseURL": "http://schemas.opengis.net",
+                  "verbose": false
+                }
+              }
+
+
+    post:
+      operationId: postWMTSWorkspaceSettings
+      tags:
+       - "OWSServices"
+      description: Invalid. Use PUT to edit a service setting.
+      responses:
+        405:
+          description: Method Not Allowed
+
+    put:
+      operationId: putWMTSWorkspaceSettings
+      tags:
+       - "OWSServices"
+      description: Edits a workspace-specific WMTS setting.
+      parameters:
+        - name: WMTSSettingsBody
+          in: body
+          description: Body of the WMTS settings
+          required: true
+          schema:
+            $ref: "#/definitions/WMTSInfo"
+      consumes:
+        - application/xml
+        - application/json
+      responses:
+        201:
+          description: Created
+    delete:
+      operationId: deleteWMTSWorkspaceSettings
+      tags:
+       - "OWSServices"
+      description: Deletes a workspace-specific WMTS setting.
+      responses:
+        200:
+          description: OK
+
+  /services/oseo/settings:
+    get:
+      operationId: getOSEOSettings
+      tags:
+        - "OWSServices"
+      description: Retrieves Open Search for Earth Observation Service settings globally for the server.
+      produces:
+        - application/xml
+        - application/json
+        - text/html
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/WFSInfo"
+          examples:
+            application/xml: |
+              <oseo>
+                <enabled>true</enabled>
+                <name>OSEO</name>
+                <title>OpenSearch for Earth Observation</title>
+                <abstrct>Provides interoperable access, following ISO/OGC interface guidelines, to Earth Observation metadata.</abstrct>
+                <versions>
+                  <org.geotools.util.Version>
+                    <version>1.0.0</version>
+                  </org.geotools.util.Version>
+                </versions>
+                <keywords>
+                  <string>EarthObservation</string>
+                  <string>OGC</string>
+                </keywords>
+                <citeCompliant>false</citeCompliant>
+                <schemaBaseURL>http://schemas.opengis.net</schemaBaseURL>
+                <verbose>false</verbose>
+                <openSearchAccessStoreId>DataStoreInfoImpl--5d5accf8:17f9ccff330:-7ffc</openSearchAccessStoreId>
+                <maximumRecords>100</maximumRecords>
+                <recordsPerPage>10</recordsPerPage>
+                <productClasses>
+                  <productClass>
+                    <name>eop_generic</name>
+                    <namespace>http://www.opengis.net/eop/2.1</namespace>
+                    <prefix>eop</prefix>
+                  </productClass>
+                  <productClass>
+                    <name>optical</name>
+                    <namespace>http://www.opengis.net/opt/2.1</namespace>
+                    <prefix>opt</prefix>
+                  </productClass>
+                  <productClass>
+                    <name>radar</name>
+                    <namespace>http://www.opengis.net/sar/2.1</namespace>
+                    <prefix>sar</prefix>
+                  </productClass>
+                  <productClass>
+                    <name>altimetric</name>
+                    <namespace>http://www.opengis.net/alt/2.1</namespace>
+                    <prefix>alt</prefix>
+                  </productClass>
+                  <productClass>
+                    <name>atmospheric</name>
+                    <namespace>http://www.opengis.net/atm/2.1</namespace>
+                    <prefix>atm</prefix>
+                  </productClass>
+                  <productClass>
+                    <name>limb</name>
+                    <namespace>http://www.opengis.net/lmb/2.1</namespace>
+                    <prefix>lmb</prefix>
+                  </productClass>
+                  <productClass>
+                    <name>ssp</name>
+                    <namespace>http://www.opengis.net/ssp/2.1</namespace>
+                    <prefix>ssp</prefix>
+                  </productClass>
+                </productClasses>
+                <globalQueryables>
+                  <string>id</string>
+                  <string>geometry</string>
+                </globalQueryables>
+              </oseo>
+            application/json: |
+              {
+                "oseo": {
+                  "enabled": true,
+                  "name": "OSEO",
+                  "title": "OpenSearch for Earth Observation",
+                  "abstrct": "Provides interoperable access, following ISO/OGC interface guidelines, to Earth Observation metadata.",
+                  "versions": {
+                    "org.geotools.util.Version": [
+                      {
+                        "version": "1.0.0"
+                      }
+                    ]
+                  },
+                  "keywords": {
+                    "string": [
+                      "EarthObservation",
+                      "OGC"
+                    ]
+                  },
+                  "citeCompliant": false,
+                  "schemaBaseURL": "http://schemas.opengis.net",
+                  "verbose": false,
+                  "openSearchAccessStoreId": "DataStoreInfoImpl--5d5accf8:17f9ccff330:-7ffc",
+                  "maximumRecords": 100,
+                  "recordsPerPage": 10,
+                  "productClasses": {
+                    "productClass": [
+                      {
+                        "name": "eop_generic",
+                        "namespace": "http://www.opengis.net/eop/2.1",
+                        "prefix": "eop"
+                      },
+                      {
+                        "name": "optical",
+                        "namespace": "http://www.opengis.net/opt/2.1",
+                        "prefix": "opt"
+                      },
+                      {
+                        "name": "radar",
+                        "namespace": "http://www.opengis.net/sar/2.1",
+                        "prefix": "sar"
+                      },
+                      {
+                        "name": "altimetric",
+                        "namespace": "http://www.opengis.net/alt/2.1",
+                        "prefix": "alt"
+                      },
+                      {
+                        "name": "atmospheric",
+                        "namespace": "http://www.opengis.net/atm/2.1",
+                        "prefix": "atm"
+                      },
+                      {
+                        "name": "limb",
+                        "namespace": "http://www.opengis.net/lmb/2.1",
+                        "prefix": "lmb"
+                      },
+                      {
+                        "name": "ssp",
+                        "namespace": "http://www.opengis.net/ssp/2.1",
+                        "prefix": "ssp"
+                      }
+                    ]
+                  },
+                  "globalQueryables": {
+                    "string": [
+                      "id",
+                      "geometry"
+                    ]
+                  }
+                }
+              }
+
+    post:
+      operationId: postOSEOSettings
+      tags:
+        - "OWSServices"
+      description: Invalid. Use PUT to edit a service setting.
+      responses:
+        405:
+          description: Method Not Allowed
+
+    put:
+      operationId: putOSEOSettings
+      tags:
+        - "OWSServices"
+      description: Edits a global OSEO setting.
+      parameters:
+        - name: OSEOSettingsBody
+          in: body
+          description: Body of the OSEO settings
+          required: true
+          schema:
+            $ref: "#/definitions/WFSInfo"
+      consumes:
+        - application/xml
+        - application/json
+      responses:
+        201:
+          description: Created
+
+    delete:
+      operationId: deleteOSEOSettings
+      tags:
+        - "OWSServices"
+      description: Invalid. Use PUT to edit settings.
+      responses:
+        405:
+          description: Method Not Allowed
 
 
 
@@ -1295,3 +1783,66 @@ definitions:
         type: boolean
         description: ""
 
+  WMTSInfo:
+    type: object
+    xml:
+      name: wmts
+    properties:
+      enabled:
+        type: boolean
+        description: Status of the service
+      name:
+        type: string
+        description: Name of the service. This value is unique among all instances of ServiceInfo and can be used as an identifier.
+      title:
+        type: string
+        description: Title of the service
+      maintainer:
+        type: string
+        description: Maintainer of the service
+      abstrct:
+        type: string
+        description: Description of the service
+      accessConstraints:
+        type: string
+        description: Access constraints
+      fees:
+        type: string
+        description: Any fees associated with the service
+      versions:
+        type: object
+        description: The versions of the service that are available.
+        properties:
+          org.geotools.util.Version:
+            type: array
+            items:
+              type: string
+              description: version number
+      keywords:
+        type: array
+        description: Keywords associated with the service.
+        items:
+          type: string
+      metadataLink:
+        type: array
+        items:
+          type: object
+          properties:
+            "@key":
+              type: string
+              description: Metadata key
+            text:
+              type: string
+              description: Metadata value
+      citeCompliant:
+        type: boolean
+        description: Status of service CITE compliance
+      onlineResource:
+        type: string
+        description: URL resource
+      schemaBaseURL:
+        type: string 
+        description: Base URL for the schemas describing the service
+      verbose:
+        type: boolean
+        description: Flag indicating if the service should be verbose

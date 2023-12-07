@@ -17,6 +17,7 @@ public class MasterPasswordChangePanelTest extends AbstractSecurityWicketTestSup
 
     FormTester ft;
 
+    @Override
     @Before
     public void setUp() throws Exception {
         // We need to enable Master Root login first
@@ -51,13 +52,13 @@ public class MasterPasswordChangePanelTest extends AbstractSecurityWicketTestSup
         ft.setValue("newPassword", "bar");
         ft.setValue("newPasswordConfirm", "bar");
         ft.submit("save");
-        assertTrue(testErrorMessagesWithRegExp(".*Current master password invalid.*"));
+        assertTrue(testErrorMessagesWithRegExp(".*Current keystore password invalid.*"));
     }
 
     @Test
     public void testPasswordViolatesPolicy() throws Exception {
         String mpw = getMasterPassword();
-        System.out.println("testPasswordViolatesPolicy: " + mpw);
+        // System.out.println("testPasswordViolatesPolicy: " + mpw);
         ft.setValue("currentPassword", mpw);
         ft.setValue("newPassword", "bar");
         ft.setValue("newPasswordConfirm", "bar");
@@ -68,7 +69,7 @@ public class MasterPasswordChangePanelTest extends AbstractSecurityWicketTestSup
     @Test
     public void testPasswordChange() throws Exception {
         String mpw = getMasterPassword();
-        System.out.println("testPasswordChange: " + mpw);
+        // System.out.println("testPasswordChange: " + mpw);
         ft.setValue("currentPassword", mpw);
         ft.setValue("newPassword", "Foobar2012");
         ft.setValue("newPasswordConfirm", "Foobar2012");

@@ -4,13 +4,16 @@
  */
 package org.geoserver.filters;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.WriteListener;
 import org.junit.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockFilterConfig;
@@ -31,10 +34,12 @@ public class FlushSafeFilterTest {
                         // make sure repeated calls to get output stream give us back the same
                         // output stream,
                         // e.g., that we're not creating a new wrapper each time
-                        ServletOutputStream os1 = response.getOutputStream();
-                        ServletOutputStream os2 = response.getOutputStream();
-                        assertSame(os1, os2);
-                        assertTrue(os1 instanceof FlushSafeResponse.FlushSafeServletOutputStream);
+                        try (ServletOutputStream os1 = response.getOutputStream();
+                                ServletOutputStream os2 = response.getOutputStream()) {
+                            assertSame(os1, os2);
+                            assertTrue(
+                                    os1 instanceof FlushSafeResponse.FlushSafeServletOutputStream);
+                        }
                     }
                 };
 
@@ -54,11 +59,22 @@ public class FlushSafeFilterTest {
                     ServletOutputStream os;
 
                     @Override
+                    @SuppressWarnings("PMD.CloseResource")
                     public ServletOutputStream getOutputStream() {
                         if (os == null) {
                             final ServletOutputStream wrapped = super.getOutputStream();
                             os =
                                     new ServletOutputStream() {
+                                        @Override
+                                        public boolean isReady() {
+                                            return wrapped.isReady();
+                                        }
+
+                                        @Override
+                                        public void setWriteListener(WriteListener writeListener) {
+                                            wrapped.setWriteListener(writeListener);
+                                        }
+
                                         boolean closed;
 
                                         @Override
@@ -90,6 +106,7 @@ public class FlushSafeFilterTest {
         MockFilterChain chain =
                 new MockFilterChain() {
                     @Override
+                    @SuppressWarnings("PMD.CloseResource")
                     public void doFilter(ServletRequest request, ServletResponse response)
                             throws IOException, ServletException {
                         ServletOutputStream os = response.getOutputStream();

@@ -9,13 +9,18 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geoserver.rest.catalog.HttpTestUtils.hasHeader;
 import static org.geoserver.rest.catalog.HttpTestUtils.hasStatus;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.net.URL;
 import java.util.List;
@@ -403,5 +408,25 @@ public class WMSStoreTest extends CatalogRESTTestSupport {
                         xml,
                         "text/xml");
         assertThat(response, hasStatus(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    public void testPostWithDisableOnConnFailure() throws Exception {
+
+        String xml =
+                "<wmsStore>"
+                        + "<name>autodisableWMSStore</name>"
+                        + "<capabilitiesURL>http://somehost/wms?</capabilitiesURL>"
+                        + "<workspace>sf</workspace>"
+                        + "<disableOnConnFailure>true</disableOnConnFailure>"
+                        + "</wmsStore>";
+        MockHttpServletResponse response =
+                postAsServletResponse(
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmsstores", xml, "text/xml");
+
+        assertThat(response, hasStatus(HttpStatus.CREATED));
+        WMSStoreInfo newStore = catalog.getStoreByName("autodisableWMSStore", WMSStoreInfo.class);
+        assertNotNull(newStore);
+        assertTrue(newStore.isDisableOnConnFailure());
     }
 }

@@ -58,6 +58,7 @@ import java.lang.reflect.Constructor;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -73,6 +74,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.NumberRange;
 import org.geotools.util.SimpleInternationalString;
 import org.geotools.util.Version;
@@ -167,7 +169,12 @@ public class SecureXStream extends XStream {
         allowTypeHierarchy(NumberRange.class);
         allowTypeHierarchy(CoordinateReferenceSystem.class);
         allowTypeHierarchy(Name.class);
-        allowTypes(new Class[] {Version.class, SimpleInternationalString.class});
+        allowTypes(
+                new Class[] {
+                    Version.class,
+                    SimpleInternationalString.class,
+                    GrowableInternationalString.class
+                });
         // common collection types
         allowTypes(
                 new Class[] {
@@ -183,6 +190,10 @@ public class SecureXStream extends XStream {
                     HashMap.class,
                     TreeMap.class,
                     ConcurrentHashMap.class,
+                    java.util.Collections.emptyList().getClass(),
+                    java.util.Collections.emptyMap().getClass(),
+                    java.util.Collections.emptySet().getClass(),
+                    Arrays.asList("foo").getClass()
                 });
 
         // Allow classes from user defined whitelist
@@ -453,10 +464,11 @@ public class SecureXStream extends XStream {
     private void registerConverterDynamically(
             String className,
             int priority,
-            Class[] constructorParamTypes,
+            Class<?>[] constructorParamTypes,
             Object[] constructorParamValues) {
         try {
-            Class type = Class.forName(className, false, getClassLoaderReference().getReference());
+            Class<?> type =
+                    Class.forName(className, false, getClassLoaderReference().getReference());
             Constructor constructor = type.getConstructor(constructorParamTypes);
             Object instance = constructor.newInstance(constructorParamValues);
             if (instance instanceof Converter) {
@@ -464,10 +476,7 @@ public class SecureXStream extends XStream {
             } else if (instance instanceof SingleValueConverter) {
                 registerConverter((SingleValueConverter) instance, priority);
             }
-        } catch (Exception e) {
-            throw new com.thoughtworks.xstream.InitializationException(
-                    "Could not instantiate converter : " + className, e);
-        } catch (LinkageError e) {
+        } catch (Exception | LinkageError e) {
             throw new com.thoughtworks.xstream.InitializationException(
                     "Could not instantiate converter : " + className, e);
         }
@@ -485,7 +494,7 @@ public class SecureXStream extends XStream {
         }
 
         @Override
-        public Class realClass(String elementName) {
+        public Class<?> realClass(String elementName) {
             try {
                 return super.realClass(elementName);
             } catch (ForbiddenClassException e) {

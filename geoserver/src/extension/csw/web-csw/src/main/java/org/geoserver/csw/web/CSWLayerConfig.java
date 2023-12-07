@@ -30,9 +30,7 @@ public class CSWLayerConfig extends PublishedConfigurationPanel<LayerInfo> {
     public CSWLayerConfig(String id, IModel<LayerInfo> model) {
         super(id, model);
 
-        PropertyModel<MetadataMap> settingsMap =
-                new PropertyModel<MetadataMap>(model, "resource.metadata");
-        MetadataMap map = settingsMap.getObject();
+        PropertyModel<MetadataMap> settingsMap = new PropertyModel<>(model, "resource.metadata");
 
         DirectDownloadSettings settings =
                 DirectDownloadSettings.getSettingsFromMetadata(settingsMap.getObject(), null);
@@ -46,30 +44,26 @@ public class CSWLayerConfig extends PublishedConfigurationPanel<LayerInfo> {
                                             .getService(CSWInfo.class)));
         }
         IModel<DirectDownloadSettings> directDownloadModel =
-                new MetadataMapModel<DirectDownloadSettings>(
-                        map,
+                new MetadataMapModel<>(
+                        settingsMap,
                         DirectDownloadSettings.DIRECTDOWNLOAD_KEY,
                         DirectDownloadSettings.class);
 
         directDownloadEnabled =
                 new CheckBox(
                         "directDownloadEnabled",
-                        new PropertyModel<Boolean>(directDownloadModel, "directDownloadEnabled"));
+                        new PropertyModel<>(directDownloadModel, "directDownloadEnabled"));
         add(directDownloadEnabled);
 
         maxDownloadSize =
-                new TextField<Long>(
+                new TextField<>(
                         "maxDownloadSize",
-                        new PropertyModel<Long>(directDownloadModel, "maxDownloadSize"));
+                        new PropertyModel<>(directDownloadModel, "maxDownloadSize"));
         maxDownloadSize.add(RangeValidator.minimum(0l));
         add(maxDownloadSize);
     }
 
-    /**
-     * Get DefaultSettings from {@link CSWInfo} config or default value.
-     *
-     * @param cswInfo
-     */
+    /** Get DefaultSettings from {@link CSWInfo} config or default value. */
     private DirectDownloadSettings setDefaultSettings(CSWInfo info) {
         if (info != null) {
             MetadataMap serviceInfoMetadata = info.getMetadata();

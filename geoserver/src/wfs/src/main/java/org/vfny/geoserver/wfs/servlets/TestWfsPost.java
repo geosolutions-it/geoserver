@@ -6,7 +6,6 @@
 package org.vfny.geoserver.wfs.servlets;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,11 +46,13 @@ public class TestWfsPost extends HttpServlet {
     static final Logger LOGGER = Logging.getLogger(TestWfsPost.class);
 
     /** Initializes the servlet. */
+    @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
     }
 
     /** Destroys the servlet. */
+    @Override
     public void destroy() {}
 
     /**
@@ -60,6 +61,7 @@ public class TestWfsPost extends HttpServlet {
      * @param request servlet request
      * @param response servlet response
      */
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
@@ -71,12 +73,14 @@ public class TestWfsPost extends HttpServlet {
      * @param request servlet request
      * @param response servlet response
      */
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
 
     /** Returns a short description of the servlet. */
+    @Override
     public String getServletInfo() {
         return "Tests a WFS post request using a form entry.";
     }
@@ -94,6 +98,7 @@ public class TestWfsPost extends HttpServlet {
         boolean doGet = (requestString == null) || requestString.trim().equals("");
 
         if ((urlString == null)) {
+            @SuppressWarnings("PMD.CloseResource") // managed by the servlet
             PrintWriter out = response.getWriter();
             StringBuffer urlInfo = request.getRequestURL();
 
@@ -164,9 +169,8 @@ public class TestWfsPost extends HttpServlet {
         } else {
             response.setContentType("application/xml");
 
-            BufferedReader xmlIn = null;
             PrintWriter xmlOut = null;
-            try {
+            try { // NOPMD - worried try-with-resource could close the connection
                 URL u = new URL(urlString);
                 validateURL(request, urlString, getProxyBaseURL());
                 java.net.HttpURLConnection acon = (java.net.HttpURLConnection) u.openConnection();
@@ -223,9 +227,9 @@ public class TestWfsPost extends HttpServlet {
                     }
                     responseContent.append("</servlet-exception>\n");
 
+                    @SuppressWarnings("PMD.CloseResource") // managed by the servlet
                     PrintWriter out = response.getWriter();
                     out.print(responseContent.toString());
-                    out.close();
                 } else {
                     // xmlIn = new BufferedReader(new InputStreamReader(
                     // acon.getInputStream()));
@@ -237,14 +241,12 @@ public class TestWfsPost extends HttpServlet {
                     response.setHeader(
                             "Content-disposition", acon.getHeaderField("Content-disposition"));
 
+                    @SuppressWarnings("PMD.CloseResource") // managed by the servlet
                     OutputStream output = response.getOutputStream();
                     int c;
-                    InputStream in = acon.getInputStream();
-
-                    while ((c = in.read()) != -1) output.write(c);
-
-                    in.close();
-                    output.close();
+                    try (InputStream in = acon.getInputStream()) {
+                        while ((c = in.read()) != -1) output.write(c);
+                    }
                 }
 
                 // while ((line = xmlIn.readLine()) != null) {
@@ -252,30 +254,19 @@ public class TestWfsPost extends HttpServlet {
                 // }
             } catch (Exception e) {
                 LOGGER.log(Level.FINE, "Failure dealing with the request", e);
+                @SuppressWarnings("PMD.CloseResource") // managed by the servlet
                 PrintWriter out = response.getWriter();
                 out.print(errorResponse(e));
-                out.close();
             } finally {
-                try {
-                    if (xmlIn != null) {
-                        xmlIn.close();
-                    }
-                } catch (Exception e1) {
-                    LOGGER.log(Level.FINE, "Internal failure dealing with the request", e1);
-                    PrintWriter out = response.getWriter();
-                    out.print(errorResponse(e1));
-                    out.close();
-                }
-
                 try {
                     if (xmlOut != null) {
                         xmlOut.close();
                     }
                 } catch (Exception e2) {
                     LOGGER.log(Level.FINE, "Internal failure dealing with the request", e2);
+                    @SuppressWarnings("PMD.CloseResource") // managed by the servlet
                     PrintWriter out = response.getWriter();
                     out.print(errorResponse(e2));
-                    out.close();
                 }
             }
         }
@@ -336,6 +327,7 @@ public class TestWfsPost extends HttpServlet {
             throw new IllegalArgumentException("Invalid url requested; not a URL: " + urlString, e);
         }
         String requestString = request.getRequestURL().toString();
+        requestString = requestString.substring(0, requestString.lastIndexOf(TEST_WFS_POST_PATH));
         try {
             requestUrl = new URL(requestString);
         } catch (MalformedURLException e) {
@@ -358,27 +350,40 @@ public class TestWfsPost extends HttpServlet {
                     "Unepected, the TestWfsPost was accessed by a path from a different servlet context: "
                             + requestString);
         }
+        if (!url.getProtocol().equalsIgnoreCase("http")
+                && !url.getProtocol().equalsIgnoreCase("https")) {
+            throw new IllegalArgumentException(
+                    "Invalid url requested; not an HTTP or HTTPS URL: " + urlString);
+        } else {
+            for (String path : url.getPath().split("/")) {
+                if (path.equals("..") || ResponseUtils.urlDecode(path).equals("..")) {
+                    throw new IllegalArgumentException(
+                            "Invalid url requested; illegal sequence '..' in URL: " + urlString);
+                }
+            }
+        }
 
+        String baseUrlString = requestString;
+        URL baseUrl = requestUrl;
         if (proxyBase != null) {
             try {
-                URL proxyBaseUrl = new URL(proxyBase);
-
-                if (!url.getHost().equals(proxyBaseUrl.getHost())) {
-                    throw new IllegalArgumentException(
-                            "Invalid url requested, the demo requests should be hitting: "
-                                    + proxyBase);
-                }
+                baseUrlString = proxyBase;
+                baseUrl = new URL(proxyBase);
             } catch (MalformedURLException e) {
                 throw new IllegalArgumentException(
                         "Invalid Proxy Base URL; not a URL: " + proxyBase, e);
             }
-        } else {
-            if (!url.getHost().equals(requestUrl.getHost())) {
-                throw new IllegalStateException(
-                        "Invalid url requested, the demo requests should be hitting: "
-                                + requestString.substring(
-                                        0, requestString.lastIndexOf(TEST_WFS_POST_PATH)));
-            }
+        }
+        String urlPath = url.getPath();
+        urlPath += urlPath.endsWith("/") ? "" : "/";
+        String baseUrlPath = baseUrl.getPath();
+        baseUrlPath += baseUrlPath.endsWith("/") ? "" : "/";
+        if (!url.getProtocol().equals(baseUrl.getProtocol())
+                || !url.getHost().equals(baseUrl.getHost())
+                || url.getPort() != baseUrl.getPort()
+                || !urlPath.startsWith(baseUrlPath)) {
+            throw new IllegalArgumentException(
+                    "Invalid url requested, the demo requests should be hitting: " + baseUrlString);
         }
     }
 }

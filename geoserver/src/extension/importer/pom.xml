@@ -1,19 +1,24 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.geoserver</groupId>
     <artifactId>extension</artifactId>
-    <version>2.16-EOWS-p8</version>
+    <version>2.23-SNAPSHOT</version>
   </parent>
 
   <groupId>org.geoserver</groupId>
   <artifactId>gs-importer</artifactId>
   <packaging>pom</packaging>
   <name>GeoServer Data Importer</name>
+
+  <modules>
+    <module>core</module>
+    <module>rest</module>
+    <module>web</module>
+  </modules>
 
   <dependencies>
     <dependency>
@@ -27,7 +32,7 @@
     </dependency>
     <dependency>
       <groupId>org.geotools</groupId>
-      <artifactId>gt-geojson</artifactId>
+      <artifactId>gt-geojson-core</artifactId>
       <version>${gt.version}</version>
     </dependency>
     <dependency>
@@ -47,33 +52,23 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>commons-net</groupId>
       <artifactId>commons-net</artifactId>
-      <version>2.2</version>
+      <version>3.9.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-	 <groupId>org.apache.commons</groupId>
-     <artifactId>commons-vfs2</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>xmlunit</groupId>
-      <artifactId>xmlunit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-test</artifactId>
-      <scope>test</scope>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-vfs2</artifactId>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -89,12 +84,4 @@
     </testResources>
   </build>
 
-  <modules>
-    <module>core</module>
-    <module>rest</module>
-    <module>bdb</module>
-    <module>web</module>
-  </modules>
-
 </project>
-

@@ -86,10 +86,10 @@ public class ImportTask implements Serializable {
     Exception error;
 
     /** transform to apply to this import item */
-    TransformChain transform;
+    TransformChain<? extends ImportTransform> transform;
 
     /** messages logged during proessing */
-    List<LogRecord> messages = new ArrayList<LogRecord>();
+    List<LogRecord> messages = new ArrayList<>();
 
     /** various metadata */
     transient Map<Object, Object> metadata;
@@ -176,16 +176,21 @@ public class ImportTask implements Serializable {
         this.error = error;
     }
 
-    public TransformChain getTransform() {
+    public TransformChain<? extends ImportTransform> getTransform() {
         return transform;
     }
 
     @SuppressWarnings("unchecked")
     public void addTransform(ImportTransform tx) {
-        this.transform.add(tx);
+        ((TransformChain) this.transform).add(tx);
     }
 
-    public void setTransform(TransformChain transform) {
+    @SuppressWarnings("unchecked")
+    public void removeTransform(ImportTransform tx) {
+        ((TransformChain) this.transform).remove(tx);
+    }
+
+    public void setTransform(TransformChain<? extends ImportTransform> transform) {
         this.transform = transform;
     }
 
@@ -193,12 +198,10 @@ public class ImportTask implements Serializable {
      * Returns a transient metadata map, useful for caching information that's expensive to compute.
      * The map won't be stored in the {@link ImportStore} so don't use it for anything that needs to
      * be persisted.
-     *
-     * @return
      */
     public Map<Object, Object> getMetadata() {
         if (metadata == null) {
-            metadata = new HashMap<Object, Object>();
+            metadata = new HashMap<>();
         }
         return metadata;
     }
@@ -211,7 +214,7 @@ public class ImportTask implements Serializable {
 
     public void addMessage(Level level, String msg) {
         if (messages == null) {
-            messages = new ArrayList<LogRecord>();
+            messages = new ArrayList<>();
         }
         messages.add(new LogRecord(level, msg));
     }
@@ -246,6 +249,11 @@ public class ImportTask implements Serializable {
         return totalToProcess;
     }
 
+    /**
+     * Indication of number of items to process, or {@code -1} for the entire file.
+     *
+     * @param totalToProcess
+     */
     public void setTotalToProcess(int totalToProcess) {
         this.totalToProcess = totalToProcess;
     }

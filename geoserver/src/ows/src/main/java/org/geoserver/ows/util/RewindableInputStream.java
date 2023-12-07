@@ -115,7 +115,6 @@ public class RewindableInputStream extends InputStream {
      * (initial size of the internal buffer and chunk read mode).
      *
      * @param is InputStream that needs some reset/rewind functionality.
-     * @param chunkedMode
      *     <p>Initial value of <code>fMayReadChunks</code> flag which determines whether multiple
      *     bytes can be read from the underlying stream in single reading operation or not. This
      *     value can be changed using <code>setChunkedMode</code> (or its aliases). For specific
@@ -194,8 +193,8 @@ public class RewindableInputStream extends InputStream {
      * @return Next byte of data or <code>-1</code> if end of stream is reached.
      * @throws IOException in case of any I/O errors.
      */
+    @Override
     public int read() throws IOException {
-        int b = 0;
 
         // Byte to be read is already in out buffer, simply returning it
         if (fOffset < fLength) {
@@ -226,7 +225,7 @@ public class RewindableInputStream extends InputStream {
 
         // Reading byte from the underlying stream, storing it in buffer and
         // then returning it.
-        b = fInputStream.read();
+        int b = fInputStream.read();
 
         if (b == -1) {
             fEndOffset = fOffset;
@@ -258,6 +257,7 @@ public class RewindableInputStream extends InputStream {
      * @throws IndexOutOfBoundsException in case of invalid <code>off</code>, <code>len</code> and
      *     <code>b.length</code> combination
      */
+    @Override
     public int read(byte[] b, int off, int len) throws IOException {
         if (null == b) {
             throw new NullPointerException("Destination byte array is null.");
@@ -345,14 +345,14 @@ public class RewindableInputStream extends InputStream {
      * @return Number of bytes actually skipped.
      * @throws IOException if an I/O error occurs.
      */
+    @Override
     public long skip(long n) throws IOException {
-        int bytesLeft;
 
         if (n <= 0) {
             return 0;
         }
 
-        bytesLeft = fLength - fOffset;
+        int bytesLeft = fLength - fOffset;
 
         // If end of buffer is reached, using `skip()` of the underlying input
         // stream
@@ -398,6 +398,7 @@ public class RewindableInputStream extends InputStream {
      * @return the number of bytes that can be read from this input stream without blocking.
      * @throws IOException when an I/O error occurs.
      */
+    @Override
     public int available() throws IOException {
         int bytesLeft = fLength - fOffset;
 
@@ -427,6 +428,7 @@ public class RewindableInputStream extends InputStream {
      *
      * @param howMuch Not used in this implementation I guess.
      */
+    @Override
     public void mark(int howMuch) {
         fMark = fOffset;
     }
@@ -435,6 +437,7 @@ public class RewindableInputStream extends InputStream {
      * Returns stream pointer to the position previously remembered using <code>mark</code> method
      * (or to beginning of the stream, if there were no <code>mark</code> method calls).
      */
+    @Override
     public void reset() {
         fOffset = fMark;
     }
@@ -445,6 +448,7 @@ public class RewindableInputStream extends InputStream {
      * @return <code>true</code> if this stream instance supports the mark and reset methods; <code>
      *     false</code> otherwise.
      */
+    @Override
     public boolean markSupported() {
         return true;
     }
@@ -454,6 +458,7 @@ public class RewindableInputStream extends InputStream {
      *
      * @throws IOException if an I/O error occurs.
      */
+    @Override
     public void close() throws IOException {
         if (fInputStream != null) {
             fInputStream.close();

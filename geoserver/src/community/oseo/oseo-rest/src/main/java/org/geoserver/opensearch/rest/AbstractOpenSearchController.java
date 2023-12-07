@@ -9,12 +9,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.lang.reflect.Array;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -26,6 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.featurestemplating.builders.JSONFieldSupport;
 import org.geoserver.opensearch.eo.ListComplexFeatureCollection;
 import org.geoserver.opensearch.eo.OpenSearchAccessProvider;
 import org.geoserver.opensearch.eo.ProductClass;
@@ -42,6 +48,7 @@ import org.geotools.data.FeatureStore;
 import org.geotools.data.Query;
 import org.geotools.data.Transaction;
 import org.geotools.data.collection.ListFeatureCollection;
+import org.geotools.data.geojson.GeoJSONReader;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.factory.CommonFactoryFinder;
@@ -52,8 +59,8 @@ import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.collection.BaseSimpleFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.util.Converters;
 import org.geotools.util.logging.Logging;
 import org.opengis.feature.Attribute;
@@ -63,6 +70,7 @@ import org.opengis.feature.Property;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.feature.type.AttributeType;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.Name;
 import org.opengis.feature.type.PropertyDescriptor;
@@ -83,12 +91,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
 
     interface ZipPart {
 
-        /**
-         * Returns true if the part matches the provided name
-         *
-         * @param name
-         * @return
-         */
+        /** Returns true if the part matches the provided name */
         public boolean matches(String name);
     }
 
@@ -99,6 +102,12 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
     static final FeatureFactory FEATURE_FACTORY = CommonFactoryFinder.getFeatureFactory(null);
 
     static final FilterFactory2 FF = CommonFactoryFinder.getFilterFactory2();
+
+    // taken from OgcLink properties. these properties are known(static) from OgcLink.
+    private static final Set<String> KNOWN_FIELDS =
+            new HashSet<>(
+                    Arrays.asList(
+                            "collection_id", "lid", "offering", "method", "code", "type", "href"));
 
     protected OpenSearchAccessProvider accessProvider;
 
@@ -162,6 +171,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         Query query = new Query();
         query.setFilter(FF.equal(FF.property("name"), FF.literal(collectionName), true));
         queryDecorator.accept(query);
+        // This method is only called by REST API endpoints that should ignore the workspace
         FeatureCollection<FeatureType, Feature> fc = queryCollections(query);
         Feature feature = DataUtilities.first(fc);
         if (feature == null) {
@@ -179,7 +189,6 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
             // skip multivalue, metadata and quicklook
             final Name propertyName = pd.getName();
             if (pd.getMaxOccurs() > 1
-                    || OpenSearchAccess.METADATA_PROPERTY_NAME.equals(propertyName)
                     || OpenSearchAccess.QUICKLOOK_PROPERTY_NAME.equals(propertyName)
                     || "htmlDescription".equalsIgnoreCase(propertyName.getLocalPart())
                     || "id".equals(propertyName.getLocalPart())) {
@@ -205,7 +214,10 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
                 mappedName = name.getLocalPart();
             }
             tb.userData(SOURCE_NAME, name);
-            tb.add(mappedName, pd.getType().getBinding());
+            // Make it a generic object if it's a JSON field, could contain both a Map or a List
+            // after parsing
+            if (JSONFieldSupport.isJSONField(pd)) tb.add(mappedName, Object.class);
+            else tb.add(mappedName, pd.getType().getBinding());
         }
         tb.setName(schema.getName());
         extraAttributeBuilder.accept(tb);
@@ -218,10 +230,34 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         List<OgcLink> links = Collections.emptyList();
         Collection<Property> linkProperties =
                 feature.getProperties(OpenSearchAccess.OGC_LINKS_PROPERTY_NAME);
-        if (linkProperties != null) {
+
+        Map<String, Object> unknownFields = new HashMap<>();
+
+        if (linkProperties != null && linkProperties.size() > 0) {
+            SimpleFeatureImpl simpleFeature =
+                    (SimpleFeatureImpl) ((ArrayList) linkProperties).get(0);
+
+            // iterate over feature to get unknown properties from OgcLink
+            if (simpleFeature != null
+                    && simpleFeature.getType() != null
+                    && simpleFeature.getType().getTypes() != null) {
+                List<AttributeType> types = simpleFeature.getType().getTypes();
+                for (int i = 0; i < types.size(); i++) {
+                    if (types.get(i) != null && simpleFeature.getAttributes().get(i) != null) {
+                        String unknownColumnName = types.get(i).getName().getLocalPart();
+                        if (!KNOWN_FIELDS.contains(unknownColumnName)
+                                && simpleFeature != null
+                                && simpleFeature.getAttributes() != null
+                                && simpleFeature.getAttributes().get(i) != null) {
+                            unknownFields.put(
+                                    unknownColumnName, simpleFeature.getAttributes().get(i));
+                        }
+                    }
+                }
+            }
+
             links =
-                    linkProperties
-                            .stream()
+                    linkProperties.stream()
                             .map(p -> (SimpleFeature) p)
                             .sorted(LinkFeatureComparator.INSTANCE)
                             .map(
@@ -231,10 +267,12 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
                                         String code = (String) sf.getAttribute("code");
                                         String type = (String) sf.getAttribute("type");
                                         String href = (String) sf.getAttribute("href");
-                                        return new OgcLink(offering, method, code, type, href);
+                                        return new OgcLink(
+                                                offering, method, code, type, href, unknownFields);
                                     })
                             .collect(Collectors.toList());
         }
+
         if (links.isEmpty() && notFoundOnEmpty) {
             throw new ResourceNotFoundException();
         }
@@ -254,11 +292,21 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
             if (p != null) {
                 Object value = p.getValue();
                 if (value != null) {
-                    fb.set(ad.getLocalName(), value);
-                    if (("eo:identifier".equals(ad.getLocalName())
-                                    || "eop:identifier".equals(ad.getLocalName()))
-                            && value instanceof String) {
-                        identifier = (String) value;
+                    if (JSONFieldSupport.isJSONField(p.getDescriptor())) {
+                        try {
+                            Object json = JSONFieldSupport.parseJSON(value);
+                            fb.set(ad.getLocalName(), json);
+                        } catch (Exception e) {
+                            throw new RuntimeException(
+                                    "Failed to parse JSON for field " + sourceName, e);
+                        }
+                    } else {
+                        fb.set(ad.getLocalName(), value);
+                        if (("eo:identifier".equals(ad.getLocalName())
+                                        || "eop:identifier".equals(ad.getLocalName()))
+                                && value instanceof String) {
+                            identifier = (String) value;
+                        }
                     }
                 }
             }
@@ -268,12 +316,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         return fb.buildFeature(identifier);
     }
 
-    /**
-     * Un-maps OSEO related attributes to a prefix:name for for json encoding
-     *
-     * @param fc
-     * @return
-     */
+    /** Un-maps OSEO related attributes to a prefix:name for for json encoding */
     protected SimpleFeatureCollection toSimpleFeatureCollection(
             FeatureCollection<FeatureType, Feature> fc,
             Consumer<SimpleFeatureTypeBuilder> extraAttributeBuilder,
@@ -308,13 +351,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         };
     }
 
-    /**
-     * Checks XML well formedness (TODO: check against actual schemas)
-     *
-     * @param xml
-     * @throws IOException
-     * @throws SAXException
-     */
+    /** Checks XML well formedness (TODO: check against actual schemas) */
     protected void checkWellFormedXML(String xml) {
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder;
@@ -332,10 +369,6 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
     /**
      * Factors out the boilerplate to create a transaction, run it, commit it if successful, revert
      * otherwise, and finally close it
-     *
-     * @param store
-     * @param featureStoreConsumer
-     * @throws IOException
      */
     protected void runTransactionOnStore(
             FeatureStore store, IOConsumer<FeatureStore> featureStoreConsumer) throws IOException {
@@ -351,12 +384,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         }
     }
 
-    /**
-     * Turns a complex feature into a single item feature collection
-     *
-     * @param f
-     * @return
-     */
+    /** Turns a complex feature into a single item feature collection */
     protected FeatureCollection singleton(Feature f) {
         ListComplexFeatureCollection fc = new ListComplexFeatureCollection(f);
         return fc;
@@ -365,10 +393,6 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
     /**
      * Converts the simple feature representatin of a collection into a complex feature suitable for
      * OpenSearchAccess usage
-     *
-     * @param feature
-     * @return
-     * @throws IOException
      */
     protected Feature simpleToComplex(
             SimpleFeature feature, FeatureType targetSch, Collection<String> ignoredAttributes)
@@ -392,8 +416,23 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
             ab.setDescriptor((AttributeDescriptor) pd);
             Object originalValue = feature.getAttribute(sourceName);
             Object converted = convert(originalValue, pd.getType().getBinding());
-            Attribute attribute = ab.buildSimple(null, converted);
-            builder.append(pd.getName(), attribute);
+            // features need to have an identifier for the creation to work, if null must be skipped
+            if (pd.getType() instanceof FeatureType) {
+                if (converted instanceof Feature) {
+                    Feature f = (Feature) converted;
+                    Attribute attribute = ab.buildSimple(f.getIdentifier().getID(), converted);
+                    builder.append(pd.getName(), attribute);
+                }
+            } else {
+                Attribute attribute = ab.buildSimple(null, converted);
+                builder.append(pd.getName(), attribute);
+            }
+        }
+        // if not otherwise specified, collections and products are enabled
+        if (feature.getAttribute("enabled") == null) {
+            PropertyDescriptor pd = targetSch.getDescriptor("enabled");
+            ab.setDescriptor((AttributeDescriptor) pd);
+            builder.append(pd.getName(), ab.buildSimple(null, true));
         }
         Feature collectionFeature = builder.buildFeature(feature.getID());
         return collectionFeature;
@@ -409,7 +448,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         // we might revisit this decision later
         if (converted == null) {
             if (targetClass.isArray() && value instanceof List) {
-                Class componentType = targetClass.getComponentType();
+                Class<?> componentType = targetClass.getComponentType();
                 List list = (List) value;
                 converted = Array.newInstance(componentType, list.size());
                 int i = 0;
@@ -430,7 +469,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
         String[] split = sourceName.split(":");
         switch (split.length) {
             case 1:
-                if ("geometry".equals(sourceName)) {
+                if (GeoJSONReader.GEOMETRY_NAME.equals(sourceName)) {
                     return new NameImpl(defaultNamespace, "footprint");
                 } else {
                     return new NameImpl(defaultNamespace, sourceName);
@@ -472,6 +511,11 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
             fb.set("code", link.code);
             fb.set("type", link.type);
             fb.set("href", link.href);
+            for (Map.Entry<String, Object> entry : link.unknownFields.entrySet()) {
+                String key = entry.getKey();
+                Object value = entry.getValue();
+                fb.set(key, value);
+            }
             SimpleFeature sf = fb.buildFeature(null);
             linksCollection.add(sf);
         }
@@ -531,7 +575,7 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
     protected SimpleFeature parseGeoJSONFeature(String fileReference, final byte[] payload) {
         try {
             SimpleFeature jsonFeature =
-                    new FeatureJSON().readFeature(new ByteArrayInputStream(payload));
+                    GeoJSONReader.parseFeature(new String(payload, StandardCharsets.UTF_8));
             return jsonFeature;
         } catch (IOException e) {
             throw new RestException(
@@ -545,11 +589,10 @@ public abstract class AbstractOpenSearchController extends RestBaseController {
             String fileReference, final byte[] payload) {
         try {
             SimpleFeatureCollection fc =
-                    (SimpleFeatureCollection)
-                            new FeatureJSON()
-                                    .readFeatureCollection(new ByteArrayInputStream(payload));
+                    GeoJSONReader.parseFeatureCollection(
+                            new String(payload, StandardCharsets.UTF_8));
             return fc;
-        } catch (IOException e) {
+        } catch (RuntimeException e) {
             throw new RestException(
                     fileReference + " contains invalid GeoJSON: " + e.getMessage(),
                     HttpStatus.BAD_REQUEST,

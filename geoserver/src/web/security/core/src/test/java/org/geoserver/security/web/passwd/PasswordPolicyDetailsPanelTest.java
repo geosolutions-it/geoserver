@@ -5,7 +5,11 @@
  */
 package org.geoserver.security.web.passwd;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.wicket.Component;
 import org.geoserver.security.config.PasswordPolicyConfig;
@@ -86,7 +90,7 @@ public class PasswordPolicyDetailsPanelTest extends AbstractSecurityNamedService
     }
 
     protected void setMinLength(int value) {
-        formTester.setValue("panel:content:minLength", Integer.valueOf(value).toString());
+        formTester.setValue("panel:content:minLength", String.valueOf(value));
     }
 
     protected int getMinLength(int value) {
@@ -95,7 +99,7 @@ public class PasswordPolicyDetailsPanelTest extends AbstractSecurityNamedService
     }
 
     protected void setMaxLength(int value) {
-        formTester.setValue("panel:content:maxLength:maxLength", Integer.valueOf(value).toString());
+        formTester.setValue("panel:content:maxLength:maxLength", String.valueOf(value));
     }
 
     protected int getMaxLength(int value) {
@@ -164,7 +168,7 @@ public class PasswordPolicyDetailsPanelTest extends AbstractSecurityNamedService
         assertEquals(4, pwConfig.getMaxLength());
 
         // reload from manager
-        pwConfig = (PasswordPolicyConfig) getSecurityManager().loadPasswordPolicyConfig("default2");
+        pwConfig = getSecurityManager().loadPasswordPolicyConfig("default2");
         assertNotNull(pwConfig);
         assertEquals("default2", pwConfig.getName());
         assertEquals(PasswordValidatorImpl.class.getName(), pwConfig.getClassName());

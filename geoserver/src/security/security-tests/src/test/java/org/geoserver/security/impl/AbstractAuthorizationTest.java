@@ -5,15 +5,43 @@
  */
 package org.geoserver.security.impl;
 
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.eq;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+import java.util.stream.Stream;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
-import org.geoserver.catalog.*;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogInfo;
+import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.CoverageStoreInfo;
+import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupHelper;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerGroupInfo.Mode;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.NamespaceInfo;
+import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WMSLayerInfo;
+import org.geoserver.catalog.WMSStoreInfo;
+import org.geoserver.catalog.WMTSLayerInfo;
+import org.geoserver.catalog.WMTSStoreInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.catalog.util.CloseableIteratorAdapter;
 import org.geoserver.ows.Dispatcher;
@@ -24,19 +52,19 @@ import org.geoserver.security.ResourceAccessManagerWrapper;
 import org.geoserver.security.SecureCatalogImpl;
 import org.geotools.data.DataStore;
 import org.geotools.data.FeatureStore;
-import org.geotools.util.factory.Hints;
 import org.junit.After;
 import org.junit.Before;
 import org.opengis.filter.Filter;
 import org.opengis.filter.sort.SortBy;
-import org.opengis.util.ProgressListener;
+import org.opengis.filter.sort.SortOrder;
+import org.springframework.beans.support.PropertyComparator;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 
 public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
 
-    private static final String NULL_STRING = (String) null;
+    private static final String NULL_STRING = null;
 
     protected Authentication rwUser;
 
@@ -55,6 +83,8 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
     protected WorkspaceInfo nurcWs;
 
     protected LayerInfo statesLayer;
+
+    protected LayerInfo regionsLayer;
 
     protected LayerInfo landmarksLayer;
 
@@ -116,6 +146,10 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
 
     protected LayerGroupInfo namedTreeA;
 
+    protected LayerGroupInfo namedTreeB;
+
+    protected LayerGroupInfo namedTreeC;
+
     protected LayerGroupInfo containerTreeB;
 
     protected LayerGroupInfo singleGroupC;
@@ -161,7 +195,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
                                 }));
 
         catalog = createNiceMock(Catalog.class);
-        expect(catalog.getWorkspace((String) anyObject()))
+        expect(catalog.getWorkspace(anyObject()))
                 .andReturn(createNiceMock(WorkspaceInfo.class))
                 .anyTimes();
         replay(catalog);
@@ -180,6 +214,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
         landmarksLayer = buildLayer("landmarks", toppWs, FeatureTypeInfo.class);
         basesLayer = buildLayer("bases", toppWs, FeatureTypeInfo.class);
         forestsLayer = buildLayer("forests", toppWs, FeatureTypeInfo.class);
+        regionsLayer = buildLayer("regions", toppWs, FeatureTypeInfo.class);
         // let's add one with a dot inside the name
         arcGridLayer = buildLayer("arc.grid", nurcWs, CoverageInfo.class);
 
@@ -213,6 +248,9 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
         namedTreeA =
                 buildLayerGroup(
                         "namedTreeA", Mode.NAMED, null, statesLayer, roadsLayer, citiesLayer);
+        namedTreeB = buildLayerGroup("namedTreeB", Mode.NAMED, null, true, false, regionsLayer);
+        namedTreeC = buildLayerGroup("namedTreeC", Mode.NAMED, null, false, true, regionsLayer);
+
         nestedContainerE = buildLayerGroup("nestedContainerE", Mode.CONTAINER, null, forestsLayer);
         containerTreeB =
                 buildLayerGroup(
@@ -231,6 +269,8 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
                         layerGroupTopp,
                         layerGroupWithSomeLockedLayer,
                         namedTreeA,
+                        namedTreeB,
+                        namedTreeC,
                         containerTreeB,
                         singleGroupC,
                         wsContainerD,
@@ -262,6 +302,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
         return buildLayer(name, ws, resourceClass, true);
     }
 
+    @SuppressWarnings("unchecked") // mocking has trouble with FeatureSource generics, could not fix
     protected LayerInfo buildLayer(
             String name,
             WorkspaceInfo ws,
@@ -301,10 +342,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
         expect(resource.prefixedName()).andReturn(ws.getName() + ":" + name).anyTimes();
         expect(resource.getNamespace()).andReturn(ns).anyTimes();
         if (resource instanceof FeatureTypeInfo) {
-            expect(
-                            ((FeatureTypeInfo) resource)
-                                    .getFeatureSource(
-                                            (ProgressListener) anyObject(), (Hints) anyObject()))
+            expect(((FeatureTypeInfo) resource).getFeatureSource(anyObject(), anyObject()))
                     .andReturn(fs)
                     .anyTimes();
         }
@@ -339,6 +377,25 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
 
     protected LayerGroupInfo buildLayerGroup(
             String name, Mode type, WorkspaceInfo ws, PublishedInfo... contents) {
+        return buildLayerGroup(name, type, ws, true, true, contents);
+    }
+
+    protected LayerGroupInfo buildLayerGroup(
+            String name,
+            Mode type,
+            WorkspaceInfo ws,
+            boolean advertised,
+            PublishedInfo... contents) {
+        return buildLayerGroup(name, type, ws, advertised, true, contents);
+    }
+
+    protected LayerGroupInfo buildLayerGroup(
+            String name,
+            Mode type,
+            WorkspaceInfo ws,
+            boolean advertised,
+            boolean enabled,
+            PublishedInfo... contents) {
         LayerGroupInfo layerGroup = createNiceMock(LayerGroupInfo.class);
         expect(layerGroup.getName()).andReturn(name).anyTimes();
         expect(layerGroup.prefixedName())
@@ -346,7 +403,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
                 .anyTimes();
         expect(layerGroup.getMode()).andReturn(type).anyTimes();
         expect(layerGroup.getLayers())
-                .andReturn(new ArrayList<PublishedInfo>(Arrays.asList(contents)))
+                .andReturn(new ArrayList<>(Arrays.asList(contents)))
                 .anyTimes();
         expect(layerGroup.getStyles()).andReturn(buildUniqueStylesForLayers(contents)).anyTimes();
         expect(layerGroup.getWorkspace()).andReturn(ws).anyTimes();
@@ -356,6 +413,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
         expect(layerGroup.getId())
                 .andAnswer(() -> (ws == null ? name : ws.getName() + ":" + name) + "-id")
                 .anyTimes();
+        expect(layerGroup.isAdvertised()).andReturn(advertised).anyTimes();
         replay(layerGroup);
         return layerGroup;
     }
@@ -392,7 +450,7 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
         expect(layerGroup.getMode()).andReturn(Mode.EO).anyTimes();
         expect(layerGroup.getRootLayer()).andReturn(rootLayer).anyTimes();
         expect(layerGroup.getLayers())
-                .andReturn(new ArrayList<PublishedInfo>(Arrays.asList(contents)))
+                .andReturn(new ArrayList<>(Arrays.asList(contents)))
                 .anyTimes();
         expect(layerGroup.getStyles()).andReturn(Arrays.asList(style)).anyTimes();
         expect(layerGroup.getWorkspace()).andReturn(ws).anyTimes();
@@ -436,8 +494,11 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
             throws Exception {
         Properties props = new Properties();
         props.load(getClass().getResourceAsStream(propertyFile));
-        return new DefaultResourceAccessManager(
-                new MemoryDataAccessRuleDAO(catalog, props), catalog);
+        DefaultResourceAccessManager defaultResourceAccessManager =
+                new DefaultResourceAccessManager(
+                        new MemoryDataAccessRuleDAO(catalog, props), catalog);
+        defaultResourceAccessManager.setGroupsCache(new LayerGroupContainmentCache(catalog));
+        return defaultResourceAccessManager;
     }
 
     /** Sets up a mock catalog. */
@@ -534,6 +595,11 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
                 expect(catalog.getLayerGroupByName(lg.getWorkspace().getName(), lg.getName()))
                         .andReturn(lg)
                         .anyTimes();
+                expect(
+                                catalog.getLayerGroupByName(
+                                        lg.getWorkspace().getName() + ":" + lg.getName()))
+                        .andReturn(lg)
+                        .anyTimes();
             }
         }
 
@@ -554,7 +620,41 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
                             Filter f = (Filter) EasyMock.getCurrentArguments()[1];
                             Iterator<LayerGroupInfo> it =
                                     groups.stream().filter(lg -> f.evaluate(lg)).iterator();
-                            return new CloseableIteratorAdapter<LayerGroupInfo>(it);
+                            return new CloseableIteratorAdapter<>(it);
+                        })
+                .anyTimes();
+        expect(
+                        catalog.list(
+                                eq(LayerGroupInfo.class),
+                                anyObject(Filter.class),
+                                anyObject(),
+                                anyObject(),
+                                anyObject()))
+                .andAnswer(
+                        () -> {
+                            List<LayerGroupInfo> groups = catalog.getLayerGroups();
+                            Filter f = (Filter) EasyMock.getCurrentArguments()[1];
+                            Stream<LayerGroupInfo> stream =
+                                    groups.stream().filter(lg -> f.evaluate(lg));
+                            Integer offset = (Integer) EasyMock.getCurrentArguments()[2];
+                            if (offset != null) {
+                                stream = stream.skip(offset);
+                            }
+                            Integer count = (Integer) EasyMock.getCurrentArguments()[3];
+                            if (count != null) {
+                                stream = stream.limit(count);
+                            }
+                            SortBy sortBy = (SortBy) EasyMock.getCurrentArguments()[4];
+                            if (sortBy != null) {
+                                Comparator<LayerGroupInfo> comparator =
+                                        new PropertyComparator<>(
+                                                sortBy.getPropertyName().getPropertyName(),
+                                                false,
+                                                sortBy.getSortOrder() == SortOrder.ASCENDING);
+                                stream = stream.sorted(comparator);
+                            }
+                            Iterator<LayerGroupInfo> it = stream.iterator();
+                            return new CloseableIteratorAdapter<>(it);
                         })
                 .anyTimes();
         replay(catalog);
@@ -565,27 +665,15 @@ public abstract class AbstractAuthorizationTest extends SecureObjectsTest {
     <T extends CatalogInfo> void stubList(Catalog mock, Class<T> clazz, final List<T> source) {
         final Capture<Filter> cap = Capture.newInstance(CaptureType.LAST);
         expect(catalog.list(eq(clazz), capture(cap)))
-                .andStubAnswer(
-                        new IAnswer<CloseableIterator<T>>() {
-                            @Override
-                            public CloseableIterator<T> answer() throws Throwable {
-                                return makeCIterator(source, cap.getValue());
-                            }
-                        });
+                .andStubAnswer(() -> makeCIterator(source, cap.getValue()));
         expect(
                         catalog.list(
                                 eq(clazz),
                                 capture(cap),
                                 EasyMock.anyInt(),
                                 EasyMock.anyInt(),
-                                (SortBy) anyObject()))
-                .andStubAnswer(
-                        new IAnswer<CloseableIterator<T>>() {
-                            @Override
-                            public CloseableIterator<T> answer() throws Throwable {
-                                return makeCIterator(source, cap.getValue());
-                            }
-                        });
+                                anyObject()))
+                .andStubAnswer(() -> makeCIterator(source, cap.getValue()));
     }
 
     static <T> CloseableIterator<T> makeCIterator(List<T> source, Filter f) {

@@ -5,6 +5,7 @@
  */
 package org.geoserver.config;
 
+import java.util.Locale;
 import java.util.Map;
 import org.geoserver.catalog.Info;
 import org.geoserver.catalog.MetadataMap;
@@ -54,13 +55,13 @@ public interface SettingsInfo extends Info {
     void setNumDecimals(int numDecimals);
 
     /**
-     * Provider web site (used for default contact information, or service provider information if
+     * Provider web site used for default contact information, or service provider information if
      * user has not filled in contact details.
      */
     String getOnlineResource();
 
     /**
-     * Provider web site (used for default contact information, or service provider information if
+     * Provider web site used for default contact information, or service provider information if
      * user has not filled in contact details.
      *
      * @param onlineResource Provider website
@@ -133,4 +134,32 @@ public interface SettingsInfo extends Info {
      *     it.
      */
     void setLocalWorkspaceIncludesPrefix(boolean includePrefix);
+
+    public boolean isShowCreatedTimeColumnsInAdminList();
+
+    public void setShowCreatedTimeColumnsInAdminList(boolean showCreatedTimeColumnsInAdminList);
+
+    public boolean isShowModifiedTimeColumnsInAdminList();
+
+    public void setShowModifiedTimeColumnsInAdminList(boolean showModifiedTimeColumnsInAdminList);
+
+    /**
+     * Get the default Locale
+     *
+     * @return the default locale
+     */
+    Locale getDefaultLocale();
+
+    /**
+     * Set the default Locale
+     *
+     * @param locale the locale to set as default
+     */
+    void setDefaultLocale(Locale locale);
+
+    /** The flag to use request headers for the proxy URL */
+    Boolean isUseHeadersProxyURL();
+
+    /** Sets the flag to use request headers for the proxy URL */
+    void setUseHeadersProxyURL(Boolean useHeadersProxyURL);
 }

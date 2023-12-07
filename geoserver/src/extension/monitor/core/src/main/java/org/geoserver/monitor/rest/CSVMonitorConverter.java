@@ -30,7 +30,7 @@ public class CSVMonitorConverter extends BaseMonitorConverter {
         private BufferedWriter writer;
         private String[] fields;
 
-        CSVRequestDataVisitor(BufferedWriter writer, String fields[]) {
+        CSVRequestDataVisitor(BufferedWriter writer, String[] fields) {
             this.writer = writer;
             this.fields = fields;
         }
@@ -81,6 +81,7 @@ public class CSVMonitorConverter extends BaseMonitorConverter {
         String[] fields = results.getFields();
         Monitor monitor = results.getMonitor();
 
+        @SuppressWarnings("PMD.CloseResource") // managed by servlet container
         OutputStream os = outputMessage.getBody();
         writeCSVfile(result, fields, monitor, os);
     }
@@ -89,7 +90,6 @@ public class CSVMonitorConverter extends BaseMonitorConverter {
      * Write CSV file (also called by {@link ZIPMonitorConverter}
      *
      * @param result Query, List or individual RequestData)
-     * @param fields
      * @param monitor used to cancel output process
      * @param os Output stream (not closed by this method allowing use of zipfile)
      */

@@ -6,13 +6,16 @@
 package org.geoserver.config;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.geoserver.catalog.Info;
 import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
 import org.geoserver.catalog.MetadataMap;
+import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geotools.util.Version;
+import org.opengis.util.InternationalString;
 
 /**
  * Generic / abstract service configuration.
@@ -22,13 +25,33 @@ import org.geotools.util.Version;
 public interface ServiceInfo extends Info {
 
     /** Identifer. */
+    @Override
     String getId();
 
     /**
-     * Name of the service.
+     * Service type, used to identify services for availability (example {@code WMS}, {@code WFS},
+     * ...).
      *
-     * <p>This value is unique among all instances of ServiceInfo and can be used as an identifier.
+     * <p>Service type is used internally by GeoServer, and is not subject to change by user like
+     * {@link #getName()} and {@link #getTitle()}.
      *
+     * <p>See {@link
+     * org.geoserver.catalog.ServiceResourceProvider#getServicesForResource(ResourceInfo)} and
+     * {@link ResourceInfo#getDisabledServices()} for example use.
+     *
+     * @return Service type.
+     */
+    String getType();
+
+    /**
+     * Name of the service, unique within all instances of ServiceInfo within global services (or
+     * within workspace services).
+     *
+     * <p>Please note that the name is used in GetCapabilities output and may user supplied (do not
+     * assume this to be {@code WMS}, {@code WFS}, {@code WCS} - an example may be {@code GeoServer
+     * WMS}.
+     *
+     * @return Name of service
      * @uml.property name="name"
      */
     String getName();
@@ -88,11 +111,23 @@ public interface ServiceInfo extends Info {
     /** @uml.property name="title" */
     void setTitle(String title);
 
+    /** @uml.property name="internationalTitle" */
+    InternationalString getInternationalTitle();
+
+    /** @uml.property name="internationalTitle" */
+    void setInternationalTitle(InternationalString title);
+
     /** @uml.property name="abstract" */
     String getAbstract();
 
     /** @uml.property name="abstract" */
     void setAbstract(String abstrct);
+
+    /** @uml.property name="internationalAbstract" */
+    InternationalString getInternationalAbstract();
+
+    /** @uml.property name="internationalAbstract" */
+    void setInternationalAbstract(InternationalString title);
 
     /** @uml.property name="maintainer" */
     String getMaintainer();
@@ -181,4 +216,8 @@ public interface ServiceInfo extends Info {
     MetadataMap getMetadata();
 
     Map<Object, Object> getClientProperties();
+
+    Locale getDefaultLocale();
+
+    void setDefaultLocale(Locale locale);
 }

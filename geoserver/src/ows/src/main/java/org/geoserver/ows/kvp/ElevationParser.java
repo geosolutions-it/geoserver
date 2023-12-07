@@ -10,13 +10,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 import org.geoserver.platform.ServiceException;
-import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 
@@ -60,7 +58,7 @@ public class ElevationParser {
      * @return A list of doubles, or an empty list of the {@code value} string is null or empty.
      * @throws ParseException if the string can not be parsed.
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked"})
     public Collection parse(String value) throws ParseException {
         if (value == null) {
             return Collections.emptyList();
@@ -71,33 +69,29 @@ public class ElevationParser {
         }
         final Set values =
                 new TreeSet(
-                        new Comparator() {
+                        (o1, o2) -> {
+                            final boolean o1Double = o1 instanceof Double;
+                            final boolean o2Double = o2 instanceof Double;
 
-                            public int compare(Object o1, Object o2) {
-                                final boolean o1Double = o1 instanceof Double;
-                                final boolean o2Double = o2 instanceof Double;
-
-                                // o1 date
-                                if (o1Double) {
-                                    final Double left = (Double) o1;
-                                    if (o2Double) {
-                                        // o2 date
-                                        return left.compareTo((Double) o2);
-                                    }
-                                    // o2 number range
-                                    return left.compareTo(((NumberRange<Double>) o2).getMinValue());
-                                }
-
-                                // o1 number range
-                                final NumberRange left = (NumberRange) o1;
+                            // o1 date
+                            if (o1Double) {
+                                final Double left = (Double) o1;
                                 if (o2Double) {
                                     // o2 date
-                                    return left.getMinValue().compareTo(((Double) o2));
+                                    return left.compareTo((Double) o2);
                                 }
-                                // o2 daterange
-                                return left.getMinValue()
-                                        .compareTo(((NumberRange) o2).getMinValue());
+                                // o2 number range
+                                return left.compareTo(((NumberRange<Double>) o2).getMinValue());
                             }
+
+                            // o1 number range
+                            final NumberRange left = (NumberRange) o1;
+                            if (o2Double) {
+                                // o2 date
+                                return left.getMinValue().compareTo(o2);
+                            }
+                            // o2 daterange
+                            return left.getMinValue().compareTo(((NumberRange) o2).getMinValue());
                         });
         final String[] listValues = value.split(",");
         int maxValues = getMaxElevations();
@@ -123,7 +117,15 @@ public class ElevationParser {
                     Double step;
                     int j = 0;
                     while ((step = j * increment + begin) <= end) {
-                        addValue(values, step);
+                        if (!addValue(values, step) && j >= maxValues) {
+                            // prevent infinite loops
+                            throw new ServiceException(
+                                    "Exceeded "
+                                            + maxValues
+                                            + " iterations parsing elevations, bailing out.",
+                                    ServiceException.INVALID_PARAMETER_VALUE,
+                                    "elevation");
+                        }
                         j++;
 
                         checkMaxElevations(values, maxValues);
@@ -139,11 +141,7 @@ public class ElevationParser {
         return new ArrayList(values);
     }
 
-    /**
-     * Maximum number of elevations this parser will parse before throwing an exception
-     *
-     * @return
-     */
+    /** Maximum number of elevations this parser will parse before throwing an exception */
     private int getMaxElevations() {
         if (maxElevations != null) {
             return maxElevations;
@@ -162,24 +160,24 @@ public class ElevationParser {
         }
     }
 
-    private void addValue(Collection result, Double step) {
-        for (Iterator it = result.iterator(); it.hasNext(); ) {
-            final Object element = it.next();
+    private boolean addValue(Collection<Double> result, Double step) {
+        for (final Object element : result) {
             if (element instanceof Double) {
                 // convert
                 final Double local = (Double) element;
-                if (local.equals(step)) return;
+                if (local.equals(step)) return false;
             } else {
                 // convert
-                final DateRange local = (DateRange) element;
-                if (local.contains(step)) return;
+                @SuppressWarnings("unchecked")
+                final NumberRange<Double> local = (NumberRange<Double>) element;
+                if (local.contains((Number) step)) return false;
             }
         }
-        result.add(step);
+        return result.add(step);
     }
 
-    private void addPeriod(Collection result, NumberRange<Double> newRange) {
-        for (Iterator it = result.iterator(); it.hasNext(); ) {
+    private void addPeriod(Collection<Object> result, NumberRange<Double> newRange) {
+        for (Iterator<Object> it = result.iterator(); it.hasNext(); ) {
             final Object element = it.next();
             if (element instanceof Double) {
                 // convert
@@ -188,6 +186,7 @@ public class ElevationParser {
                 }
             } else {
                 // convert
+                @SuppressWarnings("unchecked")
                 final NumberRange<Double> local = (NumberRange<Double>) element;
                 if (local.contains(newRange)) return;
                 if (newRange.contains(local)) it.remove();

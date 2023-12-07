@@ -7,12 +7,16 @@ package org.geoserver.wms;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
-import java.util.Arrays;
 import javax.imageio.ImageIO;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -70,7 +74,7 @@ public class WMSServiceExceptionTest extends WMSTestSupport {
                 content.contains(
                         "<!DOCTYPE ServiceExceptionReport SYSTEM \"http://localhost:8080/geoserver/schemas/wms/1.1.1/WMS_exception_1_1_1.dtd\">"));
 
-        assertEquals("application/vnd.ogc.se_xml", response.getContentType());
+        assertEquals("application/vnd.ogc.se_xml", getBaseMimeType(response.getContentType()));
         Document dom = dom(new ByteArrayInputStream(content.getBytes()));
         assertEquals("ServiceExceptionReport", dom.getDocumentElement().getNodeName());
         assertEquals("1.1.1", dom.getDocumentElement().getAttribute("version"));
@@ -88,7 +92,7 @@ public class WMSServiceExceptionTest extends WMSTestSupport {
                 content.contains(
                         "xsi:schemaLocation=\"http://www.opengis.net/ogc http://localhost:8080/geoserver/schemas/wms/1.3.0/exceptions_1_3_0.xsd\""));
 
-        assertEquals("text/xml", response.getContentType());
+        assertEquals("text/xml", getBaseMimeType(response.getContentType()));
         Document dom = dom(new ByteArrayInputStream(content.getBytes()));
         assertEquals("ServiceExceptionReport", dom.getDocumentElement().getNodeName());
         assertEquals("1.3.0", dom.getDocumentElement().getAttribute("version"));
@@ -211,7 +215,7 @@ public class WMSServiceExceptionTest extends WMSTestSupport {
         byte[][] blankbankData111 = blankdb111.getBankData();
         byte[][] bankData111 = db111.getBankData();
         for (int i = 0; i < bankData111.length; i++) {
-            assertTrue(Arrays.equals(blankbankData111[i], bankData111[i]));
+            assertArrayEquals(blankbankData111[i], bankData111[i]);
         }
     }
 }

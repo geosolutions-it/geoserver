@@ -114,16 +114,13 @@ public class GeoServerLogoutFilter extends GeoServerSecurityFilter {
      * <p>The skipHandlerName parameter gives other LogoutHandler the chance to trigger a using
      * {@link #doLogout(HttpServletRequest, HttpServletResponse, String...)} without receiving an
      * unnecessary callback.
-     *
-     * @param skipHandlerName
-     * @throws IOException
      */
     List<LogoutHandler> calculateActiveLogoutHandlers(String... skipHandlerName)
             throws IOException {
-        List<LogoutHandler> result = new ArrayList<LogoutHandler>();
+        List<LogoutHandler> result = new ArrayList<>();
         SortedSet<String> logoutFilterNames = getSecurityManager().listFilters(LogoutHandler.class);
         logoutFilterNames.removeAll(Arrays.asList(skipHandlerName));
-        Set<String> handlerNames = new HashSet<String>();
+        Set<String> handlerNames = new HashSet<>();
 
         GeoServerSecurityFilterChain chain =
                 getSecurityManager().getSecurityConfig().getFilterChain();

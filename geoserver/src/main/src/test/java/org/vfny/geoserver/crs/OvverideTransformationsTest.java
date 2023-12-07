@@ -10,8 +10,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.factory.epsg.CoordinateOperationFactoryUsingWKT;
@@ -21,7 +19,6 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.ConcatenatedOperation;
 import org.opengis.referencing.operation.CoordinateOperation;
 import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
 
 public class OvverideTransformationsTest extends GeoServerSystemTestSupport {
 
@@ -49,9 +46,6 @@ public class OvverideTransformationsTest extends GeoServerSystemTestSupport {
 
         super.onSetUp(testData);
 
-        GeoServerResourceLoader loader1 = getResourceLoader();
-        GeoServerResourceLoader loader2 = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-
         // setup the grid file, the definitions and the tx overrides
         new File(testData.getDataDirectoryRoot(), "user_projections").mkdir();
         testData.copyTo(
@@ -71,11 +65,7 @@ public class OvverideTransformationsTest extends GeoServerSystemTestSupport {
         CRS.reset("all");
     }
 
-    /**
-     * Test method for {@link CoordinateOperationFactoryUsingWKT#createCoordinateOperation}.
-     *
-     * @throws TransformException
-     */
+    /** Test method for {@link CoordinateOperationFactoryUsingWKT#createCoordinateOperation}. */
     @Test
     public void testCreateOperationFromCustomCodes() throws Exception {
         // Test CRSs
@@ -90,11 +80,7 @@ public class OvverideTransformationsTest extends GeoServerSystemTestSupport {
         assertEquals(p[1], DST_TEST_POINT[1], 1e-8);
     }
 
-    /**
-     * Test method for {@link CoordinateOperationFactoryUsingWKT#createCoordinateOperation}.
-     *
-     * @throws TransformException
-     */
+    /** Test method for {@link CoordinateOperationFactoryUsingWKT#createCoordinateOperation}. */
     @Test
     public void testOverrideEPSGOperation() throws Exception {
         // Test CRSs
@@ -109,11 +95,7 @@ public class OvverideTransformationsTest extends GeoServerSystemTestSupport {
         assertEquals(p[1], DST_TEST_POINT[1], 1e-8);
     }
 
-    /**
-     * Check we are actually using the EPSG database for anything not in override
-     *
-     * @throws TransformException
-     */
+    /** Check we are actually using the EPSG database for anything not in override */
     @Test
     public void testFallbackOnEPSGDatabaseStd() throws Exception {
         // Test CRSs
@@ -135,8 +117,8 @@ public class OvverideTransformationsTest extends GeoServerSystemTestSupport {
 
         assertTrue(mt.toWKT().contains("NADCON"));
 
-        double[] src = new double[] {-169.625, 56.575};
-        double[] expected = new double[] {-169.62744, 56.576034};
+        double[] src = {-169.625, 56.575};
+        double[] expected = {-169.62744, 56.576034};
         double[] p = new double[2];
         mt.transform(src, 0, p, 0, 1);
         assertEquals(expected[0], p[0], 1e-6);

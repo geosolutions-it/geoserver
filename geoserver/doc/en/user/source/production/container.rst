@@ -3,7 +3,7 @@
 Container Considerations
 ========================
 
-Java web containers such as `Tomcat <http://tomcat.apache.org>`_ or `Jetty <http://www.mortbay.org/jetty/>`_ ship with configurations that allow for fast startup, but don't always deliver the best performance.
+Java web containers such as `Tomcat <http://tomcat.apache.org>`_ or `Jetty <https://www.eclipse.org/jetty/>`_ ship with configurations that allow for fast startup, but don't always deliver the best performance.
 
 Optimize your JVM
 -----------------
@@ -22,7 +22,7 @@ Set the following performance settings in the Java virtual machine (JVM) for you
    * - ``-XX:SoftRefLRUPolicyMSPerMB=36000``
      - Increases the lifetime of "soft references" in GeoServer.  GeoServer uses soft references to cache datastore, spatial reference systems, and other data structures. By increasing this value to ``36000`` (which is 36 seconds) these values will stay in memory longer increasing the effectiveness of the cache.
    * - ``-XX:+UseParallelGC``
-     - The default garbage collector up to Java 8, **pauses the application while using several threads to recover memory**. Recommended if your GeoServer will be under light load and can tolerate pauses to clean up memory.
+     - This garbage collector **pauses the application while using several threads to recover memory**. Recommended if your GeoServer will be under light load and can tolerate pauses to clean up memory.
    * - ``-XX:+UseParNewGC``
      - Enables use of the concurrent mark sweep (CMS) garbage collector **uses multiple threads to recover memory while the application is running**. Recommended for GeoServer under continuous use, with heap sizes of less than 6GB.
    * - ``–XX:+UseG1GC``
@@ -32,11 +32,11 @@ For more information about JVM configuration, see the article `Performance tunin
 
 .. note::
 
-   You can only use one garbage collector at a time. Please refrain from combining garbage collectors at runtime. 
+   You can only use one garbage collector at a time. Please refrain from combining garbage collectors at runtime.
 
 .. note:: 
    
-   If you're serving just vector data, you'll be streaming, so having more memory won't increase performance.  If you're serving coverages, however, image processing will use a tile cache and benifit from more memory. As an administrator you can configure the portion of memory available as a tile cache (see the Server Config page in the :ref:`web_admin` section) - for example to use ``0.75`` to allocate ``75%`` of the heap as a tile cache.
+   If you're serving just vector data, you'll be streaming, so having more memory won't increase performance.  If you're serving coverages, however, image processing will use a tile cache and benefit from more memory. As an administrator you can configure the portion of memory available as a tile cache (see the Server Config page in the :ref:`web_admin` section) - for example to use ``0.75`` to allocate ``75%`` of the heap as a tile cache.
 
 .. note::
    
@@ -47,7 +47,7 @@ For more information about JVM configuration, see the article `Performance tunin
       uintx InitialHeapSize   := 134217728     {product}
       uintx MaxHeapSize       := 792723456     {product}
 
-   Which when converted from bytes matches ``128`` MB initial heap size, and ``512`` MB max heap size.
+   Which when converted from bytes matches ``128`` MB initial heap size, and ``756`` MB max heap size.
    
    Check defaults for your hardware using ``java -XX:+PrintFlagsFinal -version | grep HeapSize``::
 
@@ -55,36 +55,75 @@ For more information about JVM configuration, see the article `Performance tunin
       uintx MaxHeapSize       := 4294967296    {product}
     
    The above results (from a 16 GB laptop) amount to initial heap size of 256m, and a max heap size of around 4 GB (or around 1/4 of system memory).
-   
-Enable the Marlin rasterizer
+
+.. _production_container.marlin:
+
+Use newer Marlin rasterizer
 ----------------------------
 
-The Marlin rasterizer in Java 8 and getting better performance and scalability while rendering vector data in Java 8. 
-In order to enable it add the following among the JVM startup options::
+To use a newer version of Marlin than that provided by your JVM, add the following to the JVM startup options::
 
-     -Xbootclasspath/a:$MARLIN_JAR 
-     -Dsun.java2d.renderer=org.marlin.pisces.MarlinRenderingEngine 
+     -Xbootclasspath/a:$MARLIN_JAR
+     -Dsun.java2d.renderer=org.marlin.pisces.MarlinRenderingEngine
 
-where ``$MARLIN_JAR`` is the location of the ``marlin*.jar`` file located in the geoserver/WEB-INF/lib directory.
+where ``$MARLIN_JAR`` is the location of the ``marlin*.jar`` file located in the geoserver/WEB-INF/lib directory or downloaded from the `Marlin project <https://github.com/bourgesl/marlin-renderer/>`_.
+
+The server status page shows which renderer is being used.
 
 .. _production_container.enable_cors:
 
 Enable CORS
 -----------
 
-The standalone distributions of GeoServer include the Jetty application server. Enable Cross-Origin Resource Sharing (CORS) to allow JavaScript applications outside of your own domain to use GeoServer.
+The standalone distributions of GeoServer include the Jetty application server. `Enable Cross-Origin Resource Sharing (CORS) <https://enable-cors.org/>`_ to allow JavaScript applications outside of your own domain, or web browsers, to use GeoServer.
 
-For more information on what this does and other options see `Jetty Documentation <http://www.eclipse.org/jetty/documentation>`_
+For more information on what this does and other options see the `Jetty documentation <http://www.eclipse.org/jetty/documentation>`_ or the `Tomcat documentation <https://tomcat.apache.org/tomcat-9.0-doc/config/filter.html#CORS_Filter>`_.
 
-Uncomment the following <filter> and <filter-mapping> from :file:`webapps/geoserver/WEB-INF/web.xml`::
-  
-  <web-app>
-    <filter>
-        <filter-name>cross-origin</filter-name>
-        <filter-class>org.eclipse.jetty.servlets.CrossOriginFilter</filter-class>
-    </filter>
-    <filter-mapping>
-        <filter-name>cross-origin</filter-name>
-        <url-pattern>/*</url-pattern>
-    </filter-mapping>
-   </web-app>
+Uncomment the following <filter> and <filter-mapping> from :file:`webapps/geoserver/WEB-INF/web.xml` if using Jetty::
+
+  <filter>
+    <filter-name>cross-origin</filter-name>
+    <filter-class>org.eclipse.jetty.servlets.CrossOriginFilter</filter-class>
+    <init-param>
+      <param-name>chainPreflight</param-name>
+      <param-value>false</param-value>
+    </init-param>
+    <init-param>
+      <param-name>allowedOrigins</param-name>
+      <param-value>*</param-value>
+    </init-param>
+    <init-param>
+      <param-name>allowedMethods</param-name>
+      <param-value>GET,POST,PUT,DELETE,HEAD,OPTIONS</param-value>
+    </init-param>
+    <init-param>
+      <param-name>allowedHeaders</param-name>
+      <param-value>*</param-value>
+    </init-param>
+  </filter>
+
+or Tomcat::
+
+  <filter>
+    <filter-name>cross-origin</filter-name>
+    <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
+    <init-param>
+      <param-name>cors.allowed.origins</param-name>
+      <param-value>*</param-value>
+    </init-param>
+    <init-param>
+      <param-name>cors.allowed.methods</param-name>
+      <param-value>GET,POST,PUT,DELETE,HEAD,OPTIONS</param-value>
+    </init-param>
+    <init-param>
+      <param-name>cors.allowed.headers</param-name>
+      <param-value>*</param-value>
+    </init-param>
+  </filter>
+
+and regardless of application server choice uncomment::
+
+  <filter-mapping>
+    <filter-name>cross-origin</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>

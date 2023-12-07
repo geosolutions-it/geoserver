@@ -25,6 +25,7 @@ import org.geoserver.ows.XmlObjectEncodingResponse;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.threadlocals.ThreadLocalsTransfer;
+import org.geoserver.wps.ChainedProcessListener;
 import org.geoserver.wps.ProcessDismissedException;
 import org.geoserver.wps.ProcessEvent;
 import org.geoserver.wps.ProcessListener;
@@ -79,6 +80,9 @@ public class WPSExecutionManager
     /** Objects listening to the process lifecycles */
     private List<ProcessListener> listeners;
 
+    /** Objects listening to the process chaining */
+    private List<ChainedProcessListener> chainListeners;
+
     /** The HTTP connection timeout for remote resources */
     private int connectionTimeout;
 
@@ -92,8 +96,7 @@ public class WPSExecutionManager
     private ProcessStatusTracker statusTracker;
 
     /** The currently running processes */
-    private Map<String, ProcessListenerNotifier> localProcesses =
-            new ConcurrentHashMap<String, ProcessListenerNotifier>();
+    private Map<String, ProcessListenerNotifier> localProcesses = new ConcurrentHashMap<>();
 
     /** The timer informing the status tracker of the currently executing processes */
     private Timer heartbeatTimer;
@@ -120,14 +123,17 @@ public class WPSExecutionManager
     /**
      * This call should only be used by process chaining to avoid deadlocking due to execution
      * threads starvation
-     *
-     * @param request
-     * @param listener
      */
     Map<String, Object> submitChained(ExecuteRequest request, ProgressListener listener) {
         Name processName = request.getProcessName();
         ProcessManager processManager = getProcessManager(processName);
         String executionId = resourceManager.getExecutionId(true);
+
+        ChainedProcessListenerNotifier chainNotifier =
+                new ChainedProcessListenerNotifier(
+                        executionId, processName.toString(), true, chainListeners);
+        chainNotifier.fireStarted();
+
         LazyInputMap inputs = request.getProcessInputs(this);
         int inputsLongSteps = inputs.longStepCount();
         int longSteps = inputsLongSteps + 1;
@@ -137,7 +143,20 @@ public class WPSExecutionManager
         inputs.setListener(new SubProgressListener(listener, inputPercentage));
         ProgressListener executionListener =
                 new SubProgressListener(listener, inputPercentage, executionPercentage);
-        return processManager.submitChained(executionId, processName, inputs, executionListener);
+
+        try {
+            Map<String, Object> ret =
+                    processManager.submitChained(
+                            executionId, processName, inputs, executionListener);
+            chainNotifier.fireCompleted();
+            return ret;
+        } catch (ProcessDismissedException e) {
+            chainNotifier.fireDismissed();
+            throw e;
+        } catch (Exception e) {
+            chainNotifier.fireFailed(e);
+            throw e;
+        }
     }
 
     /**
@@ -146,7 +165,6 @@ public class WPSExecutionManager
      *
      * @param request The request to be executed
      * @return The execution response
-     * @throws ProcessException
      */
     public ExecuteResponseType submit(final ExecuteRequest request, boolean synchronous)
             throws ProcessException {
@@ -272,11 +290,7 @@ public class WPSExecutionManager
         return connectionTimeout;
     }
 
-    /**
-     * Sets the HTTP connection timeout for remote resource fetching
-     *
-     * @param connectionTimeout
-     */
+    /** Sets the HTTP connection timeout for remote resource fetching */
     public void setConnectionTimeout(int connectionTimeout) {
         this.connectionTimeout = connectionTimeout;
     }
@@ -294,8 +308,6 @@ public class WPSExecutionManager
     /**
      * Sets the heartbeat delay for the processes that are running (to make sure we tell the rest of
      * the cluster the process is actually still running, even if it does not update its status)
-     *
-     * @param i
      */
     public void setHeartbeatDelay(int heartbeatDelay) {
         if (heartbeatDelay != this.heartbeatDelay) {
@@ -312,6 +324,7 @@ public class WPSExecutionManager
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         this.applicationContext = context;
         this.listeners = GeoServerExtensions.extensions(ProcessListener.class, context);
+        this.chainListeners = GeoServerExtensions.extensions(ChainedProcessListener.class, context);
     }
 
     @Override
@@ -342,6 +355,8 @@ public class WPSExecutionManager
         private boolean synchronous;
 
         private ProcessListenerNotifier notifier;
+
+        private ChainedProcessListenerNotifier chainNotifier;
 
         private ThreadLocalsTransfer transfer;
 
@@ -376,6 +391,10 @@ public class WPSExecutionManager
 
             // preparing the listener that will report
             notifier = new ProcessListenerNotifier(status, request, inputs, listeners);
+            chainNotifier =
+                    new ChainedProcessListenerNotifier(
+                            status.getExecutionId(), processName.toString(), false, chainListeners);
+            chainNotifier.fireStarted();
         }
 
         boolean hasComplexOutputs() {
@@ -461,12 +480,15 @@ public class WPSExecutionManager
                             inputPercentage + executionPercentage,
                             "Execution completed, preparing to write response");
                 }
+                chainNotifier.fireCompleted();
             } catch (ProcessDismissedException e) {
                 // that's fine, move on writing the output
+                chainNotifier.fireDismissed();
             } catch (Exception e) {
                 if (status.getPhase() != ProcessState.DISMISSING) {
                     LOGGER.log(Level.SEVERE, "Process execution failed", e);
                     notifier.fireFailed(e);
+                    chainNotifier.fireFailed(e);
                 }
             } finally {
                 // build result and return
@@ -585,11 +607,7 @@ public class WPSExecutionManager
         }
     }
 
-    /**
-     * Cancels the execution of the given process, notifying the process managers if needs be
-     *
-     * @param executionId
-     */
+    /** Cancels the execution of the given process, notifying the process managers if needs be */
     public void cancel(String executionId) {
         ExecutionStatus status = statusTracker.getStatus(executionId);
         if (status == null) {

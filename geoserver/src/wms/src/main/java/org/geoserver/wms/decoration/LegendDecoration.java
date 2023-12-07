@@ -15,7 +15,6 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.awt.image.IndexColorModel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,12 +24,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-import org.geoserver.catalog.*;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.LegendInfo;
+import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StyleInfo;
 import org.geoserver.ows.AbstractDispatcherCallback;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.KvpParser;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.util.CaseInsensitiveMap;
+import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.WMS;
@@ -60,7 +64,7 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
 
     public LegendDecoration(WMS wms) {
         this.wms = wms;
-        this.layers = new ArrayList<String>();
+        this.layers = new ArrayList<>();
     }
 
     @Override
@@ -93,7 +97,7 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
 
         String legendOptions = remove(this.options, "legend_options");
         if (legendOptions != null && !legendOptions.isEmpty()) {
-            legendOptionsMap = new HashMap<String, String>();
+            legendOptionsMap = new HashMap<>();
             String[] splittedLegendOptions = legendOptions.split(";");
             for (String lop : splittedLegendOptions) {
                 String[] kvp = lop.split(":");
@@ -107,6 +111,7 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
         }
     }
 
+    @Override
     public Dimension findOptimalSize(Graphics2D g2d, WMSMapContent mapContext) {
         double dpi = RendererUtilities.getDpi(mapContext.getRequest().getFormatOptions());
         double standardDpi = RendererUtilities.getDpi(Collections.emptyMap());
@@ -154,6 +159,7 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
         return new Dimension(width, height);
     }
 
+    @Override
     public void paint(Graphics2D g2d, Rectangle paintArea, WMSMapContent mapContext)
             throws Exception {
         // check if LayerLegends have been computed in the above method; if not
@@ -194,14 +200,13 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
 
             // output image
             BufferedImage finalLegend =
-                    ImageUtils.createImage(
-                            strokeWidth, strokeHeight, (IndexColorModel) null, false);
+                    ImageUtils.createImage(strokeWidth, strokeHeight, null, false);
             Graphics2D finalGraphics =
                     ImageUtils.prepareTransparency(
                             false,
                             LegendUtils.getBackgroundColor(legend.request),
                             finalLegend,
-                            new HashMap<RenderingHints.Key, Object>());
+                            new HashMap<>());
 
             // title
             int titleHeightOffset = 0;
@@ -270,20 +275,16 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
         StyleInfo defaultStyle = info.getDefaultStyle();
 
         Predicate<StyleInfo> predicate =
-                new Predicate<StyleInfo>() {
-                    @Override
-                    public boolean test(StyleInfo s) {
-                        try {
-                            return s.getName().equals(layer.getStyle().getName())
-                                    && s.getStyle() != null;
-                        } catch (IOException e) {
-                            return false;
-                        }
+                s -> {
+                    try {
+                        return s.getName().equals(layer.getStyle().getName())
+                                && s.getStyle() != null;
+                    } catch (IOException e) {
+                        return false;
                     }
                 };
         StyleInfo sInfo =
-                info.getStyles()
-                        .stream()
+                info.getStyles().stream()
                         .filter(predicate)
                         .findFirst()
                         .orElseGet(() -> defaultStyle);
@@ -324,7 +325,7 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
         return this.getLayerLegend(g2d, mapContext, null);
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     private List<LayerLegend> getLayerLegend(
             Graphics2D g2d, WMSMapContent mapContext, Rectangle size) {
         List<LayerLegend> legendLayers = new ArrayList<>();
@@ -350,11 +351,11 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
             final Request dispatcherRequest = Dispatcher.REQUEST.get();
             if (dispatcherRequest != null) {
                 request.setKvp(dispatcherRequest.getKvp());
-                request.setRawKvp(dispatcherRequest.getRawKvp());
+                request.setRawKvp(KvpUtils.toStringKVP(dispatcherRequest.getRawKvp()));
             }
             setLegendInfo(layer, request, size);
 
-            Map legendOptions = new CaseInsensitiveMap(options);
+            Map<String, Object> legendOptions = getLegendOptions();
             legendOptions.putAll(mapContext.getRequest().getFormatOptions());
 
             // add legend_options defined by layout
@@ -367,7 +368,10 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
 
             if (dispatcherRequest != null
                     && dispatcherRequest.getKvp().get("legend_options") != null) {
-                legendOptions.putAll((Map) dispatcherRequest.getKvp().get("legend_options"));
+                @SuppressWarnings("unchecked")
+                Map<String, Object> requestOptions =
+                        (Map) dispatcherRequest.getKvp().get("legend_options");
+                legendOptions.putAll(requestOptions);
             }
             request.setLegendOptions(legendOptions);
 
@@ -404,7 +408,7 @@ public class LegendDecoration extends AbstractDispatcherCallback implements MapD
     }
 
     private Map<String, Object> getLegendOptions() {
-        CaseInsensitiveMap result = new CaseInsensitiveMap(new HashMap<>());
+        CaseInsensitiveMap<String, Object> result = new CaseInsensitiveMap<>(new HashMap<>());
         List parsers = GeoServerExtensions.extensions(KvpParser.class);
         for (Map.Entry<String, Expression> entry : options.entrySet()) {
             String key = entry.getKey();

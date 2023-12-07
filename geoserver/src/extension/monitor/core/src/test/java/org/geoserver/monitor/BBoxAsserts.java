@@ -4,19 +4,14 @@
  */
 package org.geoserver.monitor;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import org.opengis.geometry.BoundingBox;
 
 public class BBoxAsserts {
 
-    /**
-     * Asserts two BoundingBoxes are equal to within delta.
-     *
-     * @param expected
-     * @param result
-     * @param delta
-     */
+    /** Asserts two BoundingBoxes are equal to within delta. */
     public static void assertEqualsBbox(BoundingBox expected, BoundingBox result, double delta) {
         assertNotNull(String.format("Expected %s but got null", expected), result);
         assertEquals(expected.getMaxX(), result.getMaxX(), delta);

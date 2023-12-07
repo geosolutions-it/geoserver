@@ -4,6 +4,7 @@
  */
 package org.geoserver.taskmanager.data.impl;
 
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.persistence.CascadeType;
@@ -39,12 +40,14 @@ public class ConfigurationImpl extends BaseImpl implements Configuration {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @XStreamOmitField
     private Long id;
 
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
+    @XStreamOmitField
     private Boolean template = false;
 
     @Column(nullable = false)
@@ -53,40 +56,37 @@ public class ConfigurationImpl extends BaseImpl implements Configuration {
     @Column private String workspace;
 
     @OneToMany(
-        fetch = FetchType.LAZY,
-        targetEntity = AttributeImpl.class,
-        mappedBy = "configuration",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+            fetch = FetchType.LAZY,
+            targetEntity = AttributeImpl.class,
+            mappedBy = "configuration",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     @OrderBy("id")
     @MapKey(name = "name")
     private Map<String, Attribute> attributes = new LinkedHashMap<String, Attribute>();
 
     @OneToMany(
-        fetch = FetchType.LAZY,
-        targetEntity = TaskImpl.class,
-        mappedBy = "configuration",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+            fetch = FetchType.LAZY,
+            targetEntity = TaskImpl.class,
+            mappedBy = "configuration",
+            cascade = CascadeType.ALL)
     @OrderBy("id")
     @MapKey(name = "name")
     @Filter(name = "activeTaskFilter")
     private Map<String, Task> tasks = new LinkedHashMap<String, Task>();
 
     @OneToMany(
-        fetch = FetchType.LAZY,
-        targetEntity = BatchImpl.class,
-        mappedBy = "configuration",
-        cascade = CascadeType.ALL
-    )
+            fetch = FetchType.LAZY,
+            targetEntity = BatchImpl.class,
+            mappedBy = "configuration",
+            cascade = CascadeType.ALL)
     @OrderBy("id")
     @MapKey(name = "name")
     @Filter(name = "activeBatchFilter")
     private Map<String, Batch> batches = new LinkedHashMap<String, Batch>();
 
     @Column(nullable = false)
+    @XStreamOmitField
     private Long removeStamp = 0L;
 
     @Column private String description;

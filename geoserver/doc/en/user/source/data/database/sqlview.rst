@@ -3,12 +3,12 @@
 SQL Views
 =========
 
-The traditional way to access database data is is to configure layers against either tables or database views. 
+The traditional way to access database data is to configure layers against either tables or database views. 
 Starting with GeoServer 2.1.0, layers can also be defined as SQL Views.  
 SQL Views allow executing a custom SQL query on each request to the layer.  
 This avoids the need to create a database view for complex queries.  
 
-Even more usefully, SQL View queries can be parameterized via string substitution. 
+Even more usefuly, SQL View queries can be parameterized via string substitution. 
 Parameter values can be supplied in both WMS and WFS requests.  
 Default values can be supplied for parameters, and input values can be validated by Regular Expressions 
 to eliminate the risk of SQL injection attacks.
@@ -132,14 +132,14 @@ The ``viewparams`` argument is a list of ``key:value`` pairs, separated by semic
 If the values contain semicolons or commas these must be escaped with a backslash (e.g. ``\,`` and ``\;``).
 
 For example, the ``popstates`` SQL View layer can be displayed by invoking the :ref:`layerpreview`.
-Initially no parameter values are supplied, so the defaults are used and all the states are displayed, 
+Initially no parameter values are supplied, so the defaults are used and all the states are displayed. 
 
 To display all states having more than 20 million inhabitants the following parameter is added to the ``GetMap`` request: ``&viewparams=low:20000000``
 
 .. figure:: images/sqlview-20millions.png
    :align: center
 
-To display all states having between 2 and 5 millions inhabitants the view parameters are: ``&viewparams=low:2000000;high:5000000``
+To display all states having between 2 and 5 million inhabitants the view parameters are: ``&viewparams=low:2000000;high:5000000``
 
 .. figure:: images/sqlview-2m-5m.png
    :align: center
@@ -150,6 +150,31 @@ Parameters can be provided for multiple layers by separating each parameter map 
   ``&viewparams=l1p1:v1;l1p2:v2,l2p1:v1;l2p2:v2,...``
 
 The number of parameter maps must match the number of layers (featuretypes) included in the request.
+
+Using XML View parameters format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Aside the default SQL view parameters format, an XML format is available by using the request parameter/value: 
+
+  ``&viewParamsFormat=XML``
+
+XML alternative format example:
+
+  ``&viewParams=<VP><PS><P n="m1">8302,802,8505</P><P n="m2">22,44</P></PS><PS/><PS><P n="csvInput">acv,rrp;1,0;0,7;22,1</P></PS></VP>``
+
+``viewParamsFormat`` new optional parameter definition:
+  - Selects the view parameters format, valid implementation values are ``CharSeparated`` (default) and ``XML``.
+  - It's an optional parameter, if not set the default character separated format will be used supporting backward compatibility.
+
+XML tags/attributes definition:
+  - ``VP``: the root XML element tag for View Params.  This ensures XML validity (an XML document must have a single root element).
+  - ``PS``: contains the parameters for a given layer (by position).  If there are no parameters for the current layer this must be set as an empty element, e.g. ``<PS/>``
+  - ``P``: the parameter definition XML element, including the parameter name as the ``n`` attribute and the value as its text content.
+  - ``n``: the parameter name attribute inside the ``P`` element.
+
+If a layer doesn't have parameters to be set, just provide an empty ``PS`` element : ``<PS/>``
+
+Note: XML view parameters can be used only in GET requests.
 
 Parameters and validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^

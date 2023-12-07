@@ -31,6 +31,12 @@ public class MetadataMapModel<T> implements IModel<T> {
 
     protected Serializable value;
 
+    /**
+     * @deprecated use @link{MetadataMapModel(IModel<MetadataMap>, String, Class<?>)} instead. This
+     *     constructor is not safe with (de)serialization and can cause bugs with for example the
+     *     hazelcast module.
+     */
+    @Deprecated
     public MetadataMapModel(MetadataMap map, String expression, Class<?> target) {
         this(new MetadataMapWrappingModel(map), expression, target);
     }
@@ -41,6 +47,7 @@ public class MetadataMapModel<T> implements IModel<T> {
         this.target = target;
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public T getObject() {
         if (value == null) {
@@ -49,11 +56,13 @@ public class MetadataMapModel<T> implements IModel<T> {
         return (T) value;
     }
 
+    @Override
     public void setObject(T object) {
         value = (Serializable) object;
         model.getObject().put(expression, (Serializable) object);
     }
 
+    @Override
     public void detach() {
         model.detach();
     }
@@ -70,12 +79,15 @@ public class MetadataMapModel<T> implements IModel<T> {
             map = m;
         }
 
+        @Override
         public MetadataMap getObject() {
             return map;
         }
 
+        @Override
         public void setObject(MetadataMap arg0) {}
 
+        @Override
         public void detach() {}
     }
 }

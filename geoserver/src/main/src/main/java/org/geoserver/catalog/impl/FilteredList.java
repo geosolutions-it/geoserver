@@ -40,11 +40,13 @@ public class FilteredList<T> extends AbstractList<T> {
         filtered.add(index, element);
     }
 
+    @Override
     public T set(int index, T element) {
         delegate.set(index, unwrap(element));
         return filtered.set(index, element);
     }
 
+    @Override
     public T remove(int index) {
         delegate.remove(index);
         return filtered.remove(index);
@@ -56,12 +58,7 @@ public class FilteredList<T> extends AbstractList<T> {
         return filtered.remove(o);
     }
 
-    /**
-     * Allows to unwrap an element before setting it into the delegate list
-     *
-     * @param element
-     * @return
-     */
+    /** Allows to unwrap an element before setting it into the delegate list */
     protected T unwrap(T element) {
         return element;
     }

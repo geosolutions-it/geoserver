@@ -96,13 +96,9 @@ public class KmlCentroidBuilder {
         return g.getCentroid().getCoordinate();
     }
 
-    /**
-     * Selects a representative geometry from the collection (the one covering the biggest area)
-     *
-     * @param g
-     */
+    /** Selects a representative geometry from the collection (the one covering the biggest area) */
     private Geometry selectRepresentativeGeometry(GeometryCollection g) {
-        GeometryCollection gc = (GeometryCollection) g;
+        GeometryCollection gc = g;
 
         if (gc.isEmpty()) {
             return null;

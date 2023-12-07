@@ -6,6 +6,7 @@
 package org.geoserver.catalog.impl;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,7 +22,10 @@ import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.WMSLayerInfo;
+import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.logging.Logging;
+import org.opengis.util.InternationalString;
 
 public class LayerInfoImpl implements LayerInfo {
 
@@ -37,15 +41,13 @@ public class LayerInfoImpl implements LayerInfo {
     // TODO: revert to normal property when the resource/publishing split is done
     protected transient String name;
 
-    private String abstractTxt;
-
     protected String path;
 
     protected PublishedType type;
 
     protected StyleInfo defaultStyle;
 
-    protected Set<StyleInfo> styles = new HashSet<StyleInfo>();
+    protected Set<StyleInfo> styles = new HashSet<>();
 
     protected ResourceInfo resource;
 
@@ -77,7 +79,7 @@ public class LayerInfoImpl implements LayerInfo {
      *
      * @since 2.1.3
      */
-    protected List<AuthorityURLInfo> authorityURLs = new ArrayList<AuthorityURLInfo>(1);
+    protected List<AuthorityURLInfo> authorityURLs = new ArrayList<>(1);
 
     /**
      * This property is transient in 2.1.x series and stored under the metadata map with key
@@ -85,9 +87,17 @@ public class LayerInfoImpl implements LayerInfo {
      *
      * @since 2.1.3
      */
-    protected List<LayerIdentifierInfo> identifiers = new ArrayList<LayerIdentifierInfo>(1);
+    protected List<LayerIdentifierInfo> identifiers = new ArrayList<>(1);
 
     protected WMSInterpolation defaultWMSInterpolationMethod;
+
+    protected Date dateCreated;
+
+    protected Date dateModified;
+
+    protected GrowableInternationalString internationalTitle;
+
+    protected InternationalString internationalAbstract;
 
     @Override
     public String getId() {
@@ -149,6 +159,17 @@ public class LayerInfoImpl implements LayerInfo {
 
     @Override
     public StyleInfo getDefaultStyle() {
+        if (getResource() instanceof WMSLayerInfo) {
+            StyleInfo remoteDefaultStyleInfo = ((WMSLayerInfo) getResource()).getDefaultStyle();
+            // will be null if remote capability document
+            // does not have any Style tags
+            if (remoteDefaultStyleInfo != null) return remoteDefaultStyleInfo;
+            else if (LOGGER.isLoggable(Level.FINE))
+                LOGGER.fine(
+                        "No Default Style found on cascaded WMS Resource"
+                                + getResource().getName());
+        }
+
         return defaultStyle;
     }
 
@@ -157,7 +178,19 @@ public class LayerInfoImpl implements LayerInfo {
         this.defaultStyle = defaultStyle;
     }
 
+    @Override
     public Set<StyleInfo> getStyles() {
+        if (getResource() instanceof WMSLayerInfo) {
+            Set<StyleInfo> remoteStyles = ((WMSLayerInfo) getResource()).getStyles();
+            // will be null if remote capability document
+            // does not have any Style tags
+            if (remoteStyles != null) return remoteStyles;
+            else if (LOGGER.isLoggable(Level.FINE))
+                LOGGER.fine(
+                        "No Default Styles found on cascaded WMS Resource"
+                                + getResource().getName());
+        }
+
         return styles;
     }
 
@@ -233,6 +266,7 @@ public class LayerInfoImpl implements LayerInfo {
 
     @Override
     public MetadataMap getMetadata() {
+        checkMetadataNotNull();
         return metadata;
     }
 
@@ -399,12 +433,12 @@ public class LayerInfoImpl implements LayerInfo {
 
     @Override
     public String getAbstract() {
-        return abstractTxt;
+        return this.resource.getAbstract();
     }
 
     @Override
     public void setAbstract(String abstractTxt) {
-        this.abstractTxt = abstractTxt;
+        this.resource.setAbstract(abstractTxt);
     }
 
     @Override
@@ -415,5 +449,49 @@ public class LayerInfoImpl implements LayerInfo {
     @Override
     public void setDefaultWMSInterpolationMethod(WMSInterpolation interpolationMethod) {
         this.defaultWMSInterpolationMethod = interpolationMethod;
+    }
+
+    @Override
+    public Date getDateModified() {
+        return this.dateModified;
+    }
+
+    @Override
+    public Date getDateCreated() {
+        return this.dateCreated;
+    }
+
+    @Override
+    public void setDateCreated(Date dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    @Override
+    public void setDateModified(Date dateModified) {
+        this.dateModified = dateModified;
+    }
+
+    private void checkMetadataNotNull() {
+        if (metadata == null) metadata = new MetadataMap();
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalTitle() {
+        return (GrowableInternationalString) this.resource.getInternationalTitle();
+    }
+
+    @Override
+    public void setInternationalTitle(InternationalString internationalTitle) {
+        this.resource.setInternationalTitle(internationalTitle);
+    }
+
+    @Override
+    public InternationalString getInternationalAbstract() {
+        return this.resource.getInternationalAbstract();
+    }
+
+    @Override
+    public void setInternationalAbstract(InternationalString internationalAbstract) {
+        this.resource.setInternationalAbstract(internationalAbstract);
     }
 }

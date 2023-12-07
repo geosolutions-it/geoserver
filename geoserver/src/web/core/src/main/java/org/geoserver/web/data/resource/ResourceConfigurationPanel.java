@@ -37,10 +37,13 @@ public class ResourceConfigurationPanel extends Panel {
     /**
      * Called when the resource gets updated in the main page. The ajax request target might be null
      * in case there is none.
-     *
-     * @param target
      */
     public void resourceUpdated(AjaxRequestTarget target) {
         // nothing to do;
+    }
+
+    /** Allows panels to perform update actions on the model on resource save. */
+    public void onSave() {
+        // does nothing by default
     }
 }

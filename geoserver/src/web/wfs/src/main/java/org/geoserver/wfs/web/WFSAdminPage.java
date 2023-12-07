@@ -5,8 +5,11 @@
  */
 package org.geoserver.wfs.web;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -29,6 +32,8 @@ import org.apache.wicket.model.LoadableDetachableModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.util.CollectionModel;
+import org.apache.wicket.model.util.ListModel;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.validation.validator.RangeValidator;
 import org.geoserver.platform.GeoServerExtensions;
@@ -36,12 +41,14 @@ import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
+import org.geoserver.web.data.resource.LocalesDropdown;
 import org.geoserver.web.services.BaseServiceAdminPage;
 import org.geoserver.web.util.MapModel;
 import org.geoserver.web.wicket.LiveCollectionModel;
 import org.geoserver.web.wicket.SRSListTextArea;
 import org.geoserver.wfs.GMLInfo;
 import org.geoserver.wfs.GMLInfo.SrsNameStyle;
+import org.geoserver.wfs.WFSGetFeatureOutputFormat;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wfs.response.ShapeZipOutputFormat;
 
@@ -60,27 +67,62 @@ public class WFSAdminPage extends BaseServiceAdminPage<WFSInfo> {
         super(service);
     }
 
+    @Override
     protected Class<WFSInfo> getServiceClass() {
         return WFSInfo.class;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    OutputTypesFormComponent getFeatureOutputTypesComponent;
+    TreeSet<String> getFeatureAvailable;
+
+    @Override
+    @SuppressWarnings("unchecked")
     protected void build(final IModel info, Form form) {
         // max features
         form.add(new TextField<Integer>("maxFeatures").add(RangeValidator.minimum(0)));
         form.add(new TextField<Integer>("maxNumberOfFeaturesForPreview"));
+        TextField<String> dateFormatField = new TextField<>("csvDateFormat");
+        dateFormatField.setModel(new PropertyModel<>(info, "csvDateFormat"));
+        form.add(dateFormatField);
         form.add(new CheckBox("featureBounding"));
         form.add(new CheckBox("hitsIgnoreMaxFeatures"));
+        form.add(new CheckBox("simpleConversionEnabled"));
 
         // service level
         RadioGroup sl = new RadioGroup("serviceLevel");
         form.add(sl);
         sl.add(new Radio("basic", new Model(WFSInfo.ServiceLevel.BASIC)));
         sl.add(new Radio("transactional", new Model(WFSInfo.ServiceLevel.TRANSACTIONAL)));
-        sl.add(new Radio("complete", new Model(WFSInfo.ServiceLevel.COMPLETE)));
+        sl.add(
+                new Radio(
+                        "complete",
+                        new Model(WFSInfo.ServiceLevel.COMPLETE))); // mime types for GetMap
+
+        getFeatureAvailable = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (WFSGetFeatureOutputFormat format :
+                GeoServerExtensions.extensions(WFSGetFeatureOutputFormat.class)) {
+            getFeatureAvailable.addAll(format.getOutputFormats());
+        }
+
+        List<String> getFeatureSelected = new ArrayList<>();
+        getFeatureSelected.addAll(
+                new PropertyModel<Set<String>>(info, "getFeatureOutputTypes").getObject());
+        List<String> getFeatureChoices = new ArrayList<>();
+        getFeatureChoices.addAll(getFeatureAvailable);
+
+        form.add(
+                getFeatureOutputTypesComponent =
+                        new OutputTypesFormComponent(
+                                "getFeatureOutputTypes",
+                                new ListModel<>(getFeatureSelected),
+                                new CollectionModel<>(getFeatureChoices),
+                                new PropertyModel<Boolean>(
+                                                info, "getFeatureOutputTypeCheckingEnabled")
+                                        .getObject()));
 
         IModel gml2Model =
                 new LoadableDetachableModel() {
+                    @Override
                     public Object load() {
                         return ((WFSInfo) info.getObject()).getGML().get(WFSInfo.Version.V_10);
                     }
@@ -88,6 +130,7 @@ public class WFSAdminPage extends BaseServiceAdminPage<WFSInfo> {
 
         IModel gml3Model =
                 new LoadableDetachableModel() {
+                    @Override
                     public Object load() {
                         return ((WFSInfo) info.getObject()).getGML().get(WFSInfo.Version.V_11);
                     }
@@ -125,7 +168,7 @@ public class WFSAdminPage extends BaseServiceAdminPage<WFSInfo> {
                 new MapModel(metadataModel, ShapeZipOutputFormat.SHAPE_ZIP_DEFAULT_PRJ_IS_ESRI);
         CheckBox defaultPrjFormat = new CheckBox("shapeZipPrjFormat", prjFormatModel);
         form.add(defaultPrjFormat);
-
+        form.add(new CheckBox("includeWFSRequestDumpFile"));
         try {
             // This is a temporary meassure until we fully implement ESRI WKT support in GeoTools.
             // See discussion in GEOS-4503
@@ -164,23 +207,27 @@ public class WFSAdminPage extends BaseServiceAdminPage<WFSInfo> {
                                         "otherSRS.message", WFSAdminPage.this, null));
                     }
                 });
+
+        // allowGlobalQueries checkbox
+        form.add(new CheckBox("allowGlobalQueries"));
+        form.add(new LocalesDropdown("defaultLocale", new PropertyModel<>(info, "defaultLocale")));
     }
 
     static class GMLPanel extends Panel {
 
-        public GMLPanel(String id, IModel gmlModel, String... mimeTypes) {
-            super(id, new CompoundPropertyModel(gmlModel));
+        public GMLPanel(String id, IModel<GMLInfo> gmlModel, String... mimeTypes) {
+            super(id, new CompoundPropertyModel<>(gmlModel));
 
             // srsNameStyle
             List<GMLInfo.SrsNameStyle> choices = Arrays.asList(SrsNameStyle.values());
-            DropDownChoice srsNameStyle =
-                    new DropDownChoice("srsNameStyle", choices, new EnumChoiceRenderer());
+            DropDownChoice<GMLInfo.SrsNameStyle> srsNameStyle =
+                    new DropDownChoice<>("srsNameStyle", choices, new EnumChoiceRenderer<>());
             add(srsNameStyle);
 
             add(new CheckBox("overrideGMLAttributes"));
 
             // GML MIME type overriding section
-            GMLInfo gmlInfo = (GMLInfo) gmlModel.getObject();
+            GMLInfo gmlInfo = gmlModel.getObject();
             boolean mimesTypesProvided = mimeTypes.length != 0;
             boolean activated = gmlInfo.getMimeTypeToForce().isPresent();
             // add MIME type drop down choice
@@ -242,7 +289,29 @@ public class WFSAdminPage extends BaseServiceAdminPage<WFSInfo> {
         }
     }
 
+    @Override
     protected String getServiceName() {
         return "WFS";
+    }
+
+    @Override
+    protected boolean supportInternationalContent() {
+        return true;
+    }
+
+    @Override
+    protected void handleSubmit(WFSInfo info) {
+
+        info.setGetFeatureOutputTypeCheckingEnabled(
+                getFeatureOutputTypesComponent.isOutputTypeCheckingEnabled());
+        if (info.isGetFeatureOutputTypeCheckingEnabled()) {
+            info.getGetFeatureOutputTypes().clear();
+            info.getGetFeatureOutputTypes()
+                    .addAll(getFeatureOutputTypesComponent.getPalette().getModelCollection());
+        } else {
+            info.getGetFeatureOutputTypes().clear();
+        }
+
+        super.handleSubmit(info);
     }
 }

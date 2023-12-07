@@ -26,15 +26,15 @@
   <nativeBoundingBox>
     <minx>-77.0</minx>
     <maxx>77.0</maxx>
-    <miny>-77.0</miny>
-    <maxy>77.0</maxy>
+    <miny>-35.0</miny>
+    <maxy>125.0</maxy>
     <crs>EPSG:4326</crs>
   </nativeBoundingBox>
   <latLonBoundingBox>
     <minx>-77.0</minx>
     <maxx>77.0</maxx>
-    <miny>-77.0</miny>
-    <maxy>77.0</maxy>
+    <miny>-35.0</miny>
+    <maxy>125.0</maxy>
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
@@ -201,7 +201,7 @@
     </entry>
     <entry>
       <string>MaxAllowedTiles</string>
-      <int>-1</int>
+      <int>1</int>
     </entry>
     <entry>
       <string>ExcessGranuleRemoval</string>
@@ -241,7 +241,7 @@
     </entry>
     <entry>
       <string>SORTING</string>
-      <null/>
+      <string>fid D</string>
     </entry>
     <entry>
       <string>FootprintBehavior</string>

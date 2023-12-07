@@ -11,7 +11,6 @@ import com.jayway.jsonpath.PathNotFoundException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -31,6 +30,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.minidev.json.JSONArray;
+import org.geoserver.platform.GeoServerEnvironment;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.config.SecurityNamedServiceConfig;
 import org.geoserver.security.event.RoleLoadedListener;
 import org.geoserver.security.impl.AbstractGeoServerSecurityService;
@@ -47,7 +48,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
         implements GeoServerRoleService {
 
     static final SortedSet<String> emptyStringSet =
-            Collections.unmodifiableSortedSet(new TreeSet<String>());
+            Collections.unmodifiableSortedSet(new TreeSet<>());
 
     static final Map<String, String> emptyMap = Collections.emptyMap();
 
@@ -66,7 +67,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
      * @param timeout an int that specifies the connect timeout value in milliseconds
      * @throws {@link IllegalArgumentException} - if the timeout parameter is negative
      */
-    private static final int CONN_TIMEOUT = 30000;
+    static final int CONN_TIMEOUT = 30000;
 
     /**
      * Sets the read timeout to a specified timeout, in milliseconds. A non-zero value specifies the
@@ -82,7 +83,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
      * @param timeout an int that specifies the timeout value to be used in milliseconds
      * @throws {@link IllegalArgumentException} - if the timeout parameter is negative
      */
-    private static final int READ_TIMEOUT = 30000;
+    static final int READ_TIMEOUT = 30000;
 
     private RestTemplate restTemplate;
 
@@ -100,8 +101,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
 
     private String groupAdminGroup;
 
-    protected Set<RoleLoadedListener> listeners =
-            Collections.synchronizedSet(new HashSet<RoleLoadedListener>());
+    protected Set<RoleLoadedListener> listeners = Collections.synchronizedSet(new HashSet<>());
 
     /** Default Constructor */
     public GeoServerRestRoleService(SecurityNamedServiceConfig config) throws IOException {
@@ -129,6 +129,18 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
                         .build(); // look Ma, no CacheLoader
     }
 
+    /* Resolve GeoServer environment placeholders */
+    private String resolveEnvironmentValue(String value) {
+        final GeoServerEnvironment gsEnvironment =
+                GeoServerExtensions.bean(GeoServerEnvironment.class);
+
+        if (gsEnvironment != null && GeoServerEnvironment.allowEnvParametrization()) {
+            return (String) gsEnvironment.resolveValue(value);
+        }
+
+        return value;
+    }
+
     /** Read only store. */
     @Override
     public boolean canCreateStore() {
@@ -145,6 +157,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
      * @see
      *     org.geoserver.security.GeoServerRoleService#registerRoleLoadedListener(RoleLoadedListener)
      */
+    @Override
     public void registerRoleLoadedListener(RoleLoadedListener listener) {
         listeners.add(listener);
     }
@@ -153,6 +166,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
      * @see
      *     org.geoserver.security.GeoServerRoleService#unregisterRoleLoadedListener(RoleLoadedListener)
      */
+    @Override
     public void unregisterRoleLoadedListener(RoleLoadedListener listener) {
         listeners.remove(listener);
     }
@@ -165,7 +179,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
 
     @Override
     public SortedSet<String> getUserNamesForRole(GeoServerRole role) throws IOException {
-        final SortedSet<String> users = new TreeSet<String>();
+        final SortedSet<String> users = new TreeSet<>();
 
         return Collections.unmodifiableSortedSet(users);
     }
@@ -173,71 +187,71 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
     @SuppressWarnings("unchecked")
     @Override
     public SortedSet<GeoServerRole> getRolesForUser(String username) throws IOException {
-        final SortedSet<GeoServerRole> roles = new TreeSet<GeoServerRole>();
+        final SortedSet<GeoServerRole> roles = new TreeSet<>();
 
         try {
+            RestEndpointConnectionCallback callback =
+                    new RestEndpointConnectionCallback() {
+
+                        @Override
+                        public Object executeWithContext(String json) throws Exception {
+                            try {
+                                List<Object> rolesString =
+                                        JsonPath.read(
+                                                json,
+                                                restRoleServiceConfig
+                                                        .getUsersJSONPath()
+                                                        .replace("${username}", username));
+
+                                for (Object roleObj : rolesString) {
+                                    if (roleObj instanceof String) {
+                                        populateRoles((String) roleObj, roles);
+                                    } else if (roleObj instanceof JSONArray) {
+                                        for (Object role : ((JSONArray) roleObj)) {
+                                            populateRoles((String) role, roles);
+                                        }
+                                    }
+                                }
+                            } catch (PathNotFoundException ex) {
+                                Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
+                                roles.clear();
+                                roles.add(GeoServerRole.AUTHENTICATED_ROLE);
+                            }
+
+                            SortedSet<GeoServerRole> finalRoles =
+                                    Collections.unmodifiableSortedSet(fixGeoServerRoles(roles));
+
+                            if (LOGGER.isLoggable(Level.FINE)) {
+                                LOGGER.fine(
+                                        "Setting ROLES for User ["
+                                                + username
+                                                + "] to "
+                                                + finalRoles);
+                            }
+
+                            return finalRoles;
+                        }
+
+                        private void populateRoles(
+                                String role, final SortedSet<GeoServerRole> roles)
+                                throws IOException {
+                            if (role.startsWith(rolePrefix)) {
+                                // remove standard role prefix
+                                role = role.substring(rolePrefix.length());
+                            }
+
+                            roles.add(createRoleObject(role));
+                        }
+                    };
             return (SortedSet<GeoServerRole>)
                     connectToRESTEndpoint(
-                            restRoleServiceConfig.getBaseUrl(),
+                            resolveEnvironmentValue(restRoleServiceConfig.getBaseUrl()),
                             restRoleServiceConfig.getUsersRESTEndpoint() + "/" + username,
                             restRoleServiceConfig
                                     .getUsersJSONPath()
                                     .replace("${username}", username),
-                            restRoleServiceConfig.getAuthApiKey(),
-                            new RestEndpointConnectionCallback() {
-
-                                @Override
-                                public Object executeWithContext(String json) throws Exception {
-                                    try {
-                                        List<Object> rolesString =
-                                                JsonPath.read(
-                                                        json,
-                                                        restRoleServiceConfig
-                                                                .getUsersJSONPath()
-                                                                .replace("${username}", username));
-
-                                        for (Object roleObj : rolesString) {
-                                            if (roleObj instanceof String) {
-                                                populateRoles((String) roleObj, roles);
-                                            } else if (roleObj instanceof JSONArray) {
-                                                for (Object role : ((JSONArray) roleObj)) {
-                                                    populateRoles((String) role, roles);
-                                                }
-                                            }
-                                        }
-                                    } catch (PathNotFoundException ex) {
-                                        Logger.getLogger(getClass().getName())
-                                                .log(Level.FINEST, null, ex);
-                                        roles.clear();
-                                        roles.add(GeoServerRole.AUTHENTICATED_ROLE);
-                                    }
-
-                                    SortedSet<GeoServerRole> finalRoles =
-                                            Collections.unmodifiableSortedSet(
-                                                    fixGeoServerRoles(roles));
-
-                                    if (LOGGER.isLoggable(Level.FINE)) {
-                                        LOGGER.fine(
-                                                "Setting ROLES for User ["
-                                                        + username
-                                                        + "] to "
-                                                        + finalRoles);
-                                    }
-
-                                    return finalRoles;
-                                }
-
-                                private void populateRoles(
-                                        String role, final SortedSet<GeoServerRole> roles)
-                                        throws IOException {
-                                    if (role.startsWith(rolePrefix)) {
-                                        // remove standard role prefix
-                                        role = role.substring(rolePrefix.length());
-                                    }
-
-                                    roles.add(createRoleObject(role));
-                                }
-                            });
+                            resolveEnvironmentValue(restRoleServiceConfig.getAuthApiKey()),
+                            callback);
         } catch (Exception ex) {
             Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
         }
@@ -263,7 +277,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
 
     @Override
     public SortedSet<GeoServerRole> getRolesForGroup(String groupname) throws IOException {
-        SortedSet<GeoServerRole> set = new TreeSet<GeoServerRole>();
+        SortedSet<GeoServerRole> set = new TreeSet<>();
         GeoServerRole role = getRoleByName(groupname);
         if (role != null) {
             set.add(role);
@@ -275,41 +289,41 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
     @SuppressWarnings("unchecked")
     @Override
     public SortedSet<GeoServerRole> getRoles() throws IOException {
-        final SortedSet<GeoServerRole> roles = new TreeSet<GeoServerRole>();
+        final SortedSet<GeoServerRole> roles = new TreeSet<>();
 
         try {
-            return (SortedSet<GeoServerRole>)
-                    connectToRESTEndpoint(
-                            restRoleServiceConfig.getBaseUrl(),
-                            restRoleServiceConfig.getRolesRESTEndpoint(),
-                            restRoleServiceConfig.getRolesJSONPath(),
-                            restRoleServiceConfig.getAuthApiKey(),
-                            new RestEndpointConnectionCallback() {
+            RestEndpointConnectionCallback callback =
+                    new RestEndpointConnectionCallback() {
 
-                                @Override
-                                public Object executeWithContext(String json) throws Exception {
-                                    try {
-                                        List<String> rolesString =
-                                                JsonPath.read(
-                                                        json,
-                                                        restRoleServiceConfig.getRolesJSONPath());
+                        @Override
+                        public Object executeWithContext(String json) throws Exception {
+                            try {
+                                List<String> rolesString =
+                                        JsonPath.read(
+                                                json, restRoleServiceConfig.getRolesJSONPath());
 
-                                        for (String role : rolesString) {
-                                            if (role.startsWith(rolePrefix)) {
-                                                // remove standard role prefix
-                                                role = role.substring(rolePrefix.length());
-                                            }
-
-                                            roles.add(createRoleObject(role));
-                                        }
-                                    } catch (PathNotFoundException ex) {
-                                        Logger.getLogger(getClass().getName())
-                                                .log(Level.FINEST, null, ex);
+                                for (String role : rolesString) {
+                                    if (role.startsWith(rolePrefix)) {
+                                        // remove standard role prefix
+                                        role = role.substring(rolePrefix.length());
                                     }
 
-                                    return Collections.unmodifiableSortedSet(roles);
+                                    roles.add(createRoleObject(role));
                                 }
-                            });
+                            } catch (PathNotFoundException ex) {
+                                Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
+                            }
+
+                            return Collections.unmodifiableSortedSet(roles);
+                        }
+                    };
+            return (SortedSet<GeoServerRole>)
+                    connectToRESTEndpoint(
+                            resolveEnvironmentValue(restRoleServiceConfig.getBaseUrl()),
+                            restRoleServiceConfig.getRolesRESTEndpoint(),
+                            restRoleServiceConfig.getRolesJSONPath(),
+                            resolveEnvironmentValue(restRoleServiceConfig.getAuthApiKey()),
+                            callback);
         } catch (Exception ex) {
             Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
         }
@@ -341,41 +355,40 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
         final String roleName = role;
 
         try {
-            return (GeoServerRole)
-                    connectToRESTEndpoint(
-                            restRoleServiceConfig.getBaseUrl(),
-                            restRoleServiceConfig.getRolesRESTEndpoint(),
-                            restRoleServiceConfig.getRolesJSONPath(),
-                            restRoleServiceConfig.getAuthApiKey(),
-                            new RestEndpointConnectionCallback() {
+            RestEndpointConnectionCallback callback =
+                    new RestEndpointConnectionCallback() {
 
-                                @Override
-                                public Object executeWithContext(String json) throws Exception {
-                                    try {
-                                        List<String> rolesString =
-                                                JsonPath.read(
-                                                        json,
-                                                        restRoleServiceConfig.getRolesJSONPath());
+                        @Override
+                        public Object executeWithContext(String json) throws Exception {
+                            try {
+                                List<String> rolesString =
+                                        JsonPath.read(
+                                                json, restRoleServiceConfig.getRolesJSONPath());
 
-                                        for (String targetRole : rolesString) {
-                                            if (targetRole.startsWith(rolePrefix)) {
-                                                // remove standard role prefix
-                                                targetRole =
-                                                        targetRole.substring(rolePrefix.length());
-                                            }
-
-                                            if (roleName.equalsIgnoreCase(targetRole)) {
-                                                return createRoleObject(roleName);
-                                            }
-                                        }
-                                    } catch (PathNotFoundException ex) {
-                                        Logger.getLogger(getClass().getName())
-                                                .log(Level.FINEST, null, ex);
+                                for (String targetRole : rolesString) {
+                                    if (targetRole.startsWith(rolePrefix)) {
+                                        // remove standard role prefix
+                                        targetRole = targetRole.substring(rolePrefix.length());
                                     }
 
-                                    return null;
+                                    if (roleName.equalsIgnoreCase(targetRole)) {
+                                        return createRoleObject(roleName);
+                                    }
                                 }
-                            });
+                            } catch (PathNotFoundException ex) {
+                                Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
+                            }
+
+                            return null;
+                        }
+                    };
+            return (GeoServerRole)
+                    connectToRESTEndpoint(
+                            resolveEnvironmentValue(restRoleServiceConfig.getBaseUrl()),
+                            restRoleServiceConfig.getRolesRESTEndpoint(),
+                            restRoleServiceConfig.getRolesJSONPath(),
+                            resolveEnvironmentValue(restRoleServiceConfig.getAuthApiKey()),
+                            callback);
         } catch (Exception ex) {
             Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
         }
@@ -399,38 +412,38 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
     public GeoServerRole getAdminRole() {
         if (adminGroup == null) {
             try {
+                RestEndpointConnectionCallback callback =
+                        new RestEndpointConnectionCallback() {
+
+                            @Override
+                            public Object executeWithContext(String json) throws Exception {
+                                try {
+                                    String targetRole =
+                                            JsonPath.read(
+                                                    json,
+                                                    restRoleServiceConfig.getAdminRoleJSONPath());
+
+                                    if (targetRole.startsWith(rolePrefix)) {
+                                        // remove standard role prefix
+                                        targetRole = targetRole.substring(rolePrefix.length());
+                                    }
+
+                                    return createRoleObject(targetRole);
+                                } catch (PathNotFoundException ex) {
+                                    Logger.getLogger(getClass().getName())
+                                            .log(Level.FINEST, null, ex);
+                                }
+
+                                return null;
+                            }
+                        };
                 return (GeoServerRole)
                         connectToRESTEndpoint(
-                                restRoleServiceConfig.getBaseUrl(),
+                                resolveEnvironmentValue(restRoleServiceConfig.getBaseUrl()),
                                 restRoleServiceConfig.getAdminRoleRESTEndpoint(),
                                 restRoleServiceConfig.getAdminRoleJSONPath(),
-                                restRoleServiceConfig.getAuthApiKey(),
-                                new RestEndpointConnectionCallback() {
-
-                                    @Override
-                                    public Object executeWithContext(String json) throws Exception {
-                                        try {
-                                            String targetRole =
-                                                    JsonPath.read(
-                                                            json,
-                                                            restRoleServiceConfig
-                                                                    .getAdminRoleJSONPath());
-
-                                            if (targetRole.startsWith(rolePrefix)) {
-                                                // remove standard role prefix
-                                                targetRole =
-                                                        targetRole.substring(rolePrefix.length());
-                                            }
-
-                                            return createRoleObject(targetRole);
-                                        } catch (PathNotFoundException ex) {
-                                            Logger.getLogger(getClass().getName())
-                                                    .log(Level.FINEST, null, ex);
-                                        }
-
-                                        return null;
-                                    }
-                                });
+                                resolveEnvironmentValue(restRoleServiceConfig.getAuthApiKey()),
+                                callback);
             } catch (Exception ex) {
                 Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
             }
@@ -486,12 +499,7 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
         return factory;
     }
 
-    /**
-     * Execute REST CALL, and then call the given callback on HTTP JSON Response.
-     *
-     * @param callback
-     * @throws Exception
-     */
+    /** Execute REST CALL, and then call the given callback on HTTP JSON Response. */
     protected Object connectToRESTEndpoint(
             final String roleRESTBaseURL,
             final String roleRESTEndpoint,
@@ -506,80 +514,55 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
         try {
             // If the key wasn't in the "easy to compute" group, we need to
             // do things the hard way.
-            final String cachedResponse =
-                    cachedResponses.get(
-                            hash,
-                            new Callable<String>() {
+            Callable<String> authorization =
+                    new Callable<String>() {
 
-                                @Override
-                                public String call() throws Exception {
+                        @Override
+                        public String call() throws Exception {
 
-                                    LOGGER.fine(
-                                            "GeoServer REST Role Service CACHE MISS for '"
-                                                    + restEndPoint
-                                                    + "'");
+                            LOGGER.fine(
+                                    "GeoServer REST Role Service CACHE MISS for '"
+                                            + restEndPoint
+                                            + "'");
+                            try {
+                                final URI baseURI = new URI(roleRESTBaseURL);
 
-                                    ClientHttpRequest clientRequest = null;
-                                    ClientHttpResponse clientResponse = null;
-                                    try {
-                                        final URI baseURI = new URI(roleRESTBaseURL);
+                                URL url = baseURI.resolve(roleRESTEndpoint).toURL();
 
-                                        URL url = baseURI.resolve(roleRESTEndpoint).toURL();
+                                ClientHttpRequest req =
+                                        getRestTemplate()
+                                                .getRequestFactory()
+                                                .createRequest(url.toURI(), HttpMethod.GET);
 
-                                        clientRequest =
-                                                getRestTemplate()
-                                                        .getRequestFactory()
-                                                        .createRequest(url.toURI(), HttpMethod.GET);
+                                if (authApiKey != null) {
+                                    req.getHeaders().add("Authorization", "ApiKey " + authApiKey);
+                                }
+                                try (ClientHttpResponse res = req.execute()) {
+                                    int status = res.getRawStatusCode();
 
-                                        if (authApiKey != null) {
-                                            clientRequest
-                                                    .getHeaders()
-                                                    .add("Authorization", "ApiKey " + authApiKey);
-                                        }
-                                        clientResponse = clientRequest.execute();
-                                        int status = clientResponse.getRawStatusCode();
-
-                                        switch (status) {
-                                            case 200:
-                                            case 201:
-                                                BufferedReader br =
-                                                        new BufferedReader(
-                                                                new InputStreamReader(
-                                                                        clientResponse.getBody()));
+                                    switch (status) {
+                                        case 200:
+                                        case 201:
+                                            try (BufferedReader br =
+                                                    new BufferedReader(
+                                                            new InputStreamReader(res.getBody()))) {
                                                 StringBuilder sb = new StringBuilder();
                                                 String line;
                                                 while ((line = br.readLine()) != null) {
                                                     sb.append(line + "\n");
                                                 }
-                                                br.close();
-
-                                                String json = sb.toString();
-
-                                                return json;
-                                        }
-                                    } catch (MalformedURLException ex) {
-                                        Logger.getLogger(getClass().getName())
-                                                .log(Level.FINEST, null, ex);
-                                    } catch (IOException ex) {
-                                        Logger.getLogger(getClass().getName())
-                                                .log(Level.FINEST, null, ex);
-                                    } catch (URISyntaxException ex) {
-                                        Logger.getLogger(getClass().getName())
-                                                .log(Level.FINEST, null, ex);
-                                    } finally {
-                                        if (clientResponse != null) {
-                                            try {
-                                                clientResponse.close();
-                                            } catch (Exception ex) {
-                                                Logger.getLogger(getClass().getName())
-                                                        .log(Level.SEVERE, null, ex);
+                                                return sb.toString();
                                             }
-                                        }
                                     }
-
-                                    return null;
                                 }
-                            });
+                            } catch (URISyntaxException | IOException ex) {
+                                Logger.getLogger(getClass().getName()).log(Level.FINEST, null, ex);
+                            }
+
+                            return null;
+                        }
+                    };
+            final String cachedResponse = cachedResponses.get(hash, authorization);
 
             return callback.executeWithContext(cachedResponse);
         } catch (ExecutionException e) {
@@ -608,7 +591,6 @@ public class GeoServerRestRoleService extends AbstractGeoServerSecurityService
          * Perform specific operations accordingly to the caller needs.
          *
          * @param json the <code>JSON</code> string to perform an operation on.
-         * @throws Exception
          */
         Object executeWithContext(final String json) throws Exception;
     }

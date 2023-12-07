@@ -83,9 +83,6 @@ public class WCSDefaultValuesHelper {
     /**
      * Check the current request and update default values if needed. Return the updated {@link
      * GridCoverageRequest}
-     *
-     * @param subsettingRequest
-     * @throws IOException
      */
     public void setDefaults(GridCoverageRequest subsettingRequest) throws IOException {
         // Deal with default values
@@ -113,9 +110,6 @@ public class WCSDefaultValuesHelper {
      * Set default values by querying a {@link GranuleSource} from {@link
      * StructuredGridCoverage2DReader} in order to update unspecified dimensions values from
      * attributes values obtained from the query.
-     *
-     * @param subsettingRequest
-     * @throws IOException
      */
     private GridCoverageRequest setDefaultsFromStructuredReader(
             GridCoverageRequest subsettingRequest) throws IOException {
@@ -139,7 +133,7 @@ public class WCSDefaultValuesHelper {
                 structuredReader.getDimensionDescriptors(coverageName);
         DimensionDescriptor timeDimension = null;
         DimensionDescriptor elevationDimension = null;
-        final List<DimensionDescriptor> customDimensions = new ArrayList<DimensionDescriptor>();
+        final List<DimensionDescriptor> customDimensions = new ArrayList<>();
         int dimensions = 0;
 
         // Collect dimension Descriptor info
@@ -193,8 +187,7 @@ public class WCSDefaultValuesHelper {
 
             // Get granules from query
             SimpleFeatureCollection granulesCollection = source.getGranules(query);
-            SimpleFeatureIterator features = granulesCollection.features();
-            try {
+            try (SimpleFeatureIterator features = granulesCollection.features()) {
                 if (features.hasNext()) {
                     final SimpleFeature feature = features.next();
 
@@ -216,10 +209,6 @@ public class WCSDefaultValuesHelper {
                         subsettingRequest.setDimensionsSubset(dimensionsSubset);
                     }
                 }
-            } finally {
-                if (features != null) {
-                    features.close();
-                }
             }
         }
         return subsettingRequest;
@@ -227,13 +216,10 @@ public class WCSDefaultValuesHelper {
 
     /**
      * Set default for custom dimensions, taking values from the feature resulting from the query.
-     *
-     * @param customDimensions
-     * @param feature
      */
     private Map<String, List<Object>> setDefaultDimensionsSubset(
             List<DimensionDescriptor> customDimensions, SimpleFeature feature) {
-        Map<String, List<Object>> dimensionsSubset = new HashMap<String, List<Object>>();
+        Map<String, List<Object>> dimensionsSubset = new HashMap<>();
         for (DimensionDescriptor dimensionDescriptor : customDimensions) {
 
             // TODO: Add support for ranged additional dimensions
@@ -241,19 +227,14 @@ public class WCSDefaultValuesHelper {
             Object value = feature.getAttribute(start);
 
             // Replace specified values since they have been anyway set in the filters
-            List<Object> dimensionValues = new ArrayList<Object>();
+            List<Object> dimensionValues = new ArrayList<>();
             dimensionValues.add(value);
             dimensionsSubset.put(dimensionDescriptor.getName().toUpperCase(), dimensionValues);
         }
         return dimensionsSubset;
     }
 
-    /**
-     * Set default elevation value from the provided feature
-     *
-     * @param elevationDimension
-     * @param f
-     */
+    /** Set default elevation value from the provided feature */
     private NumberRange<?> setDefaultElevationSubset(
             DimensionDescriptor elevationDimension, SimpleFeature f) {
         final String start = elevationDimension.getStartAttribute();
@@ -263,15 +244,12 @@ public class WCSDefaultValuesHelper {
         if (end != null) {
             endTime = (Number) f.getAttribute(end);
         }
-        return new NumberRange(startTime.getClass(), startTime, endTime);
+        @SuppressWarnings("unchecked")
+        NumberRange<?> result = new NumberRange(startTime.getClass(), startTime, endTime);
+        return result;
     }
 
-    /**
-     * Set default time value from the provided feature
-     *
-     * @param timeDimension
-     * @param f
-     */
+    /** Set default time value from the provided feature */
     private DateRange setDefaultTemporalSubset(DimensionDescriptor timeDimension, SimpleFeature f) {
         final String start = timeDimension.getStartAttribute();
         final String end = timeDimension.getEndAttribute();
@@ -288,14 +266,13 @@ public class WCSDefaultValuesHelper {
      * elevation.
      *
      * @param query the originating query
-     * @param timeDimension
      * @param elevationDimension TODO: Consider also sorting on custom dimensions
      */
     private void sortBy(
             Query query,
             DimensionDescriptor timeDimension,
             DimensionDescriptor elevationDimension) {
-        final List<SortBy> clauses = new ArrayList<SortBy>();
+        final List<SortBy> clauses = new ArrayList<>();
         // TODO: Check sortBy clause is supported
         if (timeDimension != null) {
             clauses.add(
@@ -318,17 +295,6 @@ public class WCSDefaultValuesHelper {
     /**
      * Setup filter query on top of specified subsets values to return only granules satisfying the
      * specified conditions.
-     *
-     * @param originalFilter
-     * @param temporalSubset
-     * @param elevationSubset
-     * @param envelopeSubset
-     * @param dimensionSubset
-     * @param reader
-     * @param timeDimension
-     * @param elevationDimension
-     * @param additionalDimensions
-     * @throws IOException
      */
     private Filter setFilters(
             Filter originalFilter,
@@ -341,7 +307,7 @@ public class WCSDefaultValuesHelper {
             DimensionDescriptor elevationDimension,
             List<DimensionDescriptor> additionalDimensions)
             throws IOException {
-        List<Filter> filters = new ArrayList<Filter>();
+        List<Filter> filters = new ArrayList<>();
 
         // Setting temporal filter
         Filter timeFilter =
@@ -390,13 +356,7 @@ public class WCSDefaultValuesHelper {
         return finalFilter;
     }
 
-    /**
-     * Set envelope filter to restrict the results to the specified envelope
-     *
-     * @param envelopeSubset
-     * @param reader
-     * @throws IOException
-     */
+    /** Set envelope filter to restrict the results to the specified envelope */
     private Filter setEnvelopeFilter(Envelope envelopeSubset, StructuredGridCoverage2DReader reader)
             throws IOException {
         Filter envelopeFilter = null;
@@ -424,12 +384,7 @@ public class WCSDefaultValuesHelper {
         return envelopeFilter;
     }
 
-    /**
-     * Set filter to match specified additional dimensions values
-     *
-     * @param dimensionSubset
-     * @param additionalDimensions
-     */
+    /** Set filter to match specified additional dimensions values */
     private Filter setAdditionalDimensionsFilter(
             Map<String, List<Object>> dimensionSubset,
             List<DimensionDescriptor> additionalDimensions) {
@@ -440,9 +395,9 @@ public class WCSDefaultValuesHelper {
         if (additionalDimensions != null
                 && dimensionSubset != null
                 && additionalDimensions.size() != dimensionSubset.size()
-                && dimensionSubset.size() > 0) {
+                && !dimensionSubset.isEmpty()) {
 
-            List<Filter> additionalDimensionFilterList = new ArrayList<Filter>();
+            List<Filter> additionalDimensionFilterList = new ArrayList<>();
             Set<String> dimensionKeys = dimensionSubset.keySet();
             for (String dimension : dimensionKeys) {
                 // Look for the specified dimension
@@ -460,13 +415,7 @@ public class WCSDefaultValuesHelper {
         return additionalDimensionsFilter;
     }
 
-    /**
-     * Create a filter matching the specified additional dimension value
-     *
-     * @param dimension
-     * @param dimensionSubset
-     * @param customDimensions
-     */
+    /** Create a filter matching the specified additional dimension value */
     private Filter createCustomDimensionFilter(
             String dimension,
             Map<String, List<Object>> dimensionSubset,
@@ -484,13 +433,7 @@ public class WCSDefaultValuesHelper {
         return null;
     }
 
-    /**
-     * Set a {@link Filter} based on the specified time subset, or null if missing.
-     *
-     * @param timeRange
-     * @param start
-     * @param end
-     */
+    /** Set a {@link Filter} based on the specified time subset, or null if missing. */
     private Filter setTimeFilter(DateRange timeRange, String start, String end) {
         if (timeRange != null) {
             if (end == null) {
@@ -503,13 +446,7 @@ public class WCSDefaultValuesHelper {
         return null;
     }
 
-    /**
-     * Set a {@link Filter} based on the specified elevation subset, or null if missing.
-     *
-     * @param elevationSubset
-     * @param start
-     * @param end
-     */
+    /** Set a {@link Filter} based on the specified elevation subset, or null if missing. */
     private Filter setElevationFilter(NumberRange elevationSubset, String start, String end) {
         if (elevationSubset != null) {
             if (end == null) {
@@ -524,25 +461,12 @@ public class WCSDefaultValuesHelper {
         return null;
     }
 
-    /**
-     * A simple filter making sure a property is contained between minValue and maxValue
-     *
-     * @param start
-     * @param minValue
-     * @param maxValue
-     */
+    /** A simple filter making sure a property is contained between minValue and maxValue */
     private Filter betweenFilter(String start, Object minValue, Object maxValue) {
         return FF.between(FF.property(start), FF.literal(minValue), FF.literal(maxValue));
     }
 
-    /**
-     * A simple filter for range containment
-     *
-     * @param start
-     * @param end
-     * @param minValue
-     * @param maxValue
-     */
+    /** A simple filter for range containment */
     private Filter rangeFilter(String start, String end, Object minValue, Object maxValue) {
         Filter f1 = FF.lessOrEqual(FF.property(start), FF.literal(maxValue));
         Filter f2 = FF.greaterOrEqual(FF.property(end), FF.literal(minValue));
@@ -553,12 +477,7 @@ public class WCSDefaultValuesHelper {
         //        return FF.and(Arrays.asList(f1, f2));
     }
 
-    /**
-     * Set default values for the standard reader case (no DimensionsDescriptor available)
-     *
-     * @param subsettingRequest
-     * @throws IOException
-     */
+    /** Set default values for the standard reader case (no DimensionsDescriptor available) */
     private GridCoverageRequest setStandardReaderDefaults(GridCoverageRequest subsettingRequest)
             throws IOException {
         DateRange temporalSubset = subsettingRequest.getTemporalSubset();
@@ -582,8 +501,10 @@ public class WCSDefaultValuesHelper {
             // use "min" as the default
             Number minElevation = accessor.getMinElevation();
             if (minElevation != null) {
-                elevationSubset =
+                @SuppressWarnings("unchecked")
+                NumberRange<?> cast =
                         new NumberRange(minElevation.getClass(), minElevation, minElevation);
+                elevationSubset = cast;
             }
         }
 
@@ -595,7 +516,7 @@ public class WCSDefaultValuesHelper {
             availableCustomDimensions = customDomains.size();
             specifiedCustomDimensions = dimensionSubset != null ? dimensionSubset.size() : 0;
             if (dimensionSubset == null) {
-                dimensionSubset = new HashMap<String, List<Object>>();
+                dimensionSubset = new HashMap<>();
             }
         }
         if (availableCustomDimensions != specifiedCustomDimensions) {
@@ -608,13 +529,7 @@ public class WCSDefaultValuesHelper {
         return subsettingRequest;
     }
 
-    /**
-     * Set default custom dimensions
-     *
-     * @param customDomains
-     * @param dimensionSubset
-     * @throws IOException
-     */
+    /** Set default custom dimensions */
     private void setDefaultCustomDimensions(
             List<String> customDomains, Map<String, List<Object>> dimensionSubset)
             throws IOException {
@@ -622,7 +537,7 @@ public class WCSDefaultValuesHelper {
         // Scan available custom dimensions
         for (String customDomain : customDomains) {
             if (!dimensionSubset.containsKey(customDomain)) {
-                List<Object> dimensionValue = new ArrayList<Object>();
+                List<Object> dimensionValue = new ArrayList<>();
 
                 // set default of the proper datatype (in case of known Domain datatype)
                 String defaultValue = accessor.getCustomDomainDefaultValue(customDomain);

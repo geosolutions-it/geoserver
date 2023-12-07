@@ -4,7 +4,10 @@
  */
 package org.geoserver.security.impl;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerGroupVisibilityPolicy;
@@ -17,6 +20,7 @@ import org.junit.Test;
 
 public class AdvertisedCatalogTest extends AbstractAuthorizationTest {
 
+    @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -53,6 +57,18 @@ public class AdvertisedCatalogTest extends AbstractAuthorizationTest {
         LayerGroupInfo layerGroup = sc.getLayerGroupByName("topp", "layerGroupWithSomeLockedLayer");
         assertNotNull(layerGroup);
         assertEquals(0, layerGroup.getLayers().size());
+    }
+
+    @Test
+    public void testNotAdvertisedLayerGroup() throws Exception {
+        AdvertisedCatalog sc = new AdvertisedCatalog(catalog);
+        assertFalse(namedTreeC.isAdvertised());
+        assertNull(sc.getLayerGroupByName(namedTreeC.getName()));
+        /*assertTrue(lgA.getLayers().size()>0);
+        LayerGroupInfo lgB = sc.getLayerGroupByName("namedTreeB");
+        assertFalse(lgB.isAdvertised());
+        assertFalse(lgB.getLayers().size()>0);*/
+
     }
 
     @Test

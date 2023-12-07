@@ -5,6 +5,9 @@
 package org.geoserver.taskmanager.external;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -14,6 +17,12 @@ import java.util.Set;
  */
 public interface Dialect {
 
+    interface Column {
+        String getName() throws SQLException;
+
+        String getTypeEtc() throws SQLException;
+    }
+
     /**
      * Put quotes arround the schema name and the table name.
      *
@@ -21,20 +30,12 @@ public interface Dialect {
      */
     String quote(String tableName);
 
-    /**
-     * @param currentViewName
-     * @param newViewName
-     * @return statement to rename view
-     */
+    /** @return statement to rename view */
     String sqlRenameView(String currentViewName, String newViewName);
 
     /**
      * Returns the create index statement with the index name over the columns.
      *
-     * @param tableName
-     * @param columnNames
-     * @param isSpatialIndex
-     * @param isUniqueIndex
      * @return statement to create index
      */
     String createIndex(
@@ -43,27 +44,15 @@ public interface Dialect {
             boolean isSpatialIndex,
             boolean isUniqueIndex);
 
-    /**
-     * @param sourceConn
-     * @param tableName
-     * @param string
-     * @return set of spatial columns
-     */
-    Set<String> getSpatialColumns(Connection sourceConn, String tableName, String defaultSchema);
+    /** @return set of spatial columns */
+    Set<String> getSpatialColumns(Connection connection, String tableName, String defaultSchema);
 
-    /**
-     * translate nullable code
-     *
-     * @param nullable
-     * @return
-     */
+    /** translate nullable code */
     int isNullable(int nullable);
 
     /**
      * Create the schema if it does not exist.
      *
-     * @param connection
-     * @param schema
      * @return statement to create schema if it doesn't exist
      */
     String createSchema(Connection connection, String schema);
@@ -74,4 +63,12 @@ public interface Dialect {
      * @return true or false
      */
     boolean autoUpdateView();
+
+    /**
+     * Return list of column descriptions (name, type, etc)
+     *
+     * @throws SQLException
+     */
+    List<Column> getColumns(Connection connection, String tableName, ResultSet rs)
+            throws SQLException;
 }

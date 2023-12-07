@@ -125,8 +125,6 @@ public class GetLegendGraphicRequest extends WMSRequest {
         /**
          * LegendRequest for a feature type, additional details (title and legend graphic) provided
          * by MapLayerInfo.
-         *
-         * @param featureType
          */
         public LegendRequest(FeatureType featureType) {
             if (featureType == null) {
@@ -140,7 +138,6 @@ public class GetLegendGraphicRequest extends WMSRequest {
          * LegendRequest for a feature type, additional details (title and legend graphic) provided
          * by MapLayerInfo.
          *
-         * @param featureType
          * @param layerName layerName distinct to featureType name
          */
         public LegendRequest(FeatureType featureType, Name layerName) {
@@ -232,8 +229,6 @@ public class GetLegendGraphicRequest extends WMSRequest {
          * Used to provide a legend title (from MapLayerInfo).
          *
          * <p>If the title is empty or null the layer name will be used.
-         *
-         * @param title
          */
         public void setTitle(String title) {
             this.title = title;
@@ -293,7 +288,7 @@ public class GetLegendGraphicRequest extends WMSRequest {
     public static final String DEFAULT_FORMAT = "image/png";
 
     /** The featuretype(s) of the requested LAYER(s) */
-    private List<LegendRequest> legends = new ArrayList<LegendRequest>();
+    private List<LegendRequest> legends = new ArrayList<>();
 
     /**
      * should hold FEATURETYPE parameter value, though not used by now, since GeoServer WMS still
@@ -410,7 +405,8 @@ public class GetLegendGraphicRequest extends WMSRequest {
     public List<FeatureType> getLayers() {
         List<FeatureType> types = new ArrayList<>(legends.size());
         for (LegendRequest layer : legends) {
-            types.add(layer.getFeatureType());
+            FeatureType ft = layer.getFeatureType();
+            if (ft != null) types.add(ft);
         }
         return types;
     }
@@ -418,7 +414,6 @@ public class GetLegendGraphicRequest extends WMSRequest {
     /**
      * Lookup LegendRequest by native FeatureType name.
      *
-     * @param featureTypeName
      * @return Matching LegendRequest
      */
     public LegendRequest getLegend(Name featureTypeName) {
@@ -430,11 +425,7 @@ public class GetLegendGraphicRequest extends WMSRequest {
         return null; // not found!
     }
 
-    /**
-     * Used to clear {@link #legends} and configure with a feature type.
-     *
-     * @param layer
-     */
+    /** Used to clear {@link #legends} and configure with a feature type. */
     public void setLayer(FeatureType layer) {
         this.legends.clear();
         if (layer == null) {
@@ -444,11 +435,7 @@ public class GetLegendGraphicRequest extends WMSRequest {
         }
     }
 
-    /**
-     * Shortcut used to set the rule for the first layer.
-     *
-     * @param rule
-     */
+    /** Shortcut used to set the rule for the first layer. */
     public void setRule(String rule) {
         // Will set rule for first LegendRequest
         if (!legends.isEmpty()) {
@@ -464,11 +451,7 @@ public class GetLegendGraphicRequest extends WMSRequest {
         this.scale = scale;
     }
 
-    /**
-     * Shortcut used to set the style for the first layer.
-     *
-     * @param style
-     */
+    /** Shortcut used to set the style for the first layer. */
     public void setStyle(Style style) {
         // this will set only the first LegendRequest
         if (legends.isEmpty()) {
@@ -528,7 +511,7 @@ public class GetLegendGraphicRequest extends WMSRequest {
      * @param legendOptions the key/value pair of legend options strings
      * @see #getLegendOptions()
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     public void setLegendOptions(Map legendOptions) {
         this.legendOptions = legendOptions;
     }
@@ -573,7 +556,7 @@ public class GetLegendGraphicRequest extends WMSRequest {
     }
 
     /** SLD replacement */
-    private Map<String, Object> env = new HashMap<String, Object>();
+    private Map<String, Object> env = new HashMap<>();
 
     /**
      * Map of strings that make up the SLD enviroment for variable substitution
@@ -584,21 +567,13 @@ public class GetLegendGraphicRequest extends WMSRequest {
         return env;
     }
 
-    /**
-     * Sets the SLD environment substitution
-     *
-     * @param enviroment
-     */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    /** Sets the SLD environment substitution */
+    @SuppressWarnings("unchecked")
     public void setEnv(Map enviroment) {
         this.env = enviroment;
     }
 
-    /**
-     * Sets the optional Locale to be used for text in legend output.
-     *
-     * @param locale
-     */
+    /** Sets the optional Locale to be used for text in legend output. */
     public void setLocale(Locale locale) {
         this.locale = locale;
     }
@@ -633,20 +608,12 @@ public class GetLegendGraphicRequest extends WMSRequest {
         return converted;
     }
 
-    /**
-     * The parsed KVP map
-     *
-     * @return
-     */
+    /** The parsed KVP map */
     public Map<String, Object> getKvp() {
         return kvp;
     }
 
-    /**
-     * Sets the parsed KVP map
-     *
-     * @param kvp
-     */
+    /** Sets the parsed KVP map */
     public void setKvp(Map<String, Object> kvp) {
         this.kvp = kvp;
     }

@@ -16,6 +16,8 @@ The following properties may be set:
 
 - ``ignoreDirs``: specify all subdirectories of the :ref:`datadir` that should be ignored by the JDBCStore, in a comma-separate list. These subdirectories will not be imported and while JDBCStore is running, all access to these subdirectories and their contents will be redirected to the default file system store. This is usually done with the ``data`` directory (which holds data rather than metadata such as images and shapefiles), temporary directories (which are not used for permanent storage) and the catalog directories (when using JDBCConfig, these are unused anyway and they need not be copied into the JDBCStore).
 
+- ``cachedDirs``: specify all subdirectories of the :ref:`datadir` that should be automatically cached on the file system by the JDBCStore, in a comma-separate list. These subdirectories will be stored in the database, but an up-to-date copy will be stored on the hard drive at all times. This is handy for files that are used by tools that do not support jdbcstore (such as :ref:`Application Schemas <app-schema>` for example) but still need to be synced between nodes.
+
 - ``deleteDestinationOnRename``: allow automatic overwriting of existing destinations on move and rename operations (linux-style versus windows-style - the default store is platform dependant).
 
 JNDI
@@ -47,4 +49,8 @@ Provide the connection parameters directly in the configuration file. This inclu
 - ``pool.testOnBorrow``: whether to validate connections when obtaining from the pool
 
 - ``pool.validationQuery``: validation query for connections from pool, must be set when ``pool.testOnBorrow`` is true
+
+- ``pool.testWhileIdle``: whether to validate idle connections, used in conjunction with the idle timer below 
+
+- ``pool.setTimeBetweenEvictionRunsMillis``: period in millseconds for the idle object evictor, -1 to disable
 

@@ -26,8 +26,7 @@ public class OWS20Exception extends ServiceException {
 
     public static class OWSExceptionCode {
 
-        private static final Map<String, OWSExceptionCode> codes =
-                new HashMap<String, OWSExceptionCode>();
+        private static final Map<String, OWSExceptionCode> codes = new HashMap<>();
 
         public static final OWSExceptionCode OperationNotSupported =
                 new OWSExceptionCode("OperationNotSupported", 501, "Not Implemented");
@@ -43,6 +42,10 @@ public class OWS20Exception extends ServiceException {
                 new OWSExceptionCode("OptionNotSupported", 501, "Not Implemented");
         public static final OWSExceptionCode NoApplicableCode =
                 new OWSExceptionCode("NoApplicableCode", 500, "Not Implemented");
+        /** Added for OpenSearch support, not part of OWS 2.0 */
+        public static final OWSExceptionCode NotFound =
+                new OWSExceptionCode("NotFound", 404, "Not found");
+
         public static final OWSExceptionCode InvalidCoverageType =
                 new OWSExceptionCode(
                         "InvalidCoverageType", 404, "Coverage addressed is not a grid coverage");

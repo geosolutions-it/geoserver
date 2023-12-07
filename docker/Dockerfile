@@ -1,50 +1,161 @@
-ARG BASE_IMAGE_REPO=harbor.cgi-dev.de/cots
-ARG BASE_IMAGE_NAME=gs-base
-ARG BASE_IMAGE_TAG=7.0-jre8
-FROM ${BASE_IMAGE_REPO}/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG}
-LABEL maintainer=alessandro.parma@geo-solutions.it
+FROM tomcat:9-jdk11-openjdk as mother
+LABEL maintainer="Alessandro Parma <alessandro.parma@geosolutionsgroup.com>"
+SHELL ["/bin/bash", "-c"]
 
-RUN  export DEBIAN_FRONTEND=noninteractive
-ENV  DEBIAN_FRONTEND noninteractive
-RUN  dpkg-divert --local --rename --add /sbin/initctl
-#RUN  ln -s /bin/true /sbin/initctl
+# download and install libjpeg-2.0.6 from sources.
+ARG DEBIAN_FRONTEND=noninteractive
+ARG CMAKE_BUILD_PARALLEL_LEVEL=8
+ARG APP_LOCATION="geoserver"
+RUN apt-get update && apt-get install -y unzip wget cmake nasm\
+    && wget https://sourceforge.net/projects/libjpeg-turbo/files/2.1.5.1/libjpeg-turbo-2.1.5.1.tar.gz \
+    && tar -zxf ./libjpeg-turbo-2.1.5.1.tar.gz \
+    && cd libjpeg-turbo-2.1.5.1 && cmake -G"Unix Makefiles" -DWITH_JAVA=1 -DCMAKE_INSTALL_PREFIX=/opt/libjpeg-turbo-geoserver \
+    && make deb \
+    && dpkg -i ./libjpeg*.deb && apt-get -f install
 
-ENV jpeg_turbo_version 1.5.3
+# accepts local files and URLs. Tar(s) are automatically extracted
+#WORKDIR /output/datadir
+#RUN ls -l
+#ARG GEOSERVER_DATA_DIR_SRC="./.placeholder"
+#ADD "${GEOSERVER_DATA_DIR_SRC}" "./"
 
-# Install updates
-# Install Utils 
-# Install GDAL
-# Install JPEG Turbo 
-# Cleanup 
+# accepts local files and URLs. Tar(s) are automatically extracted
+#WORKDIR /output/webapp
+#ARG GEOSERVER_WEBAPP_SRC="./.placeholder"
+#ADD "${GEOSERVER_WEBAPP_SRC}" "./"
 
-# outdated repos https://stackoverflow.com/questions/76094428/debian-stretch-repositories-404-not-found
-RUN sed -i s/deb.debian.org/archive.debian.org/g /etc/apt/sources.list
-RUN sed -i 's|security.debian.org|archive.debian.org/|g' /etc/apt/sources.list
-RUN sed -i '/stretch-updates/d' /etc/apt/sources.list
+# zip files require explicit extracion
+#RUN \
+#    if [ "${GEOSERVER_WEBAPP_SRC##*.}" = "zip" ]; then \
+#        unzip "./*zip"; \
+#        rm ./*zip; \
+#    fi \
+#    && [ -d "./geoserver" ] || (mkdir -p ./geoserver && unzip ./geoserver.war -d ./geoserver && rm ./geoserver.war)
 
-RUN apt-get -y update \
- && apt-get install -y vim zip unzip net-tools telnet procps postgresql-client-9.6 gdal-bin \
- && wget --no-check-certificate https://downloads.sourceforge.net/project/libjpeg-turbo/${jpeg_turbo_version}/libjpeg-turbo-official_${jpeg_turbo_version}_amd64.deb \
- && dpkg -i ./libjpeg*.deb \
- && apt-get -f install \
- && rm -rf /tmp/resources \
- && rm -rf /var/lib/apt/lists/*
+#WORKDIR /output/plugins
+#ARG PLUG_IN_URLS=""
+#ARG PLUG_IN_PATHS=""
+#ADD .placeholder ${PLUG_IN_PATHS} /output/plugins/
+#COPY geoserver-plugin-download.sh /usr/local/bin/geoserver-plugin-download.sh
+#RUN /usr/local/bin/geoserver-plugin-download.sh /output/plugins/ ${PLUG_IN_URLS}
+#RUN \
+#    if [ -f *.zip ] ; then \
+#       unzip -o "./*.zip"; \
+#    fi
 
+#WORKDIR /output/webapp
+#RUN \
+#    if [ "${APP_LOCATION}" != "geoserver" ]; then \
+#      mv /output/webapp/geoserver /output/webapp/${APP_LOCATION}; \
+#    fi
 
-WORKDIR $CATALINA_HOME
+FROM tomcat:9-jdk11-openjdk
 
-# Set ErrorReportValve to hide Tomcat version and exceptions
-RUN sed -i \
-'s/<\/Host/<Valve className="org.apache.catalina.valves.ErrorReportValve"\n\t showReport="false"\n\t showServerInfo="false" \/>\n\t<\/Host/' \
-${CATALINA_BASE}/conf/server.xml
+ARG UID=99
+ARG GID=99
+ARG UNAME=tomcat
+ARG CUSTOM_FONTS="./.placeholder"
+ENV ADMIN_PASSWORD=""
+ENV APP_LOCATION="geoserver"
+
+ENV CATALINA_BASE "$CATALINA_HOME"
+# set externalizations
+ENV GEOSERVER_HOME="/var/geoserver"
+ENV GEOSERVER_LOG_DIR="${GEOSERVER_HOME}/logs"
+ENV GEOSERVER_DATA_DIR="${GEOSERVER_HOME}/datadir"
+ENV GEOSERVER_LOG_LOCATION="${GEOSERVER_LOG_DIR}/${DOCKER_HOST}-${MASTER_SLAVE}-${HOSTNAME}.log"
+ENV GEOWEBCACHE_CONFIG_DIR="${GEOSERVER_HOME}/gwc_cache_dir"
+ENV GEOSERVER_AUDIT_PATH="${GEOSERVER_HOME}/audits/geoserver-${DOCKER_HOST}-${MASTER_SLAVE}-${HOSTNAME}"
+ENV GEOWEBCACHE_CACHE_DIR="${GEOSERVER_HOME}/gwc_cache_dir"
+ENV FONTS_DIR=${JAVA_HOME}/lib/fonts
+# override at run time as needed JAVA_OPTS
+ENV INITIAL_MEMORY="2G"
+ENV MAXIMUM_MEMORY="4G"
+ENV LD_LIBRARY_PATH="${TOMCAT_NATIVE_LIBDIR}:/opt/libjpeg-turbo-geoserver/lib"
+ENV JAIEXT_ENABLED="true"
+ENV PLUGIN_DYNAMIC_URLS=""
+ENV OOM_DUMP_DIR="${GEOSERVER_HOME}/memory_dumps"
+ENV GEOSERVER_OPTS=" \
+  -Dorg.geotools.coverage.jaiext.enabled=${JAIEXT_ENABLED} \
+  -Duser.timezone=UTC \
+  -Dorg.geotools.shapefile.datetime=true \
+  -DGEOSERVER_LOG_LOCATION=${GEOSERVER_LOG_LOCATION} \
+  -DGEOWEBCACHE_CONFIG_DIR=${GEOWEBCACHE_CONFIG_DIR} \
+  -DGEOWEBCACHE_CACHE_DIR=${GEOWEBCACHE_CACHE_DIR} \
+  -DGEOSERVER_AUDIT_PATH=${GEOSERVER_AUDIT_PATH} \
+  -XX:+HeapDumpOnOutOfMemoryError \
+  -XX:HeapDumpPath=${OOM_DUMP_DIR}/geoserver-${DOCKER_HOST}-${MASTER_SLAVE}.dump \
+  -Dorg.geoserver.wms.featureinfo.minBuffer=10 \
+  -Dorg.geotools.coverage.io.netcdf.enhance.ScaleMissing=true \
+  -DDOWNLOAD_MAP_TRANSPARENT=true"
+
+ENV JAVA_OPTS="-Xms${INITIAL_MEMORY} -Xmx${MAXIMUM_MEMORY} \
+  -Djava.awt.headless=true -server \
+  -Dfile.encoding=UTF8 \
+  -Djavax.servlet.request.encoding=UTF-8 \
+  -Djavax.servlet.response.encoding=UTF-8 \
+  -XX:SoftRefLRUPolicyMSPerMB=36000 -XX:+UseG1GC \
+  -XX:MaxGCPauseMillis=200 -XX:ParallelGCThreads=20 -XX:ConcGCThreads=5 \
+  ${GEOSERVER_OPTS}"
+
+ENV LANG=C.UTF-8
+# added for git hash
+ARG GIT_HASH=""
+ENV GIT_HASH "$GIT_HASH"
+
+#COPY run_tests.sh /docker/tests/run_tests.sh
+
+# install needed packages and create externalized dirs
+ARG DEBIAN_FRONTEND=noninteractive
+RUN mkdir -p \
+    "${GEOSERVER_DATA_DIR}" \
+    "${GEOSERVER_LOG_DIR}"  \
+    "${GEOWEBCACHE_CONFIG_DIR}" \
+    "${GEOWEBCACHE_CACHE_DIR}"
+
+# copy from mother
+COPY --from=mother "/opt/libjpeg-turbo-geoserver" "/opt/libjpeg-turbo-geoserver"
+#COPY --from=mother "/output/datadir" "${GEOSERVER_DATA_DIR}"
+#COPY --from=mother "/output/webapp/geoserver" "${CATALINA_BASE}/webapps/geoserver"
+#COPY --from=mother "/output/plugins" "${CATALINA_BASE}/webapps/geoserver/WEB-INF/lib"
+COPY "./resources/geoserver-datadir" "${GEOSERVER_DATA_DIR}"
+RUN mkdir "$CATALINA_BASE/webapps/geoserver"
+WORKDIR "$CATALINA_BASE/webapps/geoserver"
+COPY "./resources/geoserver/geoserver.war" "./"
+RUN unzip ./geoserver.war 
+RUN rm -f geoserver.war
+#RUN \
+#    if [ "${APP_LOCATION}" != "geoserver" ]; then \
+#      mv ${CATALINA_BASE}/webapps/geoserver.war ${CATALINA_BASE}/webapps/${APP_LOCATION}.war; \
+#    fi
+RUN echo `ls -l "${CATALINA_BASE}/webapps"`
+
+#COPY geoserver-plugin-download.sh /usr/local/bin/geoserver-plugin-download.sh
+RUN mkdir ${JAVA_HOME}/lib/fonts
+ADD ${CUSTOM_FONTS} ${FONTS_DIR}
+
+RUN apt-get update
+RUN apt-get install --yes git vim gdal-bin postgresql-client fontconfig libfreetype6 jq
+RUN apt-get clean \
+    && apt-get -y autoclean \
+    && apt-get -y autoremove \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/share/man/* \
+    && rm -rf /usr/share/doc/*
+
+COPY geoserver-rest-config.sh /usr/local/bin/geoserver-rest-config.sh
+COPY geoserver-rest-reload.sh /usr/local/bin/geoserver-rest-reload.sh
+
+RUN groupadd -g $GID $UNAME
+RUN useradd -m -u $UID -g $GID --system $UNAME
+RUN chown -R $UID:$GID $GEOSERVER_LOG_DIR $CATALINA_BASE $GEOWEBCACHE_CACHE_DIR $GEOWEBCACHE_CONFIG_DIR $GEOSERVER_DATA_DIR
+
+WORKDIR "$CATALINA_BASE"
+COPY entrypoint.sh ${CATALINA_BASE}/entrypoint.sh
+RUN chown $UID:$GID ${CATALINA_BASE}/entrypoint.sh && chmod +x ${CATALINA_BASE}/entrypoint.sh
+
+USER $UNAME
 
 ENV TERM xterm
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/libjpeg-turbo/lib64
-# set id/gid default is 99
-ARG ID=99
-ARG GID=99
-# adjust permissions to custom id/gid
-RUN chown -R ${ID}:${GID} ${CATALINA_BASE} ${GEOSERVER_HOME} ${GEOWEBCACHE_CACHE_DIR} ${GEOWEBCACHE_CONFIG_DIR} ${OOM_DUMP_DIR} ${GEOSERVER_AUDIT_PATH}
-USER $ID:$GID
-
-EXPOSE 8080
+EXPOSE 8080/tcp
+CMD ["/usr/local/tomcat/entrypoint.sh"]

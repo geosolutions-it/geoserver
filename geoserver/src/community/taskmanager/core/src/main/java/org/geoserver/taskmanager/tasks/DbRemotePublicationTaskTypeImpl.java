@@ -5,10 +5,13 @@
 package org.geoserver.taskmanager.tasks;
 
 import it.geosolutions.geoserver.rest.GeoServerRESTManager;
+import it.geosolutions.geoserver.rest.GeoServerRESTPublisher.StoreType;
 import it.geosolutions.geoserver.rest.encoder.GSResourceEncoder;
 import it.geosolutions.geoserver.rest.encoder.feature.GSFeatureTypeEncoder;
 import java.io.IOException;
 import javax.annotation.PostConstruct;
+import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.taskmanager.external.DbSource;
 import org.geoserver.taskmanager.external.DbTable;
@@ -17,7 +20,6 @@ import org.geoserver.taskmanager.schedule.BatchContext;
 import org.geoserver.taskmanager.schedule.ParameterInfo;
 import org.geoserver.taskmanager.schedule.TaskContext;
 import org.geoserver.taskmanager.schedule.TaskException;
-import org.geoserver.taskmanager.schedule.TaskRunnable;
 import org.geoserver.taskmanager.util.SqlUtil;
 import org.springframework.stereotype.Component;
 
@@ -88,31 +90,54 @@ public class DbRemotePublicationTaskTypeImpl extends AbstractRemotePublicationTa
 
     @Override
     protected void postProcess(
-            GSResourceEncoder re, TaskContext ctx, TaskRunnable<GSResourceEncoder> update)
+            StoreType storeType,
+            ResourceInfo resource,
+            GSResourceEncoder re,
+            TaskContext ctx,
+            Finalizer finalizer)
             throws TaskException {
-        final DbTable table =
-                (DbTable)
-                        ctx.getBatchContext()
-                                .get(
-                                        ctx.getParameterValues().get(PARAM_TABLE_NAME),
-                                        new BatchContext.Dependency() {
-                                            @Override
-                                            public void revert() throws TaskException {
-                                                DbTable table =
-                                                        (DbTable)
-                                                                ctx.getBatchContext()
-                                                                        .get(
-                                                                                ctx.getParameterValues()
-                                                                                        .get(
-                                                                                                PARAM_TABLE_NAME));
-                                                GSFeatureTypeEncoder re =
-                                                        new GSFeatureTypeEncoder(false);
-                                                re.setNativeName(
-                                                        SqlUtil.notQualified(table.getTableName()));
-                                                update.run(re);
-                                            }
-                                        });
-        if (table != null) {
+        final DbTable originalTable = (DbTable) ctx.getParameterValues().get(PARAM_TABLE_NAME);
+        if (originalTable != null) {
+            final DbTable table =
+                    (DbTable)
+                            ctx.getBatchContext()
+                                    .get(
+                                            originalTable,
+                                            new BatchContext.Dependency() {
+                                                @Override
+                                                public void revert() throws TaskException {
+                                                    if (resource.getMetadata()
+                                                            .containsKey(
+                                                                    FeatureTypeInfo
+                                                                            .JDBC_VIRTUAL_TABLE)) {
+                                                        // virtual table, resource must be attached
+                                                        // to
+                                                        // SQL query
+                                                        // in metadata, rather than just table name
+                                                        finalizer
+                                                                .getEncoder()
+                                                                .setNativeName(
+                                                                        resource.getNativeName());
+                                                    } else {
+                                                        DbTable table =
+                                                                (DbTable)
+                                                                        ctx.getBatchContext()
+                                                                                .get(
+                                                                                        ctx.getParameterValues()
+                                                                                                .get(
+                                                                                                        PARAM_TABLE_NAME));
+                                                        finalizer
+                                                                .getEncoder()
+                                                                .setNativeName(
+                                                                        SqlUtil.notQualified(
+                                                                                table
+                                                                                        .getTableName()));
+                                                    }
+                                                    finalizer.run();
+                                                }
+                                            });
+            finalizer.setFinalizeAtCommit(table != null && table.equals(originalTable));
+
             ((GSFeatureTypeEncoder) re).setNativeName(SqlUtil.notQualified(table.getTableName()));
         }
     }

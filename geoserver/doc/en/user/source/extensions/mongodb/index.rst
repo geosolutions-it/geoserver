@@ -3,17 +3,17 @@
 MongoDB Data Store
 ==================
 
-This module provides support for MongoDB data store. This extension is build on top of `GeoTools MongoDB plugin
-<http://docs.geotools.org/latest/userguide/library/data/mongodb.html>`_.
+This module provides support for MongoDB data store. This extension is build on top of :geotools:`GeoTools MongoDB plugin
+<library/data/mongodb.html>`.
 
 Installation
 ------------
 
-#. Navigate to the `GeoServer download page <http://geoserver.org/download>`_.
+#. Visit the :website:`website download <download>` page, locate your release, and download:  :download_extension:`mongodb`
 
-#. Find the page that matches the version of the running GeoServer.
-
-#. Download the MongoDB extension. The download link will be in the :guilabel:`Extensions` section under :guilabel:`Vector Formats`.
+   The download link will be in the :guilabel:`Extensions` section under :guilabel:`Vector Formats`.
+   
+   .. warning:: Make sure to match the version of the extension (for example |release| above) to the version of the GeoServer instance!
 
 #. Extract the files in this archive to the :file:`WEB-INF/lib` directory of your GeoServer installation.
 
@@ -40,5 +40,5 @@ Configuring a new MongoDB data store requires providing:
 
    *Configuring a MongoDB data store.*
 
-For more details about the usage of this data store please check the `GeoTools MongoDB plugin documentation
-<http://docs.geotools.org/latest/userguide/library/data/mongodb.html>`_.
+For more details about the usage of this data store please check the :geotools:`GeoTools MongoDB plugin documentation
+<library/data/mongodb.html>`.

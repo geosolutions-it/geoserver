@@ -6,9 +6,10 @@ package org.geoserver.wcs2_0.kvp;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.geoserver.data.test.MockData.TASMANIA_DEM;
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Locale;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.Keyword;
@@ -17,6 +18,7 @@ import org.geoserver.config.GeoServerInfo;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs2_0.GetCapabilities;
 import org.geoserver.wcs2_0.WCSTestSupport;
+import org.geotools.util.GrowableInternationalString;
 import org.junit.Before;
 import org.junit.Test;
 import org.vfny.geoserver.wcs.WcsException.WcsExceptionCode;
@@ -133,7 +135,7 @@ public class GetCapabilitiesTest extends WCSTestSupport {
         Catalog catalog = getCatalog();
         CoverageInfo ci = catalog.getCoverageByName(getLayerId(TASMANIA_DEM));
         ci.setTitle("My Title");
-        ci.setDescription("My Abstract");
+        ci.setAbstract("My Abstract");
         ci.getKeywords().add(0, new Keyword("my_keyword"));
         MetadataLinkInfo mdl1 = catalog.getFactory().createMetadataLink();
         mdl1.setContent("http://www.geoserver.org/tasmania/dem.xml");
@@ -167,5 +169,47 @@ public class GetCapabilitiesTest extends WCSTestSupport {
                 "src/test/resources/geoserver/metadata?key=value",
                 base + "ows:Metadata[2]/@xlink:href",
                 dom);
+    }
+
+    @Test
+    public void testAcceptLanguagesParameter() throws Exception {
+        Catalog catalog = getCatalog();
+        CoverageInfo ci = catalog.getCoverageByName(getLayerId(TASMANIA_DEM));
+        GrowableInternationalString title = new GrowableInternationalString();
+        title.add(Locale.ENGLISH, "a i18n title for fti fifteen");
+        title.add(Locale.ITALIAN, "titolo italiano");
+        ci.setInternationalTitle(title);
+
+        GrowableInternationalString abstractInfo = new GrowableInternationalString();
+        abstractInfo.add(Locale.ENGLISH, "abstract");
+        abstractInfo.add(Locale.ITALIAN, "italiano abstract");
+        ci.setInternationalAbstract(abstractInfo);
+        catalog.save(ci);
+
+        Document dom =
+                getAsDOM(
+                        "wcs?service=WCS&version=2.0.1&request=GetCapabilities&AcceptLanguages=it");
+
+        assertXpathEvaluatesTo(
+                "http://localhost:8080/geoserver/wcs?Language=it&",
+                "//ows:DCP/ows:HTTP/ows:Get/@xlink:href",
+                dom);
+    }
+
+    @Test
+    public void testNullLocale() throws Exception {
+        Catalog catalog = getCatalog();
+        CoverageInfo ci = catalog.getCoverageByName(getLayerId(TASMANIA_DEM));
+        GrowableInternationalString title = new GrowableInternationalString();
+        title.add(Locale.ENGLISH, "a i18n title for fti fifteen");
+        title.add(null, "null locale");
+        ci.setInternationalTitle(title);
+
+        catalog.save(ci);
+
+        Document dom = getAsDOM("wcs?service=WCS&version=2.0.1&request=GetCapabilities");
+
+        assertXpathEvaluatesTo(
+                "src/test/resources/geoserver/wcs?", "//ows:DCP/ows:HTTP/ows:Get/@xlink:href", dom);
     }
 }

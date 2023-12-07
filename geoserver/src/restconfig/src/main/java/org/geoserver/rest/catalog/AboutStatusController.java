@@ -4,9 +4,12 @@
  */
 package org.geoserver.rest.catalog;
 
+import static org.geoserver.template.TemplateUtils.FM_VERSION;
+
 import com.thoughtworks.xstream.XStream;
 import freemarker.ext.beans.BeansWrapper;
 import freemarker.ext.beans.CollectionModel;
+import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.ObjectWrapper;
 import freemarker.template.SimpleHash;
 import freemarker.template.TemplateModel;
@@ -36,20 +39,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH + "/about/status",
-    produces = {
-        MediaType.TEXT_HTML_VALUE,
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE
-    }
-)
+        path = RestBaseController.ROOT_PATH + "/about/status",
+        produces = {
+            MediaType.TEXT_HTML_VALUE,
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE
+        })
 public class AboutStatusController extends RestBaseController {
 
     @GetMapping
     protected RestWrapper<ModuleStatus> statusGet() throws Exception {
         List<ModuleStatus> applicationStatus =
-                GeoServerExtensions.extensions(ModuleStatus.class)
-                        .stream()
+                GeoServerExtensions.extensions(ModuleStatus.class).stream()
                         .map(ModuleStatusImpl::new)
                         .collect(Collectors.toList());
         return wrapList(applicationStatus, ModuleStatus.class);
@@ -58,8 +59,7 @@ public class AboutStatusController extends RestBaseController {
     @GetMapping(value = "/{target}")
     protected RestWrapper<ModuleStatus> statusGet(@PathVariable String target) throws Exception {
         List<ModuleStatus> applicationStatus =
-                GeoServerExtensions.extensions(ModuleStatus.class)
-                        .stream()
+                GeoServerExtensions.extensions(ModuleStatus.class).stream()
                         .map(ModuleStatusImpl::new)
                         .filter(getModule(target))
                         .collect(Collectors.toList());
@@ -99,77 +99,56 @@ public class AboutStatusController extends RestBaseController {
 
     @Override
     protected <T> ObjectWrapper createObjectWrapper(Class<T> clazz) {
-        return new BeansWrapper() {
+        return new BeansWrapper(FM_VERSION) {
             @Override
             public TemplateModel wrap(Object obj) throws TemplateModelException {
                 if (obj instanceof List) { // we expect List of ModuleStatus
                     List<?> list = (List<?>) obj;
-                    SimpleHash hash = new SimpleHash();
-                    hash.put(
-                            "values",
+                    SimpleHash hash = new SimpleHash(new DefaultObjectWrapper(FM_VERSION));
+                    CollectionModel valuesModel =
                             new CollectionModel(
                                     list,
-                                    new BeansWrapper() {
+                                    new BeansWrapper(FM_VERSION) {
+                                        @Override
                                         public TemplateModel wrap(Object object)
                                                 throws TemplateModelException {
                                             if (object instanceof ModuleStatus) {
-                                                ModuleStatus status = (ModuleStatus) object;
-                                                SimpleHash hash = new SimpleHash();
-                                                hash.put("module", status.getModule());
-                                                hash.put("name", status.getName());
-                                                hash.put(
-                                                        "isAvailable",
-                                                        Boolean.toString(status.isAvailable()));
-                                                hash.put(
-                                                        "isEnabled",
-                                                        Boolean.toString(status.isEnabled()));
-                                                status.getComponent()
-                                                        .ifPresent(
-                                                                component ->
-                                                                        hash.put(
-                                                                                "component",
-                                                                                component));
-                                                status.getVersion()
-                                                        .ifPresent(
-                                                                version ->
-                                                                        hash.put(
-                                                                                "version",
-                                                                                version));
-                                                // Make sure to escape the string, otherwise strange
-                                                // chars here will bork the XML parser later
-
-                                                status.getMessage()
-                                                        .ifPresent(
-                                                                message -> {
-                                                                    String noControlChars =
-                                                                            message.replaceAll(
-                                                                                            "\u001b",
-                                                                                            "ESC")
-                                                                                    .replaceAll(
-                                                                                            "\u0008",
-                                                                                            "BACK")
-                                                                                    .replaceAll(
-                                                                                            "\u0007",
-                                                                                            "BELL");
-                                                                    String escaped =
-                                                                            StringEscapeUtils
-                                                                                    .escapeXml10(
-                                                                                            noControlChars)
-                                                                                    .replaceAll(
-                                                                                            "\n",
-                                                                                            "<br/>");
-                                                                    hash.put("message", escaped);
-                                                                });
-
-                                                return hash;
+                                                return wrapModleStatus((ModuleStatus) object);
                                             }
                                             return super.wrap(object);
                                         }
-                                    }));
+                                    });
+                    hash.put("values", valuesModel);
                     return hash;
                 }
                 return super.wrap(obj);
             }
         };
+    }
+
+    private SimpleHash wrapModleStatus(ModuleStatus object) {
+        ModuleStatus status = object;
+        SimpleHash hash = new SimpleHash(new DefaultObjectWrapper(FM_VERSION));
+        hash.put("module", status.getModule());
+        hash.put("name", status.getName());
+        hash.put("isAvailable", Boolean.toString(status.isAvailable()));
+        hash.put("isEnabled", Boolean.toString(status.isEnabled()));
+        status.getComponent().ifPresent(component -> hash.put("component", component));
+        status.getVersion().ifPresent(version -> hash.put("version", version));
+
+        // Make sure to escape the string, otherwise strange
+        // chars here will bork the XML parser later
+        status.getMessage().ifPresent(message -> hash.put("message", escapeMessage(message)));
+
+        return hash;
+    }
+
+    private String escapeMessage(String message) {
+        String noControlChars =
+                message.replaceAll("\u001b", "ESC")
+                        .replaceAll("\u0008", "BACK")
+                        .replaceAll("\u0007", "BELL");
+        String escaped = StringEscapeUtils.escapeXml10(noControlChars).replaceAll("\n", "<br/>");
+        return escaped;
     }
 }

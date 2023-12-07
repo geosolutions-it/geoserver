@@ -58,7 +58,10 @@ public class GeoServerExceptions {
             // move up the hierarchy and try that
 
             if (IGeoServerException.class.isAssignableFrom(clazz.getSuperclass())) {
-                clazz = (Class<? extends IGeoServerException>) clazz.getSuperclass();
+                @SuppressWarnings("unchecked")
+                Class<? extends IGeoServerException> cast =
+                        (Class<? extends IGeoServerException>) clazz.getSuperclass();
+                clazz = cast;
             } else {
                 clazz = null;
             }
@@ -140,19 +143,10 @@ public class GeoServerExceptions {
                 }
 
                 URL url = e.nextElement();
-                InputStream in = url.openStream();
-                try {
+                try (InputStream in = url.openStream()) {
                     props.load(in);
                 } catch (Exception ex) {
                     LOGGER.log(Level.WARNING, "Error loading properties from: ", url);
-                } finally {
-                    if (in != null) {
-                        try {
-                            in.close();
-                        } catch (Exception ex2) {
-                            LOGGER.log(Level.FINEST, ex2.getMessage(), ex2);
-                        }
-                    }
                 }
             }
             return props != null ? new PropResourceBundle(props) : null;
@@ -173,6 +167,7 @@ public class GeoServerExceptions {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public Enumeration<String> getKeys() {
             return (Enumeration) props.keys();
         }

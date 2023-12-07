@@ -7,17 +7,16 @@ package org.geoserver.web.data.resource;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.beanutils.BeanToPropertyValueTransformer;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
-import org.apache.wicket.Page;
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
 import org.apache.wicket.extensions.ajax.markup.html.modal.ModalWindow;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
@@ -32,19 +31,18 @@ import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.LoadableDetachableModel;
+import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.StringResourceModel;
 import org.apache.wicket.validation.IValidatable;
 import org.apache.wicket.validation.IValidator;
 import org.apache.wicket.validation.ValidationError;
 import org.geoserver.catalog.AttributeTypeInfo;
-import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.ResourcePool;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.data.layer.CascadedWFSStoredQueryEditPage;
 import org.geoserver.web.data.layer.SQLViewEditPage;
 import org.geoserver.web.wicket.GeoServerAjaxFormLink;
-import org.geoserver.web.wicket.ParamResourceModel;
 import org.geotools.data.wfs.internal.v2_0.storedquery.StoredQueryConfiguration;
 import org.geotools.filter.FilterAttributeExtractor;
 import org.geotools.filter.text.ecql.ECQL;
@@ -61,9 +59,13 @@ public class FeatureResourceConfigurationPanel extends ResourceConfigurationPane
 
     ModalWindow reloadWarningDialog;
 
-    ListView attributes;
+    ListView<AttributeTypeInfo> attributes;
 
-    private Fragment attributePanel;
+    private WebMarkupContainer attributePanel;
+
+    AttributeTypeInfoEditor attributesEditor;
+
+    boolean customizeFeatureType;
 
     public FeatureResourceConfigurationPanel(String id, final IModel model) {
         super(id, model);
@@ -71,70 +73,43 @@ public class FeatureResourceConfigurationPanel extends ResourceConfigurationPane
         CheckBox circularArcs = new CheckBox("circularArcPresent");
         add(circularArcs);
 
-        TextField<Measure> tolerance =
-                new TextField<Measure>("linearizationTolerance", Measure.class);
+        TextField<Measure> tolerance = new TextField<>("linearizationTolerance", Measure.class);
         add(tolerance);
 
-        attributePanel = new Fragment("attributePanel", "attributePanelFragment", this);
+        attributePanel = new WebMarkupContainer("attributePanel");
         attributePanel.setOutputMarkupId(true);
         add(attributePanel);
 
         // We need to use the resourcePool directly because we're playing with an edited
         // FeatureTypeInfo and the info.getFeatureType() and info.getAttributes() will hit
         // the resource pool without the modified properties (since it passes "this" into calls
-        // to the ResourcePoool
+        // to the ResourcePool
 
-        // just use the direct attributes, this is not editable atm
-        attributes =
-                new ListView("attributes", new AttributeListModel()) {
+        List<AttributeTypeInfo> attributes = ((FeatureTypeInfo) model.getObject()).getAttributes();
+        this.customizeFeatureType = attributes != null && !attributes.isEmpty();
+        Component nativeAttributePanel = getNativeAttributesTable("attributesTable", model);
+        attributePanel.add(nativeAttributePanel);
+        nativeAttributePanel.setVisible(!customizeFeatureType);
+        attributesEditor = new AttributeTypeInfoEditor("attributesEditor", model, attributePanel);
+        attributePanel.add(attributesEditor);
+        attributesEditor.setVisible(customizeFeatureType);
+
+        CheckBox customizeCheck =
+                new CheckBox(
+                        "customizeFeatureType", new PropertyModel<>(this, "customizeFeatureType"));
+        customizeCheck.add(
+                new AjaxFormComponentUpdatingBehavior("click") {
                     @Override
-                    protected void populateItem(ListItem item) {
-
-                        // odd/even style
-                        item.add(
-                                AttributeModifier.replace(
-                                        "class", item.getIndex() % 2 == 0 ? "even" : "odd"));
-
-                        // dump the attribute information we have
-                        AttributeTypeInfo attribute = (AttributeTypeInfo) item.getModelObject();
-                        item.add(new Label("name", attribute.getName()));
-                        item.add(
-                                new Label(
-                                        "minmax",
-                                        attribute.getMinOccurs() + "/" + attribute.getMaxOccurs()));
-                        try {
-                            // working around a serialization issue
-                            FeatureTypeInfo typeInfo = (FeatureTypeInfo) model.getObject();
-                            final ResourcePool resourcePool =
-                                    GeoServerApplication.get().getCatalog().getResourcePool();
-                            final FeatureType featureType = resourcePool.getFeatureType(typeInfo);
-                            org.opengis.feature.type.PropertyDescriptor pd =
-                                    featureType.getDescriptor(attribute.getName());
-                            String typeName = "?";
-                            String nillable = "?";
-                            try {
-                                typeName = pd.getType().getBinding().getSimpleName();
-                                nillable = String.valueOf(pd.isNillable());
-                            } catch (Exception e) {
-                                LOGGER.log(
-                                        Level.INFO,
-                                        "Could not find attribute "
-                                                + attribute.getName()
-                                                + " in feature type "
-                                                + featureType,
-                                        e);
-                            }
-                            item.add(new Label("type", typeName));
-                            item.add(new Label("nillable", nillable));
-                        } catch (IOException e) {
-                            item.add(new Label("type", "?"));
-                            item.add(new Label("nillable", "?"));
-                        }
+                    protected void onUpdate(AjaxRequestTarget ajaxRequestTarget) {
+                        customizeCheck.processInput();
+                        nativeAttributePanel.setVisible(!customizeFeatureType);
+                        attributesEditor.setVisible(customizeFeatureType);
+                        ajaxRequestTarget.add(attributePanel);
                     }
-                };
-        attributePanel.add(attributes);
+                });
+        attributePanel.add(customizeCheck);
 
-        TextArea<String> cqlFilter = new TextArea<String>("cqlFilter");
+        TextArea<String> cqlFilter = new TextArea<>("cqlFilter");
         cqlFilter.add(new CqlFilterValidator(model));
         add(cqlFilter);
 
@@ -166,16 +141,12 @@ public class FeatureResourceConfigurationPanel extends ResourceConfigurationPane
 
         add(reloadWarningDialog = new ModalWindow("reloadWarningDialog"));
         reloadWarningDialog.setPageCreator(
-                new ModalWindow.PageCreator() {
-                    public Page createPage() {
-                        return new ReloadWarningDialog(
-                                new StringResourceModel(
-                                        "featureTypeReloadWarning",
-                                        FeatureResourceConfigurationPanel.this,
-                                        null));
-                    }
-                });
-        reloadWarningDialog.setTitle(new StringResourceModel("warning", (Component) null, null));
+                (ModalWindow.PageCreator)
+                        () ->
+                                new ReloadWarningDialog(
+                                        new StringResourceModel(
+                                                "featureTypeReloadWarning", this, null)));
+        reloadWarningDialog.setTitle(new StringResourceModel("warning", null, null));
         reloadWarningDialog.setInitialHeight(100);
         reloadWarningDialog.setInitialHeight(200);
 
@@ -235,6 +206,61 @@ public class FeatureResourceConfigurationPanel extends ResourceConfigurationPane
                         != null);
     }
 
+    private Component getNativeAttributesTable(String id, IModel model) {
+        Fragment fragment = new Fragment(id, "attributePanelFragment", this);
+
+        // just use the direct attributes, this is not editable atm
+        attributes =
+                new ListView<AttributeTypeInfo>("attributes", new AttributeListModel()) {
+                    @Override
+                    protected void populateItem(ListItem item) {
+
+                        // odd/even style
+                        item.add(
+                                AttributeModifier.replace(
+                                        "class", item.getIndex() % 2 == 0 ? "even" : "odd"));
+
+                        // dump the attribute information we have
+                        AttributeTypeInfo attribute = (AttributeTypeInfo) item.getModelObject();
+                        item.add(new Label("name", attribute.getName()));
+                        item.add(
+                                new Label(
+                                        "minmax",
+                                        attribute.getMinOccurs() + "/" + attribute.getMaxOccurs()));
+                        try {
+                            // working around a serialization issue
+                            FeatureTypeInfo typeInfo = (FeatureTypeInfo) model.getObject();
+                            final ResourcePool resourcePool =
+                                    GeoServerApplication.get().getCatalog().getResourcePool();
+                            final FeatureType featureType = resourcePool.getFeatureType(typeInfo);
+                            org.opengis.feature.type.PropertyDescriptor pd =
+                                    featureType.getDescriptor(attribute.getName());
+                            String typeName = "?";
+                            String nillable = "?";
+                            try {
+                                typeName = pd.getType().getBinding().getSimpleName();
+                                nillable = String.valueOf(pd.isNillable());
+                            } catch (Exception e) {
+                                LOGGER.log(
+                                        Level.INFO,
+                                        "Could not find attribute "
+                                                + attribute.getName()
+                                                + " in feature type "
+                                                + featureType,
+                                        e);
+                            }
+                            item.add(new Label("type", typeName));
+                            item.add(new Label("nillable", nillable));
+                        } catch (IOException e) {
+                            item.add(new Label("type", "?"));
+                            item.add(new Label("nillable", "?"));
+                        }
+                    }
+                };
+        fragment.add(attributes);
+        return fragment;
+    }
+
     @Override
     public void resourceUpdated(AjaxRequestTarget target) {
         if (target != null) {
@@ -288,7 +314,9 @@ public class FeatureResourceConfigurationPanel extends ResourceConfigurationPane
                 BeanToPropertyValueTransformer transformer =
                         new BeanToPropertyValueTransformer("localName");
                 Collection<String> featureAttributesNames =
-                        CollectionUtils.collect(sft.getAttributeDescriptors(), transformer);
+                        CollectionUtils.collect(
+                                sft.getAttributeDescriptors(),
+                                ad -> (String) transformer.transform(ad));
 
                 FilterAttributeExtractor filterAttriubtes = new FilterAttributeExtractor(null);
                 cqlFilter.accept(filterAttriubtes, null);
@@ -304,28 +332,24 @@ public class FeatureResourceConfigurationPanel extends ResourceConfigurationPane
         }
     }
 
+    @Override
+    public void onSave() {
+        FeatureTypeInfo fti = (FeatureTypeInfo) getDefaultModelObject();
+        if (customizeFeatureType) {
+            fti.getAttributes().clear();
+            fti.getAttributes().addAll(attributesEditor.getItems());
+        } else {
+            fti.getAttributes().clear();
+        }
+    }
+
     class AttributeListModel extends LoadableDetachableModel<List<AttributeTypeInfo>> {
 
         @Override
         protected List<AttributeTypeInfo> load() {
-            try {
-                FeatureTypeInfo typeInfo = (FeatureTypeInfo) getDefaultModelObject();
-                Catalog catalog = GeoServerApplication.get().getCatalog();
-                final ResourcePool resourcePool = catalog.getResourcePool();
-                // using loadAttributes to dodge the ResourcePool caches, the
-                // feature type structure might have been modified (e.g., SQL view editing)
-                return resourcePool.loadAttributes(typeInfo);
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Grabbing the attribute list failed", e);
-                String error =
-                        new ParamResourceModel(
-                                        "attributeListingFailed",
-                                        FeatureResourceConfigurationPanel.this,
-                                        e.getMessage())
-                                .getString();
-                FeatureResourceConfigurationPanel.this.getPage().error(error);
-                return Collections.emptyList();
-            }
+            return AttributeTypeInfoEditor.loadNativeAttributes(
+                    (FeatureTypeInfo) getDefaultModelObject(),
+                    FeatureResourceConfigurationPanel.this);
         }
     }
 }

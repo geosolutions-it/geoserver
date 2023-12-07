@@ -15,7 +15,6 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
-import org.geoserver.web.wicket.browser.FileRootsFinder.PathSplitter;
 
 /**
  * Support class to locate the file system roots the file chooser uses to locate files, along with
@@ -96,7 +95,7 @@ public class FileRootsFinder implements Serializable {
 
     public FileRootsFinder(boolean hideFileSystem, boolean includeDataDir) {
         // build the roots
-        roots = new ArrayList<File>();
+        roots = new ArrayList<>();
         if (!hideFileSystem) {
             roots.addAll(Arrays.asList(File.listRoots()));
         }
@@ -134,12 +133,12 @@ public class FileRootsFinder implements Serializable {
      * file/directory starting with the same path as the input and containing the file name in a
      * case insensitive way)
      *
-     * @param input A partial path, can be a single name or a full path (can be relative, will be
-     *     matched against the data directory)
+     * @param input A partial path, can be a single name or a full path (can be relative, will
+     *     be24:14 matched against the data directory)
      * @param fileFilter An optional file filter to filter the returned files. The file filter
      *     should accept directories.
-     * @return
      */
+    @SuppressWarnings("PMD.CloseResource")
     public Stream<String> getMatches(String input, FileFilter fileFilter) {
         // check the data directory (which lives in its own *nix dream, so paths need conversion)
         PathSplitter ddSplitter = new PathSplitter(input, true);
@@ -147,8 +146,7 @@ public class FileRootsFinder implements Serializable {
         Resource resource = loader.get(ddSplitter.base);
         File dataDirectoryRoot = loader.get("/").dir();
         Stream<String> result =
-                resource.list()
-                        .stream()
+                resource.list().stream()
                         .filter(r -> r.name().toLowerCase().contains(ddSplitter.name))
                         .filter(
                                 r ->
@@ -178,11 +176,10 @@ public class FileRootsFinder implements Serializable {
                 Stream<String> rootPaths =
                         Arrays.stream(names)
                                 .filter(
-                                        fileName ->
+                                        name ->
                                                 fileFilter == null
                                                         || fileFilter.accept(
-                                                                new File(
-                                                                        fsSplitter.base, fileName)))
+                                                                new File(fsSplitter.base, name)))
                                 .map(fileName -> fsSplitter.buildPath(fileName));
                 result = Stream.concat(result, rootPaths);
             }

@@ -7,14 +7,16 @@ package org.geoserver.kml;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.data.test.MockData;
+import org.geoserver.kml.regionate.CachedHierarchyRegionatingStrategy;
 import org.geotools.util.logging.Logging;
 import org.junit.After;
 import org.junit.Before;
@@ -33,8 +35,9 @@ public class GeoSearchKMLTest extends RegionatingTestSupport {
     }
 
     @After
-    public void cleanupRegionationDatabases() throws IOException {
+    public void cleanupRegionationDatabases() throws IOException, SQLException {
         File dir = getDataDirectory().findOrCreateDir("geosearch");
+        CachedHierarchyRegionatingStrategy.clearAllHsqlDatabases(dir);
         FileUtils.deleteDirectory(dir);
     }
 
@@ -216,9 +219,8 @@ public class GeoSearchKMLTest extends RegionatingTestSupport {
             String geoName = ((Element) geoPlacemarks.item(i)).getAttribute("id");
             String dataName = ((Element) dataPlacemarks.item(i)).getAttribute("id");
 
-            assertTrue(
-                    geoName + " and " + dataName + " should not be the same!",
-                    !geoName.equals(dataName));
+            assertNotEquals(
+                    geoName + " and " + dataName + " should not be the same!", geoName, dataName);
         }
     }
 

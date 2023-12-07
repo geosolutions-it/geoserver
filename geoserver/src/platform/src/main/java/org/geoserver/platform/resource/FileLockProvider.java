@@ -15,12 +15,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletContext;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.util.IOUtils;
+import org.geotools.util.logging.Logging;
 import org.springframework.web.context.ServletContextAware;
 
 /**
@@ -30,7 +31,7 @@ import org.springframework.web.context.ServletContextAware;
  */
 public class FileLockProvider implements LockProvider, ServletContextAware {
 
-    public static Log LOGGER = LogFactory.getLog(FileLockProvider.class);
+    static final Logger LOGGER = Logging.getLogger(FileLockProvider.class.getName());
 
     private File root;
     /** The wait to occur in case the lock cannot be acquired */
@@ -48,6 +49,9 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
         this.root = basePath;
     }
 
+    @Override
+    @SuppressWarnings({"PMD.CloseResource", "PMD.UseTryWithResources"})
+    // complex but apparently correct handling
     public Resource.Lock acquire(final String lockKey) {
         // first off, synchronize among threads in the same jvm (the nio locks won't lock
         // threads in the same JVM)
@@ -55,6 +59,13 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
 
         // then synch up between different processes
         final File file = getFile(lockKey);
+        if (LOGGER.isLoggable(Level.FINE))
+            LOGGER.fine(
+                    "Mapped lock key "
+                            + lockKey
+                            + " to lock file "
+                            + file
+                            + ". Attempting to lock on it.");
         try {
             FileOutputStream currFos = null;
             FileLock currLock = null;
@@ -67,22 +78,15 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
                     currFos = new FileOutputStream(file);
                     try {
                         currLock = currFos.getChannel().lock();
-                    } catch (OverlappingFileLockException e) {
+                    } catch (OverlappingFileLockException | IOException e) {
                         IOUtils.closeQuietly(currFos);
                         try {
                             Thread.sleep(20);
                         } catch (InterruptedException ie) {
                             // ok, moving on
                         }
-                    } catch (IOException e) {
-                        // this one is also thrown with a message "avoided fs deadlock"
-                        IOUtils.closeQuietly(currFos);
-                        try {
-                            Thread.sleep(20);
-                        } catch (InterruptedException ie) {
-                            // ok, moving on
-                        }
-                    }
+                    } // this one is also thrown with a message "avoided fs deadlock"
+
                     count++;
                 }
 
@@ -96,8 +100,8 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
                                     + " attempts");
                 }
 
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug(
+                if (LOGGER.isLoggable(Level.FINE)) {
+                    LOGGER.fine(
                             "Lock "
                                     + lockKey
                                     + " acquired by thread "
@@ -118,6 +122,7 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
 
                     boolean released;
 
+                    @Override
                     public void release() {
                         if (released) {
                             return;
@@ -128,11 +133,11 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
                             if (!lock.isValid()) {
                                 // do not crap out, locks usage is only there to prevent duplication
                                 // of work
-                                if (LOGGER.isDebugEnabled()) {
-                                    LOGGER.debug(
+                                if (LOGGER.isLoggable(Level.FINE)) {
+                                    LOGGER.fine(
                                             "Lock key "
                                                     + lockKey
-                                                    + " for releasing lock is unkonwn, it means "
+                                                    + " for releasing lock is unknown, it means "
                                                     + "this lock was never acquired, or was released twice. "
                                                     + "Current thread is: "
                                                     + Thread.currentThread().getId()
@@ -147,10 +152,12 @@ public class FileLockProvider implements LockProvider, ServletContextAware {
                                 IOUtils.closeQuietly(fos);
                                 file.delete();
 
-                                if (LOGGER.isDebugEnabled()) {
-                                    LOGGER.debug(
+                                if (LOGGER.isLoggable(Level.FINE)) {
+                                    LOGGER.fine(
                                             "Lock "
                                                     + lockKey
+                                                    + " mapped onto "
+                                                    + file
                                                     + " released by thread "
                                                     + Thread.currentThread().getId());
                                 }

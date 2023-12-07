@@ -32,9 +32,11 @@ import org.geoserver.config.GeoServerInfo;
 import org.geoserver.config.SettingsInfo;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Files;
+import org.geoserver.platform.resource.Paths;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.rest.RestException;
+import org.geotools.util.URLs;
 import org.geotools.util.logging.Logging;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -168,6 +170,7 @@ public class RESTUtils {
         org.geoserver.platform.resource.Resource newFile = directory.get(itemPath.toString());
 
         // get the URL for this file to upload
+        @SuppressWarnings("PMD.CloseResource") // managed by servlet container
         final InputStream inStream = request.getInputStream();
         final String stringURL = IOUtils.getStringFromStream(inStream);
         final URL fileURL = new URL(stringURL);
@@ -177,19 +180,15 @@ public class RESTUtils {
         // Now do the real upload
         //
         ////
-        final InputStream inputStream = fileURL.openStream();
-        final OutputStream outStream = newFile.out();
-        IOUtils.copyStream(inputStream, outStream, true, true);
+        try (InputStream inputStream = fileURL.openStream();
+                OutputStream outStream = newFile.out()) {
+            IOUtils.copyStream(inputStream, outStream, true, true);
+        }
 
         return newFile;
     }
 
-    /**
-     * Handles an upload using the EXTERNAL method.
-     *
-     * @param request
-     * @throws IOException
-     */
+    /** Handles an upload using the EXTERNAL method. */
     public static org.geoserver.platform.resource.Resource handleEXTERNALUpload(
             HttpServletRequest request) throws IOException {
         // get the URL for this file to upload
@@ -216,7 +215,7 @@ public class RESTUtils {
         return Files.asResource(inputFile);
     }
 
-    static Set<String> ZIP_MIME_TYPES = new HashSet();
+    static Set<String> ZIP_MIME_TYPES = new HashSet<>();
 
     static {
         ZIP_MIME_TYPES.add("application/zip");
@@ -246,7 +245,7 @@ public class RESTUtils {
             org.geoserver.platform.resource.Resource zipFile,
             org.geoserver.platform.resource.Resource outputDirectory)
             throws IOException {
-        unzipFile(zipFile, outputDirectory, null, null, null, null, false);
+        unzipFile(zipFile, outputDirectory, null, null, null, false);
     }
 
     /**
@@ -254,27 +253,26 @@ public class RESTUtils {
      *
      * @param zipFile The zip file.
      * @param outputDirectory The directory to unpack the contents to.
-     * @param external
      * @throws IOException Any I/O errors that occur.
      *     <p>TODO: move this to IOUtils
      */
     public static void unzipFile(
-            org.geoserver.platform.resource.Resource zipFile,
-            org.geoserver.platform.resource.Resource outputDirectory,
+            Resource zipFile,
+            Resource outputDirectory,
             String workspace,
             String store,
-            HttpServletRequest request,
-            List<org.geoserver.platform.resource.Resource> files,
+            List<Resource> files,
             boolean external)
             throws IOException {
 
         if (outputDirectory == null) {
             outputDirectory = zipFile.parent();
         }
-        ZipFile archive = new ZipFile(zipFile.file());
-
-        IOUtils.inflate(archive, outputDirectory, null, workspace, store, files, external, true);
-        zipFile.delete();
+        try (ZipFile archive = new ZipFile(zipFile.file())) {
+            IOUtils.inflate(
+                    archive, outputDirectory, null, workspace, store, files, external, true);
+            zipFile.delete();
+        }
     }
 
     /**
@@ -307,25 +305,18 @@ public class RESTUtils {
         }
     }
 
-    /**
-     * Method for searching an item inside the MetadataMap.
-     *
-     * @param workspaceName
-     * @param storeName
-     * @param catalog
-     */
+    /** Method for searching an item inside the MetadataMap. */
     public static String getItem(
             String workspaceName, String storeName, Catalog catalog, String key) {
         // Initialization of a null String containing the root directory to use for the input store
         // config
-        String item;
 
         // ////////////////////////////////////
         //
         // Check Store info if present
         //
         // ////////////////////////////////////
-        item = extractMapItem(loadMapfromStore(storeName, catalog), key);
+        String item = extractMapItem(loadMapfromStore(storeName, catalog), key);
 
         // ////////////////////////////////////
         //
@@ -350,12 +341,7 @@ public class RESTUtils {
         return item;
     }
 
-    /**
-     * This method is used for extracting the metadata map from the selected store
-     *
-     * @param storeName
-     * @param catalog
-     */
+    /** This method is used for extracting the metadata map from the selected store */
     public static MetadataMap loadMapfromStore(String storeName, Catalog catalog) {
         StoreInfo storeInfo = catalog.getStoreByName(storeName, CoverageStoreInfo.class);
         if (storeInfo == null) {
@@ -368,12 +354,7 @@ public class RESTUtils {
         return null;
     }
 
-    /**
-     * This method is used for extracting the metadata map from the selected workspace
-     *
-     * @param workspaceName
-     * @param catalog
-     */
+    /** This method is used for extracting the metadata map from the selected workspace */
     public static MetadataMap loadMapfromWorkSpace(String workspaceName, Catalog catalog) {
         WorkspaceInfo wsInfo = catalog.getWorkspaceByName(workspaceName);
         // If the WorkSpace is present, then the associated MetadataMap is selected
@@ -396,12 +377,7 @@ public class RESTUtils {
         return null;
     }
 
-    /**
-     * Extraction of the item from the metadata map
-     *
-     * @param map
-     * @param key
-     */
+    /** Extraction of the item from the metadata map */
     public static String extractMapItem(MetadataMap map, String key) {
         if (map != null && !map.isEmpty()) {
             String item = map.get(key, String.class);
@@ -452,14 +428,53 @@ public class RESTUtils {
         }
     }
 
-    /**
-     * Unzips a InputStream to a directory
-     *
-     * @param in
-     * @param outputDirectory
-     * @throws IOException
-     */
+    /** Unzips a InputStream to a directory */
     public static void unzipInputStream(InputStream in, File outputDirectory) throws IOException {
         org.geoserver.util.IOUtils.decompress(in, outputDirectory);
+    }
+
+    /** Creates a file upload root for the given workspace and store */
+    public static Resource createUploadRoot(
+            Catalog catalog, String workspaceName, String storeName, boolean isPost)
+            throws IOException {
+        // Check if the Request is a POST request, in order to search for an existing coverage
+        Resource directory = null;
+        if (isPost && storeName != null) {
+            // Check if the coverage already exists
+            CoverageStoreInfo coverage = catalog.getCoverageStoreByName(storeName);
+            if (coverage != null) {
+                if (workspaceName == null
+                        || coverage.getWorkspace().getName().equalsIgnoreCase(workspaceName)) {
+                    // If the coverage exists then the associated directory is defined by its URL
+                    String url = coverage.getURL();
+                    String path;
+                    if (url.startsWith("file:")) {
+                        path = URLs.urlToFile(new URL(url)).getPath();
+                    } else {
+                        path = url;
+                    }
+                    directory = Resources.fromPath(path, catalog.getResourceLoader().get(""));
+                }
+            }
+        }
+        // If the directory has not been found then it is created directly
+        if (directory == null) {
+            directory =
+                    catalog.getResourceLoader().get(Paths.path("data", workspaceName, storeName));
+        }
+
+        // Selection of the original ROOT directory path
+        StringBuilder root = new StringBuilder(directory.path());
+        // StoreParams to use for the mapping.
+        Map<String, String> storeParams = new HashMap<>();
+        // Listing of the available pathMappers
+        List<RESTUploadPathMapper> mappers =
+                GeoServerExtensions.extensions(RESTUploadPathMapper.class);
+        // Mapping of the root directory
+        for (RESTUploadPathMapper mapper : mappers) {
+            mapper.mapStorePath(root, workspaceName, storeName, storeParams);
+        }
+        directory = Resources.fromPath(root.toString());
+        return directory;
     }
 }

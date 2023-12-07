@@ -6,13 +6,16 @@
          <label for="name"><wicket:message key="name">Name</wicket:message></label>
          <input wicket:id="name" id="name" class="text"/>
        </li>
-       <li>
-         <label for="title"><wicket:message key="layerGroupTitle">Title</wicket:message></label>
-         <input wicket:id="title" id="title" class="text"/>
+       <li class="choiceItem">
+         <input id="basic-enabled" wicket:id="enabled" type="checkbox"/>
+         <label for="basic-enabled"><wicket:message key="enabled">Enabled</wicket:message></label>
+       </li>
+       <li class="choiceItem">
+         <input id="basic-advertised" wicket:id="advertised" type="checkbox"/>
+         <label for="basic-advertised"><wicket:message key="advertised">Advertised</wicket:message></label>
        </li>
        <li>
-         <label for="abstract"><wicket:message key="abstract">Abstract</wicket:message></label>
-         <textarea rows="60" cols="20" wicket:id="abstract"></textarea>
+         <div wicket:id="titleAndAbstract"/>
        </li>
        <li>
          <label for="workspace"><wicket:message key="workspace">Workspace</wicket:message></label>
@@ -39,6 +42,9 @@
 	   </li>
        <li>
          <div wicket:id="layers"></div>
+       </li>
+       <li>
+         <div wicket:id="layerGroupStyles"></div>
        </li>
        <li>       
         <fieldset>

@@ -8,8 +8,8 @@ package org.geoserver.wms.wms_1_1_1;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathNotExists;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -326,14 +326,14 @@ public class LayerGroupWorkspaceTest extends WMSTestSupport {
     public void testWorkspaceGetMap() throws Exception {
         Document dom = getAsDOM("sf/wms?request=reflect&layers=base&format=rss");
         assertXpathExists(
-                "rss/channel/title[text() = 'sf:PrimitiveGeoFeature,sf:AggregateGeoFeature']", dom);
+                "rss/channel/title[text() = 'PrimitiveGeoFeature,AggregateGeoFeature']", dom);
 
         dom = getAsDOM("cite/wms?request=reflect&layers=base&format=rss");
-        assertXpathExists("rss/channel/title[text() = 'cite:Bridges,cite:Buildings']", dom);
+        assertXpathExists("rss/channel/title[text() = 'Bridges,Buildings']", dom);
 
         dom = getAsDOM("sf/wms?request=reflect&layers=cite:base&format=rss");
         assertXpathExists(
-                "rss/channel/title[text() = 'sf:PrimitiveGeoFeature,sf:AggregateGeoFeature']", dom);
+                "rss/channel/title[text() = 'PrimitiveGeoFeature,AggregateGeoFeature']", dom);
     }
 
     @Test
@@ -545,7 +545,7 @@ public class LayerGroupWorkspaceTest extends WMSTestSupport {
         List<String> normal =
                 originalList.stream().map(x -> removeLayerPrefix(x)).collect(Collectors.toList());
         List<String> ordered = normal.stream().sorted().collect(Collectors.toList());
-        assertTrue(ordered.equals(normal));
+        assertEquals(ordered, normal);
     }
 
     /** Test Layer group order on a workspace virtual service */
@@ -562,15 +562,10 @@ public class LayerGroupWorkspaceTest extends WMSTestSupport {
         List<String> normal =
                 originalList.stream().map(x -> removeLayerPrefix(x)).collect(Collectors.toList());
         List<String> ordered = normal.stream().sorted().collect(Collectors.toList());
-        assertTrue(ordered.equals(normal));
+        assertEquals(ordered, normal);
     }
 
-    /**
-     * removes prefix from layer name
-     *
-     * @param prefixedName
-     * @return
-     */
+    /** removes prefix from layer name */
     private String removeLayerPrefix(String prefixedName) {
         if (prefixedName.indexOf(":") > -1) {
             return prefixedName.split(":")[1];
@@ -578,13 +573,7 @@ public class LayerGroupWorkspaceTest extends WMSTestSupport {
         return prefixedName;
     }
 
-    /**
-     * returns list of prefixed layer groups names from document
-     *
-     * @param doc
-     * @return
-     * @throws Exception
-     */
+    /** returns list of prefixed layer groups names from document */
     private List<String> layerGroupNameList(Document doc) throws Exception {
         List<Node> nlist =
                 xpathList("//WMT_MS_Capabilities/Capability/Layer/Layer[not(@opaque)]/Name", doc);

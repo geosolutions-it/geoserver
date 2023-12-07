@@ -7,7 +7,7 @@ package org.geoserver.wcs.responses;
 
 import com.sun.media.imageio.plugins.tiff.BaselineTIFFTagSet;
 import it.geosolutions.imageioimpl.plugins.tiff.TIFFLZWCompressor;
-import java.awt.*;
+import java.awt.Dimension;
 import java.awt.image.RenderedImage;
 import java.awt.image.SampleModel;
 import java.io.IOException;
@@ -66,7 +66,8 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
                         "TIFF",
                         "GEOTIFF",
                         "GeoTIFF",
-                        "image/geotiff"), // output formats
+                        "image/geotiff",
+                        "image/tiff;application=geotiff"), // output formats
                 new HashMap<String, String>() { // file extensions
                     {
                         put("tiff", "tif");
@@ -77,6 +78,7 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
                         put("GeoTIFF", "tif");
                         put("image/geotiff", "tif");
                         put("image/tiff", "tif");
+                        put("image/tiff;application=geotiff", "tif");
                     }
                 },
                 new HashMap<String, String>() { // mime types
@@ -88,10 +90,12 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
                         put("GEOTIFF", "image/tiff");
                         put("GeoTIFF", "image/tiff");
                         put("image/geotiff", "image/tiff");
+                        put("image/tiff;application=geotiff", "image/tiff;application=geotiff");
                     }
                 });
     }
 
+    @Override
     public void encode(
             GridCoverage2D sourceCoverage,
             String outputFormat,
@@ -159,11 +163,7 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
         }
     }
 
-    /**
-     * All OWS 2.0 exceptions for the geotiff extension come with a 404 error code
-     *
-     * @param code
-     */
+    /** All OWS 2.0 exceptions for the geotiff extension come with a 404 error code */
     private OWS20Exception.OWSExceptionCode ows20Code(WcsExceptionCode code) {
         return new OWS20Exception.OWSExceptionCode(code.toString(), 404);
     }

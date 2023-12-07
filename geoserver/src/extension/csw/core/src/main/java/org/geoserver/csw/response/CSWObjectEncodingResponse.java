@@ -36,7 +36,7 @@ public class CSWObjectEncodingResponse extends XmlObjectEncodingResponse {
 
     @Override
     protected Map<String, String> getSchemaLocations() {
-        Map<String, String> locations = new HashMap<String, String>();
+        Map<String, String> locations = new HashMap<>();
         locations.put(
                 "http://www.opengis.net/cat/csw/2.0.2",
                 "http://schemas.opengis.net/csw/2.0.2/CSW-discovery.xsd");
@@ -47,7 +47,6 @@ public class CSWObjectEncodingResponse extends XmlObjectEncodingResponse {
     protected void configureEncoder(
             Encoder encoder, String elementName, Class<?> xmlConfiguration) {
         encoder.setNamespaceAware(true);
-        encoder.getNamespaces().declarePrefix("gml", GML.NAMESPACE);
         encoder.getNamespaces().declarePrefix("xlink", XLINK.NAMESPACE);
         try {
             for (RecordDescriptor rd : catalogStore.getRecordDescriptors()) {
@@ -61,5 +60,6 @@ public class CSWObjectEncodingResponse extends XmlObjectEncodingResponse {
         } catch (IOException e) {
             throw new CSWException(e.getMessage(), e);
         }
+        encoder.getNamespaces().declarePrefix("gml", GML.NAMESPACE);
     }
 }

@@ -8,6 +8,7 @@ package org.geoserver.wfs;
 import com.thoughtworks.xstream.XStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamServiceLoader;
@@ -31,11 +32,7 @@ public class WFSXStreamLoader extends XStreamServiceLoader<WFSInfo> {
         initXStreamPersister(xp);
     }
 
-    /**
-     * Sets up aliases and allowed types for the xstream persister
-     *
-     * @param xs
-     */
+    /** Sets up aliases and allowed types for the xstream persister */
     public static void initXStreamPersister(XStreamPersister xp) {
         XStream xs = xp.getXStream();
         xs.alias("wfs", WFSInfo.class, WFSInfoImpl.class);
@@ -45,10 +42,15 @@ public class WFSXStreamLoader extends XStreamServiceLoader<WFSInfo> {
         xs.allowTypes(new Class[] {WFSInfo.Version.class, GMLInfo.class, GMLInfoImpl.class});
     }
 
+    @Override
     protected WFSInfo createServiceFromScratch(GeoServer gs) {
         WFSInfoImpl wfs = new WFSInfoImpl();
         wfs.setName("WFS");
         wfs.setMaxFeatures(1000000);
+
+        // Feature Output Type Checking
+        wfs.setGetFeatureOutputTypeCheckingEnabled(false);
+        wfs.setGetFeatureOutputTypes(new HashSet<String>());
 
         // gml2
         addGml(wfs, WFSInfo.Version.V_10, GMLInfo.SrsNameStyle.XML, true);
@@ -61,6 +63,7 @@ public class WFSXStreamLoader extends XStreamServiceLoader<WFSInfo> {
         return wfs;
     }
 
+    @Override
     public Class<WFSInfo> getServiceClass() {
         return WFSInfo.class;
     }
@@ -77,9 +80,14 @@ public class WFSXStreamLoader extends XStreamServiceLoader<WFSInfo> {
             service.getVersions().add(WFSInfo.Version.V_20.getVersion());
         }
 
+        // set the defaults for Output Type Checking if not set
+        if (service.getGetFeatureOutputTypes() == null) {
+            service.setGetFeatureOutputTypes(new HashSet<String>());
+        }
+
         // set the defaults for GMLInfo if they are not set
         if (service.getGML() == null) {
-            ((WFSInfoImpl) service).setGML(new HashMap<WFSInfo.Version, GMLInfo>());
+            ((WFSInfoImpl) service).setGML(new HashMap<>());
         }
         GMLInfo gml = service.getGML().get(WFSInfo.Version.V_10);
         if (gml == null) {
@@ -98,7 +106,7 @@ public class WFSXStreamLoader extends XStreamServiceLoader<WFSInfo> {
             addGml(service, WFSInfo.Version.V_20, SrsNameStyle.URN2, false);
         }
         if (service.getSRS() == null) {
-            ((WFSInfoImpl) service).setSRS(new ArrayList<String>());
+            ((WFSInfoImpl) service).setSRS(new ArrayList<>());
         }
         return service;
     }

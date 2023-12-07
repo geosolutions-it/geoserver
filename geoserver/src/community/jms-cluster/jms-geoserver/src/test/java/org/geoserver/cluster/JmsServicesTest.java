@@ -7,7 +7,7 @@ package org.geoserver.cluster;
 import static org.geoserver.cluster.JmsEventsListener.getMessagesForHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.List;
 import java.util.UUID;
@@ -103,8 +103,7 @@ public final class JmsServicesTest extends GeoServerSystemTestSupport {
         assertThat(serviceEvents.size(), is(2));
         // check the modify event
         JMSServiceModifyEvent modifyEvent =
-                serviceEvents
-                        .stream()
+                serviceEvents.stream()
                         .filter(event -> event.getEventType() == JMSEventType.MODIFIED)
                         .findFirst()
                         .orElse(null);
@@ -115,8 +114,7 @@ public final class JmsServicesTest extends GeoServerSystemTestSupport {
         assertThat(modifiedService.getAbstract(), is(newAbstract));
         // check the post modify event
         JMSServiceModifyEvent postModifyEvent =
-                serviceEvents
-                        .stream()
+                serviceEvents.stream()
                         .filter(event -> event.getEventType() == JMSEventType.ADDED)
                         .findFirst()
                         .orElse(null);

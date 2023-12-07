@@ -14,14 +14,19 @@
         <include>xmlbeans-*.jar</include>
         <include>dom4j-*.jar</include>
         <include>commons-compress-*.jar</include>
+        <include>commons-math3-*.jar</include>
+        <include>curvesapi*.jar</include>
       </includes>
     </fileSet>
     <fileSet>
-      <directory>release/extensions</directory>
-      <outputDirectory></outputDirectory>
-      <includes>
-        <include>LICENSE.txt</include>
-      </includes>
+        <directory>release/target/html/licenses</directory>
+        <outputDirectory></outputDirectory>
+        <includes>
+            <include>LGPL.html</include>
+            <include>GEOTOOLS_NOTICE.html</include>
+            <include>GPL.html</include>
+            <include>NOTICE.html</include>
+        </includes>
     </fileSet>
     <fileSet>
       <directory>release/extensions/excel</directory>

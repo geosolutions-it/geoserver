@@ -64,7 +64,7 @@ Strings can be enclosed in either single or double quotes.  It's easiest to
 simply use whichever type of quotes are not in your string value, but you can
 escape quote characters by prefixing them with a backslash ``\``.  Backslash
 characters themselves must also be prefixed.  For example, ``'\\\''`` is a
-string value consisting of a single backslash followed by a single single quote
+string value consisting of a single backslash followed by a single quote
 character.
 
 Labels
@@ -88,7 +88,7 @@ concatenated to form a single label::
       label: "Serious " "Freaking " "Highway";
    }
 
-Note the whitespace within the label strings here; *no whitespace is added*
+Note the blank-space within the label strings here; *no blank-space is added*
 when concatenating strings, so you must be explicit about where you want it
 included.  You can also mix CQL expressions in with literal string values
 here::

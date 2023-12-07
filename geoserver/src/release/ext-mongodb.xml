@@ -10,6 +10,18 @@
       <outputDirectory/>
       <includes>
         <include>*mongo*.jar</include>
+        <include>*bson*.jar</include>
+        <include>gt-app-schema-*.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>release/target/html/licenses</directory>
+      <outputDirectory></outputDirectory>
+      <includes>
+         <include>LGPL.html</include>
+         <include>GEOTOOLS_NOTICE.html</include>
+         <include>GPL.html</include>
+         <include>NOTICE.html</include>
       </includes>
     </fileSet>
   </fileSets>

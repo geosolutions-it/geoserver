@@ -18,7 +18,7 @@ import org.geoserver.web.wicket.browser.FileInput;
  *
  * @author Andrea Aime - GeoSolutions
  */
-public class FileParamPanel extends Panel implements ParamPanel {
+public class FileParamPanel extends Panel implements ParamPanel<String> {
     private static final long serialVersionUID = 2630421795437249103L;
     private final FileInput fileInput;
 
@@ -54,15 +54,12 @@ public class FileParamPanel extends Panel implements ParamPanel {
     }
 
     /** The text field stored inside the panel. */
+    @Override
     public FormComponent<String> getFormComponent() {
         return fileInput.getFormComponent();
     }
 
-    /**
-     * Sets the filter that will act in the file chooser dialog
-     *
-     * @param fileFilter
-     */
+    /** Sets the filter that will act in the file chooser dialog */
     public void setFileFilter(IModel<? extends FileFilter> fileFilter) {
         this.fileInput.setFileFilter(fileFilter);
     }

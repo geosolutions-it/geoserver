@@ -93,7 +93,6 @@ public class ImportJSONWriter {
      * from the query map.
      *
      * @param def The default value to fall back on
-     * @return
      */
     public int expand(int def) {
         String ex = null;
@@ -112,7 +111,6 @@ public class ImportJSONWriter {
      *
      * @param expand The value of the "expand" parameter
      * @param def The default value to fall back on
-     * @return
      */
     public int expand(String expand, int def) {
         if (expand == null) {
@@ -349,8 +347,7 @@ public class ImportJSONWriter {
             throws IOException {
         json.key("attributes").array();
         List<AttributeTypeInfo> attributes = featureTypeInfo.attributes();
-        for (int i = 0; i < attributes.size(); i++) {
-            AttributeTypeInfo att = attributes.get(i);
+        for (AttributeTypeInfo att : attributes) {
             json.object();
             json.key("name").value(att.getName());
             json.key("binding").value(att.getBinding().getName());
@@ -398,10 +395,7 @@ public class ImportJSONWriter {
         json.key("type").value(txChain instanceof VectorTransformChain ? "vector" : "raster");
 
         transforms(
-                json,
-                task,
-                expand,
-                txChain != null ? txChain.getTransforms() : new ArrayList<ImportTransform>());
+                json, task, expand, txChain != null ? txChain.getTransforms() : new ArrayList<>());
         json.endObject();
 
         if (top) {
@@ -749,8 +743,7 @@ public class ImportJSONWriter {
         if (!records.isEmpty()) {
             json.key("messages");
             json.array();
-            for (int i = 0; i < records.size(); i++) {
-                LogRecord record = records.get(i);
+            for (LogRecord record : records) {
                 json.object();
                 json.key("level").value(record.getLevel().toString());
                 json.key("message").value(record.getMessage());
@@ -856,6 +849,15 @@ public class ImportJSONWriter {
         errorResponse.put("errors", errors);
 
         return new RestException(errorResponse.toString(), HttpStatus.BAD_REQUEST);
+    }
+
+    public static RestException badRequest(Throwable t) {
+        JSONObject errorResponse = new JSONObject();
+        JSONArray errors = new JSONArray();
+        errors.add(t.getMessage());
+        errorResponse.put("errors", errors);
+
+        return new RestException(errorResponse.toString(), HttpStatus.BAD_REQUEST, t);
     }
 
     public static class FlushableJSONBuilder extends JSONBuilder {

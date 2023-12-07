@@ -35,12 +35,23 @@
         <include>jcommander*.jar</include>
         <include>opendap*.jar</include>
         <include>http*.jar</include>
+        <include>h2-*.jar</include>
       </includes>
       <excludes>
         <exclude>gs-netcdf-out*.jar</exclude>
         <exclude>jettison*.jar</exclude>
         <exclude>log4j-over-slf4j*.jar</exclude>
       </excludes>
+    </fileSet>
+    <fileSet>
+        <directory>release/target/html/licenses</directory>
+        <outputDirectory></outputDirectory>
+        <includes>
+            <include>LGPL.html</include>
+            <include>GEOTOOLS_NOTICE.html</include>
+            <include>GPL.html</include>
+            <include>NOTICE.html</include>
+        </includes>
     </fileSet>
   </fileSets>
 </assembly>

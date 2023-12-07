@@ -5,10 +5,12 @@
  */
 package org.geoserver.wfs.v2_0;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 import au.com.bytecode.opencsv.CSVReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -21,12 +23,14 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geotools.data.DataStore;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.FeatureSource;
-import org.geotools.data.FeatureStore;
+import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
@@ -40,6 +44,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
 public class GetFeatureJoinTest extends WFS20TestSupport {
+    private static final String CSV = "text/csv";
 
     @Override
     protected void setUpInternal(SystemTestData data) throws Exception {
@@ -53,27 +58,27 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         ds.setWorkspace(cat.getDefaultWorkspace());
         ds.setEnabled(true);
 
-        Map params = ds.getConnectionParameters();
+        Map<String, Serializable> params = ds.getConnectionParameters();
         params.put("dbtype", "h2");
         params.put("database", getTestData().getDataDirectoryRoot().getAbsolutePath() + "/foo");
         cat.add(ds);
 
-        FeatureSource fs1 = getFeatureSource(SystemTestData.FORESTS);
-        FeatureSource fs2 = getFeatureSource(SystemTestData.LAKES);
-        FeatureSource fs3 = getFeatureSource(SystemTestData.PRIMITIVEGEOFEATURE);
+        SimpleFeatureSource fs1 = getFeatureSource(SystemTestData.FORESTS);
+        SimpleFeatureSource fs2 = getFeatureSource(SystemTestData.LAKES);
+        SimpleFeatureSource fs3 = getFeatureSource(SystemTestData.PRIMITIVEGEOFEATURE);
 
         DataStore store = (DataStore) ds.getDataStore(null);
         SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
 
-        tb.init((SimpleFeatureType) fs1.getSchema());
+        tb.init(fs1.getSchema());
         // tb.remove("boundedBy");
         store.createSchema(tb.buildFeatureType());
 
-        tb.init((SimpleFeatureType) fs2.getSchema());
+        tb.init(fs2.getSchema());
         // tb.remove("boundedBy");
         store.createSchema(tb.buildFeatureType());
 
-        tb.init((SimpleFeatureType) fs3.getSchema());
+        tb.init(fs3.getSchema());
         tb.remove("surfaceProperty");
         tb.remove("curveProperty");
         tb.remove("uriProperty");
@@ -82,7 +87,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         CatalogBuilder cb = new CatalogBuilder(cat);
         cb.setStore(ds);
 
-        FeatureStore fs = (FeatureStore) store.getFeatureSource("Forests");
+        SimpleFeatureStore fs = (SimpleFeatureStore) store.getFeatureSource("Forests");
         fs.addFeatures(fs1.getFeatures());
         addFeature(
                 fs,
@@ -97,7 +102,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         FeatureTypeInfo ft = cb.buildFeatureType(fs);
         cat.add(ft);
 
-        fs = (FeatureStore) store.getFeatureSource("Lakes");
+        fs = (SimpleFeatureStore) store.getFeatureSource("Lakes");
         fs.addFeatures(fs2.getFeatures());
         addFeature(
                 fs,
@@ -117,7 +122,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         ft = cb.buildFeatureType(fs);
         cat.add(ft);
 
-        fs = (FeatureStore) store.getFeatureSource("PrimitiveGeoFeature");
+        fs = (SimpleFeatureStore) store.getFeatureSource("PrimitiveGeoFeature");
         fs.addFeatures(fs3.getFeatures());
         ft = cb.buildFeatureType(fs);
         cat.add(ft);
@@ -146,7 +151,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         fb.add(dateFormat.parseObject("2006-06-28 18:00:00"));
         features.add(fb.buildFeature(null));
 
-        fs = (FeatureStore) store.getFeatureSource("TimeFeature");
+        fs = (SimpleFeatureStore) store.getFeatureSource("TimeFeature");
         fs.addFeatures(features);
         ft = cb.buildFeatureType(fs);
         cat.add(ft);
@@ -156,7 +161,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                 DataUtilities.createType(
                         SystemTestData.CITE_URI, "t1", "g1:Point:srid=4326,code1:int,name1:String");
         store.createSchema(ft1);
-        fs = (FeatureStore) store.getFeatureSource("t1");
+        fs = (SimpleFeatureStore) store.getFeatureSource("t1");
         addFeature(fs, "POINT(1 1)", Integer.valueOf(1), "First");
         ft = cb.buildFeatureType(fs);
         cat.add(ft);
@@ -165,7 +170,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                 DataUtilities.createType(
                         SystemTestData.CITE_URI, "t2", "g2:Point:srid=4326,code2:int,name2:String");
         store.createSchema(ft2);
-        fs = (FeatureStore) store.getFeatureSource("t2");
+        fs = (SimpleFeatureStore) store.getFeatureSource("t2");
         addFeature(fs, "POINT(2 2)", Integer.valueOf(1), "Second");
         ft = cb.buildFeatureType(fs);
         cat.add(ft);
@@ -174,14 +179,14 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                 DataUtilities.createType(
                         SystemTestData.CITE_URI, "t3", "g3:Point:srid=4326,code3:int,name3:String");
         store.createSchema(ft3);
-        fs = (FeatureStore) store.getFeatureSource("t3");
+        fs = (SimpleFeatureStore) store.getFeatureSource("t3");
         addFeature(fs, "POINT(3 3)", Integer.valueOf(1), "Third");
         ft = cb.buildFeatureType(fs);
         cat.add(ft);
     }
 
-    void addFeature(FeatureStore store, String wkt, Object... atts) throws Exception {
-        SimpleFeatureBuilder b = new SimpleFeatureBuilder((SimpleFeatureType) store.getSchema());
+    void addFeature(SimpleFeatureStore store, String wkt, Object... atts) throws Exception {
+        SimpleFeatureBuilder b = new SimpleFeatureBuilder(store.getSchema());
         b.add(new WKTReader().read(wkt));
         for (Object att : atts) {
             b.add(att);
@@ -295,6 +300,49 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         XMLAssert.assertXpathExists(
                 "wfs:FeatureCollection/wfs:member[position()=2]/wfs:Tuple//gs:Lakes/gs:NAME[text() = 'Green Lake']",
                 dom);
+    }
+
+    /**
+     * Both {@code cdf:Forests} and {@code gs:Forests} exist. The default workspace is {@code cdf},
+     * but the request calls for the {@code gs} local workspace with unqualified type names. At the
+     * time the KVP is parsed, the {@code LocalWorkspace} is not set, so it resolves {@code Forests}
+     * based on the default namespace. Further down the request processing chain, {@link
+     * WFSWorkspaceQualifier} figures out the original request was meant to use the typename in the
+     * local workspace instead and amends the KVP.
+     */
+    @Test
+    public void testSpatialJoinGETWorkspaceQualifier() throws Exception {
+        Catalog catalog = getCatalog();
+        // change the default workspace to make sure WFSWorkspaceQualifier did its job (i.e.
+        // TypeNamesKvpParser resolved to cdf:Forests and then WFSWorkspaceQualifier had to override
+        // as gs:Forests, since at the time the kvp parser runs the LocalWorkspace is not set)
+        WorkspaceInfo gs = catalog.getWorkspaceByName("gs");
+        WorkspaceInfo cdf = catalog.getWorkspaceByName("cdf");
+        catalog.setDefaultWorkspace(cdf);
+        try {
+            Document dom =
+                    getAsDOM(
+                            "gs/wfs?service=WFS&version=2.0.0&request=getFeature&typenames=Forests,Lakes&aliases=a,b&filter=<Filter><Intersects><ValueReference>a/the_geom</ValueReference><ValueReference>b/the_geom</ValueReference></Intersects></Filter>");
+
+            XMLAssert.assertXpathEvaluatesTo("2", "count(//wfs:Tuple)", dom);
+
+            XMLAssert.assertXpathExists(
+                    "//wfs:Tuple[position() = 1]/wfs:member/gs:Forests/gs:NAME[text() = 'Green Forest']",
+                    dom);
+            XMLAssert.assertXpathExists(
+                    "//wfs:Tuple[position() = 1]/wfs:member/gs:Lakes/gs:NAME[text() = 'Blue Lake']",
+                    dom);
+
+            XMLAssert.assertXpathExists(
+                    "wfs:FeatureCollection/wfs:member[position()=2]/wfs:Tuple//gs:Forests/gs:NAME[text() = 'Foo Forest']",
+                    dom);
+            XMLAssert.assertXpathExists(
+                    "wfs:FeatureCollection/wfs:member[position()=2]/wfs:Tuple//gs:Lakes/gs:NAME[text() = 'Green Lake']",
+                    dom);
+        } finally {
+            // restore default workspace
+            catalog.setDefaultWorkspace(gs);
+        }
     }
 
     @Test
@@ -635,11 +683,7 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         }
     }
 
-    /**
-     * See [GEOS-8032] WFS 2.0 feature joins fails when the joined feature type is renamed
-     *
-     * @throws Exception
-     */
+    /** See [GEOS-8032] WFS 2.0 feature joins fails when the joined feature type is renamed */
     @Test
     @Ignore
     public void testStandardJoinSecondaryTypeRenamed() throws Exception {
@@ -944,16 +988,17 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
-        assertEquals("attachment; filename=Forests.csv", resp.getHeader("Content-Disposition"));
+        assertEquals(
+                "attachment; filename=Forests_Lakes.csv", resp.getHeader("Content-Disposition"));
 
         // read the response back with a parser that can handle escaping, newlines
         // and what not
@@ -996,16 +1041,17 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
-        assertEquals("attachment; filename=Forests.csv", resp.getHeader("Content-Disposition"));
+        assertEquals(
+                "attachment; filename=Forests_Lakes.csv", resp.getHeader("Content-Disposition"));
 
         // read the response back with a parser that can handle escaping, newlines
         // and what not
@@ -1048,16 +1094,17 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
-        assertEquals("attachment; filename=Forests.csv", resp.getHeader("Content-Disposition"));
+        assertEquals(
+                "attachment; filename=Forests_Lakes.csv", resp.getHeader("Content-Disposition"));
 
         // read the response back with a parser that can handle escaping, newlines
         // and what not
@@ -1098,16 +1145,17 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
-        assertEquals("attachment; filename=Forests.csv", resp.getHeader("Content-Disposition"));
+        assertEquals(
+                "attachment; filename=Forests_Forests.csv", resp.getHeader("Content-Disposition"));
 
         // read the response back with a parser that can handle escaping, newlines
         // and what not
@@ -1142,16 +1190,17 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
-        assertEquals("attachment; filename=Forests.csv", resp.getHeader("Content-Disposition"));
+        assertEquals(
+                "attachment; filename=Forests_Lakes.csv", resp.getHeader("Content-Disposition"));
 
         // read the response back with a parser that can handle escaping, newlines
         // and what not
@@ -1209,16 +1258,16 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
-        assertEquals("attachment; filename=t1.csv", resp.getHeader("Content-Disposition"));
+        assertEquals("attachment; filename=t1_t2_t3.csv", resp.getHeader("Content-Disposition"));
 
         // read the response back with a parser that can handle escaping, newlines
         // and what not
@@ -1238,17 +1287,12 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
         }
     }
 
-    /**
-     * Convenience to read the csv content and
-     *
-     * @param csvContent
-     * @throws IOException
-     */
+    /** Convenience to read the csv content and */
     private List<String[]> readLines(String csvContent) throws IOException {
         // System.out.println(csvContent);
         CSVReader reader = new CSVReader(new StringReader(csvContent));
 
-        List<String[]> result = new ArrayList<String[]>();
+        List<String[]> result = new ArrayList<>();
         String[] nextLine;
         while ((nextLine = reader.readNext()) != null) {
             result.add(nextLine);

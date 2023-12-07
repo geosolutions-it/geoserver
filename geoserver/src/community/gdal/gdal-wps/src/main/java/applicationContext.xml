@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (C) 2015 Open Source Geospatial Foundation. All rights reserved.
     This code is licensed under the GPL 2.0 license, available at the root application
     directory. -->
@@ -11,5 +11,12 @@
             <ref bean="gdalCoverageResponseDelegate" />
         </constructor-arg>
     </bean>
-
+	<bean id="GDALWPSExtension"
+		class="org.geoserver.platform.ModuleStatusImpl">
+		<property name="module" value="gs-gdal-wps" />
+		<property name="name" value="GDAL WPS Extension" />
+		<property name="component" value="GDAL WPS extension" />
+		<property name="available" value="true" />
+		<property name="enabled" value="true" />
+	</bean>
 </beans>

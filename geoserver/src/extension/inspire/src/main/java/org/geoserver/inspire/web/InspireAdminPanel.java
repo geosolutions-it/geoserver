@@ -7,6 +7,7 @@ package org.geoserver.inspire.web;
 
 import static org.geoserver.inspire.InspireMetadata.CREATE_EXTENDED_CAPABILITIES;
 import static org.geoserver.inspire.InspireMetadata.LANGUAGE;
+import static org.geoserver.inspire.InspireMetadata.OTHER_LANGUAGES;
 import static org.geoserver.inspire.InspireMetadata.SERVICE_METADATA_TYPE;
 import static org.geoserver.inspire.InspireMetadata.SERVICE_METADATA_URL;
 import static org.geoserver.inspire.InspireMetadata.SPATIAL_DATASET_IDENTIFIER_TYPE;
@@ -42,7 +43,7 @@ public class InspireAdminPanel extends AdminPagePanel {
 
     private static final long serialVersionUID = -7670555379263411393L;
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     public InspireAdminPanel(final String id, final IModel<ServiceInfo> model) {
         super(id, model);
 
@@ -65,7 +66,7 @@ public class InspireAdminPanel extends AdminPagePanel {
             }
         }
 
-        PropertyModel<MetadataMap> metadata = new PropertyModel<MetadataMap>(model, "metadata");
+        PropertyModel<MetadataMap> metadata = new PropertyModel<>(model, "metadata");
 
         final CheckBox createInspireExtendedCapabilities =
                 new CheckBox(
@@ -97,7 +98,10 @@ public class InspireAdminPanel extends AdminPagePanel {
         if (!model.getObject().getMetadata().containsKey(LANGUAGE.key)) {
             model.getObject().getMetadata().put(LANGUAGE.key, "eng");
         }
+
         configs.add(new LanguageDropDownChoice("language", new MapModel(metadata, LANGUAGE.key)));
+        configs.add(
+                new LanguagesEditor("otherLanguages", new MapModel(metadata, OTHER_LANGUAGES.key)));
 
         TextField metadataUrlField =
                 new TextField("metadataURL", new MapModel(metadata, SERVICE_METADATA_URL.key));
@@ -109,7 +113,7 @@ public class InspireAdminPanel extends AdminPagePanel {
                 new AttributeModifier(
                         "title", new ResourceModel("InspireAdminPanel.metadataURL.title")));
 
-        final Map<String, String> mdUrlTypes = new HashMap<String, String>();
+        final Map<String, String> mdUrlTypes = new HashMap<>();
         mdUrlTypes.put(
                 "application/vnd.ogc.csw.GetRecordByIdResponse_xml", "CSW GetRecordById Response");
         mdUrlTypes.put("application/vnd.iso.19139+xml", "ISO 19139 ServiceMetadata record");
@@ -136,9 +140,9 @@ public class InspireAdminPanel extends AdminPagePanel {
                         return key;
                     }
                 };
-        List<String> urlTypeChoices = new ArrayList<String>(mdUrlTypes.keySet());
+        List<String> urlTypeChoices = new ArrayList<>(mdUrlTypes.keySet());
         DropDownChoice<String> serviceMetadataRecordType =
-                new DropDownChoice<String>(
+                new DropDownChoice<>(
                         "metadataURLType", urlTypeModel, urlTypeChoices, urlTypeChoiceRenderer);
         serviceMetadataRecordType.setNullValid(true);
 

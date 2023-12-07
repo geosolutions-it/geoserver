@@ -35,9 +35,10 @@ public class StyleEditCssRecoveryTest extends GeoServerWicketTestSupport {
 
     Catalog catalog;
 
+    @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
         super.setUpTestData(testData);
-        System.out.println("setUpTestData()");
+        // System.out.println("setUpTestData()");
 
         Date t0 = new Date(1483228800000L); // Midnight Jan 1, 2017 UTC
         List<String> testStyleNames =

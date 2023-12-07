@@ -6,10 +6,11 @@
 package org.geoserver.wms.wms_1_3;
 
 import static org.geoserver.data.test.MockData.WORLD;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.awt.*;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -20,7 +21,9 @@ import javax.imageio.ImageIO;
 import javax.xml.namespace.QName;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleGenerator;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.Styles;
@@ -36,6 +39,7 @@ import org.geoserver.wms.WMSTestSupport;
 import org.geoserver.wms.map.OpenLayersMapOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
 import org.geotools.image.test.ImageAssert;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -49,6 +53,11 @@ public class GetMapIntegrationTest extends WMSTestSupport {
 
     private static final QName RAIN = new QName(MockData.SF_URI, "rain", MockData.SF_PREFIX);
     private static final String RAIN_RT_STYLE = "filteredRain";
+
+    private static final QName TIMESERIES =
+            new QName(MockData.SF_URI, "timeseries", MockData.SF_PREFIX);
+    private static final QName V_TIME_ELEVATION =
+            new QName(MockData.SF_URI, "TimeElevation", MockData.SF_PREFIX);
 
     public static final String STATES_SLD10 =
             "<StyledLayerDescriptor xmlns=\"http://www.opengis.net/sld\" version=\"1.0.0\">"
@@ -185,7 +194,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                 catalog);
         testData.addVectorLayer(
                 new QName(MockData.SF_URI, "states", MockData.SF_PREFIX),
-                Collections.EMPTY_MAP,
+                Collections.emptyMap(),
                 "states.properties",
                 org.geoserver.wms.wms_1_1_1.GetMapIntegrationTest.class,
                 catalog);
@@ -193,6 +202,20 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         // add global rain and style
         testData.addRasterLayer(RAIN, "rain.zip", "asc", getCatalog());
         testData.addStyle(RAIN_RT_STYLE, "filteredRain.sld", GetMapIntegrationTest.class, catalog);
+
+        testData.addRasterLayer(TIMESERIES, "timeseries.zip", null, getCatalog());
+        setupRasterDimension(
+                TIMESERIES, ResourceInfo.TIME, DimensionPresentation.LIST, null, null, null);
+
+        testData.addVectorLayer(V_TIME_ELEVATION, getCatalog());
+        setupVectorDimension(
+                V_TIME_ELEVATION.getLocalPart(),
+                ResourceInfo.TIME,
+                "time",
+                DimensionPresentation.LIST,
+                null,
+                null,
+                null);
     }
 
     @Test
@@ -453,6 +476,31 @@ public class GetMapIntegrationTest extends WMSTestSupport {
     }
 
     @Test
+    public void testLayerGroupSingleDefaultStyle() throws Exception {
+        Catalog catalog = getCatalog();
+        LayerGroupInfo group =
+                createLakesPlacesLayerGroup(catalog, LayerGroupInfo.Mode.SINGLE, null);
+        try {
+            String name = group.getName();
+            String url =
+                    "wms?LAYERS="
+                            + name
+                            + "&STYLES=default-style-"
+                            + name
+                            + "&FORMAT=image%2Fpng&REQUEST=GetMap&SRS=EPSG%3A4326&WIDTH=256&HEIGHT=256&BBOX=0.0000,-0.0020,0.0035,0.0010";
+            BufferedImage image = getAsImage(url, "image/png");
+
+            assertPixel(image, 150, 160, Color.WHITE);
+            // places
+            assertPixel(image, 180, 16, COLOR_PLACES_GRAY);
+            // lakes
+            assertPixel(image, 90, 200, COLOR_LAKES_BLUE);
+        } finally {
+            catalog.remove(group);
+        }
+    }
+
+    @Test
     public void testLayerGroupNamed() throws Exception {
         Catalog catalog = getCatalog();
         LayerGroupInfo group =
@@ -486,7 +534,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                             + "&STYLES=&FORMAT=image%2Fpng&REQUEST=GetMap&SRS=EPSG%3A4326&WIDTH=256&HEIGHT=256&BBOX=0.0000,-0.0020,0.0035,0.0010";
             // this group is not meant to be called directly so we should get an exception
             MockHttpServletResponse resp = getAsServletResponse(url);
-            assertEquals("text/xml", resp.getContentType());
+            assertEquals("text/xml", getBaseMimeType(resp.getContentType()));
 
             Document dom = getAsDOM(url);
             assertEquals("ServiceExceptionReport", dom.getDocumentElement().getNodeName());
@@ -579,7 +627,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
             // if the file is found, its content will be used to replace the entity
             // if the file is not found the parser will throw a FileNotFoundException
             String response = getAsString(url);
-            assertTrue(response.indexOf("Error while getting SLD.") > -1);
+            assertThat(response, Matchers.containsString("Error while getting SLD."));
 
             // disable entities
             geoserverInfo.setXmlExternalEntitiesEnabled(false);
@@ -604,6 +652,52 @@ public class GetMapIntegrationTest extends WMSTestSupport {
             geoserverInfo.setXmlExternalEntitiesEnabled(null);
             getGeoServer().save(geoserverInfo);
         }
+    }
+
+    private void testMaxDimensions(String timelayer, int maxDimensions, boolean expectException)
+            throws Exception {
+        WMSInfo wms = getWMS().getServiceInfo();
+        wms.setMaxRequestedDimensionValues(maxDimensions);
+        getGeoServer().save(wms);
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bbox="
+                                + bbox
+                                + "&styles=&layers="
+                                + timelayer
+                                + "&TIME=1972-09-01T00:00:00.0Z/2023-10-31T23:59:59.999Z"
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&srs=EPSG:4326&version=1.3.0");
+
+        if (expectException) {
+            Document dom = dom(new ByteArrayInputStream(response.getContentAsString().getBytes()));
+            Element root = dom.getDocumentElement();
+            assertEquals("ServiceExceptionReport", root.getNodeName());
+            assertEquals(
+                    "time",
+                    root.getChildNodes()
+                            .item(1)
+                            .getAttributes()
+                            .getNamedItem("locator")
+                            .getNodeValue());
+        } else {
+            assertEquals("image/png", response.getContentType());
+        }
+    }
+
+    @Test
+    public void testMaxDimensionsVector() throws Exception {
+        testMaxDimensions("sf:TimeElevation", 1, true);
+        testMaxDimensions("sf:TimeElevation", 100, false);
+    }
+
+    @Test
+    public void testMaxDimensionsRaster() throws Exception {
+        testMaxDimensions("sf:timeseries", 1, true);
+        testMaxDimensions("sf:timeseries", 100, false);
     }
 
     @Test
@@ -662,6 +756,104 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                                 + "&srs=EPSG:4326&version=1.3.0");
 
         assertTrue(result.indexOf("OpenLayers") > 0);
+    }
+
+    @Test
+    public void testVendorOptionClipVector() throws Exception {
+        String bbox130 = "24,-130,50,-66";
+        String polygonWkt =
+                "POLYGON((-103.81153231351766%2038.73789567417218,-105.74512606351766%2031.78525172547746,-95.28614168851766%2028.053665204466157,-91.33106356351766%2031.260810654461146,-96.42871981351766%2038.66930662128952,-103.81153231351766%2038.73789567417218))";
+
+        BufferedImage response =
+                getAsImage(
+                        "wms?bbox="
+                                + bbox130
+                                + "&styles=polygon&layers="
+                                + layers
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&srs=EPSG:4326"
+                                + "&version=1.3.0"
+                                + "&clip="
+                                + polygonWkt,
+                        "image/png");
+        String pkg = this.getClass().getPackage().getName();
+        File parentResourceDir =
+                new File("src/test/resources/" + pkg.replace(".", "/")).getParentFile();
+        File expectedImage = new File(parentResourceDir, "wms_clip_vector.png");
+
+        ImageAssert.assertEquals(expectedImage, response, 100);
+
+        String polygonWkt900913 =
+                "srid=900913;POLYGON ((-11556246.91561025 4684196.6150700655, -11771493.587261306 3735154.4718813156, -10607204.772421502 3255741.4304766906, -10166927.489498887 3666666.8945377995, -10734395.987488035 4674412.675449564, -11556246.91561025 4684196.6150700655))";
+        response =
+                getAsImage(
+                        "wms?bbox="
+                                + bbox130
+                                + "&styles=polygon&layers="
+                                + layers
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&srs=EPSG:4326"
+                                + "&version=1.3.0"
+                                + "&clip="
+                                + polygonWkt900913,
+                        "image/png");
+        ImageAssert.assertEquals(expectedImage, response, 100);
+    }
+
+    @Test
+    public void testVendorOptionClipRaster() throws Exception {
+        // EU south of Schengen
+        String rasterMask =
+                "POLYGON((-0.4455465239619838 49.03915485780325,27.679453476038034 48.692256255310134,34.53492222603802 32.400173313532584,5.355234726038036 37.161881019039605,-0.4455465239619838 49.03915485780325))";
+        String worldBbox130 = "4.769752,-53.384768,57.719733,80.121092";
+
+        BufferedImage response =
+                getAsImage(
+                        "wms?bbox="
+                                + worldBbox130
+                                + "&styles=&layers="
+                                + "wcs:World"
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&crs=EPSG:4326"
+                                + "&version=1.3.0"
+                                + "&clip="
+                                + rasterMask,
+                        "image/png");
+        String pkg = this.getClass().getPackage().getName();
+        File parentResourceDir =
+                new File("src/test/resources/" + pkg.replace(".", "/")).getParentFile();
+        File expectedImage = new File(parentResourceDir, "wms_clip_raster.png");
+        ImageAssert.assertEquals(expectedImage, response, 100);
+
+        String rasterMask900913 =
+                "srid=900913;POLYGON ((-49598.01217216109 6281507.767506711, 3081262.66638866 6222804.1297836965, 3844409.956787858 3815954.983140064, 596142.0027810101 4461694.998093233, -49598.01217216109 6281507.767506711))";
+
+        response =
+                getAsImage(
+                        "wms?bbox="
+                                + worldBbox130
+                                + "&styles=&layers="
+                                + "wcs:World"
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&crs=EPSG:4326"
+                                + "&version=1.3.0"
+                                + "&clip="
+                                + rasterMask900913,
+                        "image/png");
+
+        ImageAssert.assertEquals(expectedImage, response, 100);
     }
 
     @Test

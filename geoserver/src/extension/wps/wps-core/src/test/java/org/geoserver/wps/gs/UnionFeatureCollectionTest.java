@@ -32,6 +32,7 @@ public class UnionFeatureCollectionTest extends WPSTestSupport {
     GeometryFactory gf = new GeometryFactory();
 
     @Test
+    @SuppressWarnings("PMD.SimplifiableTestAssertion") // JTS geometry equality
     public void testExecute() throws Exception {
         SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
         tb.setName("featureType");
@@ -47,7 +48,7 @@ public class UnionFeatureCollectionTest extends WPSTestSupport {
         Geometry[] firstArrayGeometry = new Geometry[5];
         Geometry[] secondArrayGeometry = new Geometry[5];
         for (int numFeatures = 0; numFeatures < 5; numFeatures++) {
-            Coordinate firstArray[] = new Coordinate[5];
+            Coordinate[] firstArray = new Coordinate[5];
             for (int j = 0; j < 4; j++) {
                 firstArray[j] = new Coordinate(j + numFeatures, j + numFeatures);
             }
@@ -59,7 +60,7 @@ public class UnionFeatureCollectionTest extends WPSTestSupport {
             features.add(b.buildFeature(numFeatures + ""));
         }
         for (int numFeatures = 0; numFeatures < 5; numFeatures++) {
-            Coordinate array[] = new Coordinate[5];
+            Coordinate[] array = new Coordinate[5];
             for (int j = 0; j < 4; j++) {
                 array[j] = new Coordinate(j + numFeatures + 50, j + numFeatures + 50);
             }
@@ -82,12 +83,12 @@ public class UnionFeatureCollectionTest extends WPSTestSupport {
             union[i + 5] = secondArrayGeometry[i];
         }
         GeometryCollection unionCollection = new GeometryCollection(union, new GeometryFactory());
-        SimpleFeatureIterator iterator = output.features();
-
-        for (int h = 0; h < unionCollection.getNumGeometries(); h++) {
-            Geometry expected = (Geometry) unionCollection.getGeometryN(h);
-            SimpleFeature sf = iterator.next();
-            assertTrue(expected.equals((Geometry) sf.getDefaultGeometry()));
+        try (SimpleFeatureIterator iterator = output.features()) {
+            for (int h = 0; h < unionCollection.getNumGeometries(); h++) {
+                Geometry expected = unionCollection.getGeometryN(h);
+                SimpleFeature sf = iterator.next();
+                assertTrue(expected.equals((Geometry) sf.getDefaultGeometry()));
+            }
         }
     }
 }

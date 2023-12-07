@@ -53,10 +53,15 @@ public abstract class SRSListPanel extends Panel {
 
     /** Creates the new SRS list panel. */
     public SRSListPanel(String id) {
+        this(id, new SRSProvider());
+    }
+
+    /** Creates the new SRS list panel using SRS provider */
+    public SRSListPanel(String id, SRSProvider srsProvider) {
         super(id);
 
         table =
-                new GeoServerTablePanel<SRS>("table", new SRSProvider()) {
+                new GeoServerTablePanel<SRS>("table", srsProvider) {
 
                     private static final long serialVersionUID = 6182776235846912573L;
 
@@ -64,7 +69,7 @@ public abstract class SRSListPanel extends Panel {
                     protected Component getComponentForProperty(
                             String id, IModel<SRS> itemModel, Property<SRS> property) {
 
-                        SRS srs = (SRS) itemModel.getObject();
+                        SRS srs = itemModel.getObject();
 
                         if (SRSProvider.CODE.equals(property)) {
 
@@ -88,8 +93,6 @@ public abstract class SRSListPanel extends Panel {
     /**
      * Hides the top pager so that the panel shows nicely in a small space (such as in a popup
      * window)
-     *
-     * @param compact
      */
     public void setCompactMode(boolean compact) {
         table.getTopPager().setVisible(!compact);
@@ -118,11 +121,6 @@ public abstract class SRSListPanel extends Panel {
         };
     }
 
-    /**
-     * Suclasses must override and perform whatever they see fit when a SRS code link is clicked
-     *
-     * @param target
-     * @param modelObject
-     */
+    /** Suclasses must override and perform whatever they see fit when a SRS code link is clicked */
     protected abstract void onCodeClicked(AjaxRequestTarget target, String epsgCode);
 }

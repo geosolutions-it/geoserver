@@ -7,7 +7,11 @@ package org.geoserver.rest;
 import freemarker.template.ObjectWrapper;
 import java.lang.reflect.Type;
 import java.util.Arrays;
-import org.geoserver.config.*;
+import org.geoserver.config.ContactInfo;
+import org.geoserver.config.CoverageAccessInfo;
+import org.geoserver.config.GeoServer;
+import org.geoserver.config.GeoServerInfo;
+import org.geoserver.config.JAIInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.rest.converters.XStreamMessageConverter;
@@ -18,7 +22,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Settings controller
@@ -36,24 +45,22 @@ public class SettingsController extends AbstractGeoServerController {
     }
 
     @GetMapping(
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<GeoServerInfo> settingsGet() {
         return wrapObject(geoServer.getGlobal(), GeoServerInfo.class);
     }
 
     @PutMapping(
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public void settingsPut(@RequestBody GeoServerInfo geoServerInfo) {
         GeoServerInfo original = geoServer.getGlobal();
         OwsUtils.copy(geoServerInfo, original, GeoServerInfo.class);
@@ -61,13 +68,12 @@ public class SettingsController extends AbstractGeoServerController {
     }
 
     @GetMapping(
-        value = "/contact",
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_HTML_VALUE
-        }
-    )
+            value = "/contact",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_HTML_VALUE
+            })
     public RestWrapper<ContactInfo> contactGet() {
         if (geoServer.getSettings().getContact() == null) {
             throw new ResourceNotFoundException("No contact information available");
@@ -76,14 +82,13 @@ public class SettingsController extends AbstractGeoServerController {
     }
 
     @PutMapping(
-        value = "/contact",
-        consumes = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.TEXT_XML_VALUE
-        }
-    )
+            value = "/contact",
+            consumes = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.TEXT_XML_VALUE
+            })
     public void contactSet(@RequestBody ContactInfo contactInfo) {
         GeoServerInfo geoServerInfo = geoServer.getGlobal();
         ContactInfo original = geoServerInfo.getSettings().getContact();

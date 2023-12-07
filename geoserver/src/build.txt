@@ -1,2 +1,0 @@
-mvn clean install -Pauthkey -Pcontrol-flow -Pcss -Pfeature-pregeneralized -Pimporter -Plibjpeg-turbo -Pmonitor -Pnetcdf -Pnetcdf-out -Pwps -Pimporter-jdbc -Pncwms -Pghrsst -Pwmts-multi-dimensional -Pwps-download -Pwps-jdbc
-

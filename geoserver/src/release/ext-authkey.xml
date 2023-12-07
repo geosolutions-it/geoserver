@@ -16,7 +16,16 @@
         <include>json-smart*</include>
         <include>httpcore*</include>
         <include>httpclient*</include>
+        <include>accessors-smart*</include>
       </includes>
+    </fileSet>
+    <fileSet>
+        <directory>release/target/html/licenses</directory>
+        <outputDirectory></outputDirectory>
+        <includes>
+            <include>GPL.html</include>
+            <include>NOTICE.html</include>
+        </includes>
     </fileSet>
   </fileSets>
 </assembly>

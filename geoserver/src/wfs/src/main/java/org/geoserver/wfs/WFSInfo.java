@@ -8,6 +8,7 @@ package org.geoserver.wfs;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.geoserver.config.ServiceInfo;
 import org.geotools.util.Version;
 
@@ -56,12 +57,7 @@ public interface WFSInfo extends ServiceInfo {
             return V_20;
         }
 
-        /**
-         * Compares this value with a given version as string
-         *
-         * @param version
-         * @return
-         */
+        /** Compares this value with a given version as string */
         public int compareTo(String version) {
             if (version == null) {
                 return (this == latest()) ? 0 : -1;
@@ -76,41 +72,49 @@ public interface WFSInfo extends ServiceInfo {
 
     static enum Operation {
         GETCAPABILITIES {
+            @Override
             public int getCode() {
                 return 0;
             }
         },
         DESCRIBEFEATURETYPE {
+            @Override
             public int getCode() {
                 return 0;
             }
         },
         GETFEATURE {
+            @Override
             public int getCode() {
                 return 1;
             }
         },
         LOCKFEATURE {
+            @Override
             public int getCode() {
                 return 2;
             }
         },
         TRANSACTION_INSERT {
+            @Override
             public int getCode() {
                 return 4;
             }
         },
         TRANSACTION_UPDATE {
+            @Override
             public int getCode() {
                 return 8;
             }
         },
         TRANSACTION_DELETE {
+            @Override
             public int getCode() {
                 return 16;
             }
         },
         TRANSACTION_REPLACE {
+            @Override
             public int getCode() {
                 return 32;
             }
@@ -121,10 +125,12 @@ public interface WFSInfo extends ServiceInfo {
 
     static enum ServiceLevel {
         BASIC {
+            @Override
             public int getCode() {
                 return 1;
             }
 
+            @Override
             public List<Operation> getOps() {
                 return Arrays.asList(
                         Operation.GETCAPABILITIES,
@@ -133,10 +139,12 @@ public interface WFSInfo extends ServiceInfo {
             }
         },
         TRANSACTIONAL {
+            @Override
             public int getCode() {
                 return 15;
             }
 
+            @Override
             public List<Operation> getOps() {
                 return Arrays.asList(
                         Operation.GETCAPABILITIES,
@@ -149,10 +157,12 @@ public interface WFSInfo extends ServiceInfo {
             }
         },
         COMPLETE {
+            @Override
             public int getCode() {
                 return 31;
             }
 
+            @Override
             public List<Operation> getOps() {
                 return Arrays.asList(
                         Operation.GETCAPABILITIES, Operation.DESCRIBEFEATURETYPE,
@@ -265,4 +275,73 @@ public interface WFSInfo extends ServiceInfo {
 
     /** The srs's that the WFS service will advertise in the capabilities document */
     List<String> getSRS();
+
+    /** Flag that determines if global stored queries are allowed. Default true. */
+    Boolean getAllowGlobalQueries();
+
+    void setAllowGlobalQueries(Boolean allowGlobalQueries);
+
+    /**
+     * Flag that determines if complex features will be converted to simple feature for compatible
+     * output formats.
+     */
+    boolean isSimpleConversionEnabled();
+
+    /**
+     * Sets the flag that determines if complex features will be converted to simple feature for
+     * compatible output formats.
+     */
+    void setSimpleConversionEnabled(boolean simpleConversionEnabled);
+    /**
+     * Flag that determines if the wfsRequest.txt dump file should be included in shapefile/zip
+     * output.
+     */
+    boolean getIncludeWFSRequestDumpFile();
+    /**
+     * Sets the flag that determines if the wfsRequest.txt dump file should be included in
+     * shapefile/zip output
+     */
+    void setIncludeWFSRequestDumpFile(boolean includeWFSRequestDumpFile);
+
+    /**
+     * Flag that determines if Output Type checking is enforced
+     *
+     * @return whether checking is enforced
+     */
+    boolean isGetFeatureOutputTypeCheckingEnabled();
+
+    /**
+     * Sets the flag that determines if Output Type checking is enforced
+     *
+     * @param getFeatureOutputTypeCheckingEnabled whether checking is enforced
+     */
+    void setGetFeatureOutputTypeCheckingEnabled(boolean getFeatureOutputTypeCheckingEnabled);
+
+    /**
+     * Set of Output Types allowed for GetFeature and GetFeatureWithLock
+     *
+     * @return set of Output Types
+     */
+    Set<String> getGetFeatureOutputTypes();
+
+    /**
+     * Set the Set of Output Types allowed for GetFeature and GetFeatureWithLock
+     *
+     * @param getFeatureOutputTypes set of Output Types to be enforced
+     */
+    void setGetFeatureOutputTypes(Set<String> getFeatureOutputTypes);
+
+    /**
+     * Get the Date Format for csv
+     *
+     * @return Csv Date Format pattern
+     */
+    public String getCsvDateFormat();
+
+    /**
+     * Set the Date Format for csv
+     *
+     * @param csvDateFormat Date Format pattern
+     */
+    public void setCsvDateFormat(String csvDateFormat);
 }

@@ -6,7 +6,6 @@ package org.geoserver.opensearch.eo.store;
 
 import java.awt.RenderingHints.Key;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import org.geoserver.config.GeoServer;
@@ -63,7 +62,7 @@ public class JDBCOpenSearchAccessFactory implements DataAccessFactory {
 
     @Override
     public DataAccess<? extends FeatureType, ? extends Feature> createDataStore(
-            Map<String, Serializable> params) throws IOException {
+            Map<String, ?> params) throws IOException {
         Repository repository = (Repository) REPOSITORY_PARAM.lookUp(params);
         String flatStoreName = (String) STORE_PARAM.lookUp(params);
         String ns = (String) NAMESPACE.lookUp(params);
@@ -87,14 +86,15 @@ public class JDBCOpenSearchAccessFactory implements DataAccessFactory {
         return new Param[] {DBTYPE, REPOSITORY_PARAM, STORE_PARAM, NAMESPACE};
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public boolean canProcess(Map<String, Serializable> params) {
+    public boolean canProcess(Map<String, ?> params) {
         // copied from AbstractDataStoreFactory... really, this code should be somewhere
         // where it can be reused...
         if (params == null) {
             return false;
         }
-        Param arrayParameters[] = getParametersInfo();
+        Param[] arrayParameters = getParametersInfo();
         for (int i = 0; i < arrayParameters.length; i++) {
             Param param = arrayParameters[i];
             Object value;

@@ -12,8 +12,8 @@ import static org.geowebcache.conveyor.Conveyor.CacheResult.MISS;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.nio.channels.Channels;
-import java.security.MessageDigest;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletResponse;
@@ -21,6 +21,7 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.config.GWCConfig;
+import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.HttpErrorCodeException;
 import org.geoserver.wms.GetMapRequest;
@@ -56,6 +57,7 @@ public class CachingWebMapService implements MethodInterceptor {
      * @see
      *     org.aopalliance.intercept.MethodInterceptor#invoke(org.aopalliance.intercept.MethodInvocation)
      */
+    @Override
     public WebMap invoke(MethodInvocation invocation) throws Throwable {
         GWCConfig config = gwc.getConfig();
         if (!config.isDirectWMSIntegrationEnabled()) {
@@ -63,8 +65,12 @@ public class CachingWebMapService implements MethodInterceptor {
         }
 
         final GetMapRequest request = getRequest(invocation);
-        boolean tiled = request.isTiled();
-        if (!tiled) {
+        boolean tiled = request.isTiled() || !config.isRequireTiledParameter();
+        final Map<String, String> rawKvp = request.getRawKvp();
+        // skipping seeding requests to avoid meta tile recursion
+        boolean isSeedingRequest =
+                rawKvp != null && rawKvp.containsKey(GeoServerTileLayer.GWC_SEED_INTERCEPT_TOKEN);
+        if (!tiled || isSeedingRequest) {
             return (WebMap) invocation.proceed();
         }
 
@@ -99,8 +105,7 @@ public class CachingWebMapService implements MethodInterceptor {
 
         // Handle Etags
         final String ifNoneMatch = request.getHttpRequestHeader("If-None-Match");
-        final byte[] hash = MessageDigest.getInstance("MD5").digest(tileBytes);
-        final String etag = toHexString(hash);
+        final String etag = GWC.getETag(tileBytes);
         if (etag.equals(ifNoneMatch)) {
             // Client already has the current version
             LOGGER.finer("ETag matches, returning 304");
@@ -137,20 +142,5 @@ public class CachingWebMapService implements MethodInterceptor {
 
         final GetMapRequest request = (GetMapRequest) arguments[0];
         return request;
-    }
-
-    private String toHexString(byte[] hash) {
-
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < hash.length; i += 4) {
-            int c1 = 0xFF & hash[i];
-            int c2 = 0xFF & hash[i + 1];
-            int c3 = 0xFF & hash[i + 2];
-            int c4 = 0xFF & hash[i + 3];
-            int integer = ((c1 << 24) + (c2 << 16) + (c3 << 8) + (c4 << 0));
-            sb.append(Integer.toHexString(integer));
-        }
-        return sb.toString();
     }
 }

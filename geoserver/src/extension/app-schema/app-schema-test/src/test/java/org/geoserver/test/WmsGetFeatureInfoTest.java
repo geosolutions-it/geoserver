@@ -5,7 +5,9 @@
  */
 package org.geoserver.test;
 
-import static org.junit.Assert.*;
+import static org.geoserver.test.GeoPackageUtil.isGeopkgTest;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.geoserver.wms.WMSInfo;
 import org.junit.Before;
@@ -71,6 +73,7 @@ public class WmsGetFeatureInfoTest extends AbstractAppSchemaTestSupport {
 
     @Test
     public void testGetFeatureInfoGMLReprojection() throws Exception {
+        if (isGeopkgTest()) return;
         String request =
                 "wms?request=GetFeatureInfo&SRS=EPSG:3857&BBOX=-144715.338031256,6800125.45439731,0,6891041.72389159&LAYERS=gsml:MappedFeature&QUERY_LAYERS=gsml:MappedFeature&X=0&Y=0&width=100&height=100&INFO_FORMAT=application/vnd.ogc.gml/3.1.1";
         Document doc = getAsDOM(request);

@@ -5,11 +5,18 @@
  */
 package org.geoserver.monitor;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import javax.servlet.ServletException;
@@ -17,6 +24,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import org.geoserver.wms.map.RenderTimeStatistics;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,11 +33,11 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
+@SuppressWarnings("PMD.AvoidUsingHardCodedIP")
 public class MonitorFilterTest {
 
     DummyMonitorDAO dao;
@@ -155,6 +163,7 @@ public class MonitorFilterTest {
                 new MockFilterChain(
                         new HttpServlet() {
                             @Override
+                            @SuppressWarnings("PMD.EmptyWhileStmt")
                             public void service(ServletRequest req, ServletResponse res)
                                     throws ServletException, IOException {
                                 while (req.getInputStream().read() != -1)
@@ -203,7 +212,7 @@ public class MonitorFilterTest {
         // "Referrer" was misspelled in the HTTP spec, check if it works with the "correct"
         // spelling.
         MockHttpServletRequest req = request("POST", "/bar/foo", "78.56.34.12", null, null);
-        ((MockHttpServletRequest) req).addHeader("Referrer", "http://testhost/testpath");
+        req.addHeader("Referrer", "http://testhost/testpath");
         filter.doFilter(req, response(), chain);
 
         RequestData data = dao.getLast();
@@ -235,7 +244,7 @@ public class MonitorFilterTest {
 
     @Test
     public void testUserRemoteUser() throws Exception {
-        Object principal = new User("username", "", Collections.<GrantedAuthority>emptyList());
+        Object principal = new User("username", "", Collections.emptyList());
 
         testRemoteUser(principal);
     }
@@ -250,7 +259,67 @@ public class MonitorFilterTest {
         testRemoteUser(principal);
     }
 
-    private void testRemoteUser(Object principal) throws Exception {
+    @Test
+    public void testGetStatistics() throws IOException, ServletException {
+
+        MockHttpServletRequest req = request("POST", "/bar/foo", "78.56.34.12", null, null);
+        MockHttpServletResponse response = response();
+        RenderTimeStatistics statistics =
+                (RenderTimeStatistics) req.getAttribute(RenderTimeStatistics.ID);
+        filter.doFilter(req, response, chain);
+        RequestData data = this.dao.getLast();
+        String layerNamesList = statistics.getLayerNames().toString();
+        assertEquals(
+                data.getResourcesList(), layerNamesList.substring(1, layerNamesList.length() - 1));
+        assertNotEquals(
+                data.getResourcesProcessingTimeList()
+                        .indexOf(statistics.getRenderingTime(0).toString()),
+                -1);
+        assertEquals(data.getLabellingProcessingTime().longValue(), statistics.getLabellingTime());
+    }
+
+    @Test
+    public void testDisableReverseDNSProcessor() throws Exception {
+        // step 1 : verify DND lookup working without configuration option
+        Object principal = new User("username", "", Collections.emptyList());
+        RequestData data = testRemoteUser(principal);
+        assertNotNull(data.getRemoteHost());
+        try {
+            // step 2 : verify DND lookup is disabled when run with ignore option
+            filter = new MonitorFilter(new Monitor(dao), new MonitorRequestFilter());
+            filter.monitor.config.props.put("ignorePostProcessors", "reverseDNS");
+            chain =
+                    new MockFilterChain(
+                            new HttpServlet() {
+                                @Override
+                                public void service(ServletRequest req, ServletResponse res)
+                                        throws ServletException, IOException {
+                                    req.getInputStream().read(new byte[LONG_BODY_SIZE]);
+                                    res.getOutputStream().write(new byte[0]);
+                                }
+                            });
+
+            principal = new User("username", "", Collections.emptyList());
+            data = testRemoteUser(principal);
+            assertNull(data.getRemoteHost());
+        } finally {
+            // reset
+            filter.monitor.config.props.remove("ignorePostProcessors");
+        }
+    }
+
+    RenderTimeStatistics createStatistcis() {
+        RenderTimeStatistics stats = createMock(RenderTimeStatistics.class);
+        expect(stats.getRenderingLayersIdxs()).andReturn(Arrays.asList(0)).anyTimes();
+        expect(stats.getRenderingTime(0)).andReturn(100L).anyTimes();
+        expect(stats.getLabellingTime()).andReturn(100L).anyTimes();
+        expect(stats.getLayerNames()).andReturn(Arrays.asList("Layer1")).anyTimes();
+        replay(stats);
+
+        return stats;
+    }
+
+    private RequestData testRemoteUser(Object principal) throws Exception {
         try {
             Authentication authentication = new TestingAuthenticationToken(principal, null);
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -265,6 +334,7 @@ public class MonitorFilterTest {
             RequestData data = dao.getLast();
             assertEquals("username", data.getRemoteUser());
             assertEquals(authentication, authFuture.get());
+            return data;
         } finally {
             SecurityContextHolder.getContext().setAuthentication(null);
             filter.setExecutionAudit(null);
@@ -285,7 +355,8 @@ public class MonitorFilterTest {
         // and throws NullPointerException. It should probably do something useful like return an
         // empty stream or throw
         // IOException.
-        req.setContent(body.getBytes("UTF-8"));
+        req.setContent(body.getBytes(StandardCharsets.UTF_8));
+        req.setAttribute(RenderTimeStatistics.ID, createStatistcis());
         if (referer != null) req.addHeader("Referer", referer);
         return req;
     }

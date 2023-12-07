@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
-import javax.mail.Session;
 import javax.mail.internet.MimeMessage;
 import javax.xml.namespace.QName;
 import org.custommonkey.xmlunit.SimpleNamespaceContext;
@@ -41,7 +40,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
  *
  * @author Andrea Aime, GeoSolutions
  */
-@SuppressWarnings("serial")
 public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
     protected static QName TIMERANGES =
             new QName(MockData.SF_URI, "timeranges", MockData.SF_PREFIX);
@@ -57,7 +55,7 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
 
     protected static final boolean IS_WINDOWS;
 
-    List<GridCoverage> coverages = new ArrayList<GridCoverage>();
+    List<GridCoverage> coverages = new ArrayList<>();
 
     /**
      * Small value for comparaison of sample values. Since most grid coverage implementations in
@@ -105,7 +103,7 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
                 MULTIDIM, "multidim.zip", null, null, SystemTestData.class, getCatalog());
 
         // init xmlunit
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("wcs", "http://www.opengis.net/wcs/2.0");
         namespaces.put("wcscrs", "http://www.opengis.net/wcs/service-extension/crs/1.0");
         namespaces.put("ows", "http://www.opengis.net/ows/2.0");
@@ -127,11 +125,7 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         return IS_WINDOWS;
     }
 
-    /**
-     * Marks the coverage to be cleaned when the test ends
-     *
-     * @param coverage
-     */
+    /** Marks the coverage to be cleaned when the test ends */
     protected void scheduleForCleaning(GridCoverage coverage) {
         if (coverage != null) {
             coverages.add(coverage);
@@ -145,28 +139,15 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         }
     }
 
-    /**
-     * Parses a multipart message from the response
-     *
-     * @param response
-     * @throws MessagingException
-     * @throws IOException
-     */
+    /** Parses a multipart message from the response */
     protected Multipart getMultipart(MockHttpServletResponse response)
             throws MessagingException, IOException {
-        MimeMessage body = new MimeMessage((Session) null, getBinaryInputStream(response));
+        MimeMessage body = new MimeMessage(null, getBinaryInputStream(response));
         Multipart multipart = (Multipart) body.getContent();
         return multipart;
     }
 
-    /**
-     * Configures the specified dimension for a coverage
-     *
-     * @param coverageName
-     * @param metadataKey
-     * @param presentation
-     * @param resolution
-     */
+    /** Configures the specified dimension for a coverage */
     protected void setupRasterDimension(
             String coverageName,
             String metadataKey,
@@ -177,20 +158,13 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         di.setEnabled(true);
         di.setPresentation(presentation);
         if (resolution != null) {
-            di.setResolution(new BigDecimal(resolution));
+            di.setResolution(BigDecimal.valueOf(resolution));
         }
         info.getMetadata().put(metadataKey, di);
         getCatalog().save(info);
     }
 
-    /**
-     * Clears dimension information from the specified coverage
-     *
-     * @param coverageName
-     * @param metadataKey
-     * @param presentation
-     * @param resolution
-     */
+    /** Clears dimension information from the specified coverage */
     protected void clearDimensions(String coverageName) {
         CoverageInfo info = getCatalog().getCoverageByName(coverageName);
         info.getMetadata().remove(ResourceInfo.TIME);

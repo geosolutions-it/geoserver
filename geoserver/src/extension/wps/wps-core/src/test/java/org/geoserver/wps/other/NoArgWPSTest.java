@@ -7,6 +7,7 @@ package org.geoserver.wps.other;
 import static org.junit.Assert.assertEquals;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.io.IOUtils;
@@ -44,8 +45,9 @@ public class NoArgWPSTest extends WPSTestSupport {
                         + "</wps:Execute>";
 
         // Document d = postAsDOM(root(), xml); // allows you to debug exception
-        InputStream is = post(root(), xml);
-        String s = IOUtils.toString(is, "UTF-8");
-        assertEquals(s, "Completed!");
+        try (InputStream is = post(root(), xml)) {
+            String s = IOUtils.toString(is, StandardCharsets.UTF_8);
+            assertEquals(s, "Completed!");
+        }
     }
 }

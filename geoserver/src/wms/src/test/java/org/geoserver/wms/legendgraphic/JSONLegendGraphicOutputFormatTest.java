@@ -4,15 +4,17 @@
  */
 package org.geoserver.wms.legendgraphic;
 
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.awt.*;
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,9 +24,15 @@ import java.util.Map;
 import javax.xml.transform.TransformerException;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+import org.custommonkey.xmlunit.NamespaceContext;
+import org.custommonkey.xmlunit.SimpleNamespaceContext;
+import org.custommonkey.xmlunit.XMLUnit;
+import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
@@ -55,12 +63,12 @@ import org.geotools.xml.styling.SLDTransformer;
 import org.junit.Before;
 import org.junit.Test;
 import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
 import org.opengis.coverage.grid.GridCoverage;
 import org.opengis.feature.type.AttributeType;
 import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.GeometryType;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.w3c.dom.Document;
 
 /**
  * Test the functioning of the abstract legend producer for JSON format,
@@ -81,6 +89,13 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         testData.addStyle("arealandmarks", this.getClass(), catalog);
         testData.addStyle("fixedArrows", this.getClass(), catalog);
         testData.addStyle("dynamicArrows", this.getClass(), catalog);
+        testData.addStyle("multiLanguageVector", this.getClass(), catalog);
+        testData.addStyle("multiLanguageRaster", this.getClass(), catalog);
+
+        Map<String, String> namespaces = new HashMap<>();
+        namespaces.put("ogc", "http://www.opengis.net/ogc");
+        NamespaceContext ctx = new SimpleNamespaceContext(namespaces);
+        XMLUnit.setXpathNamespaceContext(ctx);
     }
 
     @Before
@@ -93,7 +108,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that a legend is produced for the explicitly specified rule, when the FeatureTypeStyle
      * has more than one rule, and one of them is requested by the RULE parameter.
      */
-    @org.junit.Test
+    @Test
     public void testUserSpecifiedRule() throws Exception {
         // load a style with 3 rules
         Style multipleRulesStyle =
@@ -139,7 +154,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that a legend is produced for the explicitly specified rule, when the FeatureTypeStyle
      * has more than one rule, and one of them is requested by the RULE parameter.
      */
-    @org.junit.Test
+    @Test
     public void testRainfall() throws Exception {
         // load a style with 3 rules
         Style multipleRulesStyle = getCatalog().getStyleByName("rainfall").getStyle();
@@ -148,9 +163,9 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
 
         CoverageInfo cInfo = getCatalog().getCoverageByName("world");
         assertNotNull(cInfo);
-        SimpleFeatureCollection feature;
         GridCoverage coverage = cInfo.getGridCoverage(null, null);
-        feature = FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
+        SimpleFeatureCollection feature =
+                FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
         GetLegendGraphicRequest req = getRequest(feature.getSchema(), multipleRulesStyle);
 
         req.setLegendOptions(new HashMap<String, String>());
@@ -165,7 +180,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that the legend graphic is still produced when the request's strict parameter is set to
      * false and a layer is not specified
      */
-    @org.junit.Test
+    @Test
     public void testNoLayerProvidedAndNonStrictRequest() throws Exception {
         Style style = getCatalog().getStyleByName("rainfall").getStyle();
         assertNotNull(style);
@@ -183,7 +198,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals(1, resp.getJSONArray(JSONLegendGraphicBuilder.LEGEND).size());
     }
     /** Tests that the legend graphic is produced for multiple layers */
-    @org.junit.Test
+    @Test
     public void testMultipleLayers() throws Exception {
 
         FeatureTypeInfo ftInfo =
@@ -212,7 +227,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that the legend graphic is produced for multiple layers with different style for each
      * layer.
      */
-    @org.junit.Test
+    @Test
     public void testMultipleLayersWithDifferentStyles() throws Exception {
         GetLegendGraphicRequest req = getRequest(null, null);
 
@@ -244,7 +259,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that the legend graphic is produced for multiple layers with vector and coverage
      * layers.
      */
-    @org.junit.Test
+    @Test
     public void testMultipleLayersWithVectorAndCoverage() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setFeatureType(JSONFormat);
@@ -253,7 +268,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                         .getFeatureTypeByName(
                                 MockData.ROAD_SEGMENTS.getNamespaceURI(),
                                 MockData.ROAD_SEGMENTS.getLocalPart());
-        List<FeatureType> layers = new ArrayList<FeatureType>();
+        List<FeatureType> layers = new ArrayList<>();
         req.getLegends().clear();
         layers.add(ftInfo.getFeatureType());
 
@@ -261,8 +276,8 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertNotNull(cInfo);
 
         GridCoverage coverage = cInfo.getGridCoverage(null, null);
-        SimpleFeatureCollection feature;
-        feature = FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
+        SimpleFeatureCollection feature =
+                FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
         layers.add(feature.getSchema());
 
         layers.forEach(ft -> req.getLegends().add(new LegendRequest(ft)));
@@ -295,7 +310,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that the legend graphic is produced for multiple layers with vector and coverage
      * layers, when coverage is not visible at current scale.
      */
-    @org.junit.Test
+    @Test
     public void testMultipleLayersWithVectorAndInvisibleCoverage() throws Exception {
         GetLegendGraphicRequest req = getRequest(null, null);
         req.setScale(1000);
@@ -334,7 +349,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that the legend graphic is produced for multiple layers, one of which cannot be seen at
      * the current scale
      */
-    @org.junit.Test
+    @Test
     public void testMultipleLayersWithVectorAndInvisibleVector() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setScale(1000);
@@ -374,15 +389,13 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         CoordinateReferenceSystem crs = CRS.decode("EPSG:4326");
         builder.setCRS(crs);
 
-        GeometryFactory geometryFactory = new GeometryFactory();
-
         AttributeType at =
                 new AttributeTypeImpl(
                         new NameImpl("ID"),
                         String.class,
                         false,
                         false,
-                        Collections.EMPTY_LIST,
+                        Collections.emptyList(),
                         null,
                         null);
         builder.add(new AttributeDescriptorImpl(at, new NameImpl("ID"), 0, 1, false, null));
@@ -394,7 +407,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                         crs,
                         false,
                         false,
-                        Collections.EMPTY_LIST,
+                        Collections.emptyList(),
                         null,
                         null);
 
@@ -436,7 +449,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that symbols are not bigger than the requested icon size, also if an expression is used
      * for the symbol Size.
      */
-    @org.junit.Test
+    @Test
     public void testSymbolContainedInIconUsingExpression() throws Exception {
         GetLegendGraphicRequest req = getRequest();
 
@@ -481,7 +494,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
     }
 
     /** Tests that symbols relative sizes are proportional. */
-    @org.junit.Test
+    @Test
     public void testProportionalSymbolSize() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         FeatureTypeInfo ftInfo =
@@ -524,7 +537,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
     }
 
     /** Tests that symbols relative sizes are proportional. */
-    @org.junit.Test
+    @Test
     public void testProportionalSymbolsLine() throws Exception {
         GetLegendGraphicRequest req = getRequest();
 
@@ -564,7 +577,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
     }
 
     /** Tests that symbols relative sizes are proportional also if using uoms. */
-    @org.junit.Test
+    @Test
     public void testProportionalSymbolSizeUOM() throws Exception {
         GetLegendGraphicRequest req = getRequest();
 
@@ -613,11 +626,11 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Tests that symbols relative sizes are proportional also if using uoms in some Symbolizer and
      * not using them in others.
      */
-    @org.junit.Test
+    @Test
     public void testProportionalSymbolSizePartialUOM() throws Exception {
         GetLegendGraphicRequest req = getRequest();
 
-        req.setScale(RendererUtilities.calculatePixelsPerMeterRatio(10, Collections.EMPTY_MAP));
+        req.setScale(RendererUtilities.calculatePixelsPerMeterRatio(10, Collections.emptyMap()));
 
         FeatureTypeInfo ftInfo =
                 getCatalog()
@@ -659,11 +672,11 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         }
     }
 
-    @org.junit.Test
+    @Test
     public void testInternationalizedLabels() throws Exception {
         GetLegendGraphicRequest req = getRequest();
 
-        Map<String, String> options = new HashMap<String, String>();
+        Map<String, String> options = new HashMap<>();
         options.put("forceLabels", "on");
         req.setLegendOptions(options);
         req.setFormat(JSONFormat);
@@ -714,7 +727,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Test that the legend is not the same if there is a rendering transformation that converts the
      * rendered layer from raster to vector
      */
-    @org.junit.Test
+    @Test
     public void testRenderingTransformationRasterVector() throws Exception {
 
         Style transformStyle = readSLD("RenderingTransformRasterVector.sld");
@@ -728,8 +741,8 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertNotNull(cInfo);
 
         GridCoverage coverage = cInfo.getGridCoverage(null, null);
-        SimpleFeatureCollection feature;
-        feature = FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
+        SimpleFeatureCollection feature =
+                FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
         req.setLayer(feature.getSchema());
         req.setStyle(transformStyle);
         req.setLegendOptions(new HashMap<String, String>());
@@ -745,7 +758,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Test that the legend is not the same if there is a rendering transformation that converts the
      * rendered layer from raster to vector
      */
-    @org.junit.Test
+    @Test
     public void testColorMapWithCql() throws Exception {
 
         Style style = readSLD("ColorMapWithCql.sld");
@@ -783,8 +796,8 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertNotNull(cInfo);
 
         GridCoverage coverage = cInfo.getGridCoverage(null, null);
-        SimpleFeatureCollection feature;
-        feature = FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
+        SimpleFeatureCollection feature =
+                FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
         req.setLayer(feature.getSchema());
         req.setStyle(style);
         req.setLegendOptions(new HashMap<String, String>());
@@ -823,7 +836,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
      * Test that the legend is not the same if there is a rendering transformation that converts the
      * rendered layer from vector to raster
      */
-    @org.junit.Test
+    @Test
     public void testRenderingTransformationVectorRaster() throws Exception {
 
         Style transformStyle = readSLD("RenderingTransformVectorRaster.sld");
@@ -847,7 +860,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
     }
 
     /** Tests that a legend containing an ExternalGraphic icon is rendered properly. */
-    @org.junit.Test
+    @Test
     public void testExternalGraphic() throws Exception {
         // load a style with 3 rules
         Style externalGraphicStyle = readSLD("ExternalGraphicDemo.sld");
@@ -895,7 +908,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
     }
 
     /** Tests that symbols relative sizes are proportional. */
-    @org.junit.Test
+    @Test
     public void testThickPolygonBorder() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -945,7 +958,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("1", polySymb2.get(JSONLegendGraphicBuilder.STROKE_WIDTH));
     }
 
-    @org.junit.Test
+    @Test
     public void testSimplePoint() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -980,7 +993,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertNotNull(pointSymb);
     }
 
-    @org.junit.Test
+    @Test
     public void testHospitalPoint() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1023,7 +1036,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                 pointSymb.getString("url"));
     }
 
-    @org.junit.Test
+    @Test
     public void testTrickyGraphic() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1075,7 +1088,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                 pointSymb.getString("url"));
     }
 
-    @org.junit.Test
+    @Test
     public void testGraphicFillLinks() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1132,7 +1145,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                 gf2.getString("url"));
     }
 
-    @org.junit.Test
+    @Test
     public void testTextSymbolizerGraphic() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1174,7 +1187,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                 graphic.getString("url"));
     }
 
-    @org.junit.Test
+    @Test
     public void testTextSymbolizerDynamicGraphic() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1216,7 +1229,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                 graphic.getString("url"));
     }
 
-    @org.junit.Test
+    @Test
     public void testElseFilter() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1253,7 +1266,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("true", rule.get(JSONLegendGraphicBuilder.ELSE_FILTER));
     }
 
-    @org.junit.Test
+    @Test
     public void testFullPoint() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1291,7 +1304,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("0.4", pointSymb.get(JSONLegendGraphicBuilder.OPACITY));
     }
 
-    @org.junit.Test
+    @Test
     public void testSimpleLine() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1328,7 +1341,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("2", lineSymb.get(JSONLegendGraphicBuilder.STROKE_WIDTH));
     }
 
-    @org.junit.Test
+    @Test
     public void testFullLine() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1383,7 +1396,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
                 graphicFill2.getString("url"));
     }
 
-    @org.junit.Test
+    @Test
     public void testSimplePolygon() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1420,7 +1433,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("0.5", polySymb.get(JSONLegendGraphicBuilder.STROKE_WIDTH));
     }
 
-    @org.junit.Test
+    @Test
     public void testFullPolygon() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1464,7 +1477,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertFalse(fill.isNullObject() && fill.isEmpty());
     }
 
-    @org.junit.Test
+    @Test
     public void testSimpleText() throws Exception {
         GetLegendGraphicRequest req = getRequest();
         req.setWidth(20);
@@ -1579,7 +1592,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("9", fonts.getJSONObject(1).get(JSONLegendGraphicBuilder.FONT_SIZE));
     }
 
-    @org.junit.Test
+    @Test
     public void testContrastRaster() throws Exception {
 
         Style multipleRulesStyle = readSLD("raster_brightness.sld");
@@ -1592,8 +1605,8 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
 
         GridCoverage coverage = cInfo.getGridCoverage(null, null);
 
-        SimpleFeatureCollection feature;
-        feature = FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
+        SimpleFeatureCollection feature =
+                FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
         req.setLayer(feature.getSchema());
         req.setStyle(multipleRulesStyle);
         req.setLegendOptions(new HashMap<String, String>());
@@ -1623,7 +1636,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertEquals("true", ce.get(JSONLegendGraphicBuilder.NORMALIZE));
     }
 
-    @org.junit.Test
+    @Test
     public void testDescreteRaster() throws Exception {
 
         Style multipleRulesStyle = readSLD("raster_discretecolors.sld");
@@ -1636,8 +1649,8 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
 
         GridCoverage coverage = cInfo.getGridCoverage(null, null);
 
-        SimpleFeatureCollection feature;
-        feature = FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
+        SimpleFeatureCollection feature =
+                FeatureUtilities.wrapGridCoverage((GridCoverage2D) coverage);
         req.setLayer(feature.getSchema());
         req.setStyle(multipleRulesStyle);
         req.setLegendOptions(new HashMap<String, String>());
@@ -1665,6 +1678,129 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
 
         assertEquals("intervals", colormap.get(JSONLegendGraphicBuilder.COLORMAP_TYPE));
     }
+
+    @Test
+    public void testLegendSelectionInRule() throws Exception {
+        // test that the <VendorOption name=renderingLegend>false</VendorOption> works with the Json
+        // output
+        GetLegendGraphicRequest req = getRequest();
+        req.setWidth(20);
+        req.setHeight(20);
+
+        FeatureTypeInfo ftInfo =
+                getCatalog()
+                        .getFeatureTypeByName(
+                                MockData.MPOLYGONS.getNamespaceURI(),
+                                MockData.MPOLYGONS.getLocalPart());
+
+        req.setLayer(ftInfo.getFeatureType());
+        req.setStyle(getCatalog().getStyleByName("styleWithLegendSelection").getStyle());
+        req.setFormat(JSONFormat);
+        JSONObject jsonLegend = this.legendProducer.buildLegendGraphic(req);
+        JSONArray legend = jsonLegend.getJSONArray(JSONLegendGraphicBuilder.LEGEND);
+        JSONArray rules = legend.getJSONObject(0).getJSONArray("rules");
+        // only one rule should be included in the output the other one has the renderingLegend
+        // option set to false.
+        assertEquals(1, rules.size());
+        String ruleName = rules.getJSONObject(0).getString("name");
+        assertEquals("nationalpark", ruleName);
+    }
+
+    @Test
+    public void testLegendSelectionInSymbolizer() throws Exception {
+        // test that the <VendorOption name=renderingLegend>false</VendorOption> option set in
+        // symbolizer works
+        // avoiding the inclusion in the final output of one of the two symbolizers
+        GetLegendGraphicRequest req = getRequest();
+        req.setWidth(20);
+        req.setHeight(20);
+
+        FeatureTypeInfo ftInfo =
+                getCatalog()
+                        .getFeatureTypeByName(
+                                MockData.MPOLYGONS.getNamespaceURI(),
+                                MockData.MPOLYGONS.getLocalPart());
+
+        req.setLayer(ftInfo.getFeatureType());
+        req.setStyle(
+                getCatalog().getStyleByName("styleWithLegendSelectionOnSymbolizer").getStyle());
+        req.setFormat(JSONFormat);
+        JSONObject jsonLegend = this.legendProducer.buildLegendGraphic(req);
+        JSONArray rules =
+                jsonLegend
+                        .getJSONArray(JSONLegendGraphicBuilder.LEGEND)
+                        .getJSONObject(0)
+                        .getJSONArray("rules");
+        assertEquals(1, rules.size());
+        JSONArray symbolizers = rules.getJSONObject(0).getJSONArray("symbolizers");
+        // only one symbolizer of the two defined should be present in the final output
+        // the other one has the renderingLabel option set to false
+        assertEquals(1, symbolizers.size());
+    }
+
+    @Test
+    public void testLanguageVector() throws Exception {
+        // needs to go through the dispatcher for language() function to work
+        String base =
+                "wms?request=GetLegendGraphic&layer=MPolygons&style=multiLanguageVector&format"
+                        + "=application/json&legend_options=hideEmptyRules:true";
+        checkLanguageRule("it", base);
+        checkLanguageRule("de", base);
+    }
+
+    @Test
+    public void testLanguageRaster() throws Exception {
+        // needs to go through the dispatcher for language() function to work
+        String base =
+                "wms?request=GetLegendGraphic&layer=MPolygons&style=multiLanguageRaster&format"
+                        + "=application/json&legend_options=hideEmptyRules:true";
+        checkLanguageRule(null, base);
+        checkLanguageRule("", base);
+        checkLanguageRule("it", base);
+        checkLanguageRule("de", base);
+    }
+
+    @Test
+    public void testGroupDefaultStyle() throws Exception {
+        JSONObject json =
+                (JSONObject)
+                        getAsJSON(
+                                "wms?request=GetLegendGraphic&layer=nature&style=default-style-nature&format"
+                                        + "=application/json");
+        JSONArray legend = json.getJSONArray("Legend");
+        assertEquals(2, legend.size());
+        assertEquals("Lakes", legend.getJSONObject(0).getString("layerName"));
+        assertEquals("Forests", legend.getJSONObject(1).getString("layerName"));
+    }
+
+    @Test
+    public void testGroupInvalidStyleName() throws Exception {
+        Document dom =
+                getAsDOM(
+                        "wms?request=GetLegendGraphic&layer=nature&style=notAStyleName&format"
+                                + "=application/json");
+        assertXpathEvaluatesTo(
+                "StyleNotDefined", "/ogc:ServiceExceptionReport/ogc:ServiceException/@code", dom);
+        XpathEngine xpath = XMLUnit.newXpathEngine();
+        String exception = xpath.evaluate("/ogc:ServiceExceptionReport/ogc:ServiceException", dom);
+        assertEquals("No such style: notAStyleName", exception.trim());
+    }
+
+    private void checkLanguageRule(String lang, String base) throws Exception {
+        String suffix = lang != null ? "&language=" + lang : "";
+        JSONObject json = (JSONObject) getAsJSON(base + suffix, 200);
+        print(json);
+
+        JSONArray rules =
+                json.getJSONArray(JSONLegendGraphicBuilder.LEGEND)
+                        .getJSONObject(0)
+                        .getJSONArray("rules");
+        assertEquals(1, rules.size());
+        String filter = rules.getJSONObject(0).getString("filter");
+        if (lang != null) assertEquals("[language() = '" + lang + "']", filter);
+        else assertEquals("[language() = '']", filter);
+    }
+
     /** @param result */
     private void assertNotEmpty(JSONObject result) {
         assertNotNull(result);
@@ -1672,10 +1808,7 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         assertFalse(result.isEmpty());
     }
 
-    /**
-     * @param sldName
-     * @throws IOException
-     */
+    /** */
     private Style readSLD(String sldName) throws IOException {
         StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory(null);
         SLDParser stylereader = new SLDParser(styleFactory, getClass().getResource(sldName));
@@ -1684,10 +1817,8 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         Style style = readStyles[0];
         return style;
     }
-    /**
-     * @param style
-     * @throws TransformerException
-     */
+
+    @SuppressWarnings("PMD.SystemPrintln")
     private void printStyle(Style style) throws TransformerException {
         if (isQuietTests()) {
             return;
@@ -1712,5 +1843,143 @@ public class JSONLegendGraphicOutputFormatTest extends BaseLegendTest<JSONLegend
         req.setStyle(style);
         req.setFormat(JSONFormat);
         return req;
+    }
+
+    @Test
+    public void testLayerGroupStyleSingle() throws Exception {
+        Catalog catalog = getCatalog();
+        LayerGroupInfo group = null;
+        try {
+            String lgStyleName = "nature-style";
+            String lgName = "single_lake_and_places";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            LayerInfo lakesL = getCatalog().getLayerByName("cite:Lakes");
+            group =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.SINGLE,
+                            lgStyleName,
+                            Arrays.asList(forestL, lakesL),
+                            Arrays.asList(null, null));
+            String url =
+                    "wms?LAYER="
+                            + group.getName()
+                            + "&STYLE=nature-style&FORMAT=application/json"
+                            + "&SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&WIDTH=20&HEIGHT=20";
+            JSONObject legend = (JSONObject) getAsJSON(url);
+            JSONObject forest = legend.getJSONArray("Legend").getJSONObject(0);
+            JSONObject lakes = legend.getJSONArray("Legend").getJSONObject(1);
+            assertEquals("Forests", forest.get("layerName"));
+            assertEquals("Lakes", lakes.get("layerName"));
+        } finally {
+            if (group != null) {
+                catalog.remove(group);
+            }
+        }
+    }
+
+    @Test
+    public void testLayerGroupStyleOpaque() throws Exception {
+        Catalog catalog = getCatalog();
+        LayerGroupInfo group = null;
+        try {
+            String lgStyleName = "nature-style";
+            String lgName = "opaque_lakes_and_places";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            LayerInfo lakesL = getCatalog().getLayerByName("cite:Lakes");
+            group =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.OPAQUE_CONTAINER,
+                            lgStyleName,
+                            Arrays.asList(forestL, lakesL),
+                            Arrays.asList(null, null));
+            String url =
+                    "wms?LAYER="
+                            + group.getName()
+                            + "&STYLE=nature-style&FORMAT=application/json"
+                            + "&SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&WIDTH=20&HEIGHT=20";
+            JSONObject legend = (JSONObject) getAsJSON(url);
+            JSONObject forest = legend.getJSONArray("Legend").getJSONObject(0);
+            JSONObject lakes = legend.getJSONArray("Legend").getJSONObject(1);
+            assertEquals("Forests", forest.get("layerName"));
+            assertEquals("Lakes", lakes.get("layerName"));
+        } finally {
+            if (group != null) catalog.remove(group);
+        }
+    }
+
+    @Test
+    public void testNestedGroupWithStyle() throws Exception {
+        LayerGroupInfo nested = null;
+        LayerGroupInfo container = null;
+        Catalog catalog = getCatalog();
+
+        try {
+            String lgName = "nested-lakes_and_places_group";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            List<StyleInfo> styles = new ArrayList<>();
+            styles.add(null);
+            nested =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.SINGLE,
+                            "forest-style",
+                            Arrays.asList(forestL),
+                            styles);
+
+            createLakesPlacesLayerGroup(
+                    catalog, "lakes-and-place", LayerGroupInfo.Mode.SINGLE, null);
+            container = catalog.getLayerGroupByName("lakes-and-place");
+            container.getLayers().add(0, nested);
+            container.getStyles().add(0, nested.getLayerGroupStyles().get(0).getName());
+            catalog.save(container);
+
+            String url =
+                    "wms?LAYER="
+                            + container.getName()
+                            + "&STYLE=&FORMAT=application/json"
+                            + "&SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&WIDTH=20&HEIGHT=20";
+            JSONObject legend = (JSONObject) getAsJSON(url);
+            JSONObject forest = legend.getJSONArray("Legend").getJSONObject(0);
+            JSONObject lakes = legend.getJSONArray("Legend").getJSONObject(1);
+            JSONObject places = legend.getJSONArray("Legend").getJSONObject(2);
+            assertEquals("Forests", forest.get("layerName"));
+            assertEquals("Lakes", lakes.get("layerName"));
+            assertEquals("NamedPlaces", places.get("layerName"));
+        } finally {
+            if (container != null) catalog.remove(container);
+            if (nested != null) catalog.remove(nested);
+        }
+    }
+
+    @Test
+    public void testLayerGroupStyleIngnoredIfTree() throws Exception {
+        Catalog catalog = getCatalog();
+        LayerGroupInfo group = null;
+        try {
+            String lgName = "lakes_and_places_named";
+            LayerInfo forestL = getCatalog().getLayerByName("cite:Forests");
+            LayerInfo lakesL = getCatalog().getLayerByName("cite:Lakes");
+            group =
+                    lakesAndPlacesWithGroupStyle(
+                            lgName,
+                            LayerGroupInfo.Mode.NAMED,
+                            "nature-style",
+                            Arrays.asList(forestL, lakesL),
+                            Arrays.asList(null, null));
+            String url =
+                    "wms?LAYER="
+                            + group.getName()
+                            + "&STYLE=nature-style&FORMAT=application/json"
+                            + "&SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&WIDTH=20&HEIGHT=20";
+            JSONObject legend = (JSONObject) getAsJSON(url);
+            JSONObject lakes = legend.getJSONArray("Legend").getJSONObject(0);
+            JSONObject places = legend.getJSONArray("Legend").getJSONObject(1);
+            assertEquals("Lakes", lakes.get("layerName"));
+            assertEquals("NamedPlaces", places.get("layerName"));
+        } finally {
+            if (group != null) catalog.remove(group);
+        }
     }
 }

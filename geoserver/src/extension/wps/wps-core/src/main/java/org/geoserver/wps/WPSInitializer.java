@@ -8,13 +8,12 @@ package org.geoserver.wps;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
 import org.geoserver.config.ConfigurationListenerAdapter;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInfo;
-import org.geoserver.config.GeoServerInitializer;
+import org.geoserver.config.GeoServerReinitializer;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.FileLockProvider;
 import org.geoserver.platform.resource.FileSystemResourceStore;
@@ -34,7 +33,7 @@ import org.geotools.util.logging.Logging;
  *
  * @author Andrea Aime, GeoSolutions
  */
-public class WPSInitializer implements GeoServerInitializer {
+public class WPSInitializer implements GeoServerReinitializer {
 
     static final Logger LOGGER = Logging.getLogger(WPSInitializer.class);
 
@@ -48,6 +47,8 @@ public class WPSInitializer implements GeoServerInitializer {
 
     GeoServerResourceLoader resourceLoader;
 
+    ConfigurationListenerAdapter configurationListener;
+
     public WPSInitializer(
             WPSExecutionManager executionManager,
             DefaultProcessManager processManager,
@@ -59,21 +60,53 @@ public class WPSInitializer implements GeoServerInitializer {
         this.cleaner = cleaner;
         this.resources = resources;
         this.resourceLoader = resourceLoader;
+        this.configurationListener = null;
     }
 
+    @Override
     public void initialize(final GeoServer geoServer) throws Exception {
         initWPS(geoServer.getService(WPSInfo.class), geoServer);
+        synchronized (this) {
+            if (configurationListener == null) {
+                configurationListener =
+                        new ConfigurationListenerAdapter() {
+                            @Override
+                            public void handlePostGlobalChange(GeoServerInfo global) {
+                                WPSInfo wpsInfo = geoServer.getService(WPSInfo.class);
+                                if (wpsInfo != null) {
+                                    initWPS(wpsInfo, geoServer);
+                                }
+                            }
+                        };
+            }
+            geoServer.addListener(configurationListener);
+        }
+    }
 
-        geoServer.addListener(
-                new ConfigurationListenerAdapter() {
-                    @Override
-                    public void handlePostGlobalChange(GeoServerInfo global) {
-                        initWPS(geoServer.getService(WPSInfo.class), geoServer);
-                    }
-                });
+    @Override
+    public void beforeReinitialize(GeoServer geoServer) throws Exception {
+        GeoServerReinitializer.super.beforeReinitialize(geoServer);
+        synchronized (this) {
+            if (configurationListener != null) {
+                geoServer.removeListener(configurationListener);
+            }
+        }
+    }
+
+    @Override
+    public void reinitialize(GeoServer geoServer) throws Exception {
+        synchronized (this) {
+            if (configurationListener != null) {
+                geoServer.addListener(configurationListener);
+            }
+        }
+        initWPS(geoServer.getService(WPSInfo.class), geoServer);
     }
 
     void initWPS(WPSInfo info, GeoServer geoServer) {
+        if (info == null) {
+            throw new NullPointerException("WPS configuration not available for initialization");
+        }
         // Handle the http connection timeout.
         // The specified timeout is in seconds. Convert it to milliseconds
         double connectionTimeout = info.getConnectionTimeout();
@@ -116,7 +149,7 @@ public class WPSInitializer implements GeoServerInitializer {
         // one
         if (resources.getArtifactsStore() instanceof DefaultProcessArtifactsStore) {
             WPSInfo wps = geoServer.getService(WPSInfo.class);
-            String outputStorageDirectory = wps.getStorageDirectory();
+            String outputStorageDirectory = wps != null ? wps.getStorageDirectory() : null;
             FileSystemResourceStore resourceStore;
             if (outputStorageDirectory == null || outputStorageDirectory.trim().isEmpty()) {
                 Resource temp = resourceLoader.get("temp/wps");
@@ -161,12 +194,13 @@ public class WPSInitializer implements GeoServerInitializer {
                     (DefaultProcessArtifactsStore) resources.getArtifactsStore();
             artifactsStore.setResourceStore(resourceStore);
         }
+        resources.setExternalOutputDirectory(info.getExternalOutputDirectory());
 
         lookupNewProcessGroups(info, geoServer);
     }
 
     static void lookupNewProcessGroups(WPSInfo info, GeoServer geoServer) {
-        List<ProcessGroupInfo> newGroups = new ArrayList();
+        List<ProcessGroupInfo> newGroups = new ArrayList<>();
 
         for (ProcessGroupInfo available : lookupProcessGroups()) {
             boolean found = false;
@@ -190,30 +224,25 @@ public class WPSInitializer implements GeoServerInitializer {
     }
 
     static List<ProcessGroupInfo> lookupProcessGroups() {
-        List<ProcessGroupInfo> processFactories = new ArrayList<ProcessGroupInfo>();
+        List<ProcessGroupInfo> processFactories = new ArrayList<>();
 
         // here we build a full list of process factories infos, covering all available
         // factories: this makes sure the available factories are availablefrom both
         // GUI and REST configuration
 
         // get the full list of factories
-        List<ProcessFactory> factories =
-                new ArrayList<ProcessFactory>(Processors.getProcessFactories());
+        List<ProcessFactory> factories = new ArrayList<>(Processors.getProcessFactories());
 
         // ensure there is a stable order across invocations, JDK and so on
         Collections.sort(
                 factories,
-                new Comparator<ProcessFactory>() {
-
-                    @Override
-                    public int compare(ProcessFactory o1, ProcessFactory o2) {
-                        if (o1 == null) {
-                            return o2 == null ? 0 : -1;
-                        } else if (o2 == null) {
-                            return 1;
-                        } else {
-                            return o1.getClass().getName().compareTo(o2.getClass().getName());
-                        }
+                (o1, o2) -> {
+                    if (o1 == null) {
+                        return o2 == null ? 0 : -1;
+                    } else if (o2 == null) {
+                        return 1;
+                    } else {
+                        return o1.getClass().getName().compareTo(o2.getClass().getName());
                     }
                 });
 

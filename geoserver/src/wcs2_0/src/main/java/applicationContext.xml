@@ -175,4 +175,7 @@
   
   <bean id="imgWcsMimeMapper" class="org.geoserver.wcs2_0.response.ImgMimeTypeMapper"/>
 
+  <bean id="wcsDefaultLocaleCallback" class="org.geoserver.wcs2_0.WCSDefaultLocalCallback">
+    <constructor-arg ref="geoServer"/>
+  </bean>
 </beans>

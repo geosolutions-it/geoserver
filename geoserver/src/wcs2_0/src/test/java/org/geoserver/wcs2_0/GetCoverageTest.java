@@ -6,6 +6,8 @@ package org.geoserver.wcs2_0;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -19,6 +21,7 @@ import net.opengis.wcs20.GetCoverageType;
 import net.opengis.wcs20.ScalingType;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionPresentation;
+import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.data.test.MockData;
@@ -28,11 +31,13 @@ import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs.responses.GeoTIFFCoverageResponseDelegate;
+import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.kvp.WCS20GetCoverageRequestReader;
 import org.geoserver.wcs2_0.response.MIMETypeMapper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.hamcrest.CoreMatchers;
 import org.junit.Before;
@@ -55,6 +60,10 @@ public class GetCoverageTest extends WCSTestSupport {
     private static final QName RAIN = new QName(MockData.SF_URI, "rain", MockData.SF_PREFIX);
     private static final QName TIMESERIES =
             new QName(MockData.SF_URI, "timeseries", MockData.SF_PREFIX);
+    /** GEOS-11033: Test resource where native bounding box ReferencedEnvelope crs missing. */
+    public static QName NO_ENVELOPE_SRS =
+            new QName(MockData.WCS_URI, "NoEnvelopeSRS", MockData.WCS_PREFIX);
+
     private GridCoverage2DReader coverageReader;
     private AffineTransform2D originalMathTransform;
 
@@ -64,6 +73,14 @@ public class GetCoverageTest extends WCSTestSupport {
         testData.addRasterLayer(TIMESERIES, "timeseries.zip", null, getCatalog());
         setupRasterDimension(
                 TIMESERIES, ResourceInfo.TIME, DimensionPresentation.LIST, null, null, null);
+
+        testData.addRasterLayer(
+                NO_ENVELOPE_SRS, "/world.tiff", null, null, GetCoverageTest.class, getCatalog());
+        CoverageInfo noEnvelopeSRS = getCatalog().getCoverageByName(getLayerId(NO_ENVELOPE_SRS));
+        ReferencedEnvelope bbox = noEnvelopeSRS.getNativeBoundingBox();
+        noEnvelopeSRS.setNativeBoundingBox(ReferencedEnvelope.create(bbox, null));
+        noEnvelopeSRS.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
+        getCatalog().save(noEnvelopeSRS);
     }
 
     @Before
@@ -78,7 +95,7 @@ public class GetCoverageTest extends WCSTestSupport {
     @Test
     public void testAllowSubsamplingOnScaleFactor() throws Exception {
         // setup a request
-        Map<String, String> raw = setupGetCoverageRain();
+        Map<String, Object> raw = setupGetCoverageRain();
         raw.put("scalefactor", "0.5");
         assertScalingByHalf(raw);
     }
@@ -90,18 +107,58 @@ public class GetCoverageTest extends WCSTestSupport {
         int height = range.getSpan(1);
 
         // setup a request
-        Map<String, String> raw = setupGetCoverageRain();
+        Map<String, Object> raw = setupGetCoverageRain();
         raw.put("scaleextent", "i(0," + (width / 2) + "),j(0," + (height / 2) + ")");
         assertScalingByHalf(raw);
     }
 
     @Test
-    public void testDeflateCompressionLevel() throws Exception {
-        CoverageInfo ci = getCatalog().getCoverageByName(getLayerId(RAIN));
+    public void getNearestTime() throws Exception {
+        // get the original transform
+        CoverageInfo ci = getCatalog().getCoverageByName(getLayerId(TIMESERIES));
         GetCoverageType gc =
                 parse(
                         "wcs?request=GetCoverage&service=WCS&version=2.0.1"
-                                + "&coverageId=rain"
+                                + "&coverageId=timeseries&subset=time(\"2019-01-03T00:00:00Z\")");
+        coverageReader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
+        WCSInfo service = getGeoServer().getService(WCSInfo.class);
+        EnvelopeAxesLabelsMapper axesMapper =
+                GeoServerExtensions.bean(EnvelopeAxesLabelsMapper.class);
+        MIMETypeMapper mimeMapper = GeoServerExtensions.bean(MIMETypeMapper.class);
+        GetCoverage getCoverage = new GetCoverage(service, getCatalog(), axesMapper, mimeMapper);
+        boolean hasCoverage = true;
+        GridCoverage gridCoverage = null;
+        try {
+            // Requested a missing time will thrown an exception of requested time out of range
+            gridCoverage = getCoverage.run(gc);
+        } catch (WCS20Exception e) {
+            hasCoverage = false;
+            assertTrue(e.getMessage().contains("Requested time subset does not intersect"));
+            assertEquals(404, (int) e.getHttpCode());
+        }
+        assertFalse(hasCoverage);
+
+        // Enabling nearestMatch on timeDimension
+        setupNearestMatch(TIMESERIES, "time", true, "P5D", true);
+        getCoverage = new GetCoverage(service, getCatalog(), axesMapper, mimeMapper);
+        try {
+            gridCoverage = getCoverage.run(gc);
+            hasCoverage = true;
+        } catch (WCS20Exception e) {
+            hasCoverage = false;
+        }
+        assertNotNull(gridCoverage);
+        assertTrue(hasCoverage);
+        scheduleForCleaning(gridCoverage);
+    }
+
+    @Test
+    public void testDeflateCompressionLevel() throws Exception {
+        CoverageInfo ci = getCatalog().getCoverageByName(getLayerId(TIMESERIES));
+        GetCoverageType gc =
+                parse(
+                        "wcs?request=GetCoverage&service=WCS&version=2.0.1"
+                                + "&coverageId=timeseries&subset=time(\"2018-01-01T00:00:00Z\")"
                                 + "&format=image/tiff&geotiff:compression=DEFLATE");
         coverageReader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
         GeoServer geoserver = getGeoServer();
@@ -142,14 +199,14 @@ public class GetCoverageTest extends WCSTestSupport {
     }
 
     protected GetCoverageType parse(String url) throws Exception {
-        Map<String, String> rawKvp = new CaseInsensitiveMap(KvpUtils.parseQueryString(url));
-        Map<String, String> kvp = new CaseInsensitiveMap(parseKvp(rawKvp));
+        Map<String, Object> rawKvp = new CaseInsensitiveMap<>(KvpUtils.parseQueryString(url));
+        Map<String, Object> kvp = new CaseInsensitiveMap<>(parseKvp(rawKvp));
         WCS20GetCoverageRequestReader reader = new WCS20GetCoverageRequestReader();
         GetCoverageType gc = (GetCoverageType) reader.createRequest();
         return (GetCoverageType) reader.read(gc, kvp, rawKvp);
     }
 
-    private void assertScalingByHalf(Map<String, String> raw) throws Exception {
+    private void assertScalingByHalf(Map<String, Object> raw) throws Exception {
         Map<String, Object> kvp = parseKvp(raw);
         WCS20GetCoverageRequestReader reader = new WCS20GetCoverageRequestReader();
         GetCoverageType getCoverageRequest =
@@ -189,8 +246,8 @@ public class GetCoverageTest extends WCSTestSupport {
         scheduleForCleaning(result);
     }
 
-    private Map<String, String> setupGetCoverageRain() {
-        Map<String, String> raw = new HashMap<>();
+    private Map<String, Object> setupGetCoverageRain() {
+        Map<String, Object> raw = new HashMap<>();
         raw.put("service", "WCS");
         raw.put("request", "GetCoverage");
         raw.put("version", "2.0.1");
@@ -221,5 +278,32 @@ public class GetCoverageTest extends WCSTestSupport {
         String error = checkOws20Exception(response, 400, "InvalidEncodingSyntax", "subset");
         assertThat(error, CoreMatchers.containsString("Invalid point value"));
         assertThat(error, CoreMatchers.containsString("abc"));
+    }
+
+    @Test
+    public void testNoEnvelopeSRS() throws Exception {
+        CoverageInfo ci = getCatalog().getCoverageByName(getLayerId(NO_ENVELOPE_SRS));
+        GetCoverageType gc =
+                parse(
+                        "wcs?request=GetCoverage&service=WCS&version=2.0.1"
+                                + "&coverageId=NoEnvelopeSRS&format=image/tiff");
+
+        coverageReader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
+        WCSInfo service = getGeoServer().getService(WCSInfo.class);
+        EnvelopeAxesLabelsMapper axesMapper =
+                GeoServerExtensions.bean(EnvelopeAxesLabelsMapper.class);
+        MIMETypeMapper mimeMapper = GeoServerExtensions.bean(MIMETypeMapper.class);
+        GetCoverage getCoverage = new GetCoverage(service, getCatalog(), axesMapper, mimeMapper);
+        boolean hasCoverage = true;
+        GridCoverage gridCoverage = null;
+        try {
+            gridCoverage = getCoverage.run(gc);
+        } catch (WCS20Exception e) {
+            hasCoverage = false;
+            assertEquals(404, (int) e.getHttpCode());
+        }
+        assertNotNull(gridCoverage);
+        assertTrue(hasCoverage);
+        scheduleForCleaning(gridCoverage);
     }
 }

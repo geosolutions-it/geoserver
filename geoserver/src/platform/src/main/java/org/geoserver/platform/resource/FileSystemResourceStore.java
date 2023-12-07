@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geotools.util.logging.Logging;
@@ -44,7 +45,8 @@ public class FileSystemResourceStore implements ResourceStore {
     /** Base directory for ResourceStore content */
     protected File baseDirectory = null;
 
-    protected FileSystemWatcher watcher;
+    // lazily initialized by getResourceNotificationDispatcher()
+    final AtomicReference<FileSystemWatcher> watcher = new AtomicReference<>(null);
 
     protected FileSystemResourceStore() {
         // Used by Spring, baseDirectory set by subclass
@@ -89,6 +91,14 @@ public class FileSystemResourceStore implements ResourceStore {
         if (resourceDirectory.isFile()) {
             throw new IllegalArgumentException(
                     "Directory required, file present at this location " + resourceDirectory);
+        }
+        if (!resourceDirectory.isAbsolute()) {
+            try {
+                resourceDirectory = resourceDirectory.getCanonicalFile();
+            } catch (IOException e) {
+                throw new IllegalArgumentException(
+                        "Unable to resolve " + resourceDirectory + " to an absolute location");
+            }
         }
         if (!resourceDirectory.exists()) {
             boolean create = resourceDirectory.mkdirs();
@@ -191,7 +201,8 @@ public class FileSystemResourceStore implements ResourceStore {
 
         @Override
         public InputStream in() {
-            File actualFile = file();
+            // just take the File as is, don't create it.
+            File actualFile = this.file;
             if (!actualFile.exists()) {
                 throw new IllegalStateException("File not found " + actualFile);
             }
@@ -212,30 +223,6 @@ public class FileSystemResourceStore implements ResourceStore {
                         closed = true;
                         super.close();
                         lock.release();
-                    }
-
-                    @Override
-                    @SuppressWarnings("deprecation") // finalize is deprecated in Java 9
-                    protected void finalize() throws IOException {
-                        if (!closed) {
-                            String warn =
-                                    "There is code leaving resource input streams open, locks around them might not be cleared! ";
-                            if (!TRACE_ENABLED) {
-                                warn +=
-                                        "Add -D"
-                                                + GS_LOCK_TRACE
-                                                + "=true to your JVM options to get a full stack trace of the code that acquired the input stream";
-                            }
-                            LOGGER.warning(warn);
-
-                            if (TRACE_ENABLED) {
-                                LOGGER.log(
-                                        Level.WARNING,
-                                        "The unclosed input stream originated on this stack trace",
-                                        tracer);
-                            }
-                        }
-                        super.finalize();
                     }
                 };
             } catch (FileNotFoundException e) {
@@ -407,11 +394,11 @@ public class FileSystemResourceStore implements ResourceStore {
             if (file.isFile()) {
                 return Collections.emptyList();
             }
-            String array[] = file.list();
+            String[] array = file.list();
             if (array == null) {
                 return Collections.emptyList();
             }
-            List<Resource> list = new ArrayList<Resource>(array.length);
+            List<Resource> list = new ArrayList<>(array.length);
             for (String filename : array) {
                 Resource resource = FileSystemResourceStore.this.get(Paths.path(path, filename));
                 list.add(resource);
@@ -563,17 +550,18 @@ public class FileSystemResourceStore implements ResourceStore {
 
     @Override
     public ResourceNotificationDispatcher getResourceNotificationDispatcher() {
-        if (watcher == null) {
-            watcher =
-                    new FileSystemWatcher(
-                            new FileSystemWatcher.FileExtractor() {
-
-                                @Override
-                                public File getFile(String path) {
-                                    return Paths.toFile(baseDirectory, path);
-                                }
-                            });
+        FileSystemWatcher instance = this.watcher.get();
+        if (instance == null) {
+            // lazily initialize the FileSystemWatcher in a thread contention free way,
+            // creating a single instance
+            instance =
+                    watcher.updateAndGet(
+                            v ->
+                                    v == null
+                                            ? new FileSystemWatcher(
+                                                    path -> Paths.toFile(baseDirectory, path))
+                                            : v);
         }
-        return watcher;
+        return instance;
     }
 }

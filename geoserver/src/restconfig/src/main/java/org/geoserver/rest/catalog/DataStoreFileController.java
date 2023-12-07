@@ -48,7 +48,9 @@ import org.geotools.data.FeatureSource;
 import org.geotools.data.FeatureStore;
 import org.geotools.data.FileDataStoreFactorySpi;
 import org.geotools.data.Transaction;
-import org.geotools.feature.FeatureCollection;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.jdbc.JDBCDataStoreFactory;
 import org.geotools.util.URLs;
@@ -72,10 +74,9 @@ import org.vfny.geoserver.util.DataStoreUtils;
 @RestController
 @ControllerAdvice
 @RequestMapping(
-    path =
-            RestBaseController.ROOT_PATH
-                    + "/workspaces/{workspaceName}/datastores/{storeName}/{method}.{format}"
-)
+        path =
+                RestBaseController.ROOT_PATH
+                        + "/workspaces/{workspaceName}/datastores/{storeName}/{method}.{format}")
 public class DataStoreFileController extends AbstractStoreUploadController {
 
     @Autowired
@@ -85,7 +86,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
 
     private static final Pattern H2_FILE_PATTERN = Pattern.compile("(.*?)\\.(?:data.db)");
 
-    protected static final HashMap<String, String> formatToDataStoreFactory = new HashMap();
+    protected static final HashMap<String, String> formatToDataStoreFactory = new HashMap<>();
 
     static {
         formatToDataStoreFactory.put(
@@ -94,27 +95,20 @@ public class DataStoreFileController extends AbstractStoreUploadController {
                 "properties", "org.geotools.data.property.PropertyDataStoreFactory");
         formatToDataStoreFactory.put("h2", "org.geotools.data.h2.H2DataStoreFactory");
         formatToDataStoreFactory.put(
-                "spatialite", "org.geotools.data.spatialite.SpatiaLiteDataStoreFactory");
-        formatToDataStoreFactory.put(
                 "appschema", "org.geotools.data.complex.AppSchemaDataAccessFactory");
         formatToDataStoreFactory.put("gpkg", "org.geotools.geopkg.GeoPkgDataStoreFactory");
+        formatToDataStoreFactory.put("mbtiles", "org.geotools.mbtiles.MBTilesDataStoreFactory");
     }
 
-    protected static final HashMap<String, Map> dataStoreFactoryToDefaultParams = new HashMap();
+    protected static final Map<String, Map<String, Serializable>> dataStoreFactoryToDefaultParams =
+            new HashMap<>();
 
     static {
-        HashMap map = new HashMap();
+        Map<String, Serializable> map = new HashMap<>();
         map.put("database", "@DATA_DIR@/@NAME@");
         map.put("dbtype", "h2");
 
         dataStoreFactoryToDefaultParams.put("org.geotools.data.h2.H2DataStoreFactory", map);
-
-        map = new HashMap();
-        map.put("database", "@DATA_DIR@/@NAME@");
-        map.put("dbtype", "spatialite");
-
-        dataStoreFactoryToDefaultParams.put(
-                "org.geotools.data.spatialite.SpatiaLiteDataStoreFactory", map);
     }
 
     public static DataAccessFactory lookupDataStoreFactory(String format) {
@@ -122,7 +116,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
         String factoryClassName = formatToDataStoreFactory.get(format);
         if (factoryClassName != null) {
             try {
-                Class factoryClass = Class.forName(factoryClassName);
+                Class<?> factoryClass = Class.forName(factoryClassName);
                 return (DataAccessFactory) factoryClass.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 throw new RestException(
@@ -220,7 +214,6 @@ public class DataStoreFileController extends AbstractStoreUploadController {
                 BufferedOutputStream bufferedOutputStream =
                         new BufferedOutputStream(byteArrayOutputStream);
                 ZipOutputStream zipOutputStream = new ZipOutputStream(bufferedOutputStream)) {
-
             // packing files
             File[] files = directory.listFiles();
             if (files != null) {
@@ -228,11 +221,9 @@ public class DataStoreFileController extends AbstractStoreUploadController {
                     // new zip entry and copying inputstream with file to zipOutputStream, after all
                     // closing streams
                     zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
-                    FileInputStream fileInputStream = new FileInputStream(file);
-
-                    IOUtils.copy(fileInputStream, zipOutputStream);
-
-                    fileInputStream.close();
+                    try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                        IOUtils.copy(fileInputStream, zipOutputStream);
+                    }
                     zipOutputStream.closeEntry();
                 }
             }
@@ -244,7 +235,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
             responseHeaders.add(
                     "content-disposition", "attachment; filename=" + info.getName() + ".zip");
             responseHeaders.add("Content-Type", "application/zip");
-            return new ResponseEntity(
+            return new ResponseEntity<>(
                     byteArrayOutputStream.toByteArray(), responseHeaders, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -359,7 +350,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
         boolean createNewSource;
         DataAccess<?, ?> source;
         try {
-            HashMap params = new HashMap();
+            Map<String, Serializable> params = new HashMap<>();
             if (characterset != null && characterset.length() > 0) {
                 params.put("charset", characterset);
             }
@@ -404,17 +395,19 @@ public class DataStoreFileController extends AbstractStoreUploadController {
                         sourceDataStore.getSchema(featureTypeName);
                     }
 
-                    FeatureSource featureSource = targetDataStore.getFeatureSource(featureTypeName);
+                    SimpleFeatureSource featureSource =
+                            targetDataStore.getFeatureSource(featureTypeName);
                     if (!(featureSource instanceof FeatureStore)) {
                         LOGGER.warning(featureTypeName + " is not writable, skipping");
                         continue;
                     }
 
+                    @SuppressWarnings("PMD.CloseResource") // no try-with-resource to rollback
                     Transaction tx = new DefaultTransaction();
-                    FeatureStore featureStore = (FeatureStore) featureSource;
-                    featureStore.setTransaction(tx);
+                    try { // NOPMD - tx used in catch too, cannot use try-with-resources
+                        SimpleFeatureStore featureStore = (SimpleFeatureStore) featureSource;
+                        featureStore.setTransaction(tx);
 
-                    try {
                         // figure out update mode, whether we should kill existing data or append
                         if ("overwrite".equalsIgnoreCase(update)) {
                             LOGGER.fine("Removing existing features from " + featureTypeName);
@@ -423,7 +416,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
                         }
 
                         LOGGER.fine("Adding features to " + featureTypeName);
-                        FeatureCollection features =
+                        SimpleFeatureCollection features =
                                 sourceDataStore.getFeatureSource(featureTypeName).getFeatures();
                         featureStore.addFeatures(features);
 
@@ -560,7 +553,6 @@ public class DataStoreFileController extends AbstractStoreUploadController {
      *     on server)
      * @param storeName The name of the store being added
      * @param format The store format.
-     * @throws IOException
      */
     protected List<Resource> doFileUpload(
             UploadMethod method,
@@ -645,7 +637,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
             NamespaceInfo namespace,
             DataAccessFactory factory,
             Resource uploadedFile) {
-        Map connectionParameters = info.getConnectionParameters();
+        Map<String, Serializable> connectionParameters = info.getConnectionParameters();
         updateParameters(connectionParameters, factory, uploadedFile);
 
         connectionParameters.put("namespace", namespace.getURI());
@@ -659,7 +651,9 @@ public class DataStoreFileController extends AbstractStoreUploadController {
     }
 
     void updateParameters(
-            Map connectionParameters, DataAccessFactory factory, Resource uploadedFile) {
+            Map<String, Serializable> connectionParameters,
+            DataAccessFactory factory,
+            Resource uploadedFile) {
         File f = Resources.find(uploadedFile);
         for (DataAccessFactory.Param p : factory.getParametersInfo()) {
             // the nasty url / file hack
@@ -672,7 +666,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
 
                 // convert to the required type
                 // TODO: use geotools converter
-                Object converted = null;
+                Serializable converted = null;
                 if (URI.class.equals(p.type)) {
                     converted = f.toURI();
                 } else if (URL.class.equals(p.type)) {
@@ -693,7 +687,7 @@ public class DataStoreFileController extends AbstractStoreUploadController {
                     p.lookUp(connectionParameters);
                 } catch (Exception e) {
                     // set the sample value
-                    connectionParameters.put(p.key, p.sample);
+                    connectionParameters.put(p.key, (Serializable) p.sample);
                 }
             }
         }
@@ -737,19 +731,18 @@ public class DataStoreFileController extends AbstractStoreUploadController {
 
     void autoCreateParameters(
             DataStoreInfo info, NamespaceInfo namespace, DataAccessFactory factory) {
-        Map defaultParams =
+        Map<String, Serializable> defaultParams =
                 dataStoreFactoryToDefaultParams.get(factory.getClass().getCanonicalName());
         if (defaultParams == null) {
             throw new RuntimeException(
                     "Unable to auto create parameters for " + factory.getDisplayName());
         }
 
-        HashMap params = new HashMap(defaultParams);
+        Map<String, Serializable> params = new HashMap<>(defaultParams);
 
         // replace any replacable parameters
         String dataDirRoot = catalog.getResourceLoader().getBaseDirectory().getAbsolutePath();
-        for (Object o : params.entrySet()) {
-            Map.Entry e = (Map.Entry) o;
+        for (Map.Entry<String, Serializable> e : params.entrySet()) {
             if (e.getValue() instanceof String) {
                 String string = (String) e.getValue();
                 string =

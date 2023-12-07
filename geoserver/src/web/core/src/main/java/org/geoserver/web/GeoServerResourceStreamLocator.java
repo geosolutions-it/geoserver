@@ -9,7 +9,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -61,9 +65,18 @@ public class GeoServerResourceStreamLocator extends ResourceStreamLocator {
                     while (urls.hasMoreElements()) {
                         URL url = urls.nextElement();
 
-                        InputStream in = url.openStream();
-                        properties.load(in);
-                        in.close();
+                        // Java .properties files are encoded in ISO-8859-1
+                        // Support wicket .utf8.properties convention indicating UTF8 encoding
+                        Charset charset =
+                                p.endsWith(".utf8.properties")
+                                        ? StandardCharsets.UTF_8
+                                        : StandardCharsets.ISO_8859_1;
+
+                        try (InputStream in = url.openStream()) {
+                            try (Reader reader = new InputStreamReader(in, charset)) {
+                                properties.load(reader);
+                            }
+                        }
                     }
 
                     // transform the properties to a stream
@@ -71,10 +84,12 @@ public class GeoServerResourceStreamLocator extends ResourceStreamLocator {
                     properties.store(out, "");
 
                     return new AbstractResourceStream() {
+                        @Override
                         public InputStream getInputStream() throws ResourceStreamNotFoundException {
                             return new ByteArrayInputStream(out.toByteArray());
                         }
 
+                        @Override
                         public void close() throws IOException {
                             out.close();
                         }

@@ -16,7 +16,8 @@
  */
 package org.geoserver.wps.ppio;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -63,11 +64,7 @@ public class CSVPPIOTest extends WPSTestSupport {
         }
     }
 
-    /**
-     * Test method for {@link org.geoserver.wps.ppio.WFSPPIO#decode(java.io.InputStream)}.
-     *
-     * @throws Exception
-     */
+    /** Test method for {@link org.geoserver.wps.ppio.WFSPPIO#decode(java.io.InputStream)}. */
     @Test
     public void testDecodeInputStream() throws Exception {
         SimpleFeatureCollection states =

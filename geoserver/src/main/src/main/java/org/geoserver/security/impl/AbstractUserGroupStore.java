@@ -48,75 +48,93 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
         helper = new UserGroupStoreHelper();
     }
 
+    @Override
     public String getName() {
         return service.getName();
     }
 
+    @Override
     public void setName(String name) {
         service.setName(name);
     }
 
+    @Override
     public GeoServerSecurityManager getSecurityManager() {
         return service.getSecurityManager();
     }
 
+    @Override
     public void setSecurityManager(GeoServerSecurityManager securityManager) {
         service.setSecurityManager(securityManager);
     }
 
+    @Override
     public boolean canCreateStore() {
         return service.canCreateStore();
     }
 
+    @Override
     public String getPasswordEncoderName() {
         return service.getPasswordEncoderName();
     }
 
+    @Override
     public String getPasswordValidatorName() {
         return service.getPasswordValidatorName();
     }
 
+    @Override
     public GeoServerUserGroupStore createStore() throws IOException {
         return service.createStore();
     }
 
+    @Override
     public void registerUserGroupLoadedListener(UserGroupLoadedListener listener) {
         service.registerUserGroupLoadedListener(listener);
     }
 
+    @Override
     public void unregisterUserGroupLoadedListener(UserGroupLoadedListener listener) {
         service.unregisterUserGroupLoadedListener(listener);
     }
 
+    @Override
     public GeoServerUser getUserByUsername(String username) throws IOException {
         return helper.getUserByUsername(username);
     }
 
+    @Override
     public GeoServerUserGroup getGroupByGroupname(String groupname) throws IOException {
         return helper.getGroupByGroupname(groupname);
     }
 
+    @Override
     public SortedSet<GeoServerUser> getUsers() throws IOException {
         return helper.getUsers();
     }
 
+    @Override
     public SortedSet<GeoServerUserGroup> getUserGroups() throws IOException {
         return helper.getUserGroups();
     }
 
+    @Override
     public GeoServerUserGroup createGroupObject(String groupname, boolean isEnabled)
             throws IOException {
         return service.createGroupObject(groupname, isEnabled);
     }
 
+    @Override
     public SortedSet<GeoServerUserGroup> getGroupsForUser(GeoServerUser user) throws IOException {
         return helper.getGroupsForUser(user);
     }
 
+    @Override
     public SortedSet<GeoServerUser> getUsersForGroup(GeoServerUserGroup group) throws IOException {
         return helper.getUsersForGroup(group);
     }
 
+    @Override
     public void load() throws IOException {
         deserialize();
     }
@@ -125,6 +143,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
         return service.getConfigRoot();
     }
 
+    @Override
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException, DataAccessException {
         // this is only need at runtime
@@ -134,24 +153,18 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#isModified()
      */
+    @Override
     public boolean isModified() {
         return modified;
     }
 
-    /**
-     * Setter for modified flag
-     *
-     * @param value
-     */
+    /** Setter for modified flag */
     public void setModified(Boolean value) {
         modified = value;
     }
 
     /**
      * validates and encodes the password. Do nothing for a not changed password of an existing user
-     *
-     * @param user
-     * @throws IOException
      */
     protected void preparePassword(GeoServerUser user) throws IOException, PasswordPolicyException {
 
@@ -177,6 +190,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#addUser(org.geoserver.security.impl.GeoserverUser)
      */
+    @Override
     public void addUser(GeoServerUser user) throws IOException, PasswordPolicyException {
 
         if (helper.userMap.containsKey(user.getUsername()))
@@ -193,7 +207,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
         for (Object key : user.getProperties().keySet()) {
             SortedSet<GeoServerUser> users = helper.propertyMap.get(key);
             if (users == null) {
-                users = new TreeSet<GeoServerUser>();
+                users = new TreeSet<>();
                 helper.propertyMap.put((String) key, users);
             }
             users.add(user);
@@ -209,6 +223,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#addGroup(org.geoserver.security.impl.GeoserverUserGroup)
      */
+    @Override
     public void addGroup(GeoServerUserGroup group) throws IOException {
 
         if (helper.groupMap.containsKey(group.getGroupname()))
@@ -223,6 +238,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#updateUser(org.geoserver.security.impl.GeoserverUser)
      */
+    @Override
     public void updateUser(GeoServerUser user) throws IOException, PasswordPolicyException {
 
         if (helper.userMap.containsKey(user.getUsername()) == false) {
@@ -239,6 +255,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#updateGroup(org.geoserver.security.impl.GeoserverUserGroup)
      */
+    @Override
     public void updateGroup(GeoServerUserGroup group) throws IOException {
 
         if (helper.groupMap.containsKey(group.getGroupname())) {
@@ -252,11 +269,12 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#removeUser(org.geoserver.security.impl.GeoserverUser)
      */
+    @Override
     public boolean removeUser(GeoServerUser user) throws IOException {
 
         Collection<GeoServerUserGroup> groups = helper.user_groupMap.get(user);
         if (groups != null) {
-            Collection<GeoServerUserGroup> toBeRemoved = new ArrayList<GeoServerUserGroup>();
+            Collection<GeoServerUserGroup> toBeRemoved = new ArrayList<>();
             toBeRemoved.addAll(groups);
             for (GeoServerUserGroup group : toBeRemoved) {
                 disAssociateUserFromGroup(user, group);
@@ -274,10 +292,11 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#removeGroup(org.geoserver.security.impl.GeoserverUserGroup)
      */
+    @Override
     public boolean removeGroup(GeoServerUserGroup group) throws IOException {
         Collection<GeoServerUser> users = helper.group_userMap.get(group);
         if (users != null) {
-            Collection<GeoServerUser> toBeRemoved = new ArrayList<GeoServerUser>();
+            Collection<GeoServerUser> toBeRemoved = new ArrayList<>();
             toBeRemoved.addAll(users);
             for (GeoServerUser user : toBeRemoved) {
                 disAssociateUserFromGroup(user, group);
@@ -295,6 +314,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
      * @see org.geoserver.security.GeoserverUserGroupStore#store()
      *
      */
+    @Override
     public void store() throws IOException {
         if (isModified()) {
             LOGGER.info("Start storing user/groups for service named " + getName());
@@ -314,6 +334,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#associateUserToGroup(org.geoserver.security.impl.GeoserverUser, org.geoserver.security.impl.GeoserverUserGroup)
      */
+    @Override
     public void associateUserToGroup(GeoServerUser user, GeoServerUserGroup group)
             throws IOException {
         checkUser(user);
@@ -323,7 +344,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
 
         SortedSet<GeoServerUser> users = helper.group_userMap.get(group);
         if (users == null) {
-            users = new TreeSet<GeoServerUser>();
+            users = new TreeSet<>();
             helper.group_userMap.put(group, users);
         }
         if (users.contains(user) == false) {
@@ -333,7 +354,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
 
         SortedSet<GeoServerUserGroup> groups = helper.user_groupMap.get(user);
         if (groups == null) {
-            groups = new TreeSet<GeoServerUserGroup>();
+            groups = new TreeSet<>();
             helper.user_groupMap.put(user, groups);
         }
         if (groups.contains(group) == false) {
@@ -348,6 +369,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserDetailsService#disAssociateUserFromGroup(org.geoserver.security.impl.GeoserverUser, org.geoserver.security.UserGroup)
      */
+    @Override
     public void disAssociateUserFromGroup(GeoServerUser user, GeoServerUserGroup group)
             throws IOException {
         checkUser(user);
@@ -377,6 +399,7 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
     /* (non-Javadoc)
      * @see org.geoserver.security.GeoserverUserGroupStore#clear()
      */
+    @Override
     public void clear() throws IOException {
         clearMaps();
         setModified(true);
@@ -450,10 +473,12 @@ public abstract class AbstractUserGroupStore implements GeoServerUserGroupStore 
             throw new IOException("Group: " + group.getGroupname() + " does not exist");
     }
 
+    @Override
     public int getUserCount() throws IOException {
         return helper.getUserCount();
     }
 
+    @Override
     public int getGroupCount() throws IOException {
         return helper.getGroupCount();
     }

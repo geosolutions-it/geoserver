@@ -43,7 +43,7 @@ public class ParamInfo implements Serializable {
 
     private List<Serializable> options;
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("unchecked")
     public ParamInfo(Param param) {
         this.name = param.key;
         this.deprecated = param.isDeprecated();
@@ -75,8 +75,8 @@ public class ParamInfo implements Serializable {
         this.required = param.required;
         if (param.metadata != null) {
             List<Serializable> options = (List<Serializable>) param.metadata.get(Param.OPTIONS);
-            if (options != null && options.size() > 0) {
-                this.options = new ArrayList<Serializable>(options);
+            if (options != null && !options.isEmpty()) {
+                this.options = new ArrayList<>(options);
                 if (Comparable.class.isAssignableFrom(this.binding)) {
                     Collections.sort((List) options);
                 }

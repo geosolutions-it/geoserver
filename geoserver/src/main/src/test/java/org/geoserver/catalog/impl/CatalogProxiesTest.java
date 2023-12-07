@@ -4,7 +4,8 @@
  */
 package org.geoserver.catalog.impl;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,7 +32,7 @@ public class CatalogProxiesTest extends GeoServerSystemTestSupport {
         Resource resource = getDataDirectory().config(li);
         Document dom;
         try (InputStream is = resource.in()) {
-            dom = dom(resource.in());
+            dom = dom(is);
         }
         Element defaultStyle = (Element) dom.getElementsByTagName("defaultStyle").item(0);
         Element defaultStyleId = (Element) defaultStyle.getElementsByTagName("id").item(0);
@@ -54,6 +55,6 @@ public class CatalogProxiesTest extends GeoServerSystemTestSupport {
         // this would have failed with an exception, also check for stable hash code
         assertEquals(li.hashCode(), li.hashCode());
         // despite the dangling reference, the layer is equal to itself
-        assertTrue(li.equals(li));
+        assertEquals(li, li);
     }
 }

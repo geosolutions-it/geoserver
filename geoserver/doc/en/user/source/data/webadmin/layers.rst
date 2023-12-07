@@ -99,10 +99,12 @@ These sections provide "data about the data," specifically textual information t
 The metadata information will appear in the capabilities documents which refer to the layer.
 
 * **Name**—Identifier used to reference the layer in WMS requests.  (Note that for a new layer for an already-published resource, the name must be changed to avoid conflict.)
+* **Enabled**—A layer that is not enabled won't be available to any kind of request, it will just show up in the configuration (and in REST config)
+* **Advertised**—A layer is advertised by default. A non-advertised layer will be available in all data access requests (for example, WMS GetMap, WMS GetFeature) but won't appear in any capabilities document or in the layer preview.
 * **Title**—Human-readable description to briefly identify the layer to clients (required)
 * **Abstract**—Describes the layer in detail
 * **Keywords**—List of short words associated with the layer to assist catalog searching
-* **Metadata Links**—Allows linking to external documents that describe the data layer. Currently only two standard format types are valid: TC211 and FGDC. TC211 refers to the metadata structure established by the `ISO Technical Committee for Geographic Information/Geomatics <http://www.isotc211.org/>`_ (ISO/TC 211) while FGDC refers to those set out by the `Federal Geographic Data Committee <http://www.fgdc.gov/>`_ (FGDC) of the United States.
+* **Metadata Links**—Allows linking to external documents that describe the data layer. The "type" input provides a few example types, like FGDC or ISO19115:2003, but allows any other type to be declared. The optional "About" entry can be used to point to the definition of the metadata standard, or any other side information about it. Finally, "URL" points to the actual metadata, while "Format" provides its mime type. 
 
   .. figure:: img/data_layers_meta.png
 
@@ -129,13 +131,17 @@ A coordinate reference system (CRS) defines how georeferenced spatial data relat
     a EPSG code for the layers, with this setting the declared one will be advertised, and reprojection from native will happen on the fly as needed (in case a third
     CRS is requested, the reprojection will go directly from native to declared)
   * **Keep native**: this is a setting that should be used in very rare cases. Keeping native means using the declared one in the capabilities documents, but then
-    using the native CRS in all othe requests (with no reprojection in between, unless explicitly requested from client). This is particularly problematic if the source
+    using the native CRS in all otherrequests (with no reprojection in between, unless explicitly requested from client). This is particularly problematic if the source
     is a shapefile, as the PRJ files lack all the extra information provided by the EPSG database (it will for example break WFS 1.1 and 2.0 SRS declarations in GML output).
     The setting meant to be used in cases where WMS is the primary target, and the native and declared CRSs have very small differences, avoiding on the fly reprojection
     and datum change.
 
 In summary, use **Force Declared** as your primary option, **Reproject from native** only if your source data does not match any EPSG code, and **Keep Native**
 only if you really know what you're doing.
+
+For WMS Server and WFS-NG layers with multiple supported CRS in capability document, the Native CRS can be selected from clicking Find button next to Native SRS field
+
+.. figure:: img/cascade_srs.png
 
 Bounding Boxes
 ^^^^^^^^^^^^^^
@@ -183,6 +189,31 @@ Vector layers have a list of the :guilabel:`Feature Type Details`. These include
 
 The :guilabel:`Nillable` option refers to whether the property requires a value or may be flagged as being null. Meanwhile :guilabel:`Min/Max Occurrences` refers to how many values a field is allowed to have. Currently both :guilabel:`Nillable` and :guilabel:`Min/Max Occurrences` are set to ``true`` and ``0/1`` but may be extended with future work on complex features.
 
+The :guilabel:`Customize attributes` checkbox opens an attribute editor allowing customization.
+
+.. figure:: img/data_layers_feature_customize.png
+
+   Attribute customization
+
+
+It is possible to:
+
+* Change the order of attributes, using either the up/down arrows, or dragging the attribute row.
+* Remove an attribute using the "remove" icon at the end of the attribute row.
+* Add a new attribute, which will be computed based on the :guilabel:`Source` CQL expression.
+* Rename an attribute.
+* Add a description of the attribute, which will be visible wherever the feature type is described.
+* Change the nillability of the attribute, for example, making the attribute mandatory even if it's
+  not in the data source, and vice-versa.
+* Change the type of the attribute using the `Type` column. The most common types are available in 
+  a drop-down on editing, but it's possible to indicate any valid Java class, as long as GeoServer
+  has a converter that goes from the value produced by the :guilabel:`Source` expression to the 
+  target type (new converters can be plugged in with some Java programming).
+* Reset the table to the native settings, using the :guilabel:`Reset customization` link.
+
+Some of the feature type edits might result in the layer not being editable anymore, for example,
+by removing an attribute that is marked as mandatory in the data source.
+
 Restricting features showing up in the layer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -208,15 +239,14 @@ The Publishing tab configures HTTP and WMS/WFS/WCS settings.
 
    Edit Layer: Publishing tab
 
-* **Enabled**—A layer that is not enabled won't be available to any kind of request, it will just show up in the configuration (and in REST config)
-* **Advertised**—A layer is advertised by default. A non-advertised layer will be available in all data access requests (for example, WMS GetMap, WMS GetFeature) but won't appear in any capabilities document or in the layer preview.
-
 HTTP Settings
 ^^^^^^^^^^^^^
 
 Cache parameters that apply to the HTTP response from client requests.
 
 * **Response Cache Headers**— If selected, GeoServer will not request the same tile twice within the time specified in :guilabel:`Cache Time`. One hour measured in seconds (3600), is the default value for :guilabel:`Cache Time`.
+
+.. figure:: img/data_http_response_caching_settings.png
 
 Root Layer in Capabilities
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -277,7 +307,7 @@ Sets publishing information about data providers.
 
      WMS Attribution
 
-* **Attribution Text**—Human-readable text describing the data provider. This might be used as the text for a hyperlink to the data provider's web site.
+* **Attribution Text**—Human-readable text describing the data provider. This might be used as the text for a hyperlink to the data provider's website.
 * **Attribution Link**—URL to the data provider's website.
 * **Logo URL**—URL to an image that serves as a logo for the data provider.
 * **Logo Content Type, Width, and Height**—These fields provide information about the logo image that clients may use to assist with layout. GeoServer will auto-detect these values if you click the :guilabel:`Auto-detect image size and type` link at the bottom of the section. The text, link, and URL are each advertised in the WMS Capabilities document if they are provided. Some WMS clients will display this information to advise users which providers provide a particular dataset. If you omit some of the fields, those that are provided will be published and those that are not will be omitted from the Capabilities document.
@@ -293,6 +323,7 @@ Sets the WFS specific publishing parameters.
 
 * **Per-Request Feature Limit**—Sets the maximum number of features for a layer a WFS GetFeature operation should generate (regardless of the actual number of query hits)
 * **Maximum number of decimals**—Sets the maximum number of decimals in GML output.
+* **Activate complex to simple features conversion** - If the target output format does not handle complex features natively, this option enables the conversion of complex features to simple features, using only SF-0 (simple) attributes.  This means that nested features and multiple-value attributes will be omitted from the final result, instead of throwing errors while generating the output. Output formats capable of handling complex features are not affected.
 
   .. note::
 
@@ -332,7 +363,7 @@ Limits features based on certain criteria, otherwise known as **regionation**.
 Edit Layer: Dimensions
 ----------------------
 
-GeoServer supports adding specific dimensions to WMS layers, as specified in WMS 1.1.1 and WMS 1.3.0 standards. There are two pre-defined dimensions in the WMS standards mentioned above, **TIME** and **ELEVATION**. Enabling dimensions for a layer allows users to specify those as extra parameters in GetMap requests, useful for creating maps or animations from underlying multi-dimensional data.
+GeoServer supports adding specific dimensions to WMS layers, as specified in WMS 1.1.1 and WMS 1.3.0 standards. There are two pre-defined dimensions in the WMS standards mentioned above, **TIME** and **ELEVATION**. Enabling dimensions for a layer allows users to specify those as extra parameters in GetMap requests, filtering the dataset to that particular set of times or elevations.
 
 These dimensions can be enabled and configured on the Dimensions tab.
 
@@ -354,10 +385,22 @@ For each enabled dimension the following configuration options are available:
 
 * **Reference value**—The default value specifier. Only shown for the default value strategies where its used.
 * **Nearest match**—Whether to enable, or not, WMS nearest match support on this dimension. Currently supported only on the time dimension.
+* **Nearest match on raw data**—Whether to enable, or not, nearest match support on this dimension for raw data requests (WCS for coverage layers, WFS for feature layers). Currently supported only on the time dimension for WCS service.
 * **Acceptable interval**—A maximum search distance from the specified value (available only when nearest match is enabled).
   Can be empty (no limit), a single value (symmetric search) or using a ``before/after`` syntax to
   specify an asymmetric search range. Time distances should specified using the ISO period syntax. For example, ``PT1H/PT0H`` allows to search up to one hour before the user specified value,
   but not after.
+* **On nearest match fail**—What to do if the nearest match fails the acceptable interval. The default behavior is to use the original value and thus return an empty result, but can also be configured to throw an ``InvalidDimensionValue`` exception instead. In case the value is not set, it defaults to ignoring the nearest match and using the original value. To switch to the opposite default, set the following variable (system, environment, or web.xml, as usual): ``org.geoserver.wms.nearestFail=EXCEPTION``.
+* **Begin of data range**—A manually declared start value for the data range. When specified, the ``End of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
+* **End of data range**—A manually declared end value for the data range. When specified, the ``Begin of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
 
 For time dimension the value must be in ISO 8601 DateTime format ``yyyy-MM-ddThh:mm:ss.SSSZ`` For elevation dimension, the value must be and integer of floating point number.
 
@@ -366,3 +409,52 @@ Only for the "Reference value" strategy, and limited to times, it's also possibl
 is copied verbatim into the capabilities document, and as a result, not all client might be recognizing that syntax.
 
 .. note:: For more information on specifying times, please see the section on :ref:`wms_time`.
+
+Vector Custom Dimensions
+^^^^^^^^^^^^^^^^^^^^^^^^
+GeoServer also supports adding custom dimensions to vector layers, defining their names and configurations. 
+
+.. figure:: img/data_layers_dimension_editor_custom.png
+
+   Custom dimension enabled for a vector layer
+
+For each enabled dimension the following configuration options are available:
+
+* **Name**—Custom dimension name.
+* **Attribute**—Attribute name for picking the value for this dimension (vector only). This is treated at start of the range if **End attribute** is also given.
+* **End attribute**—Attribute name for picking the end of the value range for this dimension (optional, vector only).
+* **Presentation**—The presentation type for the available values in the capabilities document. Either *each value separately (list)*, *interval and resolution*, or *continuous interval*.
+* **Default value**—Default value to use for this dimension if none is provided with the request. Select one of from four strategies:
+
+  * **smallest domain value**—Uses the smallest available value from the data
+  * **biggest domain value**—Uses the biggest available value from the data
+  * **nearest to the reference value**—Selects the data value closest to the given reference value
+  * **reference value**—Tries to use the given reference value as-is, regardless of whether its actually available in the data or not.
+
+* **Reference value**—The default value specifier. Only shown for the default value strategies where its used.
+* **Nearest match**—Whether to enable, or not, WMS nearest match support on this dimension.
+* **Acceptable interval**—A maximum search distance from the specified value (available only when nearest match is enabled).
+  Can be empty (no limit), a single value (symmetric search) or using a ``before/after`` syntax to
+  specify an asymmetric search range.
+* **Begin of data range**—A manually declared start value for the data range. When specified, the ``End of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
+* **End of data range**—A manually declared end value for the data range. When specified, the ``Begin of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
+
+Edit Layer: Security
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note:: For more information on data access rules, please see the section on :ref:`security_webadmin_data`.
+
+Sets data access rules at layer level.
+
+.. figure:: img/data_layers_security_editor.png
+
+To create/edit layer's data access rules simply check/uncheck checkboxes according to desired access mode and role. 
+The Grant access to any role checkbox grant each role for each access mode.

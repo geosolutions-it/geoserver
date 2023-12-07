@@ -30,6 +30,7 @@ import net.opengis.wfs.WfsFactory;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.util.ReaderDimensionsAccessor;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.FeatureInfoRequestParameters;
@@ -116,8 +117,7 @@ public class NcWmsService implements DisposableBean {
             List<DateRange> findDates(WMS wms, CoverageInfo coverage, List<Object> times)
                     throws IOException {
                 TreeSet<Date> availableDates = wms.queryCoverageNearestMatchTimes(coverage, times);
-                return availableDates
-                        .stream()
+                return availableDates.stream()
                         .map(date -> new DateRange(date, date))
                         .collect(Collectors.toList());
             }
@@ -128,23 +128,21 @@ public class NcWmsService implements DisposableBean {
             @Override
             List<DateRange> findDates(WMS wms, CoverageInfo coverage, List<Object> times)
                     throws IOException {
-                TreeSet<Date> availableDates = new TreeSet<Date>();
+                TreeSet<Object> availableDates =
+                        new TreeSet<>(ReaderDimensionsAccessor.TEMPORAL_COMPARATOR);
                 final boolean isRange = times.get(0) instanceof DateRange;
                 for (Object time : times) {
                     TreeSet<Object> foundTimes =
                             wms.queryCoverageTimes(
                                     coverage, getAsRange(time, isRange), Query.DEFAULT_MAX);
-                    foundTimes
-                            .stream()
-                            .forEach(
-                                    d -> {
-                                        Date date = (Date) d;
-                                        availableDates.add(date);
-                                    });
+                    availableDates.addAll(foundTimes);
                 }
-                return availableDates
-                        .stream()
-                        .map(date -> new DateRange(date, date))
+                return availableDates.stream()
+                        .map(
+                                d ->
+                                        d instanceof Date
+                                                ? new DateRange((Date) d, (Date) d)
+                                                : (DateRange) d)
                         .collect(Collectors.toList());
             }
         };
@@ -212,11 +210,7 @@ public class NcWmsService implements DisposableBean {
     /**
      * Implements the GetTimeSeries method, which can retrieve a time series of values on a certain
      * point, using a syntax similar to the GetFeatureInfo operation.
-     *
-     * @param request
-     * @return
      */
-    @SuppressWarnings("rawtypes")
     public FeatureCollectionType getTimeSeries(GetFeatureInfoRequest request) {
         FeatureCollectionType result = WfsFactory.eINSTANCE.createFeatureCollectionType();
         WfsFactory.eINSTANCE.createFeatureCollectionType();
@@ -295,8 +289,7 @@ public class NcWmsService implements DisposableBean {
 
             // sort by time and accumulate values
             List<SimpleFeature> featureList =
-                    features.entrySet()
-                            .stream()
+                    features.entrySet().stream()
                             .sorted(Comparator.comparing(e -> e.getKey()))
                             .map(e -> e.getValue())
                             .collect(Collectors.toList());

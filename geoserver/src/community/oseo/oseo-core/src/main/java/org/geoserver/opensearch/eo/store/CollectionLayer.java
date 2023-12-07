@@ -34,6 +34,14 @@ public class CollectionLayer {
 
     boolean timeRanges;
 
+    boolean cog;
+
+    String cogUser;
+
+    String cogPassword;
+
+    String cogRangeReader;
+
     public CollectionLayer() {
         super();
     }
@@ -94,6 +102,38 @@ public class CollectionLayer {
         this.mosaicCRS = targetCRS;
     }
 
+    public boolean isCog() {
+        return cog;
+    }
+
+    public void setCog(boolean cog) {
+        this.cog = cog;
+    }
+
+    public String getCogUser() {
+        return cogUser;
+    }
+
+    public void setCogUser(String cogUser) {
+        this.cogUser = cogUser;
+    }
+
+    public String getCogPassword() {
+        return cogPassword;
+    }
+
+    public void setCogPassword(String cogPassword) {
+        this.cogPassword = cogPassword;
+    }
+
+    public String getCogRangeReader() {
+        return cogRangeReader;
+    }
+
+    public void setCogRangeReader(String cogRangeReader) {
+        this.cogRangeReader = cogRangeReader;
+    }
+
     @Override
     public String toString() {
         return ToStringBuilder.reflectionToString(this);
@@ -103,14 +143,14 @@ public class CollectionLayer {
      * Builds a CollectionLayer bean from the {@link OpenSearchAccess#LAYERS} property of a
      * Collection feature.
      *
-     * @param feature
      * @return The layer, or null if the property was not found
      */
     public static List<CollectionLayer> buildCollectionLayersFromFeature(Feature feature)
             throws IOException {
         // map to a single bean
         List<CollectionLayer> result = new ArrayList<>();
-        Collection<Property> layers = feature.getProperties(OpenSearchAccess.LAYERS);
+        Collection<Property> layers =
+                feature.getProperties(org.geoserver.opensearch.eo.store.OpenSearchAccess.LAYERS);
         if (layers != null) {
             for (Property p : layers) {
                 SimpleFeature lf = (SimpleFeature) p;
@@ -150,11 +190,7 @@ public class CollectionLayer {
         return defaultLayer;
     }
 
-    /**
-     * Sets the default layer property (only one should be the default)
-     *
-     * @param defaultLayer
-     */
+    /** Sets the default layer property (only one should be the default) */
     public void setDefaultLayer(boolean defaultLayer) {
         this.defaultLayer = defaultLayer;
     }

@@ -16,10 +16,12 @@ import static org.geoserver.gwc.web.layer.CachedLayerProvider.TYPE;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.io.IOUtils;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -36,6 +38,7 @@ import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.ResourceModel;
 import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.request.resource.DynamicImageResource;
 import org.apache.wicket.request.resource.PackageResourceReference;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
@@ -49,15 +52,20 @@ import org.geoserver.web.wicket.GeoServerTablePanel;
 import org.geoserver.web.wicket.ParamResourceModel;
 import org.geoserver.web.wicket.SimpleAjaxLink;
 import org.geotools.image.io.ImageIOExt;
+import org.geotools.util.logging.Logging;
 import org.geowebcache.diskquota.storage.Quota;
 import org.geowebcache.layer.TileLayer;
 import org.geowebcache.mime.MimeType;
+import org.geowebcache.seed.TruncateAllRequest;
 
 /**
  * @author groldan
  * @see GWC#removeTileLayers(List)
  */
 public class CachedLayersPage extends GeoServerSecuredPage {
+
+    private static Logger log = Logging.getLogger(CachedLayersPage.class);
+
     private static final long serialVersionUID = -6795610175856538774L;
 
     private CachedLayerProvider provider = new CachedLayerProvider();
@@ -81,10 +89,9 @@ public class CachedLayersPage extends GeoServerSecuredPage {
 
                         if (property == TYPE) {
                             Fragment f = new Fragment(id, "iconFragment", CachedLayersPage.this);
-                            PackageResourceReference layerIcon;
-                            TileLayer layer = (TileLayer) itemModel.getObject();
-                            layerIcon = (PackageResourceReference) property.getPropertyValue(layer);
-                            f.add(new Image("layerIcon", layerIcon));
+                            DynamicImageResource dynamicImage =
+                                    new DelayedImageResource(itemModel, property);
+                            f.add(new Image("layerIcon", dynamicImage));
                             return f;
                         } else if (property == NAME) {
                             return nameLink(id, itemModel);
@@ -97,7 +104,7 @@ public class CachedLayersPage extends GeoServerSecuredPage {
                                     (IModel<Quota>) property.getModel(itemModel);
                             return quotaLink(id, quotaUsageModel);
                         } else if (property == ENABLED) {
-                            TileLayer layerInfo = (TileLayer) itemModel.getObject();
+                            TileLayer layerInfo = itemModel.getObject();
                             boolean enabled = layerInfo.isEnabled();
                             PackageResourceReference icon;
                             if (enabled) {
@@ -191,7 +198,7 @@ public class CachedLayersPage extends GeoServerSecuredPage {
             final String id, IModel<TileLayer> tileLayerNameModel) {
 
         String layerName = tileLayerNameModel.getObject().getName();
-        IModel<String> model = new Model<String>(layerName);
+        IModel<String> model = new Model<>(layerName);
         IModel<String> labelModel = new ResourceModel("truncate");
 
         SimpleAjaxLink<String> link =
@@ -263,16 +270,9 @@ public class CachedLayersPage extends GeoServerSecuredPage {
         if (!layer.isEnabled()) {
             return new Label(id, new ResourceModel("previewDisabled"));
         }
-        final Set<String> gridSubsets = new TreeSet<String>(layer.getGridSubsets());
-        final List<MimeType> mimeTypes = new ArrayList<MimeType>(layer.getMimeTypes());
-        Collections.sort(
-                mimeTypes,
-                new Comparator<MimeType>() {
-                    @Override
-                    public int compare(MimeType o1, MimeType o2) {
-                        return o1.getFormat().compareTo(o2.getFormat());
-                    }
-                });
+        final Set<String> gridSubsets = new TreeSet<>(layer.getGridSubsets());
+        final List<MimeType> mimeTypes = new ArrayList<>(layer.getMimeTypes());
+        Collections.sort(mimeTypes, (o1, o2) -> o1.getFormat().compareTo(o2.getFormat()));
 
         Fragment f = new Fragment(id, "menuFragment", this);
 
@@ -287,7 +287,7 @@ public class CachedLayersPage extends GeoServerSecuredPage {
                 // build option with text and value
                 Label format = new Label(String.valueOf(i++), label);
                 String value = "gridSet=" + gridSetId + "&format=" + mimeType.getFormat();
-                format.add(new AttributeModifier("value", new Model<String>(value)));
+                format.add(new AttributeModifier("value", new Model<>(value)));
                 previewLinks.add(format);
             }
         }
@@ -297,15 +297,24 @@ public class CachedLayersPage extends GeoServerSecuredPage {
         final String baseURL = ResponseUtils.baseURL(getGeoServerApplication().servletRequest());
         // Since we're working with an absolute URL, build the URL this way to ensure proxy
         // mangling is applied.
+
+        // make the URL workspace-based (in case global services are turned off)
+        String workspaceName = "";
+        if (layer.getName().contains(":")) {
+            workspaceName = layer.getName().substring(0, layer.getName().indexOf(":")) + "/";
+        }
         final String demoURL =
                 "'"
                         + ResponseUtils.buildURL(
-                                baseURL, "gwc/demo/" + layer.getName(), null, URLType.EXTERNAL)
+                                baseURL + workspaceName,
+                                "gwc/demo/" + layer.getName(),
+                                null,
+                                URLType.EXTERNAL)
                         + "?' + this.options[this.selectedIndex].value";
         menu.add(
                 new AttributeAppender(
                         "onchange",
-                        new Model<String>("window.open(" + demoURL + ");this.selectedIndex=0"),
+                        new Model<>("window.open(" + demoURL + ");this.selectedIndex=0"),
                         ";"));
 
         f.add(menu);
@@ -323,7 +332,34 @@ public class CachedLayersPage extends GeoServerSecuredPage {
         removal.setOutputMarkupId(true);
         removal.setEnabled(false);
 
+        // the clear All GWC cache link
+        header.add(new TruncateAllLink("clearGwcLink"));
+
         return header;
+    }
+
+    private static class DelayedImageResource extends DynamicImageResource {
+        private static final long serialVersionUID = 657353636149402818L;
+        private final IModel<TileLayer> itemModel;
+        private final Property<TileLayer> property;
+
+        public DelayedImageResource(IModel<TileLayer> itemModel, Property<TileLayer> property) {
+            super("image/png");
+            this.itemModel = itemModel;
+            this.property = property;
+        }
+
+        @Override
+        protected byte[] getImageData(Attributes attributes) {
+            TileLayer layer = itemModel.getObject();
+            PackageResourceReference layerIcon = GWCIconFactory.getSpecificLayerIcon(layer);
+            try {
+                return IOUtils.toByteArray(
+                        layerIcon.getResource().getResourceStream().getInputStream());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private class CachedLayerSelectionRemovalLink extends AjaxLink<TileLayer> {
@@ -342,7 +378,7 @@ public class CachedLayersPage extends GeoServerSecuredPage {
                 return;
             }
 
-            final List<String> selectedNames = new ArrayList<String>();
+            final List<String> selectedNames = new ArrayList<>();
             for (TileLayer layer : selection) {
                 selectedNames.add(layer.getName());
             }
@@ -405,6 +441,70 @@ public class CachedLayersPage extends GeoServerSecuredPage {
                             }
                         }
                     });
+        }
+    }
+
+    private class TruncateAllLink extends AjaxLink<String> {
+
+        public TruncateAllLink(String id) {
+            super(id);
+        }
+
+        @Override
+        public void onClick(AjaxRequestTarget target) {
+            dialog.setTitle(
+                    new ParamResourceModel("confirmGwcTruncateTitle", CachedLayersPage.this));
+            dialog.setDefaultModel(getDefaultModel());
+
+            GeoServerDialog.DialogDelegate delegate =
+                    new GeoServerDialog.DialogDelegate() {
+                        private static final long serialVersionUID1 = 1L;
+                        private TruncateAllRequest truncateAllRequest;
+
+                        @Override
+                        protected Component getContents(final String id) {
+                            Label confirmLabel =
+                                    new Label(
+                                            id,
+                                            new ParamResourceModel(
+                                                    "confirmGWCClean", CachedLayersPage.this));
+                            confirmLabel.setEscapeModelStrings(
+                                    false); // allow some html inside, like
+                            // <b></b>, etc
+                            return confirmLabel;
+                        }
+
+                        @Override
+                        protected boolean onSubmit(
+                                final AjaxRequestTarget target1, final Component contents) {
+
+                            GWC facade = GWC.get();
+                            try {
+                                truncateAllRequest = facade.truncateAll();
+                            } catch (Exception e) {
+                                error(message("confirmGWCClean"));
+                                log.log(Level.SEVERE, "An Error while clearing GWC cache", e);
+                                return false;
+                            }
+                            return true;
+                        }
+
+                        private String message(String key) {
+                            return new ParamResourceModel(key, CachedLayersPage.this).getString();
+                        }
+
+                        @Override
+                        public void onClose(final AjaxRequestTarget target) {
+                            target.add(table);
+                            if (truncateAllRequest != null)
+                                if (truncateAllRequest.getTrucatedLayers().length() == 0)
+                                    warn(message("warnGWCClean"));
+                                else info(message("confirmGWCCleanInfo"));
+                            else error(message("errorGWCClean2"));
+                            setResponsePage(getPage());
+                        }
+                    };
+            dialog.showOkCancel(target, delegate);
         }
     }
 }

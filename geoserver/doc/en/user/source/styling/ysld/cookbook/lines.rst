@@ -116,7 +116,6 @@ Code
 :download:`Download the "Simple line" YSLD <artifacts/line_simpleline.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Simple Line'
   feature-styles:
@@ -152,7 +151,6 @@ Code
 :download:`Download the "Line with border" YSLD <artifacts/line_linewithborder.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Line with border'
   feature-styles:
@@ -185,7 +183,7 @@ In this example, **lines 3-9** comprise the first feature style, which is the ou
 renders the ends of the line as rounded instead of flat. 
 (When working with bordered lines using a round line cap ensures that the border connects properly at the ends of the lines.)
 
-**Lines 10-16** comprise the second ``feature-style``, which is the the inner line (or "fill"). **Line 14**
+**Lines 10-16** comprise the second ``feature-style``, which is the inner line (or "fill"). **Line 14**
 specifies the color of the line to be a medium blue (``'#6699FF'``), **line 15** specifies the width of this line to be 3 pixels, and **line 16** again renders the edges of the line to be rounded instead of flat.
 
 The result is a 3 pixel blue line with a 1 pixel gray border, since the 5 pixel gray line will display 1 pixel on each side of the 3 pixel blue line.
@@ -206,7 +204,6 @@ Code
 :download:`Download the "Dashed line" YSLD <artifacts/line_dashedline.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Dashed line'
   feature-styles:
@@ -238,7 +235,6 @@ Code
 :download:`Download the "Offset line" YSLD <artifacts/line_offsetline.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Dashed line'
   feature-styles:
@@ -276,7 +272,6 @@ Code
 :download:`Download the "Railroad (hatching)" YSLD <artifacts/line_railroad.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Railroad (hatching)'
   feature-styles:
@@ -289,7 +284,7 @@ Code
       - line:
           stroke-color: '#333333'
           stroke-width: 1
-          stroke-graphic-stroke:
+          stroke-graphic:
             size: 12
             symbols:
             - mark:
@@ -324,7 +319,6 @@ Code
 :download:`Download the "Spaced symbols" YSLD <artifacts/line_dashspace.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   name: Default Styler
   title: 'YSLD Cook Book: Dash/Space line'
@@ -336,7 +330,7 @@ Code
           stroke-color: '#333333'
           stroke-width: 1
           stroke-dasharray: 4 6
-          stroke-graphic-stroke:
+          stroke-graphic:
             size: 4
             symbols:
             - mark:
@@ -347,7 +341,7 @@ Code
       
 Details
 ~~~~~~~
-This example, like others before, uses a ``stroke-graphic-stroke`` to place a graphic symbol along a line. The symbol, defined on **lines 14-18** is a 4 pixel gray circle with a dark gray outline. The spacing between symbols is controlled with the ``stroke-dasharray`` at **line 9**, which specifies 4 pixels of pen-down (just enough to draw the circle) and 6 pixels of pen-up,  to provide the spacing.
+This example, like others before, uses a ``stroke-graphic`` to place a graphic symbol along a line. The symbol, defined on **lines 14-18** is a 4 pixel gray circle with a dark gray outline. The spacing between symbols is controlled with the ``stroke-dasharray`` at **line 9**, which specifies 4 pixels of pen-down (just enough to draw the circle) and 6 pixels of pen-up,  to provide the spacing.
 
 
 .. _ysld_cookbook_lines_defaultlabel:
@@ -359,7 +353,7 @@ This example shows how to create a complex line style which alternates a dashed 
 The code builds on features shown in the previous examples:
 
   * ``stroke-dasharray`` controls pen-down/pen-up behavior to generate dashed lines
-  * ``stroke-graphic-stroke`` places symbols along a line
+  * ``stroke-graphic`` places symbols along a line
   * combining the two allows control of symbol spacing
   
 This also shows the usage of a `dash offset`, which controls where rendering starts
@@ -381,7 +375,6 @@ Code
 :download:`Download the "Spaced symbols" YSLD <artifacts/line_dashdot.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Dash/Symbol line'
   feature-styles:
@@ -397,7 +390,7 @@ Code
           stroke-width: 1
           stroke-dasharray: 5 15
           stroke-dashoffset: 7.5
-          stroke-graphic-stroke:
+          stroke-graphic:
             size: 5
             symbols:
             - mark:
@@ -432,7 +425,6 @@ Code
 :download:`Download the "Line with default label" YSLD <artifacts/line_linewithdefaultlabel.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   name: Default Styler
   title: 'YSLD Cook Book: Line with default label'
@@ -475,7 +467,6 @@ Code
 :download:`Download the "Label following line" YSLD <artifacts/line_labelfollowingline.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Label following line'
   feature-styles:
@@ -520,7 +511,6 @@ Code
 :download:`Download the "Optimized label" YSLD <artifacts/line_optimizedlabel.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Optimized label placement'
   feature-styles:
@@ -566,7 +556,6 @@ Code
 :download:`Download the "Optimized and styled label" YSLD <artifacts/line_optimizedstyledlabel.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Optimized and styled label'
   feature-styles:
@@ -611,7 +600,6 @@ Code
 :download:`Download the "Attribute-based line" YSLD <artifacts/line_attributebasedline.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Attribute-based line'
   feature-styles:
@@ -706,7 +694,6 @@ Code
 :download:`Download the "Zoom-based line" YSLD <artifacts/line_zoombasedline.ysld>`
 
 .. code-block:: yaml
-  :linenos:
 
   title: 'YSLD Cook Book: Zoom-based line'
   feature-styles:

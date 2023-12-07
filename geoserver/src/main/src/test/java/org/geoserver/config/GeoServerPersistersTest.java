@@ -8,12 +8,12 @@ package org.geoserver.config;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geoserver.config.FileExistsMatcher.fileExists;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -1102,6 +1102,28 @@ public class GeoServerPersistersTest extends GeoServerSystemTestSupport {
     }
 
     @Test
+    public void testRemoveStyleWithBadFilename() throws Exception {
+        // test that a malformed style does not move the entire styles directory
+        testAddStyle();
+        StyleInfo s = catalog.getStyleByName("foostyle");
+        s.setFilename("/");
+        catalog.remove(s);
+        assertThat(new File(testData.getDataDirectoryRoot(), "styles"), fileExists());
+    }
+
+    @Test
+    public void testRemoveStyleWithNullFilename() throws Exception {
+        // org.geoserver.catalog.impl.CatalogImpl.validate(StyleInfo, boolean)
+        // normally makes a null filename impossible but a similar situation can
+        // occur when using the Hazelcast clustering module.
+        testAddStyle();
+        StyleInfo s = catalog.getStyleByName("foostyle");
+        s.setFilename(null);
+        catalog.remove(s);
+        assertThat(new File(testData.getDataDirectoryRoot(), "styles"), fileExists());
+    }
+
+    @Test
     public void testAddLayerGroup() throws Exception {
         testAddLayer();
         // testAddStyle();
@@ -1297,13 +1319,13 @@ public class GeoServerPersistersTest extends GeoServerSystemTestSupport {
     @Test
     public void testModifyLoggingAndReload() throws Exception {
         GeoServerResourceLoader loader = getDataDirectory().getResourceLoader();
-        LoggingUtils.initLogging(loader, "DEFAULT_LOGGING.properties", false, "logs/geoserver.log");
+        LoggingUtils.initLogging(loader, "DEFAULT_LOGGING.xml", false, true, "logs/geoserver.log");
         String path = getDataDirectory().getResourceLoader().getBaseDirectory().getPath();
         LoggingInfo logging = getGeoServer().getLogging();
         final File logFile = new File(path, "logging.xml");
         logging.setLocation("logs/geoserver.log");
         logging.setStdOutLogging(true);
-        logging.setLevel("VERBOSE_LOGGING.properties");
+        logging.setLevel("VERBOSE_LOGGING.xml");
         getGeoServer().save(logging);
         LoggingInfo currentLogging = getGeoServer().getLogging();
         assertEquals(currentLogging, logging);
@@ -1312,17 +1334,15 @@ public class GeoServerPersistersTest extends GeoServerSystemTestSupport {
             content = IOUtils.toString(fis, Charset.defaultCharset());
         }
 
-        String newLevel = "QUIET_LOGGING.properties";
-        content = content.replace("VERBOSE_LOGGING.properties", newLevel);
+        String newLevel = "QUIET_LOGGING.xml";
+        content = content.replace("VERBOSE_LOGGING.xml", newLevel);
         try (FileOutputStream fos = new FileOutputStream(logFile); ) {
             IOUtils.write(content, fos, Charset.defaultCharset());
         }
         getGeoServer().reload();
         LoggingInitializer.LoggingListener listener =
                 (LoggingInitializer.LoggingListener)
-                        getGeoServer()
-                                .getListeners()
-                                .stream()
+                        getGeoServer().getListeners().stream()
                                 .filter(l -> l instanceof LoggingInitializer.LoggingListener)
                                 .findAny()
                                 .get();

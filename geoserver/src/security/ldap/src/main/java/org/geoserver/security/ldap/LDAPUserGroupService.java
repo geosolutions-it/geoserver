@@ -18,7 +18,6 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
-import javax.naming.directory.DirContext;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.geoserver.security.GeoServerUserGroupService;
@@ -29,11 +28,9 @@ import org.geoserver.security.impl.GeoServerUser;
 import org.geoserver.security.impl.GeoServerUserGroup;
 import org.geoserver.security.impl.RoleCalculator;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.ldap.core.AuthenticatedLdapEntryContextCallback;
 import org.springframework.ldap.core.ContextMapper;
 import org.springframework.ldap.core.DirContextAdapter;
 import org.springframework.ldap.core.DirContextOperations;
-import org.springframework.ldap.core.LdapEntryIdentification;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.ldap.SpringSecurityLdapTemplate;
@@ -54,7 +51,7 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     private String passwordValidatorName;
 
-    private String[] populatedAttributes = new String[] {};
+    private String[] populatedAttributes = {};
 
     public LDAPUserGroupService(SecurityNamedServiceConfig config) throws IOException {
         initializeFromConfig(config);
@@ -123,24 +120,20 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     @Override
     public SortedSet<GeoServerUserGroup> getUserGroups() {
-        final SortedSet<GeoServerUserGroup> groups = new TreeSet<GeoServerUserGroup>();
+        final SortedSet<GeoServerUserGroup> groups = new TreeSet<>();
 
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        Set<String> groupNames =
-                                LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                        .searchForSingleAttributeValues(
-                                                groupSearchBase,
-                                                allGroupsSearchFilter,
-                                                new String[] {},
-                                                groupNameAttribute);
+                (ctx, ldapEntryIdentification) -> {
+                    Set<String> groupNames =
+                            LDAPUtils.getLdapTemplateInContext(ctx, template)
+                                    .searchForSingleAttributeValues(
+                                            groupSearchBase,
+                                            allGroupsSearchFilter,
+                                            new String[] {},
+                                            groupNameAttribute);
 
-                        for (String groupName : groupNames) {
-                            groups.add(new GeoServerUserGroup(groupName));
-                        }
+                    for (String groupName : groupNames) {
+                        groups.add(new GeoServerUserGroup(groupName));
                     }
                 });
 
@@ -166,7 +159,7 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
         return gsUser;
     }
 
-    protected ContextMapper addToUsers(SortedSet<GeoServerUser> users) {
+    protected ContextMapper<Object> addToUsers(SortedSet<GeoServerUser> users) {
         return ctx -> {
             users.add(createUser((DirContextAdapter) ctx));
             return null;
@@ -175,17 +168,16 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     @Override
     public SortedSet<GeoServerUser> getUsers() {
-        final SortedSet<GeoServerUser> users = new TreeSet<GeoServerUser>();
+        final SortedSet<GeoServerUser> users = new TreeSet<>();
 
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                .search(userSearchBase, allUsersSearchFilter, addToUsers(users));
-                    }
-                });
+                                .search(
+                                        userSearchBase,
+                                        LDAPUtils.escapeSearchString(allUsersSearchFilter),
+                                        addToUsers(users)));
 
         return Collections.unmodifiableSortedSet(users);
     }
@@ -214,29 +206,24 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     @Override
     public GeoServerUserGroup getGroupByGroupname(String groupname) {
-        final AtomicReference<GeoServerUserGroup> group = new AtomicReference<GeoServerUserGroup>();
+        final AtomicReference<GeoServerUserGroup> group = new AtomicReference<>();
 
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
+                (ctx, ldapEntryIdentification) -> {
+                    try {
+                        DirContextOperations dco =
+                                LDAPUtils.getLdapTemplateInContext(ctx, template)
+                                        .searchForSingleEntry(
+                                                groupSearchBase,
+                                                groupNameFilter,
+                                                new String[] {groupname});
 
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        try {
-                            DirContextOperations dco =
-                                    LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                            .searchForSingleEntry(
-                                                    groupSearchBase,
-                                                    groupNameFilter,
-                                                    new String[] {groupname});
-
-                            if (dco != null) {
-                                group.set(
-                                        new GeoServerUserGroup(
-                                                dco.getStringAttribute(groupNameAttribute)));
-                            }
-                        } catch (IncorrectResultSizeDataAccessException e) {
+                        if (dco != null) {
+                            group.set(
+                                    new GeoServerUserGroup(
+                                            dco.getStringAttribute(groupNameAttribute)));
                         }
+                    } catch (IncorrectResultSizeDataAccessException e) {
                     }
                 });
 
@@ -245,26 +232,22 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     @Override
     public GeoServerUser getUserByUsername(String username) {
-        final AtomicReference<GeoServerUser> user = new AtomicReference<GeoServerUser>();
+        final AtomicReference<GeoServerUser> user = new AtomicReference<>();
 
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        try {
-                            DirContextOperations dco =
-                                    LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                            .searchForSingleEntry(
-                                                    userSearchBase,
-                                                    userNameFilter,
-                                                    new String[] {username});
+                (ctx, ldapEntryIdentification) -> {
+                    try {
+                        DirContextOperations dco =
+                                LDAPUtils.getLdapTemplateInContext(ctx, template)
+                                        .searchForSingleEntry(
+                                                userSearchBase,
+                                                userNameFilter,
+                                                new String[] {username});
 
-                            if (dco != null) {
-                                user.set(createUser(dco));
-                            }
-                        } catch (IncorrectResultSizeDataAccessException e) {
+                        if (dco != null) {
+                            user.set(createUser(dco));
                         }
+                    } catch (IncorrectResultSizeDataAccessException e) {
                     }
                 });
 
@@ -273,7 +256,7 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     @Override
     public SortedSet<GeoServerUser> getUsersForGroup(final GeoServerUserGroup group) {
-        final SortedSet<GeoServerUser> users = new TreeSet<GeoServerUser>();
+        final SortedSet<GeoServerUser> users = new TreeSet<>();
 
         if (!useNestedGroups) {
             // no nested groups, load users from root group only
@@ -296,39 +279,34 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
     private void addUsersFromGroup(final GeoServerUserGroup group, final Set<GeoServerUser> users) {
         final String groupDn = getGroupDn(group);
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        try {
-                            DirContextOperations roleObj =
-                                    LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                            .searchForSingleEntry(
-                                                    groupSearchBase,
-                                                    groupNameFilter,
-                                                    new String[] {group.getGroupname(), groupDn});
-                            if (roleObj != null) {
-                                Object[] usernames =
-                                        roleObj.getObjectAttributes(groupMembershipAttribute);
-                                if (usernames != null) {
-                                    for (Object username : usernames) {
-                                        String user = username.toString();
-                                        Matcher m = userMembershipPattern.matcher(user);
-                                        if (m.matches()) {
-                                            user = m.group(1);
-                                        }
-                                        String userNameFromMembership =
-                                                getUserNameFromMembership(user);
-                                        if (StringUtils.isNotBlank(userNameFromMembership)) {
-                                            GeoServerUser userByUsername =
-                                                    getUserByUsername(userNameFromMembership);
-                                            if (userByUsername != null) users.add(userByUsername);
-                                        }
+                (ctx, ldapEntryIdentification) -> {
+                    try {
+                        DirContextOperations roleObj =
+                                LDAPUtils.getLdapTemplateInContext(ctx, template)
+                                        .searchForSingleEntry(
+                                                groupSearchBase,
+                                                groupNameFilter,
+                                                new String[] {group.getGroupname(), groupDn});
+                        if (roleObj != null) {
+                            Object[] usernames =
+                                    roleObj.getObjectAttributes(groupMembershipAttribute);
+                            if (usernames != null) {
+                                for (Object username : usernames) {
+                                    String user = username.toString();
+                                    Matcher m = userMembershipPattern.matcher(user);
+                                    if (m.matches()) {
+                                        user = m.group(1);
+                                    }
+                                    String userNameFromMembership = getUserNameFromMembership(user);
+                                    if (StringUtils.isNotBlank(userNameFromMembership)) {
+                                        GeoServerUser userByUsername =
+                                                getUserByUsername(userNameFromMembership);
+                                        if (userByUsername != null) users.add(userByUsername);
                                     }
                                 }
                             }
-                        } catch (IncorrectResultSizeDataAccessException e) {
                         }
+                    } catch (IncorrectResultSizeDataAccessException e) {
                     }
                 });
     }
@@ -351,28 +329,20 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
         final Set<String> memberGroupDns = new HashSet<>();
         final Set<GeoServerUserGroup> childGroups = new HashSet<>();
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        SpringSecurityLdapTemplate authTemplate =
-                                LDAPUtils.getLdapTemplateInContext(ctx, template);
-                        Set<String> membersDns =
-                                authTemplate
-                                        .searchForSingleAttributeValues(
-                                                groupSearchBase,
-                                                groupNameFilter,
-                                                new String[] {groupName},
-                                                groupMembershipAttribute)
-                                        .stream()
-                                        .filter(
-                                                x ->
-                                                        !useNestedGroups
-                                                                || StringUtils.containsIgnoreCase(
-                                                                        x, groupSearchBase))
-                                        .collect(Collectors.toSet());
-                        memberGroupDns.addAll(membersDns);
-                    }
+                (ctx, ldapEntryIdentification) -> {
+                    SpringSecurityLdapTemplate authTemplate =
+                            LDAPUtils.getLdapTemplateInContext(ctx, template);
+                    Set<String> membersDns =
+                            authTemplate
+                                    .searchForSingleAttributeValues(
+                                            groupSearchBase,
+                                            groupNameFilter,
+                                            new String[] {groupName},
+                                            groupMembershipAttribute)
+                                    .stream()
+                                    .filter(this::acceptChildGroup)
+                                    .collect(Collectors.toSet());
+                    memberGroupDns.addAll(membersDns);
                 });
 
         for (String dn : memberGroupDns) {
@@ -383,32 +353,33 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
         return childGroups;
     }
 
+    private boolean acceptChildGroup(String x) {
+        return !useNestedGroups || StringUtils.containsIgnoreCase(x, groupSearchBase);
+    }
+
     @Override
     public SortedSet<GeoServerUserGroup> getGroupsForUser(final GeoServerUser user) {
-        final SortedSet<GeoServerUserGroup> groups = new TreeSet<GeoServerUserGroup>();
+        final SortedSet<GeoServerUserGroup> groups = new TreeSet<>();
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        Set<String> groupNames =
-                                LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                        .searchForSingleAttributeValues(
-                                                groupSearchBase,
-                                                groupMembershipFilter,
-                                                new String[] {
-                                                    user.getUsername(), lookupDn(user.getUsername())
-                                                },
-                                                groupNameAttribute);
+                (ctx, ldapEntryIdentification) -> {
+                    Set<String> groupNames =
+                            LDAPUtils.getLdapTemplateInContext(ctx, template)
+                                    .searchForSingleAttributeValues(
+                                            groupSearchBase,
+                                            groupMembershipFilter,
+                                            new String[] {
+                                                user.getUsername(), lookupDn(user.getUsername())
+                                            },
+                                            groupNameAttribute);
 
-                        for (String groupName : groupNames) {
-                            groups.add(new GeoServerUserGroup(groupName));
-                        }
+                    for (String groupName : groupNames) {
+                        groups.add(new GeoServerUserGroup(groupName));
                     }
                 });
         // if nested groups search is enabled, add hierarchical parent groups
         if (useNestedGroups) {
-            for (GeoServerUserGroup egroup : groups) {
+            final SortedSet<GeoServerUserGroup> parentGroups = new TreeSet<>(groups);
+            for (GeoServerUserGroup egroup : parentGroups) {
                 addNestedParentGroups(egroup, groups, 1);
             }
         }
@@ -421,21 +392,17 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
         final String groupDn = getGroupDn(group);
         final Set<GeoServerUserGroup> parents = new HashSet<>();
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        SpringSecurityLdapTemplate authTemplate =
-                                LDAPUtils.getLdapTemplateInContext(ctx, template);
-                        Set<String> parentGroupsNames =
-                                authTemplate.searchForSingleAttributeValues(
-                                        groupSearchBase,
-                                        groupMembershipFilter,
-                                        new String[] {group.getGroupname(), groupDn},
-                                        groupNameAttribute);
-                        for (String ename : parentGroupsNames) {
-                            parents.add(new GeoServerUserGroup(ename));
-                        }
+                (ctx, ldapEntryIdentification) -> {
+                    SpringSecurityLdapTemplate authTemplate =
+                            LDAPUtils.getLdapTemplateInContext(ctx, template);
+                    Set<String> parentGroupsNames =
+                            authTemplate.searchForSingleAttributeValues(
+                                    groupSearchBase,
+                                    groupMembershipFilter,
+                                    new String[] {group.getGroupname(), groupDn},
+                                    groupNameAttribute);
+                    for (String ename : parentGroupsNames) {
+                        parents.add(new GeoServerUserGroup(ename));
                     }
                 });
         for (GeoServerUserGroup eparent : parents) {
@@ -448,22 +415,18 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
 
     private String getGroupDn(GeoServerUserGroup group) {
         final String groupName = group.getGroupname();
-        final MutableObject<String> groupDnReference = new MutableObject<String>(null);
+        final MutableObject<String> groupDnReference = new MutableObject<>(null);
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
-                        final String dn =
-                                LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                        .searchForSingleEntry(
-                                                groupSearchBase,
-                                                groupNameFilter,
-                                                new String[] {groupName})
-                                        .getDn()
-                                        .toString();
-                        groupDnReference.setValue(dn);
-                    }
+                (ctx, ldapEntryIdentification) -> {
+                    final String dn =
+                            LDAPUtils.getLdapTemplateInContext(ctx, template)
+                                    .searchForSingleEntry(
+                                            groupSearchBase,
+                                            groupNameFilter,
+                                            new String[] {groupName})
+                                    .getDn()
+                                    .toString();
+                    groupDnReference.setValue(dn);
                 });
         return groupDnReference.getValue();
     }
@@ -471,15 +434,15 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
     @Override
     public int getUserCount() {
         AtomicInteger size = new AtomicInteger(0);
+
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                .search(userSearchBase, allUsersSearchFilter, counter(size));
-                    }
-                });
+                                .search(
+                                        userSearchBase,
+                                        LDAPUtils.escapeSearchString(allUsersSearchFilter),
+                                        counter(size)));
 
         return size.get();
     }
@@ -487,31 +450,26 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
     @Override
     public int getGroupCount() {
         AtomicInteger size = new AtomicInteger(0);
+
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                .search(groupSearchBase, allGroupsSearchFilter, counter(size));
-                    }
-                });
+                                .search(
+                                        groupSearchBase,
+                                        LDAPUtils.escapeSearchString(allGroupsSearchFilter),
+                                        counter(size)));
         return size.get();
     }
 
     @Override
     public SortedSet<GeoServerUser> getUsersHavingProperty(String propname) {
-        final SortedSet<GeoServerUser> users = new TreeSet<GeoServerUser>();
+        final SortedSet<GeoServerUser> users = new TreeSet<>();
 
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                .search(userSearchBase, propname + "=*", addToUsers(users));
-                    }
-                });
+                                .search(userSearchBase, propname + "=*", addToUsers(users)));
 
         return users;
     }
@@ -520,33 +478,28 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
     public int getUserCountHavingProperty(String propname) {
         AtomicInteger size = new AtomicInteger(0);
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                .search(userSearchBase, propname + "=*", counter(size));
-                    }
-                });
+                                .search(userSearchBase, propname + "=*", counter(size)));
         return size.get();
     }
 
     @Override
     public SortedSet<GeoServerUser> getUsersNotHavingProperty(String propname) {
-        final SortedSet<GeoServerUser> users = new TreeSet<GeoServerUser>();
+        final SortedSet<GeoServerUser> users = new TreeSet<>();
 
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
                                 .search(
                                         userSearchBase,
-                                        "(&(!(" + propname + "=*))(" + allUsersSearchFilter + "))",
-                                        addToUsers(users));
-                    }
-                });
+                                        "(&(!("
+                                                + propname
+                                                + "=*))("
+                                                + LDAPUtils.escapeSearchString(allUsersSearchFilter)
+                                                + "))",
+                                        addToUsers(users)));
 
         return users;
     }
@@ -554,38 +507,35 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
     @Override
     public int getUserCountNotHavingProperty(String propname) {
         AtomicInteger size = new AtomicInteger(0);
+
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
                                 .search(
                                         userSearchBase,
-                                        "(&(!(" + propname + "=*))(" + allUsersSearchFilter + "))",
-                                        counter(size));
-                    }
-                });
+                                        "(&(!("
+                                                + propname
+                                                + "=*))("
+                                                + LDAPUtils.escapeSearchString(allUsersSearchFilter)
+                                                + "))",
+                                        counter(size)));
         return size.get();
     }
 
     @Override
     public SortedSet<GeoServerUser> getUsersHavingPropertyValue(String propname, String propvalue)
             throws IOException {
-        final SortedSet<GeoServerUser> users = new TreeSet<GeoServerUser>();
+        final SortedSet<GeoServerUser> users = new TreeSet<>();
 
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
                                 .search(
                                         userSearchBase,
-                                        propname + "=" + propvalue,
-                                        addToUsers(users));
-                    }
-                });
+                                        propname + "=" + LDAPUtils.escapeSearchString(propvalue),
+                                        addToUsers(users)));
 
         return users;
     }
@@ -594,15 +544,15 @@ public class LDAPUserGroupService extends LDAPBaseSecurityService
     public int getUserCountHavingPropertyValue(String propname, String propvalue)
             throws IOException {
         AtomicInteger size = new AtomicInteger(0);
+
+        // search requires an escaped string
         authenticateIfNeeded(
-                new AuthenticatedLdapEntryContextCallback() {
-                    @Override
-                    public void executeWithContext(
-                            DirContext ctx, LdapEntryIdentification ldapEntryIdentification) {
+                (ctx, ldapEntryIdentification) ->
                         LDAPUtils.getLdapTemplateInContext(ctx, template)
-                                .search(userSearchBase, propname + "=" + propvalue, counter(size));
-                    }
-                });
+                                .search(
+                                        userSearchBase,
+                                        propname + "=" + LDAPUtils.escapeSearchString(propvalue),
+                                        counter(size)));
         return size.get();
     }
 }

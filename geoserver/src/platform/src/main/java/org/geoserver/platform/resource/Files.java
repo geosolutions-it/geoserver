@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -47,7 +48,26 @@ public final class Files {
         final File file;
 
         private ResourceAdaptor(File file) {
+            valid(file.getPath());
             this.file = file.getAbsoluteFile();
+        }
+
+        /**
+         * GeoServer unit tests heavily utilize single period path components (e.g., ./something or
+         * target/./something) and Windows path separators when running on Windows so this method is
+         * a more lenient version of {@link Paths#valid(String)} that only checks for double period
+         * path components to prevent path traversal vulnerabilities.
+         *
+         * @param path the file path
+         * @return the file path
+         * @throws IllegalArgumentException If path contains '..'
+         */
+        private static String valid(String path) {
+            if (path != null
+                    && Arrays.stream(Paths.convert(path).split("/")).anyMatch(".."::equals)) {
+                throw new IllegalArgumentException("Contains invalid '..' path: " + path);
+            }
+            return path;
         }
 
         @Override
@@ -62,9 +82,7 @@ public final class Files {
 
         @Override
         public Lock lock() {
-            return new Lock() {
-                public void release() {}
-            };
+            return () -> {};
         }
 
         @Override
@@ -79,7 +97,8 @@ public final class Files {
 
         @Override
         public InputStream in() {
-            final File actualFile = file();
+            // just take the File as is, don't create it.
+            final File actualFile = this.file;
             if (!actualFile.exists()) {
                 throw new IllegalStateException("Cannot access " + actualFile);
             }
@@ -200,7 +219,7 @@ public final class Files {
 
         @Override
         public Resource get(String resourcePath) {
-            return new ResourceAdaptor(new File(file, resourcePath));
+            return new ResourceAdaptor(new File(file, valid(resourcePath)));
         }
 
         @Override
@@ -208,7 +227,7 @@ public final class Files {
             if (!file.isDirectory()) {
                 return Collections.emptyList();
             }
-            List<Resource> result = new ArrayList<Resource>();
+            List<Resource> result = new ArrayList<>();
             for (File child : Optional.ofNullable(file.listFiles()).orElse(new File[0])) {
                 result.add(new ResourceAdaptor(child));
             }
@@ -300,7 +319,7 @@ public final class Files {
      *
      * @param baseDirectory Optional base directory used to resolve relative file URLs
      * @param url File URL or path relative to data directory
-     * @return Resource indicated by provided URL
+     * @return File indicated by provided URL location
      */
     public static File url(File baseDirectory, String url) {
         String ss;
@@ -499,8 +518,6 @@ public final class Files {
      * Recursively deletes the contents of the specified directory (but not the directory itself).
      * For each file that cannot be deleted a warning log will be issued.
      *
-     * @param directory
-     * @throws IOException
      * @returns true if all the directory contents could be deleted, false otherwise
      */
     private static boolean emptyDirectory(File directory) {
@@ -512,13 +529,12 @@ public final class Files {
         boolean allClean = true;
         File[] files = directory.listFiles();
         if (files != null) {
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].isDirectory()) {
-                    allClean &= delete(files[i]);
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    allClean &= delete(file);
                 } else {
-                    if (!files[i].delete()) {
-                        LOGGER.log(
-                                Level.WARNING, "Could not delete {0}", files[i].getAbsolutePath());
+                    if (!file.delete()) {
+                        LOGGER.log(Level.WARNING, "Could not delete {0}", file.getAbsolutePath());
                         allClean = false;
                     }
                 }

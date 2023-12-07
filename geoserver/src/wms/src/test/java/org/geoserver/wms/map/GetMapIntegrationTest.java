@@ -6,14 +6,20 @@
 package org.geoserver.wms.map;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.awt.image.RenderedImage;
-import java.io.*;
-import java.util.Arrays;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -38,15 +44,11 @@ import org.geotools.image.ImageWorker;
 import org.geotools.image.test.ImageAssert;
 import org.geotools.styling.Style;
 import org.junit.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
 public class GetMapIntegrationTest extends WMSTestSupport {
-
-    @Override
-    protected String getLogConfiguration() {
-        return "/DEFAULT_LOGGING.properties";
-    }
 
     @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
@@ -165,12 +167,28 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         assertEquals("image/png", response.getContentType());
 
         // check we got the
-        RenderedImage image = ImageIO.read(getBinaryInputStream(response));
-        int[] pixel = new int[3];
-        image.getData().getPixel(0, 0, pixel);
-        assertEquals(255, pixel[0]);
-        assertEquals(0, pixel[1]);
-        assertEquals(0, pixel[2]);
+        BufferedImage image = ImageIO.read(getBinaryInputStream(response));
+        assertEquals(Color.RED, getPixelColor(image, 5, 10));
+    }
+
+    /**
+     * Clip on rasters used to lose the request parameters, that included the CQL_FILTER, among the
+     * others
+     */
+    @Test
+    public void testRasterFilterRedClip() throws Exception {
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150&transparent=false&CQL_FILTER=location like 'red%25'&clip=POLYGON((0 0, 1 0, 0 1, 0 0))");
+
+        assertEquals("image/png", response.getContentType());
+
+        // check we got the right color
+        BufferedImage image = ImageIO.read(getBinaryInputStream(response));
+        assertEquals(Color.RED, getPixelColor(image, 5, 10));
+        // and that the clip happened
+        assertEquals(Color.BLACK, getPixelColor(image, 15, 10));
     }
 
     @Test
@@ -182,12 +200,38 @@ public class GetMapIntegrationTest extends WMSTestSupport {
 
         assertEquals("image/png", response.getContentType());
 
-        RenderedImage image = ImageIO.read(getBinaryInputStream(response));
-        int[] pixel = new int[3];
-        image.getData().getPixel(0, 0, pixel);
-        assertEquals(0, pixel[0]);
-        assertEquals(255, pixel[1]);
-        assertEquals(0, pixel[2]);
+        BufferedImage image = ImageIO.read(getBinaryInputStream(response));
+        assertEquals(Color.GREEN, getPixelColor(image, 5, 10));
+    }
+
+    @Test
+    public void testEmptyCQLFilter() throws Exception {
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150&transparent=false&CQL_FILTER=");
+
+        assertEquals("image/png", response.getContentType());
+    }
+
+    /**
+     * Clip on rasters used to lose the request parameters, that included the CQL_FILTER, among the
+     * others
+     */
+    @Test
+    public void testRasterFilterGreenClip() throws Exception {
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150&transparent=false&CQL_FILTER=location like 'green%25'&clip=POLYGON((0 0, 1 0, 0 1, 0 0))");
+
+        assertEquals("image/png", response.getContentType());
+
+        // check we got the right color
+        BufferedImage image = ImageIO.read(getBinaryInputStream(response));
+        assertEquals(Color.GREEN, getPixelColor(image, 5, 10));
+        // and that the clip happened
+        assertEquals(Color.BLACK, getPixelColor(image, 15, 10));
     }
 
     @Test
@@ -243,8 +287,6 @@ public class GetMapIntegrationTest extends WMSTestSupport {
 
     /**
      * https://osgeo-org.atlassian.net/browse/GEOS-4893, make meta-tiler work with WMS 1.3 as well
-     *
-     * @throws Exception
      */
     @Test
     public void testMetaWMS13() throws Exception {
@@ -269,7 +311,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         byte[][] bankData11 = db11.getBankData();
         byte[][] bankData13 = db13.getBankData();
         for (int i = 0; i < bankData11.length; i++) {
-            assertTrue(Arrays.equals(bankData11[i], bankData13[i]));
+            assertArrayEquals(bankData11[i], bankData13[i]);
         }
     }
 
@@ -277,7 +319,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
     public void testOpenLayersProxy() throws Exception {
         NamespaceContext oldContext = XMLUnit.getXpathNamespaceContext();
         try {
-            Map<String, String> namespaces = new HashMap<String, String>();
+            Map<String, String> namespaces = new HashMap<>();
             namespaces.put("xhtml", "http://www.w3.org/1999/xhtml");
             registerNamespaces(namespaces);
             XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
@@ -396,7 +438,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         WMS wms = new WMS(getGeoServer());
         GetMapKvpRequestReader reader = new GetMapKvpRequestReader(wms);
         // asserts the a layerGroup can be created with null layer and a styleGroup sld
-        HashMap kvp = new HashMap();
+        HashMap<String, Object> kvp = new HashMap<>();
         kvp.put("layers", "BasicStyleGroup");
         kvp.put("styles", "");
 
@@ -413,20 +455,21 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         GetMapXmlReader reader = new GetMapXmlReader(wms);
 
         GetMapRequest request = reader.createRequest();
-        InputStream resourceStream =
-                getClass().getResource("WMSPostLayerGroupWithStyleGroup.xml").openStream();
-        BufferedReader input = new BufferedReader(new InputStreamReader(resourceStream));
+        try (InputStream resourceStream =
+                        getClass().getResource("WMSPostLayerGroupWithStyleGroup.xml").openStream();
+                BufferedReader input = new BufferedReader(new InputStreamReader(resourceStream))) {
 
-        request = (GetMapRequest) reader.read(request, input, new HashMap());
+            request = (GetMapRequest) reader.read(request, input, new HashMap());
 
-        String layer = MockData.BASIC_POLYGONS.getLocalPart();
-        assertEquals(1, request.getLayers().size());
-        assertTrue(request.getLayers().get(0).getName().endsWith(layer));
+            String layer = MockData.BASIC_POLYGONS.getLocalPart();
+            assertEquals(1, request.getLayers().size());
+            assertTrue(request.getLayers().get(0).getName().endsWith(layer));
 
-        assertEquals(1, request.getStyles().size());
-        Style expected = getCatalog().getStyleByName("BasicStyleGroup").getStyle();
-        Style style = request.getStyles().get(0);
-        assertEquals(expected, style);
+            assertEquals(1, request.getStyles().size());
+            Style expected = getCatalog().getStyleByName("BasicStyleGroup").getStyle();
+            Style style = request.getStyles().get(0);
+            assertEquals(expected, style);
+        }
     }
 
     @Test
@@ -451,5 +494,53 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         // last channel
         bi = getAsImage(request + "&env=band:9", "image/png");
         ImageAssert.assertEquals(new File(BASE, "csLastChannel.png"), bi, 0);
+    }
+
+    @Test
+    public void testRenderTimeStatisticsVectorsIntegrationTest() throws Exception {
+
+        String bbox = "-180,-90,180,90";
+        String layer = getLayerId(CiteTestData.POINTS);
+        String layer2 = getLayerId(CiteTestData.POLYGONS);
+        MockHttpServletRequest request =
+                createRequest(
+                        "wms?bbox="
+                                + bbox
+                                + "&layers="
+                                + layer
+                                + ","
+                                + layer2
+                                + "&style_format="
+                                + PropertyStyleHandler.FORMAT
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&srs=EPSG:4326");
+        request.setMethod("GET");
+        request.setContent(new byte[] {});
+        MockHttpServletResponse response = dispatch(request);
+        RenderTimeStatistics statistics =
+                (RenderTimeStatistics) request.getAttribute(RenderTimeStatistics.ID);
+        assertEquals(statistics.getLayerNames().size(), 2);
+        assertNotNull(statistics.getRenderingTime(0));
+        assertNotNull(statistics.getRenderingTime(1));
+        assertNotNull(statistics.getLabellingTime());
+        checkImage(response);
+    }
+
+    @Test
+    public void testRenderTimeStatisticsRasterIntegrationTest() throws Exception {
+        MockHttpServletRequest request =
+                createRequest(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150&transparent=false&CQL_FILTER=location like 'green%25'");
+        request.setMethod("GET");
+        MockHttpServletResponse response = dispatch(request);
+        RenderTimeStatistics statistics =
+                (RenderTimeStatistics) request.getAttribute(RenderTimeStatistics.ID);
+        assertEquals(statistics.getLayerNames().size(), 1);
+        assertNotNull(statistics.getRenderingTime(0));
+        checkImage(response);
     }
 }

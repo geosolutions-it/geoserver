@@ -41,6 +41,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
     //
     // FeatureCollection - Feature Access
     //
+    @Override
     @SuppressWarnings("unchecked")
     public FeatureIterator<F> features() {
         FeatureIterator iter = new DelegateFeatureIterator(openIterator());
@@ -171,6 +172,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
      * @param o object to be checked for containment in this collection.
      * @return <tt>true</tt> if this collection contains the specified element.
      */
+    @Override
     public boolean contains(Object o) {
         Iterator<F> e = null;
         try {
@@ -198,6 +200,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
      * @throws NullPointerException if the specified collection is null.
      * @see #contains(Object)
      */
+    @Override
     public boolean containsAll(Collection<?> c) {
         Iterator<?> e = c.iterator();
         try {
@@ -213,15 +216,13 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
     //
     //
     /** Set of open resource iterators */
-    @SuppressWarnings("unchecked")
-    protected final Set open = new HashSet<Iterator<F>>();
+    protected final Set open = new HashSet<>();
 
     /**
      * Returns the set of open iterators.
      *
      * <p>Contents are a mix of Iterator<F> and FeatureIterator
      */
-    @SuppressWarnings("unchecked")
     public final Set getOpenIterators() {
         return open;
     }
@@ -240,6 +241,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
     }
 
     /** @return <tt>true</tt> if this collection contains no elements. */
+    @Override
     public boolean isEmpty() {
         Iterator<F> iterator = iterator();
         try {
@@ -254,6 +256,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
      *
      * @return an array containing all of the elements in this collection.
      */
+    @Override
     public Object[] toArray() {
         Object[] result = new Object[size()];
         Iterator<F> e = null;
@@ -266,6 +269,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
         }
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public <T2> T2[] toArray(T2[] a) {
         int size = size();
@@ -284,6 +288,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
         }
     }
 
+    @Override
     public void accepts(
             org.opengis.feature.FeatureVisitor visitor,
             org.opengis.util.ProgressListener progress) {
@@ -296,7 +301,7 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
             for (iterator = iterator(); !progress.isCanceled() && iterator.hasNext(); ) {
                 if (size > 0) progress.progress(position++ / size);
                 try {
-                    Feature feature = (Feature) iterator.next();
+                    Feature feature = iterator.next();
                     visitor.visit(feature);
                 } catch (Exception erp) {
                     progress.exceptionOccurred(erp);
@@ -308,27 +313,23 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
         }
     }
 
+    @Override
     public String getID() {
         return id;
     }
 
+    @Override
     public T getSchema() {
         return schema;
     }
 
     @Override
     public int size() {
-        FeatureIterator<F> fi = null;
         int count = 0;
-        try {
-            fi = features();
+        try (FeatureIterator<F> fi = features()) {
             while (fi.hasNext()) {
                 fi.next();
                 count++;
-            }
-        } finally {
-            if (fi != null) {
-                fi.close();
             }
         }
 
@@ -337,10 +338,8 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
 
     @Override
     public ReferencedEnvelope getBounds() {
-        FeatureIterator<F> fi = null;
         ReferencedEnvelope bounds = null;
-        try {
-            fi = features();
+        try (FeatureIterator<F> fi = features()) {
             while (fi.hasNext()) {
                 Feature f = fi.next();
                 ReferencedEnvelope re = ReferencedEnvelope.reference(f.getBounds());
@@ -349,10 +348,6 @@ public abstract class AbstractFeatureCollection<T extends FeatureType, F extends
                 } else {
                     bounds.expandToInclude(re);
                 }
-            }
-        } finally {
-            if (fi != null) {
-                fi.close();
             }
         }
 

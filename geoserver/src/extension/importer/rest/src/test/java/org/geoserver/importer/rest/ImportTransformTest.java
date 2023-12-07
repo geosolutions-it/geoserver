@@ -14,7 +14,6 @@ import java.util.List;
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.importer.ImportContext;
 import org.geoserver.importer.ImportTask;
@@ -39,13 +38,9 @@ public class ImportTransformTest extends ImporterTestSupport {
      * Create a test transform context: one import task with two transforms:
      *
      * <p>One ReprojectTransform and one IntegerFieldToDateTransform.
-     *
-     * @throws Exception
      */
     @Before
     public void setupTransformContext() throws Exception {
-        Catalog cat = getCatalog();
-
         File dir = unpack("shape/archsites_epsg_prj.zip");
 
         SpatialFile file = new SpatialFile(new File(dir, "archsites.shp"));
@@ -53,8 +48,8 @@ public class ImportTransformTest extends ImporterTestSupport {
 
         ImportContext context = importer.createContext(file, store);
         ImportTask importTask = context.getTasks().get(0);
-        importTask.getTransform().add(new ReprojectTransform(CRS.decode("EPSG:4326")));
-        importTask.getTransform().add(new IntegerFieldToDateTransform("pretendDateIntField"));
+        importTask.addTransform(new ReprojectTransform(CRS.decode("EPSG:4326")));
+        importTask.addTransform(new IntegerFieldToDateTransform("pretendDateIntField"));
         importer.changed(importTask);
     }
 
@@ -99,7 +94,6 @@ public class ImportTransformTest extends ImporterTestSupport {
                         json,
                         "application/json");
 
-        String location = resp.getHeader("Location");
         assertEquals(HttpStatus.CREATED.value(), resp.getStatus());
 
         // Make sure it was created
@@ -181,9 +175,6 @@ public class ImportTransformTest extends ImporterTestSupport {
      *     }
      * ]
      * </pre>
-     *
-     * @param transformsResponse
-     * @return
      */
     List<JSONObject> parseTransformObjectsFromResponse(JSON transformsResponse) {
         assertTrue(transformsResponse instanceof JSONObject);

@@ -5,8 +5,8 @@
 package org.geoserver.wps.ogr;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import com.thoughtworks.xstream.XStream;
@@ -199,7 +199,7 @@ public class WPSOgrTest extends WPSTestSupport {
             while ((entry = zis.getNextEntry()) != null) {
                 final String name = entry.getName();
                 zis.closeEntry();
-                if (name.equals("feature.tab")) {
+                if (name.equals("features.tab")) {
                     found = true;
                     break;
                 }

@@ -38,10 +38,10 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
      * Set of parameters that we can ignore, since they do not define a map, are either unrelated,
      * or define the tiling instead
      */
-    private static final Set ignoredParameters;
+    private static final Set<String> ignoredParameters;
 
     static {
-        ignoredParameters = new HashSet();
+        ignoredParameters = new HashSet<>();
         ignoredParameters.add("REQUEST");
         ignoredParameters.add("TILED");
         ignoredParameters.add("BBOX");
@@ -55,11 +55,12 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
     /** Canonicalizer used to return the same object when two threads ask for the same meta-tile */
     private CanonicalSet<MetaTileKey> metaTileKeys = CanonicalSet.newInstance(MetaTileKey.class);
 
-    private WeakHashMap tileCache = new WeakHashMap();
+    private WeakHashMap<MetaTileKey, CacheElement> tileCache = new WeakHashMap<>();
 
     public QuickTileCache(GeoServer geoServer) {
         geoServer.addListener(
                 new ConfigurationListenerAdapter() {
+                    @Override
                     public void handleGlobalChange(
                             GeoServerInfo global,
                             List<String> propertyNames,
@@ -68,6 +69,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
                         tileCache.clear();
                     }
 
+                    @Override
                     public void handleServiceChange(
                             ServiceInfo service,
                             List<String> propertyNames,
@@ -76,6 +78,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
                         tileCache.clear();
                     }
 
+                    @Override
                     public void reloaded() {
                         tileCache.clear();
                     }
@@ -89,8 +92,6 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
      * Given a tiled request, builds a key that can be used to access the cache looking for a
      * specific meta-tile, and also as a synchronization tool to avoid multiple requests to trigger
      * parallel computation of the same meta-tile
-     *
-     * @param request
      */
     public MetaTileKey getMetaTileKey(GetMapRequest request) {
         String mapDefinition = buildMapDefinition(request.getRawKvp());
@@ -135,8 +136,6 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
     /**
      * Given a tile, returns the coordinates of the meta-tile that contains it (where the meta-tile
      * coordinate is the coordinate of its lower left subtile)
-     *
-     * @param tileCoords
      */
     Point getMetaTileCoordinates(Point tileCoords) {
         int x = tileCoords.x;
@@ -149,12 +148,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
         return new Point(mtx, mty);
     }
 
-    /**
-     * Given an envelope and origin, find the tile coordinate (row,col)
-     *
-     * @param env
-     * @param origin
-     */
+    /** Given an envelope and origin, find the tile coordinate (row,col) */
     Point getTileCoordinates(Envelope env, Point2D origin) {
         // this was using the low left corner and Math.round, but turned
         // out to be fragile when fairly zoomed in. Using the tile center
@@ -167,12 +161,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
         return new Point(x, y);
     }
 
-    /**
-     * Given an envelope and the metatile envelope, locate the tile inside the metatile
-     *
-     * @param env
-     * @param origin
-     */
+    /** Given an envelope and the metatile envelope, locate the tile inside the metatile */
     Point getTileOffsetsInMeta(Envelope bbox, Envelope metatileBox) {
         // compute using local coordinates, the previous math was using global one that
         // broke at zoom level 23-24 in the global mercator projection (yes, at scale 1:33)
@@ -191,8 +180,6 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
      * of 52 bits, and throw away the 20 more significant ones, which means we're dealing with 12
      * significant decimal digits (2^40 -> more or less one billion million). See also <a
      * href="http://en.wikipedia.org/wiki/IEEE_754">IEEE 754</a> on Wikipedia.
-     *
-     * @param d
      */
     static double normalize(double d) {
         if (Double.isInfinite(d) || Double.isNaN(d)) {
@@ -202,19 +189,13 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
         return Math.round(d * 10e6) / 10e6;
     }
 
-    /**
-     * Turns the request back into a sort of GET request (not url-encoded) for fast comparison
-     *
-     * @param map
-     */
+    /** Turns the request back into a sort of GET request (not url-encoded) for fast comparison */
     private String buildMapDefinition(Map<String, String> map) {
         StringBuffer sb = new StringBuffer();
 
-        Entry<String, String> en;
-        String paramName;
         for (Iterator<Map.Entry<String, String>> it = map.entrySet().iterator(); it.hasNext(); ) {
-            en = it.next();
-            paramName = en.getKey();
+            Entry<String, String> en = it.next();
+            String paramName = en.getKey();
 
             if (ignoredParameters.contains(paramName.toUpperCase())) {
                 continue;
@@ -247,6 +228,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
             this.origin = origin;
         }
 
+        @Override
         public int hashCode() {
             return new HashCodeBuilder()
                     .append(mapDefinition)
@@ -256,6 +238,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
                     .toHashCode();
         }
 
+        @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof MapKey)) {
                 return false;
@@ -270,6 +253,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
                     .isEquals();
         }
 
+        @Override
         public String toString() {
             return mapDefinition
                     + "\nw:"
@@ -310,10 +294,12 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
             return metaTileEnvelope;
         }
 
+        @Override
         public int hashCode() {
             return new HashCodeBuilder().append(mapKey).append(metaTileCoords).toHashCode();
         }
 
+        @Override
         public boolean equals(Object obj) {
             if (!(obj instanceof MetaTileKey)) {
                 return false;
@@ -335,19 +321,15 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
             return 256;
         }
 
+        @Override
         public String toString() {
             return mapKey + "\nmtc:" + metaTileCoords.x + "," + metaTileCoords.y;
         }
     }
 
-    /**
-     * Gathers a tile from the cache, if available
-     *
-     * @param key
-     * @param request
-     */
+    /** Gathers a tile from the cache, if available */
     public synchronized RenderedImage getTile(MetaTileKey key, GetMapRequest request) {
-        CacheElement ce = (CacheElement) tileCache.get(key);
+        CacheElement ce = tileCache.get(key);
 
         if (ce == null) {
             return null;
@@ -356,11 +338,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
         return getTile(key, request, ce.tiles);
     }
 
-    /**
-     * @param key
-     * @param request
-     * @param tiles
-     */
+    /** */
     public RenderedImage getTile(MetaTileKey key, GetMapRequest request, RenderedImage[] tiles) {
         Envelope bbox = request.getBbox();
         if (CRS.getAxisOrder(request.getCrs()) == AxisOrder.NORTH_EAST) {
@@ -374,10 +352,6 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
 
     /**
      * Puts the specified tile array in the cache, and returns the tile the request was looking for
-     *
-     * @param key
-     * @param request
-     * @param tiles
      */
     public synchronized void storeTiles(MetaTileKey key, RenderedImage[] tiles) {
         tileCache.put(key, new CacheElement(tiles));
@@ -391,6 +365,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
         }
     }
 
+    @Override
     public void dataStoreChange(TransactionEvent event) throws WFSException {
         // if anything changes we just wipe out the cache. the mapkey
         // contains a string with part of the map request where the layer
@@ -410,6 +385,7 @@ public class QuickTileCache implements TransactionListener, GeoServerLifecycleHa
         tileCache.clear();
     }
 
+    @Override
     public void beforeReload() {
         // nothing to do
     }

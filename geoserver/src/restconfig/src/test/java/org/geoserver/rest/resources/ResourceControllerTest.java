@@ -4,6 +4,9 @@
  */
 package org.geoserver.rest.resources;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -13,7 +16,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TimeZone;
 import net.sf.json.JSON;
 import net.sf.json.JSONObject;
 import net.sf.json.test.JSONAssert;
@@ -75,41 +82,43 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
     @Before
     public void initialise() throws IOException {
 
-        myRes = getDataDirectory().get("/mydir/myres");
+        myRes = getDataDirectory().get("mydir/myres");
         try (OutputStreamWriter os = new OutputStreamWriter(myRes.out())) {
             os.append(STR_MY_TEST);
         }
 
         try (OutputStreamWriter os =
-                new OutputStreamWriter(getDataDirectory().get("/mydir2/myres.xml").out())) {
+                new OutputStreamWriter(getDataDirectory().get("mydir2/myres.xml").out())) {
             os.append(STR_MY_TEST);
         }
 
         try (OutputStreamWriter os =
-                new OutputStreamWriter(getDataDirectory().get("/mydir2/myres.json").out())) {
+                new OutputStreamWriter(getDataDirectory().get("mydir2/myres.json").out())) {
             os.append(STR_MY_TEST);
         }
 
         try (OutputStreamWriter os =
-                new OutputStreamWriter(getDataDirectory().get("/mydir2/fake.png").out())) {
+                new OutputStreamWriter(getDataDirectory().get("mydir2/fake.png").out())) {
             os.append("This is not a real png file.");
         }
 
         try (OutputStreamWriter os =
-                new OutputStreamWriter(getDataDirectory().get("/poëzie/café").out())) {
+                new OutputStreamWriter(getDataDirectory().get("poëzie/café").out())) {
             os.append("The content of this file is irrelevant.");
         }
 
         IOUtils.copyStream(
                 getClass().getResourceAsStream("testimage.png"),
-                getDataDirectory().get("/mydir2/imagewithoutextension").out(),
+                getDataDirectory().get("mydir2/imagewithoutextension").out(),
                 true,
                 true);
     }
 
     @Test
     public void testResource() throws Exception {
-        String str = getAsString(RestBaseController.ROOT_PATH + "/resource/mydir/myres").trim();
+        String str =
+                getAsString(RestBaseController.ROOT_PATH + "/resource/mydir/myres", UTF_8.name())
+                        .trim();
         Assert.assertEquals(STR_MY_TEST, str);
     }
 
@@ -122,7 +131,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                                 + "/resource/mydir/myres?operation=mEtAdATa&format=xml");
         // print(doc);
         XMLAssert.assertXpathEvaluatesTo("myres", "/ResourceMetadata/name", doc);
-        XMLAssert.assertXpathEvaluatesTo("/mydir", "/ResourceMetadata/parent/path", doc);
+        XMLAssert.assertXpathEvaluatesTo("mydir", "/ResourceMetadata/parent/path", doc);
         XMLAssert.assertXpathEvaluatesTo(
                 "http://localhost:8080/geoserver"
                         + RestBaseController.ROOT_PATH
@@ -144,7 +153,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                 "{\"ResourceMetadata\": {"
                         + "  \"name\": \"myres\","
                         + "  \"parent\":   {"
-                        + "    \"path\": \"/mydir\","
+                        + "    \"path\": \"mydir\","
                         + "    \"link\": {"
                         + "       \"href\": \"http://localhost:8080/geoserver"
                         + RestBaseController.ROOT_PATH
@@ -164,10 +173,17 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
     @Test
     public void testResourceMetadataWithResourceExtension() throws Exception {
         String str =
-                getAsString(RestBaseController.ROOT_PATH + "/resource/mydir2/myres.xml").trim();
+                getAsString(
+                                RestBaseController.ROOT_PATH + "/resource/mydir2/myres.xml",
+                                UTF_8.name())
+                        .trim();
         Assert.assertEquals(STR_MY_TEST, str);
 
-        str = getAsString(RestBaseController.ROOT_PATH + "/resource/mydir2/myres.json").trim();
+        str =
+                getAsString(
+                                RestBaseController.ROOT_PATH + "/resource/mydir2/myres.json",
+                                UTF_8.name())
+                        .trim();
         Assert.assertEquals(STR_MY_TEST, str);
 
         // format=xml should return XML regardless of extension
@@ -223,8 +239,13 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
     public void testResourceHeaders() throws Exception {
         MockHttpServletResponse response =
                 getAsServletResponse(RestBaseController.ROOT_PATH + "/resource/mydir2/fake.png");
+        assertEquals(
+                "http://localhost:8080/geoserver"
+                        + RestBaseController.ROOT_PATH
+                        + "/resource/mydir2/fake.png",
+                response.getHeader("Location"));
         Assert.assertEquals(
-                FORMAT_HEADER.format(getDataDirectory().get("/mydir2/fake.png").lastmodified()),
+                FORMAT_HEADER.format(getDataDirectory().get("mydir2/fake.png").lastmodified()),
                 response.getHeader("Last-Modified"));
         Assert.assertEquals(
                 "http://localhost:8080/geoserver"
@@ -233,14 +254,21 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                 response.getHeader("Resource-Parent"));
         Assert.assertEquals("resource", response.getHeader("Resource-Type"));
         assertContentType("image/png", response);
+        assertEquals(
+                "attachment; filename=\"fake.png\"", response.getHeader("Content-Disposition"));
     }
 
     @Test
     public void testResourceHead() throws Exception {
         MockHttpServletResponse response =
                 headAsServletResponse(RestBaseController.ROOT_PATH + "/resource/mydir2/fake.png");
+        assertEquals(
+                "http://localhost:8080/geoserver"
+                        + RestBaseController.ROOT_PATH
+                        + "/resource/mydir2/fake.png",
+                response.getHeader("Location"));
         Assert.assertEquals(
-                FORMAT_HEADER.format(getDataDirectory().get("/mydir2/fake.png").lastmodified()),
+                FORMAT_HEADER.format(getDataDirectory().get("mydir2/fake.png").lastmodified()),
                 response.getHeader("Last-Modified"));
         Assert.assertEquals(
                 "http://localhost:8080/geoserver"
@@ -249,6 +277,8 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                 response.getHeader("Resource-Parent"));
         Assert.assertEquals("resource", response.getHeader("Resource-Type"));
         assertContentType("image/png", response);
+        assertEquals(
+                "attachment; filename=\"fake.png\"", response.getHeader("Content-Disposition"));
     }
 
     @Test
@@ -286,7 +316,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
         Document doc = getAsDOM(RestBaseController.ROOT_PATH + "/resource/mydir?format=xml");
         print(doc);
         XMLAssert.assertXpathEvaluatesTo("mydir", "/ResourceDirectory/name", doc);
-        XMLAssert.assertXpathEvaluatesTo("/", "/ResourceDirectory/parent/path", doc);
+        XMLAssert.assertXpathEvaluatesTo("", "/ResourceDirectory/parent/path", doc);
         XMLAssert.assertXpathEvaluatesTo(
                 "http://localhost:8080/geoserver" + RestBaseController.ROOT_PATH + "/resource/",
                 "/ResourceDirectory/parent/atom:link/@href",
@@ -305,35 +335,114 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
     }
 
     @Test
-    public void testDirectoryJSON() throws Exception {
-        JSON json = getAsJSON(RestBaseController.ROOT_PATH + "/resource/mydir?format=json");
-        print(json);
+    public void testDirectoryJSON_no_children() throws Exception {
+        Resource emptyDir = getDataDirectory().get("emptyDir");
+        emptyDir.dir();
+        JSON json = getAsJSON(RestBaseController.ROOT_PATH + "/resource/emptyDir?format=json");
+        // print(json);
         String expected =
-                "{\"ResourceDirectory\": {"
-                        + "\"name\": \"mydir\","
-                        + "\"parent\":   {"
-                        + "  \"path\": \"/\","
-                        + "    \"link\":     {"
-                        + "      \"href\": \"http://localhost:8080/geoserver"
-                        + RestBaseController.ROOT_PATH
-                        + "/resource/\","
-                        + "      \"rel\": \"alternate\","
-                        + "      \"type\": \"application/json\""
+                "{'ResourceDirectory': {\n"
+                        + "  'name': 'emptyDir',\n"
+                        + "  'parent':   {\n"
+                        + "    'path': '',\n"
+                        + "    'link':     {\n"
+                        + "      'href': 'http://localhost:8080/geoserver/rest/resource/',\n"
+                        + "      'rel': 'alternate',\n"
+                        + "      'type': 'application/json'\n"
+                        + "    }\n"
+                        + "  },\n"
+                        + "'lastModified': '"
+                        + FORMAT.format(emptyDir.lastmodified())
+                        + "'\n"
+                        + "}}";
+        JSONAssert.assertEquals(expected, (JSONObject) json);
+    }
+
+    @Test
+    public void testDirectoryJSON_single_child() throws Exception {
+        JSON json = getAsJSON(RestBaseController.ROOT_PATH + "/resource/mydir?format=json");
+        // print(json);
+        String expected =
+                "{'ResourceDirectory': {"
+                        + "'name': 'mydir',"
+                        + "'parent':   {"
+                        + "  'path': '',"
+                        + "    'link':     {"
+                        + "      'href': 'http://localhost:8080/geoserver/rest/resource/',"
+                        + "      'rel': 'alternate',"
+                        + "      'type': 'application/json'"
                         + "  }"
                         + "},"
-                        + "\"lastModified\": \""
+                        + "'lastModified': '"
                         + FORMAT.format(myRes.parent().lastmodified())
-                        + "\","
-                        + "  \"children\": {\"child\": [  {"
-                        + "    \"name\": \"myres\","
-                        + "    \"link\":     {"
-                        + "      \"href\": \"http://localhost:8080/geoserver"
-                        + RestBaseController.ROOT_PATH
-                        + "/resource/mydir/myres\","
-                        + "      \"rel\": \"alternate\","
-                        + "      \"type\": \"application/octet-stream\""
+                        + "',"
+                        + "  'children': {'child': [  {"
+                        + "    'name': 'myres',"
+                        + "    'link':     {"
+                        + "      'href': 'http://localhost:8080/geoserver/rest/resource/mydir/myres',"
+                        + "      'rel': 'alternate',"
+                        + "      'type': 'application/octet-stream'"
                         + "    }"
                         + "  }]}"
+                        + "}}";
+        JSONAssert.assertEquals(expected, (JSONObject) json);
+    }
+
+    @Test
+    public void testDirectoryJSONMultipleChildren() throws Exception {
+        Resource mydir2 = getDataDirectory().get("mydir2");
+        String lastModified = FORMAT.format(mydir2.lastmodified());
+
+        JSON json = getAsJSON(RestBaseController.ROOT_PATH + "/resource/mydir2?format=json");
+        print(json);
+        String expected =
+                "{'ResourceDirectory': {\n"
+                        + "  'name': 'mydir2',\n"
+                        + "  'parent':   {\n"
+                        + "    'path': '',\n"
+                        + "    'link':     {\n"
+                        + "      'href': 'http://localhost:8080/geoserver/rest/resource/',\n"
+                        + "      'rel': 'alternate',\n"
+                        + "      'type': 'application/json'\n"
+                        + "    }\n"
+                        + "  },\n"
+                        + "  'lastModified': '"
+                        + lastModified
+                        + "',\n"
+                        + "  'children': {'child':   [\n"
+                        + "        {\n"
+                        + "      'name': 'fake.png',\n"
+                        + "      'link':       {\n"
+                        + "        'href': 'http://localhost:8080/geoserver/rest/resource/mydir2/fake.png',\n"
+                        + "        'rel': 'alternate',\n"
+                        + "        'type': 'image/png'\n"
+                        + "      }\n"
+                        + "    },\n"
+                        + "        {\n"
+                        + "      'name': 'imagewithoutextension',\n"
+                        + "      'link':       {\n"
+                        + "        'href': 'http://localhost:8080/geoserver/rest/resource/mydir2/imagewithoutextension',\n"
+                        + "        'rel': 'alternate',\n"
+                        + "        'type': 'application/octet-stream'\n"
+                        + "      }\n"
+                        + "    },\n"
+                        + "        {\n"
+                        + "      'name': 'myres.json',\n"
+                        + "      'link':       {\n"
+                        + "        'href': 'http://localhost:8080/geoserver/rest/resource/mydir2/myres.json',\n"
+                        + "        'rel': 'alternate',\n"
+                        + "        'type': 'application/json'\n"
+                        + "      }\n"
+                        + "    },\n"
+                        + "        {\n"
+                        + "      'name': 'myres.xml',\n"
+                        + "      'link':       {\n"
+                        + "        'href': 'http://localhost:8080/geoserver/rest/resource/mydir2/myres.xml',\n"
+                        + "        'rel': 'alternate',\n"
+                        + "        'type': 'application/xml'\n"
+                        + "      }\n"
+                        + "    }\n"
+                        + "  ]}\n"
                         + "}}";
         JSONAssert.assertEquals(expected, (JSONObject) json);
     }
@@ -410,7 +519,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
         Document doc = getAsDOM(RestBaseController.ROOT_PATH + "/resource/mydir2?format=xml");
         // print(doc);
         XMLAssert.assertXpathEvaluatesTo(
-                "image/png",
+                "application/octet-stream",
                 "/ResourceDirectory/children/child[name='imagewithoutextension']/atom:link/@type",
                 doc);
         XMLAssert.assertXpathEvaluatesTo(
@@ -423,7 +532,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
     public void testUpload() throws Exception {
         put(RestBaseController.ROOT_PATH + "/resource/mydir/mynewres", STR_MY_NEW_TEST);
 
-        Resource newRes = getDataDirectory().get("/mydir/mynewres");
+        Resource newRes = getDataDirectory().get("mydir/mynewres");
         try (InputStream is = newRes.in()) {
             Assert.assertEquals(STR_MY_NEW_TEST, IOUtils.toString(is, Charset.defaultCharset()));
         }
@@ -437,7 +546,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                 RestBaseController.ROOT_PATH + "/resource/mydir/mynewres?operation=cOpY",
                 "/mydir/myres");
 
-        Resource newRes = getDataDirectory().get("/mydir/mynewres");
+        Resource newRes = getDataDirectory().get("mydir/mynewres");
         assertTrue(Resources.exists(myRes));
         assertTrue(Resources.exists(newRes));
         try (InputStream is = newRes.in()) {
@@ -453,7 +562,7 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                 RestBaseController.ROOT_PATH + "/resource/mydir/mynewres?operation=move",
                 "/mydir/myres");
 
-        Resource newRes = getDataDirectory().get("/mydir/mynewres");
+        Resource newRes = getDataDirectory().get("mydir/mynewres");
         Assert.assertFalse(Resources.exists(myRes));
         assertTrue(Resources.exists(newRes));
         try (InputStream is = newRes.in()) {
@@ -468,18 +577,18 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
         put(RestBaseController.ROOT_PATH + "/resource/mydir/mynewdir?operation=move", "/mydir");
         put(RestBaseController.ROOT_PATH + "/resource/mynewdir?operation=move", "/mydir");
 
-        Resource newDir = getDataDirectory().get("/mynewdir");
+        Resource newDir = getDataDirectory().get("mynewdir");
         assertTrue(Resources.exists(newDir));
-        assertTrue(newDir.getType() == Type.DIRECTORY);
+        assertSame(newDir.getType(), Type.DIRECTORY);
         Assert.assertFalse(Resources.exists(myRes));
-        assertTrue(Resources.exists(getDataDirectory().get("/mynewdir/myres")));
+        assertTrue(Resources.exists(getDataDirectory().get("mynewdir/myres")));
 
-        newDir.renameTo(getDataDirectory().get("/mydir"));
+        newDir.renameTo(getDataDirectory().get("mydir"));
     }
 
     @Test
     public void testDelete() throws Exception {
-        Resource newRes = getDataDirectory().get("/mydir/mynewres");
+        Resource newRes = getDataDirectory().get("mydir/mynewres");
         Resources.copy(myRes, newRes);
         assertTrue(Resources.exists(newRes));
 
@@ -490,10 +599,10 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
 
     @Test
     public void testErrorResponseCodes() throws Exception {
-        MockHttpServletResponse response;
 
         // get resource that doesn't exist
-        response = getAsServletResponse(RestBaseController.ROOT_PATH + "/resource/doesntexist");
+        MockHttpServletResponse response =
+                getAsServletResponse(RestBaseController.ROOT_PATH + "/resource/doesntexist");
         Assert.assertEquals(404, response.getStatus());
 
         // delete resource that doesn't exist

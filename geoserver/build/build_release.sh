@@ -22,9 +22,9 @@ function usage() {
   echo " SKIP_BUILD : Skips main release build"
   echo " SKIP_COMMUNITY : Skips community release build"
   echo " SKIP_TAG : Skips tag on release branch"
-  echo " SKIP_INSTALLERS : Skips building of mac and windows installers"
   echo " SKIP_GT : Skips the GeoTools build, as used to build revision"
   echo " SKIP_GWC : Skips the GeoWebCache build, as used to build revision"
+  echo " MAVEN_FLAGS : Used to supply additional option, like -U or -X to build process."
 }
 
 # parse options
@@ -111,7 +111,16 @@ echo "  jira id = $jira_id"
 echo "  distribution = $dist"
 echo
 echo "maven/java settings:"
-mvn -version
+mvn -version $MAVEN_FLAGS 
+
+echo "maven opts:"
+echo "$MAVEN_OPTS"
+
+echo "maven flags:"
+echo "$MAVEN_FLAGS"
+
+echo "maven localRepository:"
+mvn help:evaluate $MAVEN_FLAGS -Dexpression=settings.localRepository -N --no-transfer-progress -B | grep -v '\[INFO\]'
 
 # clear out any changes
 git reset --hard HEAD
@@ -252,10 +261,11 @@ old_ver=`get_pom_version src/pom.xml`
 echo "updating version numbers from $old_ver to $tag"
 find src -name pom.xml -exec sed -i "s/$old_ver/$tag/g" {} \;
 find doc -name conf.py -exec sed -i "s/$old_ver/$tag/g" {} \;
+find doc -name pom.xml -exec sed -i "s/$old_ver/$tag/g" {} \;
 
 pushd src/release > /dev/null
 shopt -s extglob
-sed -i "s/$old_ver/$tag/g" !(pom).xml installer/win/*.nsi installer/win/*.conf 
+# sed -i "s/$old_ver/$tag/g" !(pom).xml installer/win/*.nsi installer/win/*.conf 
 shopt -u extglob
 popd > /dev/null
 
@@ -275,10 +285,13 @@ if [ -z $SKIP_BUILD ]; then
 
   pushd ../doc/en > /dev/null
 
-  ant clean user -Dproject.version=$tag
-  ant user-pdf -Dproject.version=$tag
-  ant developer -Dproject.version=$tag
+  # ant clean user -Dproject.version=$tag
+  # ant user-pdf -Dproject.version=$tag
+  # ant developer -Dproject.version=$tag
 
+  mvn clean compile $MAVEN_FLAGS
+  mvn package $MAVEN_FLAGS
+  
   popd > /dev/null
 else
    echo "Skipping mvn clean install $MAVEN_FLAGS -DskipTests -P release"
@@ -287,15 +300,15 @@ fi
 if [ -z $SKIP_COMMUNITY ]; then
    pushd community > /dev/null
    set +e
-   mvn clean install -P communityRelease -DskipTests $MAVEN_FLAGS || true
+   mvn clean install $MAVEN_FLAGS -P communityRelease -DskipTests || true
    set -e
    popd > /dev/null
 else
-   echo "Skipping mvn clean install -P communityRelease -DskipTests"
+   echo "Skipping mvn clean install $MAVEN_FLAGS -P communityRelease -DskipTests"
 fi
 
-
-mvn assembly:attached $MAVEN_FLAGS
+echo "Assemble artifacts"
+mvn assembly:single $MAVEN_FLAGS -N
 
 artifacts=`pwd`/target/release
 echo "artifacts = $artifacts"
@@ -304,32 +317,39 @@ echo "artifacts = $artifacts"
 pushd release/installer/mac > /dev/null
 zip -q -r $artifacts/geoserver-$tag-mac.zip *
 popd > /dev/null
+
 pushd release/installer/win > /dev/null
 zip -q -r $artifacts/geoserver-$tag-win.zip *
 popd > /dev/null
 
 pushd $artifacts > /dev/null
 
-# setup doc artifacts
-if [ -e user ]; then
-  unlink user
-fi
-if [ -e developer ]; then
-  unlink developer
-fi
-
-ln -sf ../../../doc/en/target/user/html user
-ln -sf ../../../doc/en/target/developer/html developer
-ln -sf ../../../doc/en/release/README.txt readme
-
 htmldoc=geoserver-$tag-htmldoc.zip
-if [ -e $htmldoc ]; then
-  rm -f $htmldoc 
+
+if [ -e ../../../doc/en/target/$htmldoc ]; then
+  echo "Using $htmldoc assembly"
+  # use assembly
+  cp ../../../doc/en/target/$htmldoc $htmldoc
+else
+  echo "Creating $htmldoc"
+  # setup doc artifacts
+  if [ -e user ]; then
+    unlink user
+  fi
+  if [ -e developer ]; then
+    unlink developer
+  fi
+  ln -sf ../../../doc/en/target/user/html user
+  ln -sf ../../../doc/en/target/developer/html developer
+  ln -sf ../../../doc/en/release/README.txt readme
+  if [ -e $htmldoc ]; then
+    rm -f $htmldoc 
+  fi
+  zip -q -r $htmldoc user developer readme
+  unlink user
+  unlink developer
+  unlink readme
 fi
-zip -q -r $htmldoc user developer readme
-unlink user
-unlink developer
-unlink readme
 
 popd > /dev/null
 
@@ -378,13 +398,6 @@ if [ -z $SKIP_TAG ]; then
 fi
 
 popd > /dev/null
-
-# fire off mac and windows build machines
-if [ -z $SKIP_INSTALLERS ]; then
-  echo "starting installer jobs"
-  start_installer_job $WIN_JENKINS $WIN_JENKINS_USER $WIN_JENKINS_KEY $tag
-  start_installer_job $MAC_JENKINS $MAC_JENKINS_USER $MAC_JENKINS_KEY $tag
-fi
 
 popd > /dev/null
 

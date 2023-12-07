@@ -5,12 +5,13 @@
  */
 package org.geoserver.csw.store;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +26,9 @@ import org.geotools.data.Transaction;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.NameImpl;
 import org.opengis.feature.Feature;
-import org.opengis.feature.FeatureVisitor;
 import org.opengis.feature.Property;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.feature.type.FeatureType;
 import org.opengis.feature.type.Name;
 import org.opengis.filter.Filter;
 import org.opengis.filter.expression.PropertyName;
@@ -40,17 +41,14 @@ import org.opengis.filter.identity.FeatureId;
 public abstract class AbstractCatalogStore implements CatalogStore {
 
     protected Map<Name, RecordDescriptor> descriptorByType = new RecordDescriptorsMap();
-    protected Map<String, RecordDescriptor> descriptorByOutputSchema =
-            new HashMap<String, RecordDescriptor>();
 
     protected void support(RecordDescriptor descriptor) {
         descriptorByType.put(descriptor.getFeatureDescriptor().getName(), descriptor);
-        descriptorByOutputSchema.put(descriptor.getOutputSchema(), descriptor);
     }
 
     @Override
     public RecordDescriptor[] getRecordDescriptors() throws IOException {
-        ArrayList<RecordDescriptor> ft = new ArrayList<RecordDescriptor>(descriptorByType.values());
+        ArrayList<RecordDescriptor> ft = new ArrayList<>(descriptorByType.values());
         return ft.toArray(new RecordDescriptor[ft.size()]);
     }
 
@@ -67,7 +65,7 @@ public abstract class AbstractCatalogStore implements CatalogStore {
         final PropertyName property = rd.translateProperty(attributeName);
         AttributeDescriptor ad = (AttributeDescriptor) property.evaluate(rd.getFeatureType());
         if (ad == null) {
-            return new CloseableIteratorAdapter<String>(new ArrayList<String>().iterator());
+            return new CloseableIteratorAdapter<>(new ArrayList<String>().iterator());
         }
 
         // build the query against csw:record
@@ -76,38 +74,29 @@ public abstract class AbstractCatalogStore implements CatalogStore {
         q.setProperties(Arrays.asList(translateProperty(rd, attributeName)));
 
         // collect the values without duplicates
-        final Set<String> values = new HashSet<String>();
-        getRecords(q, Transaction.AUTO_COMMIT, rd.getOutputSchema())
+        final Set<String> values = new HashSet<>();
+        getRecords(q, Transaction.AUTO_COMMIT, rd)
                 .accepts(
-                        new FeatureVisitor() {
-
-                            @Override
-                            public void visit(Feature feature) {
-                                Property prop = (Property) property.evaluate(feature);
-                                if (prop != null)
-                                    try {
-                                        values.add(
-                                                new String(
-                                                        ((String) prop.getValue())
-                                                                .getBytes("ISO-8859-1"),
-                                                        "UTF-8"));
-                                    } catch (UnsupportedEncodingException e) {
-                                        throw new RuntimeException(e);
-                                    }
+                        feature -> {
+                            Property prop = (Property) property.evaluate(feature);
+                            if (prop != null) {
+                                values.add(
+                                        new String(
+                                                ((String) prop.getValue()).getBytes(ISO_8859_1),
+                                                UTF_8));
                             }
                         },
                         null);
 
         // sort and return
-        List<String> result = new ArrayList(values);
+        List<String> result = new ArrayList<>(values);
         Collections.sort(result);
-        return new CloseableIteratorAdapter<String>(result.iterator());
+        return new CloseableIteratorAdapter<>(result.iterator());
     }
 
     @Override
-    public FeatureCollection getRecords(Query q, Transaction t, String outputSchema)
-            throws IOException {
-        RecordDescriptor rd;
+    public FeatureCollection<FeatureType, Feature> getRecords(
+            Query q, Transaction t, RecordDescriptor rdOutput) throws IOException {
         Name typeName = null;
         if (q.getTypeName() == null) {
             typeName = CSWRecordDescriptor.RECORD_DESCRIPTOR.getName();
@@ -116,29 +105,16 @@ public abstract class AbstractCatalogStore implements CatalogStore {
         } else {
             typeName = new NameImpl(q.getTypeName());
         }
-        rd = descriptorByType.get(typeName);
-
-        RecordDescriptor rdOutput;
-        if (outputSchema == null || "".equals(outputSchema)) {
-            rdOutput =
-                    descriptorByOutputSchema.get(
-                            CSWRecordDescriptor.getInstance().getOutputSchema());
-        } else {
-            rdOutput = descriptorByOutputSchema.get(outputSchema);
-        }
+        RecordDescriptor rd = descriptorByType.get(typeName);
 
         if (rd == null) {
             throw new IOException(q.getTypeName() + " is not a supported type");
         }
 
-        if (rdOutput == null) {
-            throw new IOException(outputSchema + " is not a supported output schema");
-        }
-
         return getRecordsInternal(rd, rdOutput, q, t);
     }
 
-    public abstract FeatureCollection getRecordsInternal(
+    public abstract FeatureCollection<FeatureType, Feature> getRecordsInternal(
             RecordDescriptor rd, RecordDescriptor rdOutput, Query q, Transaction t)
             throws IOException;
 
@@ -149,11 +125,12 @@ public abstract class AbstractCatalogStore implements CatalogStore {
     }
 
     @Override
-    public int getRecordsCount(Query q, Transaction t) throws IOException {
+    public int getRecordsCount(Query q, Transaction t, RecordDescriptor rdOutput)
+            throws IOException {
         // simply delegate to the feature collection, we have no optimizations
         // available for the time being (even counting the files in case of no filtering
         // would be wrong as we have to
-        return getRecords(q, t, null).size();
+        return getRecords(q, t, rdOutput).size();
     }
 
     @Override

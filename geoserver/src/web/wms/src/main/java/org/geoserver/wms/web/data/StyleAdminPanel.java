@@ -4,6 +4,8 @@
  */
 package org.geoserver.wms.web.data;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -126,12 +128,12 @@ public class StyleAdminPanel extends StyleEditTabPanel {
 
         IModel<String> nameBinding = styleModel.bind("name");
 
-        add(nameTextField = new TextField<String>("name", nameBinding));
+        add(nameTextField = new TextField<>("name", nameBinding));
         nameTextField.setRequired(true);
 
         IModel<WorkspaceInfo> wsBinding = styleModel.bind("workspace");
         wsChoice =
-                new Select2DropDownChoice<WorkspaceInfo>(
+                new Select2DropDownChoice<>(
                         "workspace",
                         wsBinding,
                         new WorkspacesModel(),
@@ -218,7 +220,9 @@ public class StyleAdminPanel extends StyleEditTabPanel {
         formatReadOnlyMessage.setVisible(false);
         add(formatReadOnlyMessage);
         // add the Legend fields
-        legendPanel = new ExternalGraphicPanel("legendPanel", styleModel, stylePage.styleForm);
+        legendPanel =
+                new ExternalGraphicPanel(
+                        "legendPanel", styleModel, stylePage.styleForm, getStylePage());
         legendPanel.setOutputMarkupId(true);
         add(legendPanel);
         if (style.getId() != null) {
@@ -228,16 +232,17 @@ public class StyleAdminPanel extends StyleEditTabPanel {
                 // ouch, the style file is gone! Register a generic error message
                 Session.get()
                         .error(
-                                new ParamResourceModel("styleNotFound", this, style.getFilename())
+                                new ParamResourceModel(
+                                                "styleNotFound", stylePage, style.getFilename())
                                         .getString());
             }
         }
 
         // style generation functionality
         templates =
-                new Select2DropDownChoice<StyleType>(
+                new Select2DropDownChoice<>(
                         "templates",
-                        new Model<StyleType>(),
+                        new Model<>(),
                         new StyleTypeModel(),
                         new StyleTypeChoiceRenderer());
         templates.setOutputMarkupId(true);
@@ -289,7 +294,7 @@ public class StyleAdminPanel extends StyleEditTabPanel {
 
         fileUploadField = new FileUploadField("filename");
         // Explicitly set model so this doesn't use the form model
-        fileUploadField.setDefaultModel(new Model<String>(""));
+        fileUploadField.setDefaultModel(new Model<>(""));
         add(fileUploadField);
 
         add(previewLink());
@@ -444,7 +449,7 @@ public class StyleAdminPanel extends StyleEditTabPanel {
                 templates.processInput();
                 nameTextField.processInput();
                 wsChoice.processInput();
-                StyleType template = (StyleType) templates.getConvertedInput();
+                StyleType template = templates.getConvertedInput();
                 StyleGenerator styleGen = new StyleGenerator(stylePage.getCatalog());
                 styleGen.setWorkspace(getStylePage().getStyleInfo().getWorkspace());
 
@@ -485,7 +490,7 @@ public class StyleAdminPanel extends StyleEditTabPanel {
             protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
                 // we need to force validation or the value won't be converted
                 styles.processInput();
-                StyleInfo style = (StyleInfo) styles.getConvertedInput();
+                StyleInfo style = styles.getConvertedInput();
 
                 if (style != null) {
                     try {
@@ -533,7 +538,7 @@ public class StyleAdminPanel extends StyleEditTabPanel {
                     stylePage.editor.reset();
                     stylePage.setRawStyle(
                             new InputStreamReader(
-                                    new ByteArrayInputStream(bout.toByteArray()), "UTF-8"));
+                                    new ByteArrayInputStream(bout.toByteArray()), UTF_8));
                     target.appendJavaScript(
                             String.format(
                                     "if (document.gsEditors) { document.gsEditors.editor.setOption('mode', '%s'); }",

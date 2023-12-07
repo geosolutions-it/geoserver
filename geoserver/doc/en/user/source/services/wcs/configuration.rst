@@ -29,11 +29,11 @@ The overview policy has four possible values:
      - Looks up the overview closest to the one requested
      - 2.0.3
      
-While reading coverage data at a resolution lower than the one available on persistent storage its common to use subsampling, that is, read one every N pixels as a way to reduce the resolution of the data read in memory. **Use subsampling** controls wheter subsampling is enabled or not.
+While reading coverage data at a resolution lower than the one available on persistent storage its common to use subsampling, that is, read one every N pixels as a way to reduce the resolution of the data read in memory. **Use subsampling** controls whether subsampling is enabled or not.
 
 
-Request limits
---------------
+Resource consumption limits
+---------------------------
 
 The request limit options allow the administrator to limit the resources consumed by each WCS ``GetCoverage`` request.
 
@@ -56,11 +56,11 @@ The request limits limit the size of the image read from the source and the size
      - 2.14.0
 
      
-To understand the limits let's consider a very simplified examle in which no tiles and overviews enter the game:
+To understand the limits let's consider a very simplified example in which no tiles and overviews enter the game:
 
 * The request hits a certain area of the original raster. Reading it at full resolution requires grabbing a raster of size ``rw * rh``, which has a certain number of bands, each with a certain size. The amount of memory used for the read will be ``rw * rh * pixelsize``. This is the value measured by the input memory limit
 * The WCS performs the necessary processing: band selection, resolution change (downsampling or upsampling), reprojection
-* The resuling raster will have size ``ow * oh`` and will have a certain number of bands, possibly less than the input data, each with a certain size. The amount of memory used for the final raster will be ``ow * oh * pixelsize``. This is the value measured by the output memory limit.
+* The resulting raster will have size ``ow * oh`` and will have a certain number of bands, possibly less than the input data, each with a certain size. The amount of memory used for the final raster will be ``ow * oh * pixelsize``. This is the value measured by the output memory limit.
 * Finally the resulting raster will be encoded in the output format. Depending on the output format structure the size of the result might be higher than the in memory size (ArcGrid case) or smaller (for example in the case of GeoTIFF output, which is normally LZW compressed)
 
 In fact reality is a bit more complicated:
@@ -73,7 +73,15 @@ Only a few input formats are so badly structure that they force the reader to re
 * JPEG or PNG images with world file
 * Single tiled and JPEG compressed GeoTIFF files
 
+Limited SRS list
+----------------
 
+Some clients may have problems processing a GetCapabilities document listing the complete list of SRS (projections) that GeoServer supports by default. You may also find some projections are not appropriate for your data products.
 
+Use this setting to limit the default list of supported SRS (projections) for the service. This list will be used by default, individual coverages define their own list of SRS (projections).
 
+.. figure:: img/wcs_limited_srs_list.png
+   
+   Limited SRS list
 
+To limit the service to only the required projections use the :guilabel:`Limited SRS List` text box to list the desired EPSG codes separated by commas, e.g. `4326,27700` .

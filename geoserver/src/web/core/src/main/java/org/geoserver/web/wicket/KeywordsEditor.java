@@ -8,7 +8,6 @@ package org.geoserver.web.wicket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -39,17 +38,16 @@ public class KeywordsEditor extends FormComponentPanel<List<KeywordInfo>> {
     /**
      * Creates a new keywords editor.
      *
-     * @param id
      * @param keywords The module should return a non null collection of strings.
      */
     public KeywordsEditor(String id, final IModel<List<KeywordInfo>> keywords) {
         super(id, keywords);
 
         choices =
-                new ListMultipleChoice<KeywordInfo>(
+                new ListMultipleChoice<>(
                         "keywords",
                         new Model<ArrayList<KeywordInfo>>(),
-                        new ArrayList<KeywordInfo>(keywords.getObject()),
+                        new ArrayList<>(keywords.getObject()),
                         new ChoiceRenderer<KeywordInfo>() {
                             private static final long serialVersionUID = 1L;
 
@@ -68,14 +66,14 @@ public class KeywordsEditor extends FormComponentPanel<List<KeywordInfo>> {
         choices.setOutputMarkupId(true);
         add(choices);
         add(removeKeywordsButton());
-        newKeyword = new TextField<String>("newKeyword", new Model<String>());
+        newKeyword = new TextField<>("newKeyword", new Model<>());
         newKeyword.setOutputMarkupId(true);
         add(newKeyword);
 
         langChoice =
-                new DropDownChoice<String>(
+                new DropDownChoice<>(
                         "lang",
-                        new Model<String>(),
+                        new Model<>(),
                         Arrays.asList(Locale.getISOLanguages()),
                         new ChoiceRenderer<String>() {
                             private static final long serialVersionUID = 1L;
@@ -95,7 +93,7 @@ public class KeywordsEditor extends FormComponentPanel<List<KeywordInfo>> {
         langChoice.setOutputMarkupId(true);
         add(langChoice);
 
-        vocabTextField = new TextField<String>("vocab", new Model<String>());
+        vocabTextField = new TextField<>("vocab", new Model<>());
         vocabTextField.setOutputMarkupId(true);
 
         add(vocabTextField);
@@ -154,8 +152,7 @@ public class KeywordsEditor extends FormComponentPanel<List<KeywordInfo>> {
                         Collection<KeywordInfo> selection = choices.getModelObject();
                         @SuppressWarnings("unchecked")
                         List<KeywordInfo> keywords = (List<KeywordInfo>) choices.getChoices();
-                        for (Iterator<KeywordInfo> it = selection.iterator(); it.hasNext(); ) {
-                            KeywordInfo selected = (KeywordInfo) it.next();
+                        for (KeywordInfo selected : selection) {
                             keywords.remove(selected);
                         }
                         choices.setChoices(keywords);

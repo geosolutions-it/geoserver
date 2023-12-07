@@ -5,12 +5,15 @@
  */
 package org.geoserver.wms;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.geoserver.catalog.AuthorityURLInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.config.ServiceInfo;
+import org.geotools.util.GrowableInternationalString;
+import org.opengis.util.InternationalString;
 
 /**
  * Configuration object for Web Map Service.
@@ -104,11 +107,7 @@ public interface WMSInfo extends ServiceInfo {
      */
     int getMaxRenderingTime();
 
-    /**
-     * Sets the max allowed rendering time, in seconds
-     *
-     * @param maxRenderingTime
-     */
+    /** Sets the max allowed rendering time, in seconds */
     void setMaxRenderingTime(int maxRenderingTime);
 
     /**
@@ -117,11 +116,7 @@ public interface WMSInfo extends ServiceInfo {
      */
     int getMaxRenderingErrors();
 
-    /**
-     * Sets the max number of rendering errors tolerated
-     *
-     * @param maxRenderingTime
-     */
+    /** Sets the max number of rendering errors tolerated */
     void setMaxRenderingErrors(int maxRenderingTime);
 
     /**
@@ -137,28 +132,16 @@ public interface WMSInfo extends ServiceInfo {
     /** @return the title of the root layer */
     String getRootLayerTitle();
 
-    /**
-     * Sets the title of the root layer
-     *
-     * @param rootLayerTitle
-     */
+    /** Sets the title of the root layer */
     void setRootLayerTitle(String rootLayerTitle);
 
     /** @return the abstract of the root layer */
     public String getRootLayerAbstract();
 
-    /**
-     * Sets the abstract of the root layer
-     *
-     * @param rootLayerAbstract
-     */
+    /** Sets the abstract of the root layer */
     public void setRootLayerAbstract(String rootLayerAbstract);
 
-    /**
-     * Sets the status of dynamic styling (SLD and SLD_BODY params) allowance
-     *
-     * @param dynamicStylesEnabled
-     */
+    /** Sets the status of dynamic styling (SLD and SLD_BODY params) allowance */
     void setDynamicStylingDisabled(Boolean dynamicStylesDisabled);
 
     /** @return the status of dynamic styling (SLD and SLD_BODY params) allowance */
@@ -188,8 +171,6 @@ public interface WMSInfo extends ServiceInfo {
      * Returns the maximum number of dimension items that can be requested by a client without
      * getting a service exception. The default is
      * {DimensionInfo#DEFAULT_MAX_REQUESTED_DIMENSION_VALUES} that is, no limit.
-     *
-     * @return
      */
     default int getMaxRequestedDimensionValues() {
         return DimensionInfo.DEFAULT_MAX_REQUESTED_DIMENSION_VALUES;
@@ -205,17 +186,58 @@ public interface WMSInfo extends ServiceInfo {
         // if not implemented nothing is done
     }
 
-    /**
-     * Returns WMS cache configuration for remote resources.
-     *
-     * @return
-     */
+    /** Returns WMS cache configuration for remote resources. */
     CacheConfiguration getCacheConfiguration();
 
-    /**
-     * Set current WMS cache configuration for remote resources.
-     *
-     * @return
-     */
+    /** Set current WMS cache configuration for remote resources. */
     void setCacheConfiguration(CacheConfiguration cacheCfg);
+
+    /** Returns the remote style max request time in milliseconds */
+    int getRemoteStyleMaxRequestTime();
+
+    /** Sets the remote style max request time in milliseconds */
+    void setRemoteStyleMaxRequestTime(int time);
+
+    /** Returns the remote SLD Urls that are allowed for authorization forwarding */
+    default List<String> getAllowedURLsForAuthForwarding() {
+        return Collections.emptyList();
+    }
+
+    /** Returns the remote style timeout in milliseconds * */
+    int getRemoteStyleTimeout();
+
+    /** Sets the remote style timeout in milliseconds * */
+    void setRemoteStyleTimeout(int time);
+
+    default boolean isDefaultGroupStyleEnabled() {
+        return true;
+    }
+
+    default void setDefaultGroupStyleEnabled(boolean defaultGroupStyleEnabled) {
+        // if not implemented nothing to do
+    }
+
+    /** @return the international title of the root layer */
+    GrowableInternationalString getInternationalRootLayerTitle();
+
+    /** Sets the international title of the root layer */
+    void setInternationalRootLayerTitle(InternationalString rootLayerTitle);
+
+    /** @return the international abstract of the root layer */
+    GrowableInternationalString getInternationalRootLayerAbstract();
+
+    /** Sets the international title of the root layer */
+    void setInternationalRootLayerAbstract(InternationalString rootLayerAbstract);
+
+    /** @return whether to apply rendering transformations for WMS GetFeatureInfo requests */
+    boolean isTransformFeatureInfoDisabled();
+
+    /** Sets whether to apply rendering transformations for WMS GetFeatureInfo requests */
+    void setTransformFeatureInfoDisabled(boolean transformFeatureInfoDisabled);
+
+    /** @return whether to enable auto-escaping HTML FreeMarker template values */
+    boolean isAutoEscapeTemplateValues();
+
+    /** Sets whether to enable auto-escaping HTML FreeMarker template values */
+    void setAutoEscapeTemplateValues(boolean autoEscapeTemplateValues);
 }

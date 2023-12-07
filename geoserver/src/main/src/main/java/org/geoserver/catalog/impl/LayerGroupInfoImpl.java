@@ -6,6 +6,7 @@
 package org.geoserver.catalog.impl;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import org.geoserver.catalog.AttributionInfo;
 import org.geoserver.catalog.AuthorityURLInfo;
@@ -21,7 +22,10 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.util.InternationalStringUtils;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.util.GrowableInternationalString;
+import org.opengis.util.InternationalString;
 
 public class LayerGroupInfoImpl implements LayerGroupInfo {
 
@@ -36,22 +40,31 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
     /** This property in 2.2.x series is stored under the metadata map with key 'abstract'. */
     protected String abstractTxt;
 
+    protected Boolean enabled;
+
+    protected Boolean advertised;
+
     protected WorkspaceInfo workspace;
     protected String path;
     protected LayerInfo rootLayer;
     protected StyleInfo rootLayerStyle;
 
+    protected GrowableInternationalString internationalTitle;
+
+    protected GrowableInternationalString internationalAbstract;
+
     /**
      * This property is here for compatibility purpose, in 2.3.x series it has been replaced by
      * 'publishables'
      */
-    protected List<LayerInfo> layers = new ArrayList<LayerInfo>();
+    protected List<LayerInfo> layers = new ArrayList<>();
 
-    protected List<PublishedInfo> publishables = new ArrayList<PublishedInfo>();
-    protected List<StyleInfo> styles = new ArrayList<StyleInfo>();
-    protected List<MetadataLinkInfo> metadataLinks = new ArrayList<MetadataLinkInfo>();
+    protected List<PublishedInfo> publishables = new ArrayList<>();
+    protected List<StyleInfo> styles = new ArrayList<>();
+    protected List<MetadataLinkInfo> metadataLinks = new ArrayList<>();
 
     protected ReferencedEnvelope bounds;
+
     protected MetadataMap metadata = new MetadataMap();
 
     protected AttributionInfo attribution;
@@ -62,7 +75,7 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
      *
      * @since 2.1.3
      */
-    protected List<AuthorityURLInfo> authorityURLs = new ArrayList<AuthorityURLInfo>(2);
+    protected List<AuthorityURLInfo> authorityURLs = new ArrayList<>(2);
 
     /**
      * This property is transient in 2.1.x series and stored under the metadata map with key
@@ -70,9 +83,15 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
      *
      * @since 2.1.3
      */
-    protected List<LayerIdentifierInfo> identifiers = new ArrayList<LayerIdentifierInfo>(2);
+    protected List<LayerIdentifierInfo> identifiers = new ArrayList<>(2);
 
     private List<KeywordInfo> keywords = new ArrayList<>();
+
+    protected Date dateCreated;
+
+    protected Date dateModified;
+
+    protected List<LayerGroupStyle> layerGroupStyles = new ArrayList<>();
 
     @Override
     public List<KeywordInfo> getKeywords() {
@@ -91,8 +110,8 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
 
     public LayerGroupInfoImpl() {
         mode = Mode.SINGLE;
-        publishables = new ArrayList<PublishedInfo>();
-        styles = new ArrayList<StyleInfo>();
+        publishables = new ArrayList<>();
+        styles = new ArrayList<>();
         metadata = new MetadataMap();
     }
 
@@ -126,6 +145,17 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
     }
 
     @Override
+    public boolean isEnabled() {
+        if (this.enabled != null) return this.enabled;
+        else return true;
+    }
+
+    @Override
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    @Override
     public boolean isQueryDisabled() {
         return queryDisabled != null ? queryDisabled.booleanValue() : false;
     }
@@ -137,10 +167,12 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
 
     @Override
     public String getTitle() {
-        if (title == null && metadata != null) {
+        String result = InternationalStringUtils.getOrDefault(title, internationalTitle);
+        if (result == null && metadata != null) {
             title = metadata.get("title", String.class);
+            result = title;
         }
-        return title;
+        return result;
     }
 
     @Override
@@ -149,11 +181,27 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
     }
 
     @Override
-    public String getAbstract() {
-        if (abstractTxt == null && metadata != null) {
-            abstractTxt = metadata.get("title", String.class);
+    public boolean isAdvertised() {
+        if (this.advertised != null) {
+            return advertised;
+        } else {
+            return true;
         }
-        return abstractTxt;
+    }
+
+    @Override
+    public void setAdvertised(boolean advertised) {
+        this.advertised = advertised;
+    }
+
+    @Override
+    public String getAbstract() {
+        String result = InternationalStringUtils.getOrDefault(abstractTxt, internationalAbstract);
+        if (result == null && metadata != null) {
+            abstractTxt = metadata.get("title", String.class);
+            result = abstractTxt;
+        }
+        return result;
     }
 
     @Override
@@ -211,7 +259,7 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
      */
     public void convertLegacyLayers() {
         if (layers != null && publishables == null) {
-            publishables = new ArrayList<PublishedInfo>();
+            publishables = new ArrayList<>();
             for (LayerInfo layer : layers) {
                 publishables.add(layer);
             }
@@ -252,6 +300,7 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
 
     @Override
     public MetadataMap getMetadata() {
+        checkMetadataNotNull();
         return metadata;
     }
 
@@ -327,5 +376,72 @@ public class LayerGroupInfoImpl implements LayerGroupInfo {
 
     public void setMetadataLinks(List<MetadataLinkInfo> metadataLinks) {
         this.metadataLinks = metadataLinks;
+    }
+
+    @Override
+    public Date getDateModified() {
+        return this.dateModified;
+    }
+
+    @Override
+    public Date getDateCreated() {
+        return this.dateCreated;
+    }
+
+    @Override
+    public void setDateCreated(Date dateCreated) {
+        this.dateCreated = dateCreated;
+    }
+
+    @Override
+    public void setDateModified(Date dateModified) {
+        this.dateModified = dateModified;
+    }
+
+    private void checkMetadataNotNull() {
+        if (metadata == null) metadata = new MetadataMap();
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalTitle() {
+        return this.internationalTitle;
+    }
+
+    @Override
+    public void setInternationalTitle(InternationalString internationalTitle) {
+        this.internationalTitle = InternationalStringUtils.growable(internationalTitle);
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalAbstract() {
+        return this.internationalAbstract;
+    }
+
+    @Override
+    public void setInternationalAbstract(InternationalString internationalAbstract) {
+        this.internationalAbstract = InternationalStringUtils.growable(internationalAbstract);
+    }
+
+    @Override
+    public List<LayerInfo> layers(String layerGroupStyleName) {
+        LayerGroupHelper helper = new LayerGroupHelper(this);
+        return helper.allLayersForRendering(layerGroupStyleName);
+    }
+
+    @Override
+    public List<StyleInfo> styles(String layerGroupStyleName) {
+        LayerGroupHelper helper = new LayerGroupHelper(this);
+        return helper.allStylesForRendering(layerGroupStyleName);
+    }
+
+    @Override
+    public List<LayerGroupStyle> getLayerGroupStyles() {
+        if (layerGroupStyles == null) layerGroupStyles = new ArrayList<>();
+        return layerGroupStyles;
+    }
+
+    @Override
+    public void setLayerGroupStyles(List<LayerGroupStyle> styles) {
+        this.layerGroupStyles = styles;
     }
 }

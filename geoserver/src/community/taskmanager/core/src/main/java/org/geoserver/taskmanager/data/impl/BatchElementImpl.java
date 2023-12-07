@@ -4,6 +4,7 @@
  */
 package org.geoserver.taskmanager.data.impl;
 
+import com.thoughtworks.xstream.annotations.XStreamOmitField;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.CascadeType;
@@ -33,6 +34,7 @@ public class BatchElementImpl extends BaseImpl implements BatchElement {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @XStreamOmitField
     private Long id;
 
     @ManyToOne
@@ -46,15 +48,16 @@ public class BatchElementImpl extends BaseImpl implements BatchElement {
     @Column private Integer index;
 
     @OneToMany(
-        fetch = FetchType.LAZY,
-        targetEntity = RunImpl.class,
-        mappedBy = "batchElement",
-        cascade = CascadeType.ALL
-    )
+            fetch = FetchType.LAZY,
+            targetEntity = RunImpl.class,
+            mappedBy = "batchElement",
+            cascade = CascadeType.ALL)
     @OrderBy("start")
+    @XStreamOmitField
     private List<Run> runs = new ArrayList<Run>();
 
     @Column(nullable = false)
+    @XStreamOmitField
     private Long removeStamp = 0L;
 
     @Override

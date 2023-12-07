@@ -25,21 +25,12 @@ public class RoleCalculator {
     protected GeoServerRoleService roleService;
     protected GeoServerUserGroupService userGroupService;
 
-    /**
-     * Constructor
-     *
-     * @param roleService
-     */
+    /** Constructor */
     public RoleCalculator(GeoServerRoleService roleService) {
         this(null, roleService);
     }
 
-    /**
-     * Constructor
-     *
-     * @param userGroupService
-     * @param roleService
-     */
+    /** Constructor */
     public RoleCalculator(
             GeoServerUserGroupService userGroupService, GeoServerRoleService roleService) {
         this.userGroupService = userGroupService;
@@ -71,12 +62,7 @@ public class RoleCalculator {
         }
     }
 
-    /**
-     * Convenience method for {@link #calculateRoles(GeoServerUser)}
-     *
-     * @param username
-     * @throws IOException
-     */
+    /** Convenience method for {@link #calculateRoles(GeoServerUser)} */
     public SortedSet<GeoServerRole> calculateRoles(String username) throws IOException {
         return calculateRoles(new GeoServerUser(username));
     }
@@ -97,13 +83,10 @@ public class RoleCalculator {
      *
      * <p>If the user has the admin role of the active role service, {@link
      * GeoServerRole#ADMIN_ROLE} is also included in the set.
-     *
-     * @param user
-     * @throws IOException
      */
     public SortedSet<GeoServerRole> calculateRoles(GeoServerUser user) throws IOException {
 
-        Set<GeoServerRole> set1 = new HashSet<GeoServerRole>();
+        Set<GeoServerRole> set1 = new HashSet<>();
 
         // alle roles for the user
         set1.addAll(getRoleService().getRolesForUser(user.getUsername()));
@@ -141,12 +124,7 @@ public class RoleCalculator {
         }
     }
 
-    /**
-     * Collects the ascendents for a {@link GeoServerRole} object
-     *
-     * @param role
-     * @param inherited
-     */
+    /** Collects the ascendents for a {@link GeoServerRole} object */
     protected void addParentRole(GeoServerRole role, Collection<GeoServerRole> inherited)
             throws IOException {
         GeoServerRole parentRole = getRoleService().getParentRole(role);
@@ -159,28 +137,18 @@ public class RoleCalculator {
         addParentRole(parentRole, inherited);
     }
 
-    /**
-     * Calculate the {@link GeoServerRole} objects for a group including inherited roles
-     *
-     * @param group
-     * @throws IOException
-     */
+    /** Calculate the {@link GeoServerRole} objects for a group including inherited roles */
     public SortedSet<GeoServerRole> calculateRoles(GeoServerUserGroup group) throws IOException {
 
-        SortedSet<GeoServerRole> roles = new TreeSet<GeoServerRole>();
+        SortedSet<GeoServerRole> roles = new TreeSet<>();
         roles.addAll(getRoleService().getRolesForGroup(group.getGroupname()));
         addInheritedRoles(roles);
         return roles;
     }
 
-    /**
-     * Adds inherited roles to a role set
-     *
-     * @param coll
-     * @throws IOException
-     */
+    /** Adds inherited roles to a role set */
     public void addInheritedRoles(Collection<GeoServerRole> coll) throws IOException {
-        Set<GeoServerRole> inherited = new HashSet<GeoServerRole>();
+        Set<GeoServerRole> inherited = new HashSet<>();
         for (GeoServerRole role : coll) addParentRole(role, inherited);
         coll.addAll(inherited);
     }
@@ -188,14 +156,10 @@ public class RoleCalculator {
     /**
      * Takes the role set for a user and personalizes the roles (matching user properties and role
      * parameters)
-     *
-     * @param user
-     * @param roles
-     * @throws IOException
      */
     public SortedSet<GeoServerRole> personalizeRoles(
             GeoServerUser user, Collection<GeoServerRole> roles) throws IOException {
-        SortedSet<GeoServerRole> set = new TreeSet<GeoServerRole>();
+        SortedSet<GeoServerRole> set = new TreeSet<>();
         for (GeoServerRole role : roles) {
             Properties personalizedProps =
                     getRoleService()

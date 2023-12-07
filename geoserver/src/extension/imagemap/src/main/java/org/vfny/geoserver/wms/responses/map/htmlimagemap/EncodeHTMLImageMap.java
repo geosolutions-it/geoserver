@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.WebMap;
@@ -90,9 +91,6 @@ public class EncodeHTMLImageMap extends WebMap {
     /**
      * Applies Filters from style rules to the given query, to optimize DataStore queries. Similar
      * to the method in StreamingRenderer.
-     *
-     * @param styles
-     * @param q
      */
     private Filter processRuleForQuery(FeatureTypeStyle[] styles) {
         try {
@@ -111,16 +109,13 @@ public class EncodeHTMLImageMap extends WebMap {
             // ie. SELECT * FROM ... WHERE (the_geom && BBOX) AND (filter1 OR
             // filter2 OR filter3);
 
-            final List<Filter> filtersToDS = new ArrayList<Filter>();
-
-            final int stylesLength = styles.length;
+            final List<Filter> filtersToDS = new ArrayList<>();
 
             FeatureTypeStyle style;
-
-            for (int t = 0; t < stylesLength; t++) // look at each
+            // look at each
             // featuretypestyle
-            {
-                style = styles[t];
+            for (FeatureTypeStyle featureTypeStyle : styles) {
+                style = featureTypeStyle;
 
                 for (Rule r : style.rules()) {
                     if (r.getFilter() == null) return null; // uh-oh has no filter (want all rows)
@@ -190,9 +185,7 @@ public class EncodeHTMLImageMap extends WebMap {
 
             // does this style apply to the feature collection
             if (featureTypeStyle.featureTypeNames().isEmpty()
-                    || featureTypeStyle
-                            .featureTypeNames()
-                            .stream()
+                    || featureTypeStyle.featureTypeNames().stream()
                             .anyMatch(tn -> FeatureTypes.matches(featureType, tn))) {
                 filtered.add(featureTypeStyle);
             }
@@ -213,13 +206,9 @@ public class EncodeHTMLImageMap extends WebMap {
                 && ((r.getMaxScaleDenominator()) > scaleDenominator);
     }
 
-    /**
-     * Filter given rules, to consider only the rules compatible with the current scale.
-     *
-     * @param rules
-     */
+    /** Filter given rules, to consider only the rules compatible with the current scale. */
     private Rule[] filterRules(List<Rule> rules) {
-        List<Rule> result = new ArrayList<Rule>();
+        List<Rule> result = new ArrayList<>();
         for (Rule rule : rules) {
             double scaleDenominator;
             try {
@@ -234,12 +223,8 @@ public class EncodeHTMLImageMap extends WebMap {
                 if (EncodeHTMLImageMap.isWithInScale(rule, scaleDenominator)) {
                     result.add(rule);
                 }
-            } catch (TransformException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } catch (FactoryException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            } catch (TransformException | FactoryException e) {
+                LOGGER.log(Level.WARNING, "", e);
             }
         }
         // TODO Auto-generated method stub
@@ -253,11 +238,9 @@ public class EncodeHTMLImageMap extends WebMap {
      * @throws AbortedException if the encoding is aborted
      * @task TODO: respect layer filtering given by their Styles
      */
-    @SuppressWarnings("unchecked")
     private void writeLayers() throws IOException, AbortedException {
         for (Layer layer : mapContent.layers()) {
-            SimpleFeatureSource fSource;
-            fSource = (SimpleFeatureSource) layer.getFeatureSource();
+            SimpleFeatureSource fSource = (SimpleFeatureSource) layer.getFeatureSource();
             SimpleFeatureType schema = fSource.getSchema();
             /*FeatureSource fSource = layer.getFeatureSource();
             FeatureType schema = fSource.getSchema();*/
@@ -287,9 +270,7 @@ public class EncodeHTMLImageMap extends WebMap {
                                 null);
                 Query q = new Query(schema.getTypeName(), bboxFilter);
 
-                String mapId = null;
-
-                mapId = schema.getTypeName();
+                String mapId = schema.getTypeName();
 
                 writer.write("<map name=\"" + mapId + "\">\n");
 
@@ -298,12 +279,9 @@ public class EncodeHTMLImageMap extends WebMap {
                 LOGGER.info("Definition Query: " + definitionQuery.toString());
                 if (!definitionQuery.equals(Query.ALL)) {
                     if (q.equals(Query.ALL)) {
-                        q = (Query) definitionQuery;
+                        q = definitionQuery;
                     } else {
-                        q =
-                                (Query)
-                                        DataUtilities.mixQueries(
-                                                definitionQuery, q, "HTMLImageMapEncoder");
+                        q = DataUtilities.mixQueries(definitionQuery, q, "HTMLImageMapEncoder");
                     }
                 }
 

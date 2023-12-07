@@ -5,12 +5,18 @@
  */
 package org.geoserver.wms.capabilities;
 
+import static org.geoserver.catalog.LayerGroupHelper.isSingleOrOpaque;
 import static org.geoserver.catalog.Predicates.asc;
 import static org.geoserver.catalog.Predicates.equal;
 import static org.geoserver.ows.util.ResponseUtils.appendQueryString;
 import static org.geoserver.ows.util.ResponseUtils.buildSchemaURL;
 import static org.geoserver.ows.util.ResponseUtils.buildURL;
 import static org.geoserver.ows.util.ResponseUtils.params;
+import static org.geoserver.wms.capabilities.CapabilityUtil.LAYER_GROUP_STYLE_ABSTRACT_PREFIX;
+import static org.geoserver.wms.capabilities.CapabilityUtil.LAYER_GROUP_STYLE_ABSTRACT_SUFFIX;
+import static org.geoserver.wms.capabilities.CapabilityUtil.LAYER_GROUP_STYLE_NAME;
+import static org.geoserver.wms.capabilities.CapabilityUtil.LAYER_GROUP_STYLE_TITLE_PREFIX;
+import static org.geoserver.wms.capabilities.CapabilityUtil.LAYER_GROUP_STYLE_TITLE_SUFFIX;
 import static org.geoserver.wms.capabilities.CapabilityUtil.validateLegendInfo;
 
 import com.google.common.collect.Iterables;
@@ -24,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -54,14 +59,17 @@ import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WMTSLayerInfo;
+import org.geoserver.catalog.impl.LayerGroupStyle;
 import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.config.ContactInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ResourceErrorHandling;
+import org.geoserver.data.InternationalContentHelper;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.sld.GetStylesResponse;
+import org.geoserver.util.InternationalStringUtils;
 import org.geoserver.wfs.json.JSONType;
 import org.geoserver.wms.ExtendedCapabilitiesProvider;
 import org.geoserver.wms.GetCapabilities;
@@ -74,6 +82,7 @@ import org.geoserver.wms.describelayer.XMLDescribeLayerResponse;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.styling.Description;
 import org.geotools.styling.Style;
 import org.geotools.util.NumberRange;
 import org.geotools.xml.transform.TransformerBase;
@@ -120,7 +129,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
      * rule: {@code <!ATTLIST MetadataURL type ( TC211 | FGDC ) #REQUIRED>}
      */
     private static final Set<String> SUPPORTED_MDLINK_TYPES =
-            Collections.unmodifiableSet(new HashSet<String>(Arrays.asList("FGDC", "TC211")));
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList("FGDC", "TC211")));
 
     /**
      * The geoserver base URL to append it the schemas/wms/1.1.1/WMS_MS_Capabilities.dtd DTD
@@ -144,7 +153,6 @@ public class GetCapabilitiesTransformer extends TransformerBase {
     /**
      * Creates a new WMSCapsTransformer object.
      *
-     * @param wms
      * @param baseURL the base URL of the current request (usually "http://host:port/geoserver")
      * @param getMapFormats the list of supported output formats to state for the GetMap request
      * @param getLegendGraphicFormats the list of supported output formats to state for the
@@ -169,7 +177,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
         this.getLegendGraphicFormats = getLegendGraphicFormats;
         this.baseURL = baseURL;
         this.extCapsProviders =
-                extCapsProviders == null ? Collections.EMPTY_LIST : extCapsProviders;
+                extCapsProviders == null ? Collections.emptyList() : extCapsProviders;
         this.setNamespaceDeclarationEnabled(false);
         setIndentation(2);
         final Charset encoding = wms.getCharSet();
@@ -265,11 +273,14 @@ public class GetCapabilitiesTransformer extends TransformerBase {
 
         private Boolean includeRootLayer;
 
+        private InternationalContentHelper internationalContentHelper;
+
+        private boolean i18nRequested;
+
         /**
          * Creates a new CapabilitiesTranslator object.
          *
          * @param handler content handler to send sax events to.
-         * @param wmsConfig2
          */
         public CapabilitiesTranslator(
                 ContentHandler handler,
@@ -309,12 +320,16 @@ public class GetCapabilitiesTransformer extends TransformerBase {
          * @param o the {@link GetCapabilitiesRequest}
          * @throws IllegalArgumentException if {@code o} is not of the expected type
          */
+        @Override
         public void encode(Object o) throws IllegalArgumentException {
             if (!(o instanceof GetCapabilitiesRequest)) {
                 throw new IllegalArgumentException();
             }
 
             this.request = (GetCapabilitiesRequest) o;
+
+            String[] acceptLanguages = request.getAcceptLanguages();
+            this.i18nRequested = acceptLanguages != null;
 
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine(
@@ -326,9 +341,20 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             AttributesImpl rootAtts = new AttributesImpl(wmsVersion);
             rootAtts.addAttribute(
                     "", "updateSequence", "updateSequence", "", wmsConfig.getUpdateSequence() + "");
+
+            List<LayerInfo> orderedLayers = getOrderedLayers();
+            List<LayerGroupInfo> orderedGroups = getOrderedLayerGroups();
+            if (i18nRequested)
+                this.internationalContentHelper =
+                        new InternationalContentHelper(
+                                request.getAcceptLanguages(),
+                                serviceInfo,
+                                orderedLayers,
+                                orderedGroups);
+
             start("WMT_MS_Capabilities", rootAtts);
             handleService();
-            handleCapability();
+            handleCapability(orderedLayers, orderedGroups);
             end("WMT_MS_Capabilities");
         }
 
@@ -337,8 +363,8 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             start("Service");
 
             element("Name", "OGC:WMS");
-            element("Title", serviceInfo.getTitle());
-            element("Abstract", serviceInfo.getAbstract());
+
+            handleTitleAndAbstractServiceInfo();
 
             handleKeywordList(serviceInfo.getKeywords());
 
@@ -346,11 +372,16 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             orAtts.addAttribute("", "xmlns:xlink", "xmlns:xlink", "", XLINK_NS);
             orAtts.addAttribute(XLINK_NS, "xlink:type", "xlink:type", "", "simple");
 
-            String onlineResource = serviceInfo.getOnlineResource();
-            if (onlineResource == null || onlineResource.trim().length() == 0) {
-                String requestBaseUrl = request.getBaseUrl();
-                onlineResource = buildURL(requestBaseUrl, null, null, URLType.SERVICE);
-            } else {
+            GeoServer geoServer = wmsConfig.getGeoServer();
+            ContactInfo contact = geoServer.getSettings().getContact();
+
+            String onlineResource =
+                    InternationalStringUtils.firstNonBlank(
+                            serviceInfo.getOnlineResource(),
+                            contact.getOnlineResource(),
+                            serviceInfo.getGeoServer().getSettings().getOnlineResource(),
+                            buildURL(request.getBaseUrl(), null, null, URLType.SERVICE));
+            if (onlineResource != null) {
                 try {
                     new URL(onlineResource);
                 } catch (MalformedURLException e) {
@@ -364,9 +395,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             orAtts.addAttribute("", "xlink:href", "xlink:href", "", onlineResource);
             element("OnlineResource", null, orAtts);
 
-            GeoServer geoServer = wmsConfig.getGeoServer();
-            ContactInfo contact = geoServer.getSettings().getContact();
-            handleContactInfo(contact);
+            encodeContactInfo(contact);
 
             String fees = serviceInfo.getFees();
             element("Fees", fees == null ? "none" : fees);
@@ -375,13 +404,15 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             end("Service");
         }
 
-        /**
-         * Encodes contact information in the WMS capabilities document
-         *
-         * @param geoServer
-         */
-        public void handleContactInfo(ContactInfo contact) {
+        private void encodeContactInfo(ContactInfo contactInfo) {
             start("ContactInformation");
+            if (!i18nRequested) handleContactInfo(contactInfo);
+            else handleInternationalContactInfo(contactInfo);
+            end("ContactInformation");
+        }
+
+        /** Encodes contact information in the WMS capabilities document */
+        public void handleContactInfo(ContactInfo contact) {
 
             start("ContactPersonPrimary");
             element("ContactPerson", contact.getContactPerson());
@@ -402,32 +433,83 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             element("ContactVoiceTelephone", contact.getContactVoice());
             element("ContactFacsimileTelephone", contact.getContactFacsimile());
             element("ContactElectronicMailAddress", contact.getContactEmail());
-
-            end("ContactInformation");
         }
 
-        /**
-         * Turns the keyword list to XML
-         *
-         * @param keywords
-         */
+        /** Encodes i18n contact information in the WMS capabilities document */
+        private void handleInternationalContactInfo(ContactInfo contact) {
+            start("ContactPersonPrimary");
+            element(
+                    "ContactPerson",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactPerson()));
+            element(
+                    "ContactOrganization",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactOrganization()));
+            end("ContactPersonPrimary");
+
+            element(
+                    "ContactPosition",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactPosition()));
+
+            start("ContactAddress");
+            element(
+                    "AddressType",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressType()));
+            element(
+                    "Address",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddress()));
+            element(
+                    "City",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressCity()));
+            element(
+                    "StateOrProvince",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressState()));
+            element(
+                    "PostCode",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressPostalCode()));
+            element(
+                    "Country",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalAddressCountry()));
+            end("ContactAddress");
+
+            element(
+                    "ContactVoiceTelephone",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactVoice()));
+            element(
+                    "ContactFacsimileTelephone",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactFacsimile()));
+            element(
+                    "ContactElectronicMailAddress",
+                    internationalContentHelper.getNullableString(
+                            contact.getInternationalContactEmail()));
+        }
+
+        /** Turns the keyword list to XML */
         private void handleKeywordList(List<KeywordInfo> keywords) {
+            if (i18nRequested) keywords = internationalContentHelper.filterKeywords(keywords);
+
             start("KeywordList");
 
             if (keywords != null) {
-                for (Iterator<KeywordInfo> it = keywords.iterator(); it.hasNext(); ) {
-                    element("Keyword", it.next().getValue());
+                for (KeywordInfo keyword : keywords) {
+                    element("Keyword", keyword.getValue());
                 }
             }
 
             end("KeywordList");
         }
 
-        /**
-         * Turns the metadata URL list to XML
-         *
-         * @param keywords
-         */
+        /** Turns the metadata URL list to XML */
         private void handleMetadataList(Collection<MetadataLinkInfo> metadataURLs) {
             if (metadataURLs == null) {
                 return;
@@ -455,11 +537,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             }
         }
 
-        /**
-         * Turns the data URL list to XML
-         *
-         * @param keywords
-         */
+        /** Turns the data URL list to XML */
         private void handleDataList(Collection<DataLinkInfo> dataURLs) {
             if (dataURLs == null) {
                 return;
@@ -478,19 +556,18 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 orAtts.addAttribute(XLINK_NS, "xlink:type", "xlink:type", "", "simple");
                 orAtts.addAttribute("", "xlink:href", "xlink:href", "", content);
                 element("OnlineResource", null, orAtts);
-
                 end("DataURL");
             }
         }
 
         /** Encodes the capabilities metadata section of a WMS capabilities document */
-        private void handleCapability() {
+        private void handleCapability(List<LayerInfo> layers, List<LayerGroupInfo> groups) {
             start("Capability");
             handleRequest();
             handleException();
             handleVendorSpecificCapabilities();
             handleSLD();
-            handleLayers();
+            handleLayers(layers, groups);
             end("Capability");
         }
 
@@ -515,7 +592,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
 
             start("GetMap");
 
-            List<String> sortedFormats = new ArrayList<String>(getMapFormats);
+            List<String> sortedFormats = new ArrayList<>(getMapFormats);
             Collections.sort(sortedFormats);
             // this is a hack necessary to make cite tests pass: we need an output format
             // that is equal to the mime type as the first one....
@@ -523,8 +600,8 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 sortedFormats.remove("image/png");
                 sortedFormats.add(0, "image/png");
             }
-            for (Iterator<String> it = sortedFormats.iterator(); it.hasNext(); ) {
-                element("Format", String.valueOf(it.next()));
+            for (String sortedFormat : sortedFormats) {
+                element("Format", String.valueOf(sortedFormat));
             }
 
             handleDcpType(serviceUrl, null);
@@ -648,18 +725,22 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 try {
                     cp.encode(
                             new ExtendedCapabilitiesProvider.Translator() {
+                                @Override
                                 public void start(String element) {
                                     CapabilitiesTranslator.this.start(element);
                                 }
 
+                                @Override
                                 public void start(String element, Attributes attributes) {
                                     CapabilitiesTranslator.this.start(element, attributes);
                                 }
 
+                                @Override
                                 public void chars(String text) {
                                     CapabilitiesTranslator.this.chars(text);
                                 }
 
+                                @Override
                                 public void end(String element) {
                                     CapabilitiesTranslator.this.end(element);
                                 }
@@ -690,27 +771,15 @@ public class GetCapabilitiesTransformer extends TransformerBase {
          *     decoupled from the feature types configured for the server instance. (This involves
          *     nested layers, gridcoverages, etc)
          */
-        private void handleLayers() {
+        private void handleLayers(List<LayerInfo> layers, List<LayerGroupInfo> groups) {
             // get filtered and ordered layers:
-            final List<LayerInfo> layers = getOrderedLayers();
-            final List<LayerGroupInfo> layerGroups = getOrderedLayerGroups();
-            Set<LayerInfo> layersAlreadyProcessed =
-                    getLayersInGroups(new ArrayList<LayerGroupInfo>(layerGroups));
+            Set<LayerInfo> layersAlreadyProcessed = getLayersInGroups(new ArrayList<>(groups));
 
-            if (includeRootLayer(layers, layerGroups, layersAlreadyProcessed)) {
+            if (includeRootLayer(layers, groups, layersAlreadyProcessed)) {
                 start("Layer");
 
                 // WMSInfo serviceInfo = wmsConfig.getServiceInfo();
-                if (StringUtils.isBlank(serviceInfo.getRootLayerTitle())) {
-                    element("Title", serviceInfo.getTitle());
-                } else {
-                    element("Title", serviceInfo.getRootLayerTitle());
-                }
-                if (StringUtils.isBlank(serviceInfo.getRootLayerAbstract())) {
-                    element("Abstract", serviceInfo.getAbstract());
-                } else {
-                    element("Abstract", serviceInfo.getRootLayerAbstract());
-                }
+                handleRootLayerTitleAndAbstract();
                 Set<String> srs = getServiceSRSList();
                 handleRootCrsList(srs);
 
@@ -724,7 +793,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
 
                 // encode layer groups
                 try {
-                    handleLayerGroups(new ArrayList<LayerGroupInfo>(layerGroups), false);
+                    handleLayerGroups(new ArrayList<>(groups), false);
                 } catch (Exception e) {
                     throw new RuntimeException(
                             "Can't obtain Envelope of Layer-Groups: " + e.getMessage(), e);
@@ -736,17 +805,17 @@ public class GetCapabilitiesTransformer extends TransformerBase {
 
                 end("Layer");
             } else {
-                if (layerGroups.size() > 0) {
+                if (groups.isEmpty()) {
+                    // now encode the single layer
+                    LayerTree featuresLayerTree = new LayerTree(layers);
+                    handleLayerTree(featuresLayerTree, layersAlreadyProcessed, true);
+                } else {
                     try {
-                        handleLayerGroups(new ArrayList<LayerGroupInfo>(layerGroups), true);
+                        handleLayerGroups(new ArrayList<>(groups), true);
                     } catch (Exception e) {
                         throw new RuntimeException(
                                 "Can't obtain Envelope of Layer-Groups: " + e.getMessage(), e);
                     }
-                } else {
-                    // now encode the single layer
-                    LayerTree featuresLayerTree = new LayerTree(layers);
-                    handleLayerTree(featuresLayerTree, layersAlreadyProcessed, true);
                 }
             }
         }
@@ -786,10 +855,10 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                             .filter(layer -> includeLayer(layersAlreadyProcessed, layer))
                             .collect(Collectors.toList());
             List<LayerGroupInfo> rootGroups = filterNestedGroups(layerGroups);
-            if (rootLayers.size() == 1 && rootGroups.size() == 0) {
+            if (rootLayers.size() == 1 && rootGroups.isEmpty()) {
                 return rootLayers.get(0);
             }
-            if (rootLayers.size() == 0 && rootGroups.size() == 1) {
+            if (rootLayers.isEmpty() && rootGroups.size() == 1) {
                 return rootGroups.get(0);
             }
             return null;
@@ -797,7 +866,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
 
         private Set<String> getServiceSRSList() {
             List<String> srsList = serviceInfo.getSRS();
-            Set<String> srs = new LinkedHashSet<String>();
+            Set<String> srs = new LinkedHashSet<>();
             if (srsList != null) {
                 srs.addAll(srsList);
             }
@@ -874,7 +943,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             final Set<String> capabilitiesCrsIdentifiers;
             if (epsgCodes.isEmpty()) {
                 comment("All supported EPSG projections:");
-                capabilitiesCrsIdentifiers = new LinkedHashSet<String>();
+                capabilitiesCrsIdentifiers = new LinkedHashSet<>();
                 for (String code : CRS.getSupportedCodes("AUTO")) {
                     if ("WGS84(DD)".equals(code)) continue;
                     capabilitiesCrsIdentifiers.add("AUTO:" + code);
@@ -882,7 +951,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 capabilitiesCrsIdentifiers.addAll(CRS.getSupportedCodes("EPSG"));
             } else {
                 comment("Limited list of EPSG projections:");
-                capabilitiesCrsIdentifiers = new LinkedHashSet<String>(epsgCodes);
+                capabilitiesCrsIdentifiers = new LinkedHashSet<>(epsgCodes);
             }
 
             try {
@@ -940,16 +1009,10 @@ public class GetCapabilitiesTransformer extends TransformerBase {
         /** @param layerTree */
         private void handleLayerTree(
                 final LayerTree layerTree, Set<LayerInfo> layersAlreadyProcessed, boolean isRoot) {
-            final List<LayerInfo> data = new ArrayList<LayerInfo>(layerTree.getData());
+            final List<LayerInfo> data = new ArrayList<>(layerTree.getData());
             final Collection<LayerTree> children = layerTree.getChildrens();
 
-            Collections.sort(
-                    data,
-                    new Comparator<LayerInfo>() {
-                        public int compare(LayerInfo o1, LayerInfo o2) {
-                            return o1.getName().compareTo(o2.getName());
-                        }
-                    });
+            Collections.sort(data, (o1, o2) -> o1.getName().compareTo(o2.getName()));
 
             for (LayerInfo layer : data) {
                 // ask for enabled() instead of isEnabled() to account for disabled resource/store
@@ -995,12 +1058,12 @@ public class GetCapabilitiesTransformer extends TransformerBase {
          * LatLonBoundingBox, and then writes WMS specific layer properties as Styles, Scale Hint,
          * etc.
          *
-         * @throws RuntimeException
-         * @throws IOException
          * @task TODO: write wms specific elements.
          */
-        @SuppressWarnings("deprecation")
         protected void handleLayer(final LayerInfo layer, boolean isRoot) throws IOException {
+
+            String layerName = layer.prefixedName();
+
             // HACK: by now all our layers are queryable, since they reference
             // only featuretypes managed by this server
             AttributesImpl qatts = new AttributesImpl();
@@ -1014,10 +1077,9 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             }
 
             start("Layer", qatts);
-            element("Name", layer.prefixedName());
-            // REVISIT: this is bad, layer should have title and anbstract by itself
-            element("Title", layer.getResource().getTitle());
-            element("Abstract", layer.getResource().getAbstract());
+            element("Name", layerName);
+
+            handleTitleAndAbstract(layer, layerName);
             handleKeywordList(layer.getResource().getKeywords());
 
             /**
@@ -1079,48 +1141,47 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             // cascaded named styles
             // in the future (when we add support for that)
             if (!(layer.getResource() instanceof WMTSLayerInfo)) {
-                // add the layer style
-                start("Style");
-
-                StyleInfo defaultStyle = layer.getDefaultStyle();
-                if (defaultStyle == null) {
-                    throw new NullPointerException(
-                            "Layer " + layer.getName() + " has no default style");
-                }
-                handleCommonStyleElements(defaultStyle);
-                handleLegendURL(layer, defaultStyle.getLegend(), null, defaultStyle);
-                end("Style");
-
-                for (StyleInfo styleInfo : layer.getStyles()) {
-                    start("Style");
-                    handleCommonStyleElements(styleInfo);
-                    handleLegendURL(layer, styleInfo.getLegend(), styleInfo, styleInfo);
-                    end("Style");
-                }
+                handleStyles(layerName, layer.getDefaultStyle(), layer.styles());
             }
+
             handleScaleHint(layer);
 
             end("Layer");
         }
 
-        private void handleCommonStyleElements(StyleInfo styleInfo) {
+        private void handleCommonStyleElements(StyleInfo defaultStyle) {
+            element("Name", defaultStyle.prefixedName());
             Style ftStyle;
             try {
-                ftStyle = styleInfo.getStyle();
+                ftStyle = defaultStyle.getStyle();
+                handleStyleTitleAndAbstract(defaultStyle.prefixedName(), ftStyle);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
 
-            element("Name", styleInfo.prefixedName());
-            if (ftStyle.getDescription() != null) {
-                if (ftStyle.getDescription().getTitle() != null) {
-                    element("Title", ftStyle.getDescription().getTitle());
+        private void handleStyleTitleAndAbstract(String prefixedName, Style ftStyle) {
+            Description description = ftStyle.getDescription();
+
+            if (description != null) {
+                // PMT: WMS capabilities requires at least a title,
+                // if description's title is null, use the name
+                // for title.
+                if (!i18nRequested) {
+                    if (description.getTitle() != null) {
+                        element("Title", ftStyle.getDescription().getTitle());
+                    } else {
+                        element("Title", prefixedName);
+                    }
+                    element("Abstract", description.getAbstract());
                 } else {
-                    // Title is not required by the SLD spec, but it is required
-                    // by the WMS 1.1 DTD so we have to provide something.
-                    element("Title", styleInfo.prefixedName());
+                    String i18nTitle = internationalContentHelper.getTitle(ftStyle);
+                    if (i18nTitle == null) element("Title", prefixedName);
+                    else element("Title", i18nTitle);
+                    element("Abstract", internationalContentHelper.getAbstract(ftStyle));
                 }
-                element("Abstract", ftStyle.getDescription().getAbstract());
+            } else {
+                element("Title", prefixedName);
             }
         }
 
@@ -1140,8 +1201,6 @@ public class GetCapabilitiesTransformer extends TransformerBase {
          * b) max=value => <ScaleHint min=0 max=value/>
          * c) min=value => <ScaleHint min=value max=infinity/>
          * </pre>
-         *
-         * @param layer
          */
         private void handleScaleHint(PublishedInfo layer) {
 
@@ -1221,17 +1280,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 element("Name", layerName);
             }
 
-            if (StringUtils.isEmpty(layerGroup.getTitle())) {
-                element("Title", layerName);
-            } else {
-                element("Title", layerGroup.getTitle());
-            }
-
-            if (StringUtils.isEmpty(layerGroup.getAbstract())) {
-                element("Abstract", "Layer-Group type layer: " + layerName);
-            } else {
-                element("Abstract", layerGroup.getAbstract());
-            }
+            handleTitleAndAbstract(layerGroup, layerName);
 
             // handle keywords
             handleKeywordList(layerGroup.getKeywords());
@@ -1283,7 +1332,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             Collection<MetadataLinkInfo> metadataLinks = layerGroup.getMetadataLinks();
             if (metadataLinks == null || metadataLinks.isEmpty()) {
                 // Aggregated metadata links (see GEOS-4500)
-                Set<MetadataLinkInfo> aggregatedLinks = new HashSet<MetadataLinkInfo>();
+                Set<MetadataLinkInfo> aggregatedLinks = new HashSet<>();
                 for (LayerInfo layer : Iterables.filter(layerGroup.getLayers(), LayerInfo.class)) {
                     List<MetadataLinkInfo> metadataLinksLayer =
                             layer.getResource().getMetadataLinks();
@@ -1294,6 +1343,14 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 metadataLinks = aggregatedLinks;
             }
             handleMetadataList(metadataLinks);
+
+            if (CapabilityUtil.encodeGroupDefaultStyle(wmsConfig, layerGroup))
+                handleLayerGroupDefaultStyle(layerName);
+
+            if (isSingleOrOpaque(layerGroup))
+                handleLayerGroupStyles(layerName, layerGroup.getLayerGroupStyles());
+
+            handleScaleHint(layerGroup);
 
             // handle children layers and groups
             if (!LayerGroupInfo.Mode.OPAQUE_CONTAINER.equals(layerGroup.getMode())
@@ -1310,19 +1367,13 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 }
             }
 
-            // the layer style is not provided since the group does just have
-            // one possibility, the lack of styles that will make it use
-            // the default ones for each layer
-
-            handleScaleHint(layerGroup);
-
             end("Layer");
         }
 
         protected Set<LayerInfo> getLayersInGroups(List<LayerGroupInfo> layerGroups) {
-            Set<LayerInfo> layersAlreadyProcessed = new HashSet<LayerInfo>();
+            Set<LayerInfo> layersAlreadyProcessed = new HashSet<>();
 
-            if (layerGroups == null || layerGroups.size() == 0) {
+            if (layerGroups == null || layerGroups.isEmpty()) {
                 return layersAlreadyProcessed;
             }
 
@@ -1402,11 +1453,9 @@ public class GetCapabilitiesTransformer extends TransformerBase {
         /**
          * Returns a list of top level groups, that is, the ones that are not nested within other
          * layer groups
-         *
-         * @param allGroups
          */
         private List<LayerGroupInfo> filterNestedGroups(List<LayerGroupInfo> allGroups) {
-            LinkedHashSet<LayerGroupInfo> result = new LinkedHashSet<LayerGroupInfo>(allGroups);
+            LinkedHashSet<LayerGroupInfo> result = new LinkedHashSet<>(allGroups);
             for (LayerGroupInfo group : allGroups) {
                 for (PublishedInfo pi : group.getLayers()) {
                     if (pi instanceof LayerGroupInfo) {
@@ -1415,7 +1464,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 }
             }
 
-            return new ArrayList<LayerGroupInfo>(result);
+            return new ArrayList<>(result);
         }
 
         protected void handleAttribution(PublishedInfo layer) {
@@ -1478,12 +1527,15 @@ public class GetCapabilitiesTransformer extends TransformerBase {
          * <p>It is common practice to supply a URL to a WMS accesible legend graphic when it is
          * difficult to create a dynamic legend for a layer.
          *
-         * @param layer The LayerInfo that holds the legendURL to write out, or<code>null</code> if
-         *     dynamically generated.
+         * @param layerName The layer prefixed name
+         * @param legend The user specified legend url. If null a default url pointing back to the
+         *     GetLegendGraphic operation will be automatically created.
+         * @param style The style for the layer.
+         * @param sampleStyle The style to use for sample sizing.
          * @task TODO: figure out how to unhack legend parameters such as WIDTH, HEIGHT and FORMAT
          */
         protected void handleLegendURL(
-                LayerInfo layer, LegendInfo legend, StyleInfo style, StyleInfo sampleStyle) {
+                String layerName, LegendInfo legend, StyleInfo style, StyleInfo sampleStyle) {
             // add CapabilityUtil.validateLegendInfo
             int legendWidth = GetLegendGraphicRequest.DEFAULT_WIDTH;
             int legendHeight = GetLegendGraphicRequest.DEFAULT_HEIGHT;
@@ -1542,17 +1594,27 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             element("Format", defaultFormat);
             attrs.clear();
 
-            String layerName = layer.prefixedName();
+            // encode the Legend width and height in the URL too if we have a static legend
+            boolean hasExternalGraphic = legend != null && legend.getOnlineResource() != null;
+
             Map<String, String> params =
                     params(
                             "request",
                             "GetLegendGraphic",
+                            "version",
+                            request.getVersion(),
                             "format",
                             defaultFormat,
                             "width",
-                            String.valueOf(GetLegendGraphicRequest.DEFAULT_WIDTH),
+                            String.valueOf(
+                                    hasExternalGraphic
+                                            ? legendWidth
+                                            : GetLegendGraphicRequest.DEFAULT_WIDTH),
                             "height",
-                            String.valueOf(GetLegendGraphicRequest.DEFAULT_HEIGHT),
+                            String.valueOf(
+                                    hasExternalGraphic
+                                            ? legendHeight
+                                            : GetLegendGraphicRequest.DEFAULT_HEIGHT),
                             "layer",
                             layerName);
             if (style != null) {
@@ -1565,11 +1627,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             end("LegendURL");
         }
 
-        /**
-         * Encodes a LatLonBoundingBox for the given Envelope.
-         *
-         * @param bbox
-         */
+        /** Encodes a LatLonBoundingBox for the given Envelope. */
         private void handleLatLonBBox(Envelope bbox) {
             String minx = String.valueOf(bbox.getMinX());
             String miny = String.valueOf(bbox.getMinY());
@@ -1585,11 +1643,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             element("LatLonBoundingBox", null, bboxAtts);
         }
 
-        /**
-         * Encodes a BoundingBox for the given Envelope.
-         *
-         * @param bbox
-         */
+        /** Encodes a BoundingBox for the given Envelope. */
         private void handleBBox(Envelope bbox, String SRS) {
             String minx = String.valueOf(bbox.getMinX());
             String miny = String.valueOf(bbox.getMinY());
@@ -1717,6 +1771,153 @@ public class GetCapabilitiesTransformer extends TransformerBase {
                 atts.addAttribute("", "authority", "authority", "", authority);
                 element("Identifier", id, atts);
             }
+        }
+
+        /**
+         * Handle Style blocks for layers
+         *
+         * @param prefixedLayerName the prefixed layer name, used to construct the LegendURL block
+         * @param defaultStyle the default style for the layer
+         * @param styles the list of styles for the layer
+         */
+        private void handleStyles(
+                String prefixedLayerName, StyleInfo defaultStyle, Set<StyleInfo> styles) {
+            // if WMSLayerInfo do nothing for the moment, we may want to list the set of cascaded
+            // named styles
+            // in the future (when we add support for that)
+            // support added :GEOS-9312
+
+            if (defaultStyle == null) {
+                throw new NullPointerException(
+                        "Layer " + prefixedLayerName + " has no default style");
+            }
+
+            // add the default style
+            start("Style");
+            handleCommonStyleElements(defaultStyle);
+            handleLegendURL(prefixedLayerName, defaultStyle.getLegend(), null, defaultStyle);
+            end("Style");
+
+            // add all the styles
+            if (styles != null) {
+                for (StyleInfo styleInfo : styles) {
+                    start("Style");
+                    handleCommonStyleElements(styleInfo);
+                    handleLegendURL(prefixedLayerName, styleInfo.getLegend(), styleInfo, styleInfo);
+                    end("Style");
+                }
+            }
+        }
+
+        private void handleLayerGroupDefaultStyle(String layerName) {
+            start("Style");
+            element("Name", LAYER_GROUP_STYLE_NAME.concat("-").concat(layerName));
+            element(
+                    "Title",
+                    LAYER_GROUP_STYLE_TITLE_PREFIX
+                            .concat(layerName)
+                            .concat(LAYER_GROUP_STYLE_TITLE_SUFFIX));
+            element(
+                    "Abstract",
+                    LAYER_GROUP_STYLE_ABSTRACT_PREFIX
+                            .concat(layerName)
+                            .concat(LAYER_GROUP_STYLE_ABSTRACT_SUFFIX));
+            handleLegendURL(layerName, null, null, null);
+            end("Style");
+        }
+
+        /**
+         * Handle Style blocks for layer groups
+         *
+         * @param layerName the layer name, used to construct the LegendURL block
+         */
+        private void handleLayerGroupStyles(String layerName, List<LayerGroupStyle> styles) {
+            for (LayerGroupStyle style : styles) {
+                start("Style");
+                element("Name", style.getName().getName());
+                handleTitleAndAbstract(style);
+                handleLegendURL(layerName, null, style.getName(), null);
+                end("Style");
+            }
+        }
+
+        private void handleTitleAndAbstract(LayerGroupStyle groupStyle) {
+            if (!i18nRequested) {
+                if (StringUtils.isEmpty(groupStyle.getTitle())) {
+                    element("Title", groupStyle.getName().getName());
+                } else {
+                    element("Title", groupStyle.getTitle());
+                }
+
+                element("Abstract", groupStyle.getAbstract());
+
+            } else {
+                String title =
+                        internationalContentHelper.getString(
+                                groupStyle.getInternationalTitle(), false);
+                String abstrct =
+                        internationalContentHelper.getString(
+                                groupStyle.getInternationalAbstract(), true);
+                element("Title", title);
+                element("Abstract", abstrct);
+            }
+        }
+
+        private void handleTitleAndAbstract(PublishedInfo publishedInfo, String layerName) {
+            if (!i18nRequested) {
+                if (StringUtils.isEmpty(publishedInfo.getTitle())) {
+                    element("Title", layerName);
+                } else {
+                    element("Title", publishedInfo.getTitle());
+                }
+
+                element("Abstract", publishedInfo.getAbstract());
+            } else {
+                String title = internationalContentHelper.getTitle(publishedInfo);
+                String abstrct = internationalContentHelper.getAbstract(publishedInfo);
+                element("Title", title);
+                element("Abstract", abstrct);
+            }
+        }
+
+        private void handleTitleAndAbstractServiceInfo() {
+            if (!i18nRequested) {
+                element("Title", serviceInfo.getTitle());
+                element("Abstract", serviceInfo.getAbstract());
+            } else {
+                String title = internationalContentHelper.getTitle(serviceInfo);
+                element("Title", title);
+                String abstrct = internationalContentHelper.getAbstract(serviceInfo);
+                element("Abstract", abstrct);
+            }
+        }
+
+        private void handleRootLayerTitleAndAbstract() {
+            String titleValue;
+            String abstractValue;
+            if (!i18nRequested) {
+                titleValue = serviceInfo.getRootLayerTitle();
+                abstractValue = serviceInfo.getRootLayerAbstract();
+                if (StringUtils.isBlank(titleValue)) titleValue = serviceInfo.getTitle();
+                if (StringUtils.isBlank(abstractValue)) abstractValue = serviceInfo.getAbstract();
+            } else {
+                titleValue =
+                        internationalContentHelper.getString(
+                                serviceInfo.getInternationalRootLayerTitle(), true);
+                abstractValue =
+                        internationalContentHelper.getString(
+                                serviceInfo.getInternationalRootLayerAbstract(), true);
+                if (StringUtils.isBlank(titleValue))
+                    titleValue =
+                            internationalContentHelper.getString(
+                                    serviceInfo.getInternationalTitle(), false);
+                if (StringUtils.isBlank(abstractValue))
+                    abstractValue =
+                            internationalContentHelper.getString(
+                                    serviceInfo.getInternationalAbstract(), false);
+            }
+            element("Title", titleValue);
+            element("Abstract", abstractValue);
         }
     }
 }

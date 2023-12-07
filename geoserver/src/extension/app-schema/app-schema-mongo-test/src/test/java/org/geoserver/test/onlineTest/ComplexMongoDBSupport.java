@@ -5,7 +5,7 @@
 package org.geoserver.test.onlineTest;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assume.assumeTrue;
 
 import com.mongodb.BasicDBObject;
@@ -33,11 +33,7 @@ import javax.imageio.ImageIO;
 import org.custommonkey.xmlunit.SimpleNamespaceContext;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
-import org.geoserver.catalog.Catalog;
-import org.geoserver.catalog.CatalogBuilder;
-import org.geoserver.catalog.FeatureTypeInfo;
-import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.NamespaceInfo;
+import org.geoserver.catalog.*;
 import org.geoserver.catalog.impl.DataStoreInfoImpl;
 import org.geoserver.catalog.impl.NamespaceInfoImpl;
 import org.geoserver.catalog.impl.WorkspaceInfoImpl;
@@ -150,6 +146,21 @@ public abstract class ComplexMongoDBSupport extends GeoServerSystemTestSupport {
         catalog.add(dataStore);
         // add the stations style and set it as the default one for stations layer
         testData.addStyle("stations", "stations.sld", ComplexMongoDBSupport.class, catalog);
+        testData.addStyle(
+                "stations_with_sort_by_desc",
+                "stations_with_sort_by_desc.sld",
+                ComplexMongoDBSupport.class,
+                getCatalog());
+        testData.addStyle(
+                "stations_with_sort_by_asc",
+                "stations_with_sort_by_asc.sld",
+                ComplexMongoDBSupport.class,
+                getCatalog());
+        testData.addStyle(
+                "stations_with_RT",
+                "stations_with_RT.sld",
+                ComplexMongoDBSupport.class,
+                getCatalog());
         // build the feature type for the root mapping (StationFeature)
         CatalogBuilder builder = new CatalogBuilder(catalog);
         builder.setStore(dataStore);
@@ -231,6 +242,7 @@ public abstract class ComplexMongoDBSupport extends GeoServerSystemTestSupport {
                 "c",
                 "1482146935",
                 "25.0");
+        checkMeasurementNotExists(WFS11_XPATH_ENGINE, document, "station 3", "station3@mail.com");
     }
 
     @Test
@@ -296,13 +308,14 @@ public abstract class ComplexMongoDBSupport extends GeoServerSystemTestSupport {
                         "wms?SERVICE=WMS&VERSION=1.1.1"
                                 + "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&STYLES&LAYERS=st:StationFeature"
                                 + "&SRS=EPSG:4326&WIDTH=349&HEIGHT=768"
+                                + "&cql_filter=st:name='stations1' or st:name='stations2' or st:name='stations3' or st:name='stations4'"
                                 + "&BBOX=96.251220703125,-57.81005859375,103.919677734375,-40.93505859375");
         assertThat(result.getStatus(), is(200));
         assertThat(result.getContentType(), is("image/png"));
         // check that we got the expected image back
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBinary(result)));
         ImageAssert.assertEquals(
-                URLs.urlToFile(getClass().getResource("/results/result1.png")), image, 10);
+                URLs.urlToFile(getClass().getResource("/results/result1.png")), image, 240);
     }
 
     @Test
@@ -421,18 +434,47 @@ public abstract class ComplexMongoDBSupport extends GeoServerSystemTestSupport {
                 mappingsContent.replaceAll("\\{collectionName\\}", STATIONS_COLLECTION_NAME);
         mappingsContent = mappingsContent.replaceAll("\\{mongoHost\\}", hostAsString);
         mappingsContent = mappingsContent.replaceAll("\\{mongoPort\\}", portAsString);
+        Path schemaPath = new File(ROOT_DIRECTORY.toFile(), "schema-store").toPath();
         mappingsContent =
-                mappingsContent.replaceAll(
-                        "\\{schemaStore\\}",
-                        new File(ROOT_DIRECTORY.toFile(), "schema-store").getAbsolutePath());
+                mappingsContent.replaceAll("\\{schemaStore\\}", schemaPath.toUri().toString());
         Files.write(APP_SCHEMA_MAPPINGS.toPath(), mappingsContent.getBytes());
         // insert stations data set in MongoDB
         File stationsFile1 = moveResourceToTempDir("/data/stations1.json", "stations1.json");
         File stationsFile2 = moveResourceToTempDir("/data/stations2.json", "stations2.json");
+        File stationsFile3 = moveResourceToTempDir("/data/stations3.json", "stations3.json");
+        File stationsFile4 = moveResourceToTempDir("/data/stations4.json", "stations4.json");
+        File stationsFile5 = moveResourceToTempDir("/data/stations5.json", "stations5.json");
+        File stationsFile6 = moveResourceToTempDir("/data/stations6.json", "stations6.json");
+        File stationsFile7 = moveResourceToTempDir("/data/stations7.json", "stations7.json");
+        File stationsFile8 = moveResourceToTempDir("/data/stations8.json", "stations8.json");
+        File stationsFile9 = moveResourceToTempDir("/data/stations9.json", "stations9.json");
+        File stationsFile10 = moveResourceToTempDir("/data/stations10.json", "stations10.json");
+        File stationsFile11 = moveResourceToTempDir("/data/stations11.json", "stations11.json");
+        File stationsFile12 = moveResourceToTempDir("/data/stations12.json", "stations12.json");
         String stationsContent1 = new String(Files.readAllBytes(stationsFile1.toPath()));
         String stationsContent2 = new String(Files.readAllBytes(stationsFile2.toPath()));
+        String stationsContent3 = new String(Files.readAllBytes(stationsFile3.toPath()));
+        String stationsContent4 = new String(Files.readAllBytes(stationsFile4.toPath()));
+        String stationsContent5 = new String(Files.readAllBytes(stationsFile5.toPath()));
+        String stationsContent6 = new String(Files.readAllBytes(stationsFile6.toPath()));
+        String stationsContent7 = new String(Files.readAllBytes(stationsFile7.toPath()));
+        String stationsContent8 = new String(Files.readAllBytes(stationsFile8.toPath()));
+        String stationsContent9 = new String(Files.readAllBytes(stationsFile9.toPath()));
+        String stationsContent10 = new String(Files.readAllBytes(stationsFile10.toPath()));
+        String stationsContent11 = new String(Files.readAllBytes(stationsFile11.toPath()));
+        String stationsContent12 = new String(Files.readAllBytes(stationsFile12.toPath()));
         insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent1);
         insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent2);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent3);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent4);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent5);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent6);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent7);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent8);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent9);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent10);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent11);
+        insertJson(STATIONS_DATA_BASE_NAME, STATIONS_COLLECTION_NAME, stationsContent12);
     }
 
     /** Load MongoDB connection properties. */
@@ -608,5 +650,107 @@ public abstract class ComplexMongoDBSupport extends GeoServerSystemTestSupport {
                         measurementUnit,
                         measurementTimestamp,
                         measurementValue));
+    }
+
+    private void checkMeasurementNotExists(
+            XpathEngine xpathEngine, Document document, String stationName, String stationMail) {
+        // check that the station metadata is correct
+        checkCount(
+                xpathEngine,
+                document,
+                1,
+                String.format(
+                        "/wfs:FeatureCollection/gml:featureMembers"
+                                + "/st:StationFeature[st:name='%s']/st:contact[st:mail='%s']",
+                        stationName, stationMail));
+        checkCount(
+                WFS11_XPATH_ENGINE,
+                document,
+                0,
+                String.format(
+                        "/wfs:FeatureCollection/gml:featureMembers"
+                                + "/st:StationFeature[st:name='%s']/st:measurement",
+                        stationName));
+    }
+
+    @Test
+    public void testStationsWmsGetMapWithSortByDesc() throws Exception {
+
+        LayerInfo layer = getCatalog().getLayerByName("st:StationFeature");
+        StyleInfo sort = getCatalog().getStyleByName("stations_with_sort_by_desc");
+        StyleInfo defaultStyle = getCatalog().getStyleByName("stations");
+        layer.setDefaultStyle(sort);
+        getCatalog().save(layer);
+        // execute the WMS GetMap request
+        MockHttpServletResponse result =
+                getAsServletResponse(
+                        "wms?SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&STYLES&LAYERS=st:StationFeature"
+                                + "&SRS=EPSG:4326&WIDTH=349&HEIGHT=768"
+                                + "&BBOX=96.251220703125,-57.81005859375,103.919677734375,-40.93505859375");
+        assertThat(result.getStatus(), is(200));
+        assertThat(result.getContentType(), is("image/png"));
+        // check that we got the expected image back
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBinary(result)));
+        // use same image as test asc to check for equality since in the desc sld
+        // the two symbolizers have been shifted with respect to the asc sld
+        ImageAssert.assertEquals(
+                URLs.urlToFile(getClass().getResource("/results/sorted_result.png")), image, 240);
+        layer.setDefaultStyle(defaultStyle);
+        getCatalog().save(layer);
+    }
+
+    @Test
+    public void testStationsWmsGetMapWithSortByAsc() throws Exception {
+
+        LayerInfo layer = getCatalog().getLayerByName("st:StationFeature");
+        StyleInfo sort = getCatalog().getStyleByName("stations_with_sort_by_asc");
+        StyleInfo defaultStyle = getCatalog().getStyleByName("stations");
+        layer.setDefaultStyle(sort);
+        getCatalog().save(layer);
+        // execute the WMS GetMap request
+        MockHttpServletResponse result =
+                getAsServletResponse(
+                        "wms?SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&STYLES&LAYERS=st:StationFeature"
+                                + "&SRS=EPSG:4326&WIDTH=349&HEIGHT=768"
+                                + "&BBOX=96.251220703125,-57.81005859375,103.919677734375,-40.93505859375");
+        assertThat(result.getStatus(), is(200));
+        assertThat(result.getContentType(), is("image/png"));
+        // check that we got the expected image back
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBinary(result)));
+        // use same image as test desc to check for equality since in the asc sld
+        // the two symbolizers have been shifted with respect to the desc sld
+        ImageAssert.assertEquals(
+                URLs.urlToFile(getClass().getResource("/results/sorted_result.png")), image, 240);
+        layer.setDefaultStyle(defaultStyle);
+        getCatalog().save(layer);
+    }
+
+    @Test
+    public void testStationsWmsGetMapWithRendering() throws Exception {
+
+        // test getMap request with a style declaring a filtering Vector transformation
+        // features are 12 the result should display 6 features
+        LayerInfo layer = getCatalog().getLayerByName("st:StationFeature");
+        StyleInfo rt = getCatalog().getStyleByName("stations_with_RT");
+        StyleInfo defaultStyle = getCatalog().getStyleByName("stations");
+        layer.setDefaultStyle(rt);
+        getCatalog().save(layer);
+        // execute the WMS GetMap request
+        MockHttpServletResponse result =
+                getAsServletResponse(
+                        "wms?SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&STYLES&LAYERS=st:StationFeature"
+                                + "&SRS=EPSG:4326&WIDTH=576&HEIGHT=768"
+                                + "&BBOX=5,-60,110,80");
+        assertThat(result.getStatus(), is(200));
+        assertThat(result.getContentType(), is("image/png"));
+        // check that we got the expected image back
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(getBinary(result)));
+        ImageAssert.assertEquals(
+                URLs.urlToFile(getClass().getResource("/results/result_rt.png")), image, 240);
+        layer.setDefaultStyle(defaultStyle);
+        getCatalog().save(layer);
     }
 }

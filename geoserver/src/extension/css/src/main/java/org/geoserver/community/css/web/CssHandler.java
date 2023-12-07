@@ -5,6 +5,8 @@
  */
 package org.geoserver.community.css.web;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
@@ -18,12 +20,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.SLDHandler;
 import org.geoserver.catalog.StyleHandler;
 import org.geoserver.catalog.StyleType;
 import org.geoserver.catalog.Styles;
+import org.geoserver.platform.ModuleStatus;
 import org.geoserver.platform.resource.FileSystemResourceStore;
 import org.geoserver.platform.resource.Resource;
 import org.geotools.styling.ResourceLocator;
@@ -33,39 +37,40 @@ import org.geotools.styling.css.CssParser;
 import org.geotools.styling.css.CssTranslator;
 import org.geotools.styling.css.Stylesheet;
 import org.geotools.util.Version;
+import org.geotools.util.factory.GeoTools;
 import org.xml.sax.EntityResolver;
 
 /** Style handler for geocss. Justin Deoliveira, Boundless */
-public class CssHandler extends StyleHandler {
+public class CssHandler extends StyleHandler implements ModuleStatus {
 
     public static final String FORMAT = "css";
 
     public static final String MIME_TYPE = "application/vnd.geoserver.geocss+css";
 
-    static final Map<StyleType, String> TEMPLATES = new HashMap<StyleType, String>();
+    static final Map<StyleType, String> TEMPLATES = new HashMap<>();
 
     static {
         try {
             TEMPLATES.put(
                     StyleType.POINT,
                     IOUtils.toString(
-                            CssHandler.class.getResourceAsStream("template_point.css"), "UTF-8"));
+                            CssHandler.class.getResourceAsStream("template_point.css"), UTF_8));
             TEMPLATES.put(
                     StyleType.POLYGON,
                     IOUtils.toString(
-                            CssHandler.class.getResourceAsStream("template_polygon.css"), "UTF-8"));
+                            CssHandler.class.getResourceAsStream("template_polygon.css"), UTF_8));
             TEMPLATES.put(
                     StyleType.LINE,
                     IOUtils.toString(
-                            CssHandler.class.getResourceAsStream("template_line.css"), "UTF-8"));
+                            CssHandler.class.getResourceAsStream("template_line.css"), UTF_8));
             TEMPLATES.put(
                     StyleType.RASTER,
                     IOUtils.toString(
-                            CssHandler.class.getResourceAsStream("template_raster.css"), "UTF-8"));
+                            CssHandler.class.getResourceAsStream("template_raster.css"), UTF_8));
             TEMPLATES.put(
                     StyleType.GENERIC,
                     IOUtils.toString(
-                            CssHandler.class.getResourceAsStream("template_generic.css"), "UTF-8"));
+                            CssHandler.class.getResourceAsStream("template_generic.css"), UTF_8));
         } catch (IOException e) {
             throw new RuntimeException("Error loading up the css style templates", e);
         }
@@ -184,5 +189,44 @@ public class CssHandler extends StyleHandler {
     @Override
     public String getFileExtension() {
         return "css";
+    }
+
+    @Override
+    public String getModule() {
+        return "gs-css";
+    }
+
+    @Override
+    public Optional<String> getComponent() {
+        return Optional.of("GeoServer CSS Styling");
+    }
+
+    @Override
+    public Optional<String> getVersion() {
+        Version v = GeoTools.getVersion(CssParser.class);
+        if (v == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(v.toString());
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+
+    @Override
+    public Optional<String> getMessage() {
+        return Optional.of("CSS Styling");
+    }
+
+    @Override
+    public Optional<String> getDocumentation() {
+        return Optional.of("https://docs.geoserver.org/latest/en/user/styling/css/index.html");
     }
 }

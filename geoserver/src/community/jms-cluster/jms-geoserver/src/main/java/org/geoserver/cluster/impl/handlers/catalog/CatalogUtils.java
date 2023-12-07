@@ -37,11 +37,7 @@ import org.geotools.util.logging.Logging;
 public abstract class CatalogUtils {
     public static final java.util.logging.Logger LOGGER = Logging.getLogger(CatalogUtils.class);
 
-    /**
-     * @param info
-     * @param catalog
-     * @return the local workspace if found or the passed one (localized)
-     */
+    /** @return the local workspace if found or the passed one (localized) */
     public static WorkspaceInfo localizeWorkspace(final WorkspaceInfo info, final Catalog catalog) {
         if (info == null || catalog == null)
             throw new NullPointerException("Arguments may never be null");
@@ -71,11 +67,7 @@ public abstract class CatalogUtils {
         return info;
     }
 
-    /**
-     * @param info
-     * @param catalog
-     * @return the local style or the passed one (if not exists locally)
-     */
+    /** @return the local style or the passed one (if not exists locally) */
     public static StyleInfo localizeStyle(final StyleInfo info, final Catalog catalog) {
         if (info == null || catalog == null)
             throw new NullPointerException("Arguments may never be null");
@@ -258,7 +250,10 @@ public abstract class CatalogUtils {
         }
 
         // localize layers
-        info.getStyles().addAll(localizeStyles(new HashSet<StyleInfo>(info.getStyles()), catalog));
+        Set<StyleInfo> localizeStyles =
+                localizeStyles(new HashSet<StyleInfo>(info.getStyles()), catalog);
+        info.getStyles().clear();
+        info.getStyles().addAll(localizeStyles);
 
         // attach to the catalog
         final CatalogBuilder builder = new CatalogBuilder(catalog);

@@ -184,8 +184,8 @@ public class LoggingFilter implements GeoServerFilter {
             } else {
                 message = "" + req.getRemoteHost() + " made a non-HTTP request";
             }
-
             logger.info(message);
+
             long startTime = System.currentTimeMillis();
             chain.doFilter(req, res);
             long requestTime = System.currentTimeMillis() - startTime;
@@ -195,6 +195,7 @@ public class LoggingFilter implements GeoServerFilter {
         }
     }
 
+    @Override
     public void init(FilterConfig filterConfig) {
         enabled = getConfigBool("enabled", filterConfig);
         logBodies = getConfigBool("log-request-bodies", filterConfig);
@@ -204,7 +205,7 @@ public class LoggingFilter implements GeoServerFilter {
     protected boolean getConfigBool(String name, FilterConfig conf) {
         try {
             String value = conf.getInitParameter(name);
-            return Boolean.valueOf(value).booleanValue();
+            return Boolean.parseBoolean(value);
         } catch (Exception e) {
             return false;
         }
@@ -215,6 +216,7 @@ public class LoggingFilter implements GeoServerFilter {
         return s;
     }
 
+    @Override
     public void destroy() {}
 
     /** @return the enabled */

@@ -5,15 +5,14 @@
  */
 package org.geoserver.gwc;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -22,12 +21,15 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import javax.xml.namespace.QName;
-import org.geoserver.catalog.*;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.data.test.SystemTestData.LayerProperty;
-import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.CatalogMode;
 import org.geoserver.security.CoverageAccessLimits;
@@ -92,7 +94,7 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         GWC.get().getConfig().setSecurityEnabled(true);
 
         testData.addStyle("raster", "raster.sld", SystemTestData.class, getCatalog());
-        Map properties = new HashMap();
+        Map<LayerProperty, Object> properties = new HashMap<>();
         properties.put(LayerProperty.STYLE, "raster");
         testData.addRasterLayer(
                 new QName(MockData.SF_URI, "mosaic", MockData.SF_PREFIX),
@@ -440,25 +442,27 @@ public class GWCDataSecurityTest extends WMSTestSupport {
     @Test
     public void testPermissionCropTileWmts() throws Exception {
 
-        System.out.println(
-                Arrays.toString(
-                        GWC.get()
-                                .getTileLayerByName("sf:mosaic")
-                                .getGridSubset("EPSG:900913")
-                                .getCoverage(13)));
-        System.out.println(
-                GWC.get()
-                        .getTileLayerByName("sf:mosaic")
-                        .getGridSubset("EPSG:900913")
-                        .getOriginalExtent());
-        System.out.println(
-                ((LayerInfo)
-                                ((GeoServerTileLayer) (GWC.get().getTileLayerByName("sf:mosaic")))
-                                        .getPublishedInfo())
-                        .getResource()
-                        .getLatLonBoundingBox());
-        System.out.println(
-                getCatalog().getLayerByName("sf:mosaic").getResource().getLatLonBoundingBox());
+        //        System.out.println(
+        //                Arrays.toString(
+        //                        GWC.get()
+        //                                .getTileLayerByName("sf:mosaic")
+        //                                .getGridSubset("EPSG:900913")
+        //                                .getCoverage(13)));
+        //        System.out.println(
+        //                GWC.get()
+        //                        .getTileLayerByName("sf:mosaic")
+        //                        .getGridSubset("EPSG:900913")
+        //                        .getOriginalExtent());
+        //        System.out.println(
+        //                ((LayerInfo)
+        //                                ((GeoServerTileLayer)
+        // (GWC.get().getTileLayerByName("sf:mosaic")))
+        //                                        .getPublishedInfo())
+        //                        .getResource()
+        //                        .getLatLonBoundingBox());
+        //        System.out.println(
+        //
+        // getCatalog().getLayerByName("sf:mosaic").getResource().getLatLonBoundingBox());
         doPermissionCropTileTest(
                 (layer, index) ->
                         String.format(
@@ -538,12 +542,13 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         // Test that we have access when we should
         setRequestAuth("cite", "cite");
         MockHttpServletResponse response = getAsServletResponse(path);
-        assertThat(response, addBodyOnFail(hasProperty("contentType", equalTo(overlayFormat))));
+        String mime = getBaseMimeType(response.getContentType());
+        assertEquals(overlayFormat, mime);
 
         setRequestAuth("cite_mosaic2", "cite");
         response = getAsServletResponse(path2);
-        assertThat(response, addBodyOnFail(hasProperty("contentType", equalTo(overlayFormat))));
-
+        mime = getBaseMimeType(response.getContentType());
+        assertEquals(overlayFormat, mime);
         // try now as cite_mosaic2 user permission on sf:mosaic must be denied
         setRequestAuth("cite_mosaic2", "cite");
         response = getAsServletResponse(path);

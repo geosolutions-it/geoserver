@@ -35,9 +35,9 @@ import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterValue;
 import org.opengis.parameter.ParameterValueGroup;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.crs.ProjectedCRS;
+import org.opengis.referencing.crs.GeneralDerivedCRS;
+import org.opengis.referencing.operation.Conversion;
 import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.Projection;
 import ucar.ma2.ArrayFloat;
 import ucar.ma2.DataType;
 import ucar.ma2.Index;
@@ -80,8 +80,7 @@ class NetCDFCRSWriter {
     private GridCoverage2D sampleGranule;
 
     /** A map to assign a Dimension Mapping to each coordinate */
-    private Map<String, NetCDFDimensionMapping> coordinatesDimensions =
-            new LinkedHashMap<String, NetCDFDimensionMapping>();
+    private Map<String, NetCDFDimensionMapping> coordinatesDimensions = new LinkedHashMap<>();
 
     /** The underlying CoordinateReferenceSystem */
     private CoordinateReferenceSystem crs;
@@ -110,8 +109,6 @@ class NetCDFCRSWriter {
     /**
      * Setup lat,lon dimension (or y,x) and related coordinates variable and add them to the
      * provided dimensionsManager
-     *
-     * @param dimensionsManager
      */
     public Map<String, NetCDFDimensionMapping> initialize2DCoordinatesDimensions() {
         final RenderedImage image = sampleGranule.getRenderedImage();
@@ -167,8 +164,6 @@ class NetCDFCRSWriter {
     /**
      * Add a coordinate variable to the dataset, along with the related dimension. Finally, add the
      * created dimension to the coordinates map
-     *
-     * @param dimensionsManager
      */
     private void addCoordinateVariable(
             NetCDFCoordinate netCDFCoordinate, int size, double min, double period) {
@@ -209,13 +204,7 @@ class NetCDFCRSWriter {
         coordinatesDimensions.put(dimensionName, dimensionMapper);
     }
 
-    /**
-     * Set the coordinate values for all the dimensions
-     *
-     * @param writer
-     * @throws IOException
-     * @throws InvalidRangeException
-     */
+    /** Set the coordinate values for all the dimensions */
     void setCoordinateVariable(NetCDFDimensionMapping manager)
             throws IOException, InvalidRangeException {
 
@@ -276,10 +265,6 @@ class NetCDFCRSWriter {
     /**
      * Add GeoReferencing information to the writer, starting from the CoordinateReferenceSystem and
      * the MathTransform
-     *
-     * @param writer
-     * @param crs
-     * @param transform
      */
     public void updateProjectionInformation(
             NetCDFCoordinateReferenceSystemType crsType,
@@ -306,17 +291,17 @@ class NetCDFCRSWriter {
             CoordinateReferenceSystem crs,
             Variable var,
             NetCDFProjection projection) {
-        if (!(crs instanceof ProjectedCRS)) {
+        if (!(crs instanceof GeneralDerivedCRS)) {
             if (LOGGER.isLoggable(Level.FINE)) {
                 LOGGER.fine(
-                        "The provided CRS is not a projected CRS\n"
+                        "The provided CRS is not a projected or derived CRS\n"
                                 + "No projection information needs to be added");
             }
             return;
         }
         Map<String, String> referencingToNetCDFParameters = projection.getParameters();
-        ProjectedCRS projectedCRS = (ProjectedCRS) crs;
-        Projection conversionFromBase = projectedCRS.getConversionFromBase();
+        GeneralDerivedCRS projectedCRS = (GeneralDerivedCRS) crs;
+        Conversion conversionFromBase = projectedCRS.getConversionFromBase();
         if (conversionFromBase != null) {
 
             // getting the list of parameters needed for the NetCDF mapping
@@ -328,7 +313,7 @@ class NetCDFCRSWriter {
             List<GeneralParameterValue> valuesList = values.values();
 
             // Set up NetCDF CF parameters to be written
-            Map<String, List<Double>> parameterValues = new HashMap<String, List<Double>>();
+            Map<String, List<Double>> parameterValues = new HashMap<>();
 
             // Loop over the available conversion parameters
             for (GeneralParameterValue param : valuesList) {
@@ -393,7 +378,7 @@ class NetCDFCRSWriter {
             List<Double> paramValues = parameterValues.get(mappedKey);
             paramValues.add(value);
         } else {
-            List<Double> paramValues = new ArrayList<Double>(1);
+            List<Double> paramValues = new ArrayList<>(1);
             paramValues.add(value);
             parameterValues.put(mappedKey, paramValues);
         }
@@ -402,10 +387,6 @@ class NetCDFCRSWriter {
     /**
      * Add GeoReferencing global attributes (GDAL's spatial_ref and GeoTransform). They will be used
      * for datasets with unsupported NetCDF CF projection.
-     *
-     * @param writer
-     * @param crs
-     * @param transform
      */
     private void addGlobalAttributes(
             NetcdfFileWriter writer, CoordinateReferenceSystem crs, MathTransform transform) {
@@ -413,15 +394,7 @@ class NetCDFCRSWriter {
         writer.addGroupAttribute(null, getGeoTransformAttribute(transform));
     }
 
-    /**
-     * Add the gridMapping attribute
-     *
-     * @param writer
-     * @param crs
-     * @param transform
-     * @param var
-     * @param gridMapping
-     */
+    /** Add the gridMapping attribute */
     private void setGeoreferencingAttributes(
             NetcdfFileWriter writer,
             CoordinateReferenceSystem crs,

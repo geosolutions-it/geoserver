@@ -54,11 +54,11 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.sql.DataSource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
-import org.apache.wicket.util.string.Strings;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogInfo;
 import org.geoserver.catalog.CatalogVisitor;
@@ -103,7 +103,9 @@ import org.geoserver.config.SettingsInfo;
 import org.geoserver.config.impl.CoverageAccessInfoImpl;
 import org.geoserver.config.impl.GeoServerInfoImpl;
 import org.geoserver.config.impl.JAIInfoImpl;
+import org.geoserver.jdbcloader.JDBCLoaderProperties;
 import org.geoserver.ows.util.OwsUtils;
+import org.geoserver.platform.ExtensionPriority;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.util.CacheProvider;
 import org.geoserver.util.DefaultCacheProvider;
@@ -117,7 +119,12 @@ import org.opengis.filter.PropertyIsEqualTo;
 import org.opengis.filter.expression.Literal;
 import org.opengis.filter.expression.PropertyName;
 import org.opengis.filter.sort.SortBy;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
@@ -128,14 +135,33 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-/** */
-public class ConfigDatabase {
+/**
+ * Stores and retrieves actual {@link CatalogInfo} and {@link ServiceInfo} from the underlying
+ * database, with an in memory cache for both objects.
+ *
+ * <p><b>Important implementation notes</b> This bean is annotated with {@link Transactional} in all
+ * write methods and all exposed read methods. The write methods are obvious, the read ones less so.
+ * The reads load XML from the database and use XStream to decode it. This can cause references to
+ * object related objects to be resolved, which happen by calling again onto the catalog, the facade
+ * and eventually again this class. Using a read only transaction around the read methods ensures
+ * that a single connection is used in this process, which prevents deadlock at the connection pool
+ * level. Also, methods returning a {@link CloseableIterator} of info objects just look up the
+ * identifier, and resolve them to full objects during the iteration. This lazy loading also needs
+ * to be protected by transactional loading, which is tricky. A trivial implementation would just
+ * call itself, which ends up bypassing the transaction annotations (which are implemented as a
+ * proxy around the object). To avoid deadlocks there, the {@link ConfigDatabase} also loads itself
+ * from the application context, with full transactional proxying, and uses that instance for
+ * deferred loading while iterating.
+ */
+public class ConfigDatabase implements ApplicationContextAware {
 
     public static final Logger LOGGER = Logging.getLogger(ConfigDatabase.class);
 
     private static final int LOCK_TIMEOUT_SECONDS = 60;
 
     private Dialect dialect;
+
+    private JDBCLoaderProperties properties;
 
     private DataSource dataSource;
 
@@ -163,20 +189,31 @@ public class ConfigDatabase {
 
     private ConcurrentMap<String, Semaphore> locks;
 
+    // transaction management works only if the method
+    // is called from a Spring proxy that processed the annotations,
+    // so we cannot call getId directly, it needs to be done from
+    // "outside"
+    /* the bean itself, but with the transactional proxy wrappers around */
+    private ConfigDatabase transactionalConfigDatabase;
+
     /** Protected default constructor needed by spring-jdbc instrumentation */
     protected ConfigDatabase() {
         //
     }
 
-    public ConfigDatabase(final DataSource dataSource, final XStreamInfoSerialBinding binding) {
-        this(dataSource, binding, null);
+    public ConfigDatabase(
+            JDBCLoaderProperties properties,
+            DataSource dataSource,
+            XStreamInfoSerialBinding binding) {
+        this(properties, dataSource, binding, null);
     }
 
     public ConfigDatabase(
+            JDBCLoaderProperties properties,
             final DataSource dataSource,
             final XStreamInfoSerialBinding binding,
             CacheProvider cacheProvider) {
-
+        this.properties = properties;
         this.binding = binding;
         this.template = new NamedParameterJdbcTemplate(dataSource);
         // cannot use dataSource at this point due to spring context config hack
@@ -197,16 +234,15 @@ public class ConfigDatabase {
 
     private Dialect dialect() {
         if (dialect == null) {
-            this.dialect = Dialect.detect(dataSource);
+            this.dialect = Dialect.detect(dataSource, properties.isDebugMode());
         }
         return dialect;
     }
 
     @Transactional(
-        transactionManager = "jdbcConfigTransactionManager",
-        propagation = Propagation.REQUIRED,
-        rollbackFor = Exception.class
-    )
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            rollbackFor = Exception.class)
     public void initDb(@Nullable Resource resource) throws IOException {
         this.dbMappings = new DbMappings(dialect());
         if (resource != null) {
@@ -233,6 +269,12 @@ public class ConfigDatabase {
         return dbMappings;
     }
 
+    /**
+     * CatalogClearingListener listener will be added to CatalogImpl when CatalogImpl is set, and
+     * CatalogImpl's addListener method will sort the listener
+     *
+     * @param catalog
+     */
     public void setCatalog(CatalogImpl catalog) {
         this.catalog = catalog;
         this.binding.setCatalog(catalog);
@@ -261,20 +303,13 @@ public class ConfigDatabase {
 
         QueryBuilder<T> sqlBuilder = QueryBuilder.forCount(dialect, of, dbMappings).filter(filter);
 
-        final StringBuilder sql = sqlBuilder.build();
-        final Filter unsupportedFilter = sqlBuilder.getUnsupportedFilter();
-        final boolean fullySupported = Filter.INCLUDE.equals(unsupportedFilter);
-        if (LOGGER.isLoggable(Level.FINER)) {
-            LOGGER.finer("Original filter: " + filter);
-            LOGGER.finer("Supported filter: " + sqlBuilder.getSupportedFilter());
-            LOGGER.finer("Unsupported filter: " + sqlBuilder.getUnsupportedFilter());
-        }
+        final String sql = sqlBuilder.build();
         final int count;
-        if (fullySupported) {
+        if (sqlBuilder.isFullySupported()) {
             final Map<String, Object> namedParameters = sqlBuilder.getNamedParameters();
             logStatement(sql, namedParameters);
 
-            count = template.queryForObject(sql.toString(), namedParameters, Integer.class);
+            count = template.queryForObject(sql, namedParameters, Integer.class);
         } else {
             LOGGER.fine(
                     "Filter is not fully supported, doing scan of supported part to return the number of matches");
@@ -289,6 +324,10 @@ public class ConfigDatabase {
         return count;
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> CloseableIterator<T> query(
             final Class<T> of,
             final Filter filter,
@@ -296,12 +335,16 @@ public class ConfigDatabase {
             @Nullable Integer limit,
             @Nullable SortBy sortOrder) {
         if (sortOrder == null) {
-            return query(of, filter, offset, limit, new SortBy[] {});
+            return query(of, filter, offset, limit);
         } else {
-            return query(of, filter, offset, limit, new SortBy[] {sortOrder});
+            return query(of, filter, offset, limit, sortOrder);
         }
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> CloseableIterator<T> query(
             final Class<T> of,
             final Filter filter,
@@ -320,7 +363,7 @@ public class ConfigDatabase {
                         .offset(offset)
                         .limit(limit)
                         .sortOrder(sortOrder);
-        final StringBuilder sql = sqlBuilder.build();
+        final String sql = sqlBuilder.build();
 
         List<String> ids = null;
 
@@ -345,17 +388,8 @@ public class ConfigDatabase {
             }
         }
 
-        final Filter unsupportedFilter = sqlBuilder.getUnsupportedFilter();
-        final boolean fullySupported = Filter.INCLUDE.equals(unsupportedFilter);
-
         if (ids == null) {
             final Map<String, Object> namedParameters = sqlBuilder.getNamedParameters();
-
-            if (LOGGER.isLoggable(Level.FINER)) {
-                LOGGER.finer("Original filter: " + filter);
-                LOGGER.finer("Supported filter: " + sqlBuilder.getSupportedFilter());
-                LOGGER.finer("Unsupported filter: " + sqlBuilder.getUnsupportedFilter());
-            }
             logStatement(sql, namedParameters);
 
             Stopwatch sw = Stopwatch.createStarted();
@@ -363,7 +397,7 @@ public class ConfigDatabase {
             // with rownum in the 2nd - queryForList will throw an exception
             ids =
                     template.query(
-                            sql.toString(),
+                            sql,
                             namedParameters,
                             new RowMapper<String>() {
                                 @Override
@@ -399,11 +433,11 @@ public class ConfigDatabase {
                 Iterators.filter(
                         lazyTransformed.iterator(), com.google.common.base.Predicates.notNull());
 
-        if (fullySupported) {
+        if (sqlBuilder.isFullySupported()) {
             result = new CloseableIteratorAdapter<T>(iterator);
         } else {
-            // Apply the filter
-            result = CloseableIteratorAdapter.filter(iterator, filter);
+            // Apply the unsupported filter
+            result = CloseableIteratorAdapter.filter(iterator, sqlBuilder.getUnsupportedFilter());
             // The offset and limit should not have been applied as part of the query
             assert (!sqlBuilder.isOffsetLimitApplied());
             // Apply offset and limits after filtering
@@ -413,6 +447,10 @@ public class ConfigDatabase {
         return result;
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> CloseableIterator<String> queryIds(
             final Class<T> of, final Filter filter) {
 
@@ -421,16 +459,8 @@ public class ConfigDatabase {
 
         QueryBuilder<T> sqlBuilder = QueryBuilder.forIds(dialect, of, dbMappings).filter(filter);
 
-        final StringBuilder sql = sqlBuilder.build();
+        final String sql = sqlBuilder.build();
         final Map<String, Object> namedParameters = sqlBuilder.getNamedParameters();
-        final Filter unsupportedFilter = sqlBuilder.getUnsupportedFilter();
-        final boolean fullySupported = Filter.INCLUDE.equals(unsupportedFilter);
-
-        if (LOGGER.isLoggable(Level.FINER)) {
-            LOGGER.finer("Original filter: " + filter);
-            LOGGER.finer("Supported filter: " + sqlBuilder.getSupportedFilter());
-            LOGGER.finer("Unsupported filter: " + sqlBuilder.getUnsupportedFilter());
-        }
         logStatement(sql, namedParameters);
 
         Stopwatch sw = Stopwatch.createStarted();
@@ -438,7 +468,7 @@ public class ConfigDatabase {
         // with rownum in the 2nd - queryForList will throw an exception
         List<String> ids =
                 template.query(
-                        sql.toString(),
+                        sql,
                         namedParameters,
                         new RowMapper<String>() {
                             @Override
@@ -455,11 +485,11 @@ public class ConfigDatabase {
         Iterator<String> iterator =
                 Iterators.filter(ids.iterator(), com.google.common.base.Predicates.notNull());
 
-        if (fullySupported) {
+        if (sqlBuilder.isFullySupported()) {
             result = new CloseableIteratorAdapter<String>(iterator);
         } else {
-            // Apply the filter
-            result = CloseableIteratorAdapter.filter(iterator, filter);
+            // Apply the unsupported filter
+            result = CloseableIteratorAdapter.filter(iterator, sqlBuilder.getUnsupportedFilter());
             // The offset and limit should not have been applied as part of the query
             assert (!sqlBuilder.isOffsetLimitApplied());
         }
@@ -478,6 +508,10 @@ public class ConfigDatabase {
         return iterator;
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> List<T> queryAsList(
             final Class<T> of,
             final Filter filter,
@@ -495,8 +529,12 @@ public class ConfigDatabase {
         return list;
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends CatalogInfo> T getDefault(final String key, Class<T> type) {
-        String sql = "SELECT ID FROM DEFAULT_OBJECT WHERE DEF_KEY = :key";
+        String sql = "SELECT id FROM default_object WHERE def_key = :key";
 
         String defaultObjectId;
         try {
@@ -510,10 +548,9 @@ public class ConfigDatabase {
     }
 
     @Transactional(
-        transactionManager = "jdbcConfigTransactionManager",
-        propagation = Propagation.REQUIRED,
-        rollbackFor = Exception.class
-    )
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            rollbackFor = Exception.class)
     public <T extends Info> T add(final T info) {
         checkNotNull(info);
         checkNotNull(info.getId(), "Object has no id");
@@ -523,13 +560,14 @@ public class ConfigDatabase {
 
         byte[] value = binding.objectToEntry(info);
         final String blob = new String(value, StandardCharsets.UTF_8);
-        final Class<T> interf = ClassMappings.fromImpl(info.getClass()).getInterface();
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        final Class<T> interf = (Class) ClassMappings.fromImpl(info.getClass()).getInterface();
         final Integer typeId = dbMappings.getTypeId(interf);
 
         Map<String, ?> params = params("type_id", typeId, "id", id, "blob", blob);
         final String statement =
                 String.format(
-                        "insert into object (oid, type_id, id, blob) values (%s, :type_id, :id, :blob)",
+                        "INSERT INTO object (oid, type_id, id, blob) VALUES (%s, :type_id, :id, :blob)",
                         dialect.nextVal("seq_OBJECT"));
         logStatement(statement, params);
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -576,7 +614,26 @@ public class ConfigDatabase {
                 propValue = values.get(index);
                 final String storedValue = marshalValue(propValue);
 
-                addAttribute(info, infoPk, prop, colIndex, storedValue);
+                Integer relatedOid = null;
+                Integer relatedPropertyType = null;
+                if (prop.isRelationship()) {
+                    final Info relatedObject = lookUpRelatedObject(info, prop, colIndex);
+                    // Layer styles might not be actually persisted, in the case of WMS cascaded
+                    // layers,
+                    // where they are created on the fly based on the style names found in the caps
+                    // documents. So check if the id is not null, in addition to checking
+                    // if the related object is not null.
+                    if (relatedObject != null && relatedObject.getId() != null) {
+                        relatedOid = findObjectId(relatedObject);
+                        relatedPropertyType = getRelatedPropertyType(prop, relatedObject);
+                    }
+                } else {
+                    // it's a self property, lets update the value on the property table
+                    relatedOid = null;
+                    relatedPropertyType = null;
+                }
+                addAttribute(
+                        info, infoPk, prop, colIndex, storedValue, relatedOid, relatedPropertyType);
             }
         }
     }
@@ -586,78 +643,39 @@ public class ConfigDatabase {
             final Number infoPk,
             Property prop,
             Integer colIndex,
-            final String storedValue) {
-        Map<String, ?> params = params("value", storedValue);
+            final String storedValue,
+            Integer relatedOid,
+            Integer relatedPropertyType) {
 
         final String insertPropertySQL =
-                "insert into object_property " //
-                        + "(oid, property_type, related_oid, related_property_type, colindex, value, id) " //
-                        + "values (:object_id, :property_type, :related_oid, :related_property_type, :colindex, :value, :id)";
-
-        final boolean isRelationShip = prop.isRelationship();
-
-        Integer relatedObjectId = null;
-        final Integer concreteTargetPropertyOid;
-
-        if (isRelationShip) {
-            Info relatedObject = lookUpRelatedObject(info, prop, colIndex);
-            if (relatedObject == null) {
-                concreteTargetPropertyOid = null;
-            } else {
-                // the related property may refer to an abstract type (e.g.
-                // LayerInfo.resource.name), so we need to find out the actual property type id (for
-                // example, whether it belongs to FeatureTypeInfo or CoverageInfo)
-                relatedObject = ModificationProxy.unwrap(relatedObject);
-                relatedObjectId = this.findObjectId(relatedObject);
-
-                Integer targetPropertyOid = prop.getPropertyType().getTargetPropertyOid();
-                PropertyType targetProperty;
-                String targetPropertyName;
-
-                Class<?> targetQueryType;
-                ClassMappings classMappings = ClassMappings.fromImpl(relatedObject.getClass());
-                targetQueryType = classMappings.getInterface();
-                targetProperty = dbMappings.getPropertyType(targetPropertyOid);
-                targetPropertyName = targetProperty.getPropertyName();
-
-                Set<Integer> propertyTypeIds;
-                propertyTypeIds =
-                        dbMappings.getPropertyTypeIds(targetQueryType, targetPropertyName);
-                checkState(propertyTypeIds.size() == 1);
-                concreteTargetPropertyOid = propertyTypeIds.iterator().next();
-            }
-        } else {
-            concreteTargetPropertyOid = null;
-        }
-
+                "INSERT INTO object_property "
+                        + "(oid, property_type, related_oid, related_property_type, colindex, value, id) "
+                        + "VALUES (:object_id, :property_type, :related_oid, :related_property_type, :colindex, :value, :id)";
         final Number propertyType = prop.getPropertyType().getOid();
         final String id = info.getId();
 
-        params =
+        Map<String, ?> params =
                 params(
                         "object_id",
-                        infoPk, //
+                        infoPk,
                         "property_type",
-                        propertyType, //
-                        "id",
-                        id, //
+                        propertyType,
                         "related_oid",
-                        relatedObjectId, //
+                        relatedOid,
                         "related_property_type",
-                        concreteTargetPropertyOid, //
+                        relatedPropertyType,
                         "colindex",
-                        colIndex, //
+                        colIndex,
                         "value",
-                        storedValue);
+                        storedValue,
+                        "id",
+                        id);
 
         logStatement(insertPropertySQL, params);
         template.update(insertPropertySQL, params);
     }
 
-    /**
-     * @param info
-     * @param prop
-     */
+    /** */
     private Info lookUpRelatedObject(
             final Info info, final Property prop, @Nullable Integer collectionIndex) {
 
@@ -678,8 +696,8 @@ public class ConfigDatabase {
         String[] steps = localPropertyName.split("\\.");
         // Step back through ancestor property references If starting at a.b.c.d, then look at
         // a.b.c, then a.b, then a
-        for (int i = steps.length - 1; i >= 0; i--) {
-            String backPropName = Strings.join(".", Arrays.copyOfRange(steps, 0, i));
+        for (int len = steps.length - 1; len > 0; len--) {
+            String backPropName = Arrays.stream(steps).limit(len).collect(Collectors.joining("."));
             Object backProp = ff.property(backPropName).evaluate(info);
             if (backProp != null) {
                 if (prop.isCollectionProperty()
@@ -715,7 +733,7 @@ public class ConfigDatabase {
                     }
                 }
                 if (targetType.isAssignableFrom(backProp.getClass())) {
-                    return (Info) backProp;
+                    return ModificationProxy.unwrap((Info) backProp);
                 }
             }
         }
@@ -750,10 +768,9 @@ public class ConfigDatabase {
 
     /** @param info */
     @Transactional(
-        transactionManager = "jdbcConfigTransactionManager",
-        propagation = Propagation.REQUIRED,
-        rollbackFor = Exception.class
-    )
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            rollbackFor = Exception.class)
     public void remove(Info info) {
         Integer oid;
         try {
@@ -762,8 +779,8 @@ public class ConfigDatabase {
             return;
         }
 
-        String deleteObject = "delete from object where id = :id";
-        String deleteRelatedProperties = "delete from object_property where related_oid = :oid";
+        String deleteObject = "DELETE FROM object WHERE id = :id";
+        String deleteRelatedProperties = "DELETE FROM object_property WHERE related_oid = :oid";
 
         Map<String, ?> params = ImmutableMap.of("id", info.getId());
         logStatement(deleteObject, params);
@@ -784,10 +801,9 @@ public class ConfigDatabase {
 
     /** @param info */
     @Transactional(
-        transactionManager = "jdbcConfigTransactionManager",
-        propagation = Propagation.REQUIRED,
-        rollbackFor = Exception.class
-    )
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            rollbackFor = Exception.class)
     public <T extends Info> T save(T info) {
         checkNotNull(info);
 
@@ -831,14 +847,15 @@ public class ConfigDatabase {
         final Integer objectId = findObjectId(info);
         byte[] value = binding.objectToEntry(info);
         final String blob = new String(value, StandardCharsets.UTF_8);
-        String updateStatement = "update object set blob = :blob where oid = :oid";
+        String updateStatement = "UPDATE object SET blob = :blob WHERE oid = :oid";
         params = params("blob", blob, "oid", objectId);
         logStatement(updateStatement, params);
         template.update(updateStatement, params);
 
         updateQueryableProperties(oldObject, objectId, changedProperties);
 
-        Class<T> clazz = ClassMappings.fromImpl(oldObject.getClass()).getInterface();
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        Class<T> clazz = (Class) ClassMappings.fromImpl(oldObject.getClass()).getInterface();
 
         // / <HACK>
         // we're explicitly changing the resourceinfo's layer name property here because
@@ -848,6 +865,8 @@ public class ConfigDatabase {
             if (updateResouceLayersName) {
                 updateResourceLayerProperty(
                         (ResourceInfo) info, "name", ((ResourceInfo) info).getName());
+                updateResourceLayerProperty(
+                        (ResourceInfo) info, "prefixedName", ((ResourceInfo) info).prefixedName());
             }
             if (updateResouceLayersAdvertised) {
                 updateResourceLayerProperty(
@@ -886,12 +905,41 @@ public class ConfigDatabase {
 
     private Integer findObjectId(final Info info) {
         final String id = info.getId();
-        final String oidQuery = "select oid from object where id = :id";
+        final String oidQuery = "SELECT oid FROM object WHERE id = :id";
         Map<String, ?> params = params("id", id);
         logStatement(oidQuery, params);
         final Integer objectId = template.queryForObject(oidQuery, params, Integer.class);
         Preconditions.checkState(objectId != null, "Object not found: " + id);
         return objectId;
+    }
+
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            rollbackFor = Exception.class)
+    public void repopulateQueryableProperties() {
+        InfoRowMapper<Info> mapper = new InfoRowMapper<Info>(Info.class, binding, 2);
+        String sql = "SELECT oid, blob FROM object";
+        logStatement(sql, null);
+        template.query(
+                sql,
+                new ResultSetExtractor<Void>() {
+
+                    @Override
+                    public Void extractData(ResultSet rs) throws SQLException, DataAccessException {
+                        while (rs.next()) {
+                            Integer oid = rs.getInt(1);
+                            Info info = mapper.mapRow(rs, rs.getRow());
+                            if (info instanceof CatalogInfo) {
+                                info = resolveCatalog((CatalogInfo) info);
+                            } else if (info instanceof ServiceInfo) {
+                                resolveTransient((ServiceInfo) info);
+                            }
+                            updateQueryableProperties(info, oid, dbMappings.allProperties(info));
+                        }
+                        return null;
+                    }
+                });
     }
 
     private void updateQueryableProperties(
@@ -901,8 +949,8 @@ public class ConfigDatabase {
 
         final Integer oid = objectId;
         Integer propertyType;
-        Integer relatedOid;
-        Integer relatedPropertyType;
+        Integer relatedOid = null;
+        Integer relatedPropertyType = null;
         Integer colIndex;
         String storedValue;
 
@@ -928,19 +976,26 @@ public class ConfigDatabase {
 
                 if (isRelationship) {
                     final Info relatedObject = lookUpRelatedObject(info, changedProp, colIndex);
-                    relatedOid = relatedObject == null ? null : findObjectId(relatedObject);
-                    relatedPropertyType = changedProp.getPropertyType().getTargetPropertyOid();
+                    // Layer styles might not be actually persisted, in the case of WMS cascaded
+                    // layers,
+                    // where they are created on the fly based on the style names found in the caps
+                    // documents. So check if the id is not null, in addition to checking
+                    // if the related object is not null.
+                    if (relatedObject != null && relatedObject.getId() != null) {
+                        relatedOid = findObjectId(relatedObject);
+                        relatedPropertyType = getRelatedPropertyType(changedProp, relatedObject);
+                    }
                 } else {
                     // it's a self property, lets update the value on the property table
                     relatedOid = null;
                     relatedPropertyType = null;
                 }
                 String sql =
-                        "update object_property set " //
-                                + "related_oid = :related_oid, " //
-                                + "related_property_type = :related_property_type, " //
-                                + "value = :value " //
-                                + "where oid = :oid and property_type = :property_type and colindex = :colindex";
+                        "UPDATE object_property SET "
+                                + "related_oid = :related_oid, "
+                                + "related_property_type = :related_property_type, "
+                                + "value = :value "
+                                + "WHERE oid = :oid AND property_type = :property_type AND colindex = :colindex";
                 params =
                         params(
                                 "related_oid",
@@ -960,23 +1015,30 @@ public class ConfigDatabase {
                 final int updateCnt = template.update(sql, params);
 
                 if (updateCnt == 0) {
-                    addAttribute(info, oid, changedProp, colIndex, storedValue);
+                    addAttribute(
+                            info,
+                            oid,
+                            changedProp,
+                            colIndex,
+                            storedValue,
+                            relatedOid,
+                            relatedPropertyType);
                 } else {
                     // prop existed already, lets update any related property that points to its old
                     // value
                     String updateRelated =
-                            "update object_property set value = :value "
-                                    + "where related_oid = :oid and related_property_type = :property_type and colindex = :colindex";
+                            "UPDATE object_property SET value = :value "
+                                    + "WHERE related_oid = :oid AND related_property_type = :property_type AND colindex = :colindex";
                     params =
                             params(
+                                    "value",
+                                    storedValue,
                                     "oid",
                                     oid,
                                     "property_type",
                                     propertyType,
                                     "colindex",
-                                    colIndex,
-                                    "value",
-                                    storedValue);
+                                    colIndex);
                     logStatement(updateRelated, params);
                     int relatedUpdateCnt = template.update(updateRelated, params);
                     if (LOGGER.isLoggable(Level.FINER)) {
@@ -996,8 +1058,8 @@ public class ConfigDatabase {
             if (changedProp.isCollectionProperty()) {
                 // delete any remaining collection value that's no longer in the value list
                 String sql =
-                        "delete from object_property where oid=:oid and property_type=:property_type "
-                                + "and colindex > :maxIndex";
+                        "DELETE FROM object_property WHERE oid = :oid AND property_type = :property_type "
+                                + "AND colindex > :maxIndex";
                 Integer maxIndex = Integer.valueOf(values.size());
                 params = params("oid", oid, "property_type", propertyType, "maxIndex", maxIndex);
                 logStatement(sql, params);
@@ -1006,7 +1068,27 @@ public class ConfigDatabase {
         }
     }
 
-    @Nullable
+    private Integer getRelatedPropertyType(Property changedProp, final Info relatedObject) {
+        // the related property may refer to an abstract type (e.g.
+        // LayerInfo.resource.name), so we need to find out the actual property type id (for
+        // example, whether it belongs to FeatureTypeInfo or CoverageInfo)
+
+        Integer targetPropertyOid = changedProp.getPropertyType().getTargetPropertyOid();
+        PropertyType targetProperty;
+        String targetPropertyName;
+
+        Class<?> targetQueryType;
+        ClassMappings classMappings = ClassMappings.fromImpl(relatedObject.getClass());
+        targetQueryType = classMappings.getInterface();
+        targetProperty = dbMappings.getPropertyType(targetPropertyOid);
+        targetPropertyName = targetProperty.getPropertyName();
+
+        Set<Integer> propertyTypeIds;
+        propertyTypeIds = dbMappings.getPropertyTypeIds(targetQueryType, targetPropertyName);
+        checkState(propertyTypeIds.size() == 1);
+        return propertyTypeIds.iterator().next();
+    }
+
     public <T extends Info> T getById(final String id, final Class<T> type) {
         Assert.notNull(id, "id");
 
@@ -1069,7 +1151,6 @@ public class ConfigDatabase {
         return null;
     }
 
-    @Nullable
     public <T extends Info> String getIdByIdentity(
             final Class<T> type, final String... identityMappings) {
         Assert.notNull(identityMappings, "id");
@@ -1097,6 +1178,10 @@ public class ConfigDatabase {
     }
 
     @Nullable
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public ServiceInfo getService(
             final WorkspaceInfo ws, final Class<? extends ServiceInfo> clazz) {
         Assert.notNull(clazz, "clazz");
@@ -1120,6 +1205,18 @@ public class ConfigDatabase {
         resolveTransient(info);
 
         return info;
+    }
+
+    @Nullable
+    public List<ServiceInfo> getServices(final WorkspaceInfo ws) {
+
+        List<ServiceInfo> result = new ArrayList<>();
+        for (ServiceInfo info : serviceCache.asMap().values()) {
+            if (ws.equals(info.getWorkspace())) {
+                result.add(info);
+            }
+        }
+        return result;
     }
 
     @Nullable
@@ -1165,9 +1262,12 @@ public class ConfigDatabase {
         } else if (real instanceof LayerInfo) {
             LayerInfo layer = (LayerInfo) real;
             resolveTransient(layer.getDefaultStyle());
-            if (!layer.getStyles().isEmpty()) {
-                for (StyleInfo s : layer.getStyles()) {
-                    resolveTransient(s);
+            // avoids concurrent modification exceptions on the list contents
+            synchronized (layer) {
+                if (!layer.getStyles().isEmpty()) {
+                    for (StyleInfo s : layer.getStyles()) {
+                        resolveTransient(s);
+                    }
                 }
             }
             resolveTransient(layer.getResource());
@@ -1187,15 +1287,17 @@ public class ConfigDatabase {
         real.setGeoServer(getGeoServer());
     }
 
-    /**
-     * @param type
-     * @return immutable list of results
-     */
+    /** @return immutable list of results */
+    @Nullable
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> List<T> getAll(final Class<T> clazz) {
 
         Map<String, ?> params = params("types", typesParam(clazz));
 
-        final String sql = "select id from object where type_id in ( :types ) order by id";
+        final String sql = "SELECT id FROM object WHERE type_id IN (:types) ORDER BY id";
 
         logStatement(sql, params);
         Stopwatch sw = Stopwatch.createStarted();
@@ -1235,17 +1337,16 @@ public class ConfigDatabase {
     }
 
     @Transactional(
-        transactionManager = "jdbcConfigTransactionManager",
-        propagation = Propagation.REQUIRED,
-        rollbackFor = Exception.class
-    )
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            rollbackFor = Exception.class)
     public void setDefault(final String key, @Nullable final String id) {
-        String sql = "DELETE FROM DEFAULT_OBJECT WHERE DEF_KEY = :key";
+        String sql = "DELETE FROM default_object WHERE def_key = :key";
         Map<String, ?> params = params("key", key);
         logStatement(sql, params);
         template.update(sql, params);
         if (id != null) {
-            sql = "INSERT INTO DEFAULT_OBJECT (DEF_KEY, ID) VALUES(:key, :id)";
+            sql = "INSERT INTO default_object (def_key, id) VALUES (:key, :id)";
             params = params("key", key, "id", id);
             logStatement(sql, params);
             template.update(sql, params);
@@ -1265,6 +1366,11 @@ public class ConfigDatabase {
         serviceCache.cleanUp();
     }
 
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.transactionalConfigDatabase = applicationContext.getBean(ConfigDatabase.class);
+    }
+
     private final class CatalogLoader implements Callable<CatalogInfo> {
 
         private final String id;
@@ -1275,17 +1381,27 @@ public class ConfigDatabase {
 
         @Override
         public CatalogInfo call() throws Exception {
-            CatalogInfo info;
-            try {
-                String sql = "select blob from object where id = :id";
-                Map<String, String> params = ImmutableMap.of("id", id);
-                logStatement(sql, params);
-                info = template.queryForObject(sql, params, catalogRowMapper);
-            } catch (EmptyResultDataAccessException noSuchObject) {
-                return null;
-            }
-            return info;
+            return transactionalConfigDatabase.loadCatalog(id);
         }
+    }
+
+    @Nullable
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
+    public CatalogInfo loadCatalog(String id) {
+
+        CatalogInfo info;
+        try {
+            String sql = "SELECT blob FROM object WHERE id = :id";
+            Map<String, String> params = ImmutableMap.of("id", id);
+            logStatement(sql, params);
+            info = template.queryForObject(sql, params, catalogRowMapper);
+        } catch (EmptyResultDataAccessException noSuchObject) {
+            return null;
+        }
+        return info;
     }
 
     private final class IdentityLoader implements Callable<String> {
@@ -1298,23 +1414,30 @@ public class ConfigDatabase {
 
         @Override
         public String call() throws Exception {
-            Filter filter = Filter.INCLUDE;
-            for (int i = 0; i < identity.getDescriptor().length; i++) {
-                filter =
-                        and(
-                                filter,
-                                identity.getValues()[i] == null
-                                        ? isNull(identity.getDescriptor()[i])
-                                        : equal(
-                                                identity.getDescriptor()[i],
-                                                identity.getValues()[i]));
-            }
+            return transactionalConfigDatabase.loadIdentity(identity);
+        }
+    }
 
-            try {
-                return getId(identity.getClazz(), filter);
-            } catch (IllegalArgumentException multipleResults) {
-                return null;
-            }
+    @Nullable
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
+    public String loadIdentity(InfoIdentity identity) {
+        Filter filter = Filter.INCLUDE;
+        for (int i = 0; i < identity.getDescriptor().length; i++) {
+            filter =
+                    and(
+                            filter,
+                            identity.getValues()[i] == null
+                                    ? isNull(identity.getDescriptor()[i])
+                                    : equal(identity.getDescriptor()[i], identity.getValues()[i]));
+        }
+
+        try {
+            return getId(identity.getClazz(), filter);
+        } catch (IllegalArgumentException multipleResults) {
+            return null;
         }
     }
 
@@ -1441,38 +1564,47 @@ public class ConfigDatabase {
 
         @Override
         public Info call() throws Exception {
-            Info info;
-            try {
-                String sql = "select blob from object where id = :id";
-                Map<String, String> params = ImmutableMap.of("id", id);
-                logStatement(sql, params);
-                info = template.queryForObject(sql, params, configRowMapper);
-            } catch (EmptyResultDataAccessException noSuchObject) {
-                return null;
-            }
-            OwsUtils.resolveCollections(info);
-            if (info instanceof GeoServerInfo) {
-
-                GeoServerInfoImpl global = (GeoServerInfoImpl) info;
-                if (global.getMetadata() == null) {
-                    global.setMetadata(new MetadataMap());
-                }
-                if (global.getClientProperties() == null) {
-                    global.setClientProperties(new HashMap<Object, Object>());
-                }
-                if (global.getCoverageAccess() == null) {
-                    global.setCoverageAccess(new CoverageAccessInfoImpl());
-                }
-                if (global.getJAI() == null) {
-                    global.setJAI(new JAIInfoImpl());
-                }
-            }
-            if (info instanceof ServiceInfo) {
-                ((ServiceInfo) info).setGeoServer(geoServer);
-            }
-
-            return info;
+            return transactionalConfigDatabase.loadConfig(id);
         }
+    }
+
+    @Nullable
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
+    public Info loadConfig(String id) {
+        Info info;
+        try {
+            String sql = "SELECT blob FROM object WHERE id = :id";
+            Map<String, String> params = ImmutableMap.of("id", id);
+            logStatement(sql, params);
+            info = template.queryForObject(sql, params, configRowMapper);
+        } catch (EmptyResultDataAccessException noSuchObject) {
+            return null;
+        }
+        OwsUtils.resolveCollections(info);
+        if (info instanceof GeoServerInfo) {
+
+            GeoServerInfoImpl global = (GeoServerInfoImpl) info;
+            if (global.getMetadata() == null) {
+                global.setMetadata(new MetadataMap());
+            }
+            if (global.getClientProperties() == null) {
+                global.setClientProperties(new HashMap<Object, Object>());
+            }
+            if (global.getCoverageAccess() == null) {
+                global.setCoverageAccess(new CoverageAccessInfoImpl());
+            }
+            if (global.getJAI() == null) {
+                global.setJAI(new JAIInfoImpl());
+            }
+        }
+        if (info instanceof ServiceInfo) {
+            ((ServiceInfo) info).setGeoServer(geoServer);
+        }
+
+        return info;
     }
 
     /**
@@ -1482,6 +1614,11 @@ public class ConfigDatabase {
     public boolean canSort(Class<? extends CatalogInfo> type, String propertyName) {
         Set<PropertyType> propertyTypes = dbMappings.getPropertyTypes(type, propertyName);
         return !propertyTypes.isEmpty();
+    }
+
+    public void clearCache() {
+        cache.invalidateAll();
+        serviceCache.invalidateAll();
     }
 
     public void clearCache(Info info) {
@@ -1516,6 +1653,10 @@ public class ConfigDatabase {
         }
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> T get(Class<T> type, Filter filter) throws IllegalArgumentException {
 
         CloseableIterator<T> it =
@@ -1535,6 +1676,10 @@ public class ConfigDatabase {
         return result;
     }
 
+    @Transactional(
+            transactionManager = "jdbcConfigTransactionManager",
+            propagation = Propagation.REQUIRED,
+            readOnly = true)
     public <T extends Info> String getId(Class<T> type, Filter filter)
             throws IllegalArgumentException {
 
@@ -1569,17 +1714,42 @@ public class ConfigDatabase {
     }
 
     private void releaseWriteLock(String id) {
-        locks.get(id).release();
+        Semaphore lock = locks.get(id);
+        // while semaphores are thread safe by nature,
+        // the if-condition below isn't
+        synchronized (lock) {
+            if (lock.availablePermits() < 1) {
+                // we never give more than one permit
+                lock.release();
+            }
+        }
     }
 
-    /** Listens to catalog events clearing cache entires when resources are modified. */
-    // Copied from org.geoserver.catalog.ResourcePool
-    public class CatalogClearingListener implements CatalogListener {
+    /** Only intended for testing purposes */
+    public void lock(String id, long millis) {
+        acquireWriteLock(id);
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+        }
+        releaseWriteLock(id);
+    }
 
+    /**
+     * Listens to catalog events clearing cache entires when resources are modified. Copied from
+     * org.geoserver.catalog.ResourcePool upgrade CatalogClearingListener clear old source default
+     * priority is 100
+     *
+     * @see CatalogImpl#addListener(CatalogListener)
+     */
+    public class CatalogClearingListener implements CatalogListener, ExtensionPriority {
+
+        @Override
         public void handleAddEvent(CatalogAddEvent event) {
             updateCache(event.getSource());
         }
 
+        @Override
         public void handleModifyEvent(CatalogModifyEvent event) {
             // make sure that cache is not refilled before commit
             if (event.getSource() instanceof ResourceInfo) {
@@ -1592,6 +1762,7 @@ public class ConfigDatabase {
             clearCache(event.getSource());
         }
 
+        @Override
         public void handlePostModifyEvent(CatalogPostModifyEvent event) {
             updateCache(event.getSource());
             releaseWriteLock(event.getSource().getId());
@@ -1602,11 +1773,18 @@ public class ConfigDatabase {
             }
         }
 
+        @Override
         public void handleRemoveEvent(CatalogRemoveEvent event) {
             clearCache(event.getSource());
         }
 
+        @Override
         public void reloaded() {}
+
+        @Override
+        public int getPriority() {
+            return 999;
+        }
     }
     /** Listens to configuration events clearing cache entires when resources are modified. */
     public class ConfigClearingListener extends ConfigurationListenerAdapter {
@@ -1764,17 +1942,25 @@ public class ConfigDatabase {
 
         @Override
         public void visit(LayerInfo layer) {
-            if (layer.getDefaultStyle() != null) {
-                layer.setDefaultStyle(getById(layer.getDefaultStyle().getId(), StyleInfo.class));
-            }
-            Set<StyleInfo> newStyles = new HashSet<>();
-            for (StyleInfo style : layer.getStyles()) {
-                if (style != null) {
-                    newStyles.add(getById(style.getId(), StyleInfo.class));
+            // avoids concurrent modification exceptions on the list contents
+            // Layer styles might not be actually persisted, in the case of WMS cascaded layers,
+            // where they are created on the fly based on the style names found in the caps
+            // documents. So check if the id is not null, in addition to checking if the style is
+            // not null.
+            synchronized (layer) {
+                if (layer.getDefaultStyle() != null && layer.getDefaultStyle().getId() != null) {
+                    layer.setDefaultStyle(
+                            getById(layer.getDefaultStyle().getId(), StyleInfo.class));
                 }
+                Set<StyleInfo> newStyles = new HashSet<>();
+                for (StyleInfo style : new ArrayList<>(layer.getStyles())) {
+                    if (style != null && style.getId() != null) {
+                        newStyles.add(getById(style.getId(), StyleInfo.class));
+                    }
+                }
+                layer.getStyles().clear();
+                layer.getStyles().addAll(newStyles);
             }
-            layer.getStyles().clear();
-            layer.getStyles().addAll(newStyles);
         }
 
         @Override

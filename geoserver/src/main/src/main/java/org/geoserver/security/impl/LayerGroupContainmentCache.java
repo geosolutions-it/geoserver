@@ -28,6 +28,9 @@ import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.event.CatalogModifyEvent;
 import org.geoserver.catalog.event.CatalogPostModifyEvent;
 import org.geoserver.catalog.event.CatalogRemoveEvent;
+import org.geoserver.catalog.impl.LayerGroupStyleListener;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
 
 /**
  * A cache for layer group containment, it speeds up looking up layer groups containing a particular
@@ -35,7 +38,7 @@ import org.geoserver.catalog.event.CatalogRemoveEvent;
  *
  * @author Andrea Aime - GeoSolutions
  */
-class LayerGroupContainmentCache {
+public class LayerGroupContainmentCache implements ApplicationListener<ContextRefreshedEvent> {
 
     /** Builds a concurrent set wrapping a {@link ConcurrentHashMap} */
     static final Function<? super String, ? extends Set<LayerGroupSummary>> CONCURRENT_SET_BUILDER =
@@ -67,6 +70,7 @@ class LayerGroupContainmentCache {
     public LayerGroupContainmentCache(Catalog catalog) {
         this.catalog = catalog;
         catalog.addListener(new CatalogChangeListener());
+        catalog.addListener(new LayerGroupStyleListener());
         buildLayerGroupCaches();
     }
 
@@ -87,8 +91,7 @@ class LayerGroupContainmentCache {
     }
 
     private void registerContainedGroups(LayerGroupInfo lg) {
-        lg.getLayers()
-                .stream()
+        lg.getLayers().stream()
                 .filter(IS_GROUP)
                 .forEach(
                         p -> {
@@ -105,8 +108,7 @@ class LayerGroupContainmentCache {
     private void addGroupInfo(LayerGroupInfo lg) {
         LayerGroupSummary groupData = new LayerGroupSummary(lg);
         groupCache.put(lg.getId(), groupData);
-        lg.getLayers()
-                .stream()
+        lg.getLayers().stream()
                 .filter(IS_LAYER)
                 .forEach(
                         p -> {
@@ -121,8 +123,7 @@ class LayerGroupContainmentCache {
     private void clearGroupInfo(LayerGroupInfo lg) {
         LayerGroupSummary data = groupCache.remove(lg.getId());
         // clear the resource containment cache
-        lg.getLayers()
-                .stream()
+        lg.getLayers().stream()
                 .filter(IS_LAYER)
                 .forEach(
                         p -> {
@@ -142,12 +143,7 @@ class LayerGroupContainmentCache {
         }
     }
 
-    /**
-     * Returns all groups containing directly or indirectly containing the resource
-     *
-     * @param resource
-     * @return
-     */
+    /** Returns all groups containing directly or indirectly containing the resource */
     public Collection<LayerGroupSummary> getContainerGroupsFor(ResourceInfo resource) {
         String id = resource.getId();
         Set<LayerGroupSummary> groups = resourceContainmentCache.get(id);
@@ -164,9 +160,6 @@ class LayerGroupContainmentCache {
     /**
      * Returns all groups containing directly or indirectly the specified group, and relevant for
      * security (e.g., anything but {@link LayerGroupInfo.Mode#SINGLE} ones
-     *
-     * @param lg
-     * @return
      */
     public Collection<LayerGroupSummary> getContainerGroupsFor(LayerGroupInfo lg) {
         String id = lg.getId();
@@ -187,9 +180,6 @@ class LayerGroupContainmentCache {
 
     /**
      * Recursively collects the group and all its containers in the <data>groups</data> collection
-     *
-     * @param lg
-     * @param groups
      */
     private void collectContainers(LayerGroupSummary lg, Set<LayerGroupSummary> groups) {
         if (!groups.contains(lg)) {
@@ -202,11 +192,16 @@ class LayerGroupContainmentCache {
         }
     }
 
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+        buildLayerGroupCaches();
+    }
+
     /**
      * Information summary about a layer group, just enough information to avoid performing linear
      * searches against the catalog to match against rules and scan layer containment upwards
      */
-    static class LayerGroupSummary {
+    public static class LayerGroupSummary {
         String id;
 
         String workspace;
@@ -346,8 +341,10 @@ class LayerGroupContainmentCache {
                 }
                 int layerIdx = event.getPropertyNames().indexOf("layers");
                 if (layerIdx != -1) {
+                    @SuppressWarnings("unchecked")
                     List<PublishedInfo> oldLayers =
                             (List<PublishedInfo>) event.getOldValues().get(layerIdx);
+                    @SuppressWarnings("unchecked")
                     List<PublishedInfo> newLayers =
                             (List<PublishedInfo>) event.getNewValues().get(layerIdx);
                     updateContainedLayers(groupCache.get(lg.getId()), oldLayers, newLayers);
@@ -438,9 +435,7 @@ class LayerGroupContainmentCache {
         }
 
         private void updateWorkspaceNames(String oldName, String newName) {
-            groupCache
-                    .values()
-                    .stream()
+            groupCache.values().stream()
                     .filter(lg -> Objects.equals(lg.workspace, oldName))
                     .forEach(lg -> lg.workspace = newName);
         }

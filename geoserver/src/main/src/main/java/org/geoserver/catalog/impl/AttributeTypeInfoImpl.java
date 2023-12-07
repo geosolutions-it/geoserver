@@ -5,10 +5,16 @@
  */
 package org.geoserver.catalog.impl;
 
+import java.util.Objects;
 import org.geoserver.catalog.AttributeTypeInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.MetadataMap;
+import org.geoserver.util.InternationalStringUtils;
+import org.geotools.filter.text.cql2.CQLException;
+import org.geotools.filter.text.ecql.ECQL;
+import org.geotools.util.GrowableInternationalString;
 import org.opengis.feature.type.AttributeDescriptor;
+import org.opengis.util.InternationalString;
 
 public class AttributeTypeInfoImpl implements AttributeTypeInfo {
 
@@ -16,12 +22,14 @@ public class AttributeTypeInfoImpl implements AttributeTypeInfo {
     protected String name;
     protected int minOccurs;
     protected int maxOccurs;
-    protected boolean nillable;
+    protected Boolean nillable;
     protected transient AttributeDescriptor attribute;
     protected MetadataMap metadata = new MetadataMap();
     protected FeatureTypeInfo featureType;
-    protected Class binding;
+    protected Class<?> binding;
     protected Integer length;
+    protected String source;
+    protected GrowableInternationalString description;
 
     public String getId() {
         return id;
@@ -31,54 +39,68 @@ public class AttributeTypeInfoImpl implements AttributeTypeInfo {
         this.id = id;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public void setName(String name) {
         this.name = name;
     }
 
+    @Override
     public int getMaxOccurs() {
         return maxOccurs;
     }
 
+    @Override
     public void setMaxOccurs(int maxOccurs) {
         this.maxOccurs = maxOccurs;
     }
 
+    @Override
     public int getMinOccurs() {
         return minOccurs;
     }
 
+    @Override
     public void setMinOccurs(int minOccurs) {
         this.minOccurs = minOccurs;
     }
 
+    @Override
     public boolean isNillable() {
-        return nillable;
+        // NPE safe, defaults to true if not set
+        return nillable == null || nillable;
     }
 
+    @Override
     public void setNillable(boolean nillable) {
         this.nillable = nillable;
     }
 
+    @Override
     public FeatureTypeInfo getFeatureType() {
         return featureType;
     }
 
+    @Override
     public void setFeatureType(FeatureTypeInfo featureType) {
         this.featureType = featureType;
     }
 
+    @Override
     public AttributeDescriptor getAttribute() {
         return attribute;
     }
 
+    @Override
     public void setAttribute(AttributeDescriptor attribute) {
         this.attribute = attribute;
     }
 
+    @Override
     public MetadataMap getMetadata() {
         return metadata;
     }
@@ -92,99 +114,99 @@ public class AttributeTypeInfoImpl implements AttributeTypeInfo {
         return name;
     }
 
-    public Class getBinding() {
+    @Override
+    public Class<?> getBinding() {
         return binding;
     }
 
-    public void setBinding(Class binding) {
+    @Override
+    public void setBinding(Class<?> binding) {
         this.binding = binding;
     }
 
+    @Override
     public Integer getLength() {
         return length;
     }
 
+    @Override
     public void setLength(Integer length) {
         this.length = length;
     }
 
     @Override
+    public String getSource() {
+        if (source == null && name != null) {
+            try {
+                // is it usable as is?
+                ECQL.toExpression(name);
+                // even if parseable, dots should be escaped
+                if (name.contains(".")) return "\"" + name + "\"";
+                return name;
+            } catch (CQLException e) {
+                // quoting to avoid reserved keyword issues
+                return "\"" + name + "\"";
+            }
+        }
+        return source;
+    }
+
+    @Override
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    @Override
+    public GrowableInternationalString getDescription() {
+        return description;
+    }
+
+    @Override
+    public void setDescription(InternationalString description) {
+        this.description = InternationalStringUtils.growable(description);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return equalsIngnoreFeatureType(o)
+                && Objects.equals(featureType, ((AttributeTypeInfoImpl) o).featureType);
+    }
+
+    @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((attribute == null) ? 0 : attribute.hashCode());
-        result = prime * result + ((binding == null) ? 0 : binding.hashCode());
-        result = prime * result + ((featureType == null) ? 0 : featureType.hashCode());
-        result = prime * result + ((id == null) ? 0 : id.hashCode());
-        result = prime * result + ((length == null) ? 0 : length.hashCode());
-        result = prime * result + maxOccurs;
-        result = prime * result + ((metadata == null) ? 0 : metadata.hashCode());
-        result = prime * result + minOccurs;
-        result = prime * result + ((name == null) ? 0 : name.hashCode());
-        result = prime * result + (nillable ? 1231 : 1237);
-        return result;
+        // feature type excluded, or it's gonna go in infinite recursion
+        String source = this.source == null ? this.name : this.source;
+        return Objects.hash(
+                id,
+                name,
+                minOccurs,
+                maxOccurs,
+                isNillable(),
+                attribute,
+                metadata,
+                binding,
+                length,
+                description,
+                source);
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
-        AttributeTypeInfoImpl other = (AttributeTypeInfoImpl) obj;
-        if (attribute == null) {
-            if (other.attribute != null) return false;
-        } else if (!attribute.equals(other.attribute)) return false;
-        if (binding == null) {
-            if (other.binding != null) return false;
-        } else if (!binding.equals(other.binding)) return false;
-        if (featureType == null) {
-            if (other.featureType != null) return false;
-        } else if (!featureType.equals(other.featureType)) return false;
-        if (id == null) {
-            if (other.id != null) return false;
-        } else if (!id.equals(other.id)) return false;
-        if (length == null) {
-            if (other.length != null) return false;
-        } else if (!length.equals(other.length)) return false;
-        if (maxOccurs != other.maxOccurs) return false;
-        if (metadata == null) {
-            if (other.metadata != null) return false;
-        } else if (!metadata.equals(other.metadata)) return false;
-        if (minOccurs != other.minOccurs) return false;
-        if (name == null) {
-            if (other.name != null) return false;
-        } else if (!name.equals(other.name)) return false;
-        if (nillable != other.nillable) return false;
-        return true;
-    }
-
-    @Override
-    public boolean equalsIngnoreFeatureType(Object obj) {
-        if (this == obj) return true;
-        if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
-        AttributeTypeInfoImpl other = (AttributeTypeInfoImpl) obj;
-        if (attribute == null) {
-            if (other.attribute != null) return false;
-        } else if (!attribute.equals(other.attribute)) return false;
-        if (binding == null) {
-            if (other.binding != null) return false;
-        } else if (!binding.equals(other.binding)) return false;
-        if (id == null) {
-            if (other.id != null) return false;
-        } else if (!id.equals(other.id)) return false;
-        if (length == null) {
-            if (other.length != null) return false;
-        } else if (!length.equals(other.length)) return false;
-        if (maxOccurs != other.maxOccurs) return false;
-        if (metadata == null) {
-            if (other.metadata != null) return false;
-        } else if (!metadata.equals(other.metadata)) return false;
-        if (minOccurs != other.minOccurs) return false;
-        if (name == null) {
-            if (other.name != null) return false;
-        } else if (!name.equals(other.name)) return false;
-        if (nillable != other.nillable) return false;
-        return true;
+    public boolean equalsIngnoreFeatureType(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AttributeTypeInfoImpl that = (AttributeTypeInfoImpl) o;
+        return minOccurs == that.minOccurs
+                && maxOccurs == that.maxOccurs
+                && Objects.equals(isNillable(), that.isNillable())
+                && Objects.equals(id, that.id)
+                && Objects.equals(name, that.name)
+                && Objects.equals(attribute, that.attribute)
+                && Objects.equals(metadata, that.metadata)
+                && Objects.equals(binding, that.binding)
+                && Objects.equals(length, that.length)
+                && Objects.equals(description, that.description)
+                // avoid false negatives, source is derived if unset
+                && (Objects.equals(source, that.source)
+                        || Objects.equals(getSource(), that.getSource()));
     }
 }

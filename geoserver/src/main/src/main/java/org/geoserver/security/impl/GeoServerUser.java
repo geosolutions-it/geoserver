@@ -44,7 +44,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
         GeoServerUser root = new GeoServerUser(GeoServerUser.ROOT_USERNAME);
         root.setPassword(null);
         root.setEnabled(true);
-        Set<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
+        Set<GrantedAuthority> roles = new HashSet<>();
         roles.add(GeoServerRole.ADMIN_ROLE);
         root.setAuthorities(roles);
         return root;
@@ -54,7 +54,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
         GeoServerUser anon = new GeoServerUser(GeoServerUser.ANONYMOUS_USERNAME);
         anon.setPassword(null);
         anon.setEnabled(true);
-        Set<GrantedAuthority> roles = new HashSet<GrantedAuthority>();
+        Set<GrantedAuthority> roles = new HashSet<>();
         roles.add(GeoServerRole.ANONYMOUS_ROLE);
         anon.setAuthorities(roles);
         return anon;
@@ -83,18 +83,19 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
         this.accountNonExpired = other.isAccountNonExpired();
         this.accountNonLocked = other.isAccountNonLocked();
         this.credentialsNonExpired = other.isCredentialsNonExpired();
+        this.enabled = other.isEnabled();
         this.authorities =
-                other.getAuthorities() != null
-                        ? new ArrayList<GrantedAuthority>(other.getAuthorities())
-                        : null;
+                other.getAuthorities() != null ? new ArrayList<>(other.getAuthorities()) : null;
     }
 
     /** The user name. */
+    @Override
     public String getUsername() {
         return username;
     }
 
     /** The user password. */
+    @Override
     public String getPassword() {
         return password;
     }
@@ -106,6 +107,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see org.springframework.security.core.userdetails.UserDetails#isEnabled()
      */
+    @Override
     public boolean isEnabled() {
         return enabled;
     }
@@ -117,6 +119,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see org.springframework.security.core.userdetails.UserDetails#isAccountNonExpired()
      */
+    @Override
     public boolean isAccountNonExpired() {
         return accountNonExpired;
     }
@@ -130,6 +133,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see org.springframework.security.core.userdetails.UserDetails#isAccountNonLocked()
      */
+    @Override
     public boolean isAccountNonLocked() {
         return accountNonLocked;
     }
@@ -144,6 +148,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see org.springframework.security.core.userdetails.UserDetails#isCredentialsNonExpired()
      */
+    @Override
     public boolean isCredentialsNonExpired() {
         return credentialsNonExpired;
     }
@@ -158,17 +163,13 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see org.springframework.security.core.userdetails.UserDetails#getAuthorities()
      */
+    @Override
     public Collection<GrantedAuthority> getAuthorities() {
-        if (authorities == null)
-            authorities = Collections.unmodifiableSet(new TreeSet<GrantedAuthority>());
+        if (authorities == null) authorities = Collections.unmodifiableSet(new TreeSet<>());
         return authorities;
     }
 
-    /**
-     * Set the roles of the user.
-     *
-     * @param roles
-     */
+    /** Set the roles of the user. */
     public void setAuthorities(Set<? extends GrantedAuthority> roles) {
         authorities = Collections.unmodifiableSet(roles);
     }
@@ -176,6 +177,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see org.springframework.security.core.CredentialsContainer#eraseCredentials()
      */
+    @Override
     public void eraseCredentials() {
         password = null;
     }
@@ -194,6 +196,7 @@ public class GeoServerUser implements UserDetails, CredentialsContainer, Compara
     /* (non-Javadoc)
      * @see java.lang.Comparable#compareTo(java.lang.Object)
      */
+    @Override
     public int compareTo(GeoServerUser o) {
         if (o == null) return 1;
         return getUsername().compareTo(o.getUsername());

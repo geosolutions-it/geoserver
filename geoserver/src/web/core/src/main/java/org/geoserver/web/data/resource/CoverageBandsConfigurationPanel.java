@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.measure.Unit;
-import javax.measure.format.UnitFormat;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.extensions.ajax.markup.html.autocomplete.AutoCompleteTextField;
@@ -26,8 +25,6 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.CoverageDimensionInfo;
 import org.geoserver.catalog.CoverageInfo;
-import org.geoserver.catalog.CoverageView;
-import org.geoserver.catalog.MetadataMap;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.wicket.DecimalListTextField;
 import org.geoserver.web.wicket.DecimalTextField;
@@ -36,10 +33,9 @@ import org.geoserver.web.wicket.GeoServerDataProvider;
 import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 import org.geoserver.web.wicket.GeoServerTablePanel;
 import org.geoserver.web.wicket.ParamResourceModel;
-import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.util.GeoToolsUnitFormat;
+import org.geotools.measure.UnitFormat;
+import org.geotools.measure.UnitFormatter;
 import org.geotools.util.NumberRange;
-import org.geotools.util.factory.GeoTools;
 import org.geotools.util.logging.Logging;
 import org.opengis.coverage.SampleDimensionType;
 import si.uom.NonSI;
@@ -66,6 +62,7 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                             Fragment f =
                                     new Fragment(
                                             id, "bandtext", CoverageBandsConfigurationPanel.this);
+                            @SuppressWarnings("unchecked")
                             Component text =
                                     new TextField<>(
                                             "bandtext",
@@ -77,6 +74,7 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                             Fragment f =
                                     new Fragment(
                                             id, "nulltext", CoverageBandsConfigurationPanel.this);
+                            @SuppressWarnings("unchecked")
                             Component text =
                                     new DecimalListTextField(
                                             "nulltext",
@@ -87,7 +85,10 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                         if ("unit".equals(property.getName())) {
                             Fragment f =
                                     new Fragment(id, "text", CoverageBandsConfigurationPanel.this);
-                            Component text = buildUnitField("text", property.getModel(itemModel));
+                            @SuppressWarnings("unchecked")
+                            Component text =
+                                    buildUnitField(
+                                            "text", (IModel<String>) property.getModel(itemModel));
                             f.add(text);
                             return f;
                         }
@@ -95,6 +96,7 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                             Fragment f =
                                     new Fragment(
                                             id, "minRange", CoverageBandsConfigurationPanel.this);
+                            @SuppressWarnings("unchecked")
                             Component min =
                                     new DecimalTextField(
                                             "minRange",
@@ -106,6 +108,7 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                             Fragment f =
                                     new Fragment(
                                             id, "maxRange", CoverageBandsConfigurationPanel.this);
+                            @SuppressWarnings("unchecked")
                             Component max =
                                     new DecimalTextField(
                                             "maxRange",
@@ -130,31 +133,8 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                 new GeoServerAjaxFormLink("reload") {
                     @Override
                     protected void onClick(AjaxRequestTarget target, Form form) {
-                        GeoServerApplication app = (GeoServerApplication) getApplication();
-
                         try {
-                            CoverageInfo ci = (CoverageInfo) getResourceInfo();
-                            String nativeName = ci.getNativeCoverageName();
-                            Catalog catalog = app.getCatalog();
-                            CatalogBuilder cb = new CatalogBuilder(catalog);
-                            cb.setStore(ci.getStore());
-                            MetadataMap metadata = ci.getMetadata();
-                            CoverageInfo rebuilt = null;
-                            if (metadata != null
-                                    && metadata.containsKey(CoverageView.COVERAGE_VIEW)) {
-                                GridCoverage2DReader reader =
-                                        (GridCoverage2DReader)
-                                                catalog.getResourcePool()
-                                                        .getGridCoverageReader(
-                                                                ci,
-                                                                nativeName,
-                                                                GeoTools.getDefaultHints());
-                                rebuilt = cb.buildCoverage(reader, nativeName, null);
-                            } else {
-                                rebuilt = cb.buildCoverage(nativeName);
-                            }
-                            ci.getDimensions().clear();
-                            ci.getDimensions().addAll(rebuilt.getDimensions());
+                            reloadBands();
                             target.add(bands);
                         } catch (Exception e) {
                             LOGGER.log(Level.SEVERE, "Failure updating the bands list", e);
@@ -165,7 +145,15 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
         add(reload);
     }
 
-    protected Component buildUnitField(String id, IModel model) {
+    private void reloadBands() throws Exception {
+        GeoServerApplication app = (GeoServerApplication) getApplication();
+        CoverageInfo ci = (CoverageInfo) getResourceInfo();
+        Catalog catalog = app.getCatalog();
+        CatalogBuilder cb = new CatalogBuilder(catalog);
+        cb.reloadDimensions(ci);
+    }
+
+    protected Component buildUnitField(String id, IModel<String> model) {
         return new AutoCompleteTextField<String>(id, model) {
             @Override
             protected Iterator<String> getChoices(String input) {
@@ -174,19 +162,19 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                     return emptyList.iterator();
                 }
 
-                List<Unit<?>> units = new ArrayList<Unit<?>>();
+                List<Unit<?>> units = new ArrayList<>();
                 units.addAll(SI.getInstance().getUnits());
                 units.addAll(NonSI.getInstance().getUnits());
 
-                List<String> unitNames = new ArrayList<String>();
+                List<String> unitNames = new ArrayList<>();
                 // adding radiance as it's the most common, but it's not part of the standard units
                 unitNames.add("W.m-2.Sr-1");
-                UnitFormat format = GeoToolsUnitFormat.getInstance();
+                UnitFormatter format = UnitFormat.getInstance();
                 for (Unit<?> unit : units) {
                     unitNames.add(format.format(unit));
                 }
 
-                List<String> choices = new ArrayList<String>();
+                List<String> choices = new ArrayList<>();
                 for (String name : unitNames) {
                     if (name.toLowerCase().startsWith(input.toLowerCase())) {
                         choices.add(name);
@@ -202,9 +190,8 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
 
         @Override
         protected List<Property<CoverageDimensionInfo>> getProperties() {
-            List<Property<CoverageDimensionInfo>> result =
-                    new ArrayList<Property<CoverageDimensionInfo>>();
-            result.add(new BeanProperty<CoverageDimensionInfo>("band", "name"));
+            List<Property<CoverageDimensionInfo>> result = new ArrayList<>();
+            result.add(new BeanProperty<>("band", "name"));
             result.add(
                     new AbstractProperty<CoverageDimensionInfo>("dimensionType") {
 
@@ -323,7 +310,7 @@ public class CoverageBandsConfigurationPanel extends ResourceConfigurationPanel 
                             };
                         }
                     });
-            result.add(new BeanProperty<CoverageDimensionInfo>("unit", "unit"));
+            result.add(new BeanProperty<>("unit", "unit"));
             return result;
         }
 

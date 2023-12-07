@@ -4,6 +4,7 @@
  */
 package org.geoserver.wms;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -12,7 +13,7 @@ import java.util.Objects;
  *
  * @author maurobartolomeoli@gmail.com
  */
-public class CacheConfiguration implements Cloneable {
+public class CacheConfiguration implements Cloneable, Serializable {
 
     private boolean enabled;
     private int maxEntries = 1000;
@@ -38,11 +39,7 @@ public class CacheConfiguration implements Cloneable {
         return enabled;
     }
 
-    /**
-     * Enables / disables caching.
-     *
-     * @param enabled
-     */
+    /** Enables / disables caching. */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
@@ -51,11 +48,7 @@ public class CacheConfiguration implements Cloneable {
         return maxEntries;
     }
 
-    /**
-     * Sets max # of entries in cache.
-     *
-     * @param maxEntries
-     */
+    /** Sets max # of entries in cache. */
     public void setMaxEntries(int maxEntries) {
         this.maxEntries = maxEntries;
     }
@@ -64,11 +57,7 @@ public class CacheConfiguration implements Cloneable {
         return maxEntrySize;
     }
 
-    /**
-     * Sets max entry size in bytes.
-     *
-     * @param maxEntrySize
-     */
+    /** Sets max entry size in bytes. */
     public void setMaxEntrySize(long maxEntrySize) {
         this.maxEntrySize = maxEntrySize;
     }
@@ -89,6 +78,7 @@ public class CacheConfiguration implements Cloneable {
         return Objects.hash(enabled, maxEntries, maxEntrySize);
     }
 
+    @Override
     public Object clone() {
         return new CacheConfiguration(enabled, maxEntries, maxEntrySize);
     }

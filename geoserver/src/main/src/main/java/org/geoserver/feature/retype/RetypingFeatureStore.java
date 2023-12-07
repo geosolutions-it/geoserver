@@ -44,25 +44,31 @@ public class RetypingFeatureStore extends RetypingFeatureSource implements Simpl
         return (SimpleFeatureStore) wrapped;
     }
 
+    @Override
     public Transaction getTransaction() {
         return featureStore().getTransaction();
     }
 
+    @Override
     public void setTransaction(Transaction transaction) {
         featureStore().setTransaction(transaction);
     }
 
+    @Override
     public void removeFeatures(Filter filter) throws IOException {
         featureStore().removeFeatures(store.retypeFilter(filter, typeMap));
     }
 
+    @Override
     public void setFeatures(FeatureReader<SimpleFeatureType, SimpleFeature> reader)
             throws IOException {
-        RetypingFeatureReader retypingFeatureReader;
-        retypingFeatureReader = new RetypingFeatureReader(reader, typeMap.getOriginalFeatureType());
+        @SuppressWarnings("PMD.CloseResource") // just a wrapper
+        RetypingFeatureReader retypingFeatureReader =
+                new RetypingFeatureReader(reader, typeMap.getOriginalFeatureType());
         featureStore().setFeatures(retypingFeatureReader);
     }
 
+    @Override
     public List<FeatureId> addFeatures(
             FeatureCollection<SimpleFeatureType, SimpleFeature> collection) throws IOException {
         List<FeatureId> ids =
@@ -71,7 +77,7 @@ public class RetypingFeatureStore extends RetypingFeatureSource implements Simpl
                                 new RetypingFeatureCollection(
                                         DataUtilities.simple(collection),
                                         typeMap.getOriginalFeatureType()));
-        List<FeatureId> retyped = new ArrayList<FeatureId>();
+        List<FeatureId> retyped = new ArrayList<>();
         for (FeatureId id : ids) {
             retyped.add(
                     RetypingFeatureCollection.reTypeId(
@@ -80,17 +86,20 @@ public class RetypingFeatureStore extends RetypingFeatureSource implements Simpl
         return retyped;
     }
 
+    @Override
     public void modifyFeatures(String[] names, Object[] attributeValues, Filter filter)
             throws IOException {
         Name[] param = Arrays.stream(names).map(n -> new NameImpl(n)).toArray(n -> new Name[n]);
         modifyFeatures(param, attributeValues, filter);
     }
 
+    @Override
     public void modifyFeatures(String name, Object attributeValue, Filter filter)
             throws IOException {
         modifyFeatures(new Name[] {new NameImpl(name)}, new Object[] {attributeValue}, filter);
     }
 
+    @Override
     public void modifyFeatures(Name[] names, Object[] values, Filter filter) throws IOException {
         SimpleFeatureType original = typeMap.getOriginalFeatureType();
 
@@ -109,6 +118,7 @@ public class RetypingFeatureStore extends RetypingFeatureSource implements Simpl
         featureStore().modifyFeatures(names, originalValues, store.retypeFilter(filter, typeMap));
     }
 
+    @Override
     public void modifyFeatures(Name attributeName, Object attributeValue, Filter filter)
             throws IOException {
         modifyFeatures(new Name[] {attributeName}, new Object[] {attributeValue}, filter);

@@ -1,8 +1,9 @@
 include:
-  - project: 'pathfinders/wms/cicd-pipeline'
-    ref: main
-    file: '/maven.gitlab-ci.yml'
-#test
+  - project: 'eows/common/cicd-pipeline'
+    ref: feature/pipelineWMS
+    file: '/wms/maven.gitlab-ci.yml'
+
+
 variables:
   # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
   # `showDateTime` will show the passed time in milliseconds. You need to specify `--batch-mode` to make this work.
@@ -12,13 +13,10 @@ variables:
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -Dproject.build.sourceEncoding=UTF-8 -Dproject.reporting.outputEncoding=UTF-8 -Djava.awt.headless=true -Dtest.maxHeapSize=512M -B -U -T2 -DskipTests=true"
   MAVEN_ACTIVE_PROFILES: "-Pauthkey -Pcontrol-flow -Pcss -Pfeature-pregeneralized -Pimporter -Plibjpeg-turbo -Pmonitor -Pnetcdf -Pnetcdf-out -Pwps -Pimporter-jdbc -Pncwms -Pghrsst -Pwmts-multi-dimensional -Pwps-download -Pwps-jdbc -Pgrib"
-  BASE_IMAGE_NAME: "gs-base"
-  BASE_IMAGE_TAG: "7.0-jre8"
   CI_ENVIRONMENT_NAME: "geosolutions"
   TAG_NAME: "2.16.x-eows_${CI_PIPELINE_ID}"
   TAG_LATEST: "gs-latest"
-  GEOSERVER_APP_NAME: "geoserver"
-  INCLUDE_DATA_DIR: "true"
+  APP_LOCATION: "geoserver"
   GEOSERVER_HOME: "/var/geoserver"
   GEOSERVER_DATA_DIR: "${GEOSERVER_HOME}/datadir"
   GEOSERVER_LOG_LOCATION: "${GEOSERVER_HOME}/logs/$${DOCKER_HOST}-$${MASTER_SLAVE}-$${HOSTNAME}.log"
@@ -26,18 +24,13 @@ variables:
   GEOWEBCACHE_CACHE_DIR: "${GEOSERVER_HOME}/gwc_cache_dir"
   GEOSERVER_AUDIT_PATH: "${GEOSERVER_HOME}/audits/geoserver-$${DOCKER_HOST}-$${MASTER_SLAVE}-$${HOSTNAME}"
   JAI_EXT_ENABLED: "true"
-  JAVA_OPTS: "-Xms1024m -Xmx1024m -XX:+UseParallelGC -XX:+UseParallelOldGC -DGEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR} -DGEOWEBCACHE_CACHE_DIR=${GEOWEBCACHE_CACHE_DIR} -DGEOWEBCACHE_CONFIG_DIR=${GEOWEBCACHE_CONFIG_DIR} -DGEOSERVER_LOG_LOCATION=${GEOSERVER_LOG_LOCATION} -DGEOSERVER_AUDIT_PATH=${GEOSERVER_AUDIT_PATH} -DPROXY_BASE_URL=$${PROXY_BASE_URL} -DGEOSERVER_NODE_OPTS=id:$${MASTER_SLAVE} -Dorg.geotools.coverage.jaiext.enabled=${JAI_EXT_ENABLED}"
-  TOMCAT_EXTRAS: "false"
-  INCLUDE_GS_WAR: "true"
-  INCLUDE_PLUGINS: "false"
+  JAVA_OPTS: JAVA_OPTS="-Xms2048m -Xmx2048m -Djava.awt.headless=true -server -XX:+UseParallelGC -XX:+UseParallelOldGC -DGEOSERVER_DATA_DIR=/var/geoserver/datadir -DGEOWEBCACHE_CACHE_DIR=/var/geoserver/gwc_cache_dir -DGEOWEBCACHE_CONFIG_DIR=/var/geoserver/datadir/gwc -DGEOSERVER_LOG_LOCATION=/var/geoserver/logs/${DOCKER_HOST}-${MASTER_SLAVE}.log -DGEOSERVER_AUDIT_PATH=/var/geoserver/audits/geoserver-${DOCKER_HOST}-${MASTER_SLAVE} -DPROXY_BASE_URL=${PROXY_BASE_URL} -DGEOSERVER_NODE_OPTS=id:${MASTER_SLAVE} -Dorg.geotools.coverage.jaiext.enabled=true -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/geoserver/memory_dumps/geoserver-${DOCKER_HOST}-${MASTER_SLAVE}.dump -Dorg.geoserver.wms.featureinfo.minBuffer=10 -Dorg.geoserver.wms.featureinfo.render.minBuffer=10 -Dorg.geotools.coverage.io.netcdf.enhance.ScaleMissing=true -DGEOSERVER_CSRF_WHITELIST=cgi-dev.de,eumetsat.int -DDOWNLOAD_MAP_TRANSPARENT=true -Dorg.geoserver.wms.nearestFail=EXCEPTION -Djava.library.path=/opt/libjpeg-turbo-geoserver/lib"
   ADD_EXTRA_FONTS: "true"
   DOCKERFILE: "./Dockerfile"
-  BASE_IMAGE_REPO: "harbor.eumetsat.int/ext-cots"
 
 
 build: 
   script:
-    - export
     - cd geoserver/src
     - mvn $MAVEN_CLI_OPTS $MAVEN_ACTIVE_PROFILES -am clean install
     - cd web/app
@@ -55,34 +48,28 @@ tests:
 package:
   image: docker:stable
   script:
-    - mv geoserver/src/web/app/target/geoserver.war docker/resources/geoserver/geoserver.war
+    - apt update && apt install -y zip
+    - zip docker/resources/geoserver/geoserver.war.zip geoserver/src/web/app/target/geoserver.war
     - cp -v -r datadir/* docker/resources/geoserver-datadir/
     - apk add wget
     - wget -O docker/resources/fonts/osm-fonts.tar.xz https://www.dropbox.com/s/ges2v64on30katy/osm-fonts.tar.xz
     - chmod +x docker/resources/geoserver-datadir/importer/scripts/*.sh
-    - chmod +x docker/catalina-wrapper.sh
     - cd docker
     - docker build --no-cache
-      --build-arg "BASE_IMAGE_REPO=${BASE_IMAGE_REPO}"
-      --build-arg "BASE_IMAGE_NAME=${BASE_IMAGE_NAME}"
-      --build-arg "BASE_IMAGE_TAG=${BASE_IMAGE_TAG}"
-      --build-arg "INCLUDE_DATA_DIR=${INCLUDE_DATA_DIR}"
-      --build-arg "INCLUDE_GS_WAR=${INCLUDE_GS_WAR}"
-      --build-arg "INCLUDE_PLUGINS=${INCLUDE_PLUGINS}"
       --build-arg "GEOSERVER_HOME=${GEOSERVER_HOME}"
-      --build-arg "GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}"
-      --build-arg "GEOSERVER_APP_NAME=${GEOSERVER_APP_NAME}"
+      --build-arg "GEOSERVER_WEBAPP_SRC="docker/resources/geoserver/geoserver.war.zip"
+      --build-arg "GEOSERVER_DATA_DIR_SRC="docker/resources/geoserver-datadir/"
+      --build-arg "CUSTOM_FONTS=docker/resources/fonts/*"
+      --build-arg "APP_LOCATION=${APP_LOCATION}"
       --build-arg "GEOSERVER_LOG_LOCATION=${GEOSERVER_LOG_LOCATION}"
       --build-arg "GEOWEBCACHE_CACHE_DIR=${GEOWEBCACHE_CACHE_DIR}"
       --build-arg "GEOWEBCACHE_CONFIG_DIR=${GEOWEBCACHE_CONFIG_DIR}"
       --build-arg "GEOSERVER_AUDIT_PATH=${GEOSERVER_AUDIT_PATH}"
       --build-arg "JAVA_OPTS=${JAVA_OPTS}"
-      --build-arg "TOMCAT_EXTRAS=${TOMCAT_EXTRAS}"
-      --build-arg "ADD_EXTRA_FONTS=${ADD_EXTRA_FONTS}"
       -t ${HARBOR_REGISTRY}/${HARBOR_PROJECT_NAME}/${COMPONENT_NAME}:$CI_COMMIT_SHORT_SHA
       -f "${DOCKERFILE}" .
     - docker save ${HARBOR_REGISTRY}/${HARBOR_PROJECT_NAME}/${COMPONENT_NAME}:${CI_COMMIT_SHORT_SHA} > ../docker-images/${COMPONENT_NAME}-${CI_COMMIT_SHORT_SHA}.tar
 
 trivy:
   allow_failure: true #for have the time to check the report (more than 200 High and Critical reported)
-    
+

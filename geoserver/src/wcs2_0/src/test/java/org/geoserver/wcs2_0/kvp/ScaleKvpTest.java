@@ -4,9 +4,9 @@
  */
 package org.geoserver.wcs2_0.kvp;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -16,8 +16,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.wcs2_0.exception.WCS20Exception.WCS20ExceptionCode;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -25,7 +23,6 @@ import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.geometry.Envelope2D;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.image.ImageWorker;
-import org.geotools.util.logging.Logging;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -41,7 +38,6 @@ import org.w3c.dom.Document;
 @RunWith(Parameterized.class)
 public class ScaleKvpTest extends WCSKVPTestSupport {
 
-    private Logger LOGGER = Logging.getLogger(ScaleKvpTest.class);
     private String axisPrefix;
     private String subsetPrefix;
 
@@ -63,7 +59,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
     }
 
     @Test
-    public void capabilties() throws Exception {
+    public void capabilities() throws Exception {
         final File xml = new File("./src/test/resources/getcapabilities/getCap.xml");
         final String request = FileUtils.readFileToString(xml, "UTF-8");
         Document dom = postAsDOM("wcs", request);
@@ -128,21 +124,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
                     sourceCoverage.getGridGeometry().getGridRange().getSpan(1) / 2,
                     targetCoverage.getGridGeometry().getGridRange().getSpan(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // upsample
@@ -179,21 +161,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
                     sourceCoverage.getGridGeometry().getGridRange().getSpan(1) * 2,
                     targetCoverage.getGridGeometry().getGridRange().getSpan(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // error 0
@@ -259,21 +227,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
                     sourceCoverage.getGridGeometry().getGridRange().getSpan(1) / 2,
                     targetCoverage.getGridGeometry().getGridRange().getSpan(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // upsample
@@ -314,21 +268,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
                     sourceCoverage.getGridGeometry().getGridRange().getSpan(1) * 2,
                     targetCoverage.getGridGeometry().getGridRange().getSpan(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // error 0
@@ -430,21 +370,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(
                     29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0], 1);
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         try {
@@ -516,23 +442,10 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
                     sourceCoverage.getCoordinateReferenceSystem());
 
             // get extrema
-            assertEquals(29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0]);
+            assertEquals(
+                    29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0], 0d);
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // error 0
@@ -602,21 +515,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(100, targetCoverage.getGridGeometry().getGridRange().getSpan(0));
             assertEquals(100, targetCoverage.getGridGeometry().getGridRange().getSpan(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // upsample
@@ -659,21 +558,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(999, targetCoverage.getGridGeometry().getGridRange().getHigh(0));
             assertEquals(999, targetCoverage.getGridGeometry().getGridRange().getHigh(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // test coverage directly to make sure we respect LLC & URC
@@ -707,21 +592,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(1099, targetCoverage.getGridGeometry().getGridRange().getHigh(0));
             assertEquals(1099, targetCoverage.getGridGeometry().getGridRange().getHigh(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // error minx > maxx
@@ -851,23 +722,10 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(100, targetCoverage.getGridGeometry().getGridRange().getSpan(1));
 
             // get extrema
-            assertEquals(29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0]);
+            assertEquals(
+                    29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0], 0d);
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         try {
@@ -944,23 +802,10 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(999, targetCoverage.getGridGeometry().getGridRange().getHigh(1));
 
             // get extrema
-            assertEquals(29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0]);
+            assertEquals(
+                    29.0, new ImageWorker(targetCoverage.getRenderedImage()).getMaximums()[0], 0d);
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // test coverage directly to make sure we respect LLC & URC
@@ -994,21 +839,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
             assertEquals(1099, targetCoverage.getGridGeometry().getGridRange().getHigh(0));
             assertEquals(1099, targetCoverage.getGridGeometry().getGridRange().getHigh(1));
         } finally {
-            try {
-                readerTarget.dispose();
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(targetCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
-            try {
-                scheduleForCleaning(sourceCoverage);
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
-            }
+            clean(readerTarget, targetCoverage, sourceCoverage);
         }
 
         // error minx > maxx
@@ -1068,11 +899,7 @@ public class ScaleKvpTest extends WCSKVPTestSupport {
                 response, 404, WCS20ExceptionCode.InvalidExtent.getExceptionCode(), "1000");
     }
 
-    /**
-     * See https://osgeo-org.atlassian.net/browse/GEOS-8491
-     *
-     * @throws Exception
-     */
+    /** See https://osgeo-org.atlassian.net/browse/GEOS-8491 */
     @Test
     public void testConcurrentRequests() throws Exception {
         ExecutorService executor =

@@ -33,7 +33,7 @@ public class WcsEOXmlReader extends XmlRequestReader {
         this.resolverProvider = resolverProvider;
     }
 
-    @SuppressWarnings("rawtypes")
+    @Override
     public Object read(Object request, Reader reader, Map kvp) throws Exception {
         // create the parser instance
         Parser parser = new Parser(configuration);

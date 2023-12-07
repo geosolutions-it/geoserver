@@ -17,15 +17,12 @@ public class NameExclusionFilter implements ExtensionFilter {
         return beanId;
     }
 
-    /**
-     * Sets the bean to be filtered out
-     *
-     * @param beanId
-     */
+    /** Sets the bean to be filtered out */
     public void setBeanId(String beanId) {
         this.beanId = beanId;
     }
 
+    @Override
     public boolean exclude(String beanId, Object bean) {
         if (this.beanId != null) {
             if (beanId == null) return false;

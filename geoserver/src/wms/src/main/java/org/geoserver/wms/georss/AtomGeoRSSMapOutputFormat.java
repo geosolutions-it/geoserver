@@ -24,14 +24,14 @@ public class AtomGeoRSSMapOutputFormat implements GetMapOutputFormat {
     public static String MIME_TYPE = "application/atom+xml";
 
     static final MapProducerCapabilities ATOM_CAPABILITIES =
-            new MapProducerCapabilities(false, false, false, true, null);
+            new MapProducerCapabilities(false, false, true);
 
     /** format names/aliases */
     public static final Set<String> FORMAT_NAMES;
 
     static {
         String[] FORMATS = {MIME_TYPE, "atom", "application/atom xml"};
-        Set<String> names = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        Set<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         names.addAll(Arrays.asList(FORMATS));
         FORMAT_NAMES = Collections.unmodifiableSet(names);
     }
@@ -43,16 +43,19 @@ public class AtomGeoRSSMapOutputFormat implements GetMapOutputFormat {
     }
 
     /** @see org.geoserver.wms.GetMapOutputFormat#getMimeType() */
+    @Override
     public String getMimeType() {
         return MIME_TYPE;
     }
 
     /** @see GetMapOutputFormat#getOutputFormatNames() */
+    @Override
     public Set<String> getOutputFormatNames() {
         return FORMAT_NAMES;
     }
 
     /** @see org.geoserver.wms.GetMapOutputFormat#produceMap(org.geoserver.wms.WMSMapContent) */
+    @Override
     public XMLTransformerMap produceMap(WMSMapContent mapContent)
             throws ServiceException, IOException {
 
@@ -75,6 +78,7 @@ public class AtomGeoRSSMapOutputFormat implements GetMapOutputFormat {
         return result;
     }
 
+    @Override
     public MapProducerCapabilities getCapabilities(String format) {
         return ATOM_CAPABILITIES;
     }

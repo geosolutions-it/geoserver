@@ -44,7 +44,6 @@ public class CapabilitiesXmlReader extends XmlRequestReader {
         this.resolverProvider = resolverProvider;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public Object read(Object request, Reader reader, Map kvp) throws Exception {
         // instantiante parsers and content handlers
@@ -112,6 +111,7 @@ public class CapabilitiesXmlReader extends XmlRequestReader {
          * @param atts Element attributes.
          * @throws SAXException For any standard SAX errors.
          */
+        @Override
         public void startElement(
                 String namespaceURI, String localName, String rawName, Attributes atts)
                 throws SAXException {

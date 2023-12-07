@@ -45,6 +45,7 @@ public class ResourceAccessManagerWCSTest extends WCSTestSupport {
     protected static final String UNITS = "foot";
     protected static final String UNIT_SYMBOL = "ft";
 
+    @Override
     protected void setUpSpring(List<String> springContextLocations) {
         super.setUpSpring(springContextLocations);
         springContextLocations.add(
@@ -106,8 +107,6 @@ public class ResourceAccessManagerWCSTest extends WCSTestSupport {
     /**
      * DescribeCoverage requires a special exemption to run as it needs to access actual data to
      * fill in the time and elevation
-     *
-     * @throws Exception
      */
     @Test
     public void testDescribeWithTimeElevation() throws Exception {

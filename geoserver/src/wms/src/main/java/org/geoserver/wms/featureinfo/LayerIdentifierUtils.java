@@ -35,7 +35,6 @@ public final class LayerIdentifierUtils {
      * @param targetCrs reprojection target CRS, can be NULL
      * @return feature collections, some may not have been reprojected
      */
-    @SuppressWarnings("unchecked")
     public static List<FeatureCollection> reproject(
             List<FeatureCollection> featureCollections, CoordinateReferenceSystem targetCrs) {
         if (targetCrs == null) {
@@ -43,8 +42,7 @@ public final class LayerIdentifierUtils {
             return featureCollections;
         }
         // try to reproject features collections to the target CRS
-        return featureCollections
-                .stream()
+        return featureCollections.stream()
                 .map(featureCollection -> reproject(featureCollection, targetCrs))
                 .collect(Collectors.toList());
     }

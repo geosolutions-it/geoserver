@@ -5,7 +5,8 @@
  */
 package org.geoserver.logging;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.impl.GeoServerImpl;
@@ -28,7 +29,7 @@ public class LegacyLoggingImporterTest {
 
     @Test
     public void test() throws Exception {
-        assertEquals("DEFAULT_LOGGING.properties", importer.getConfigFileName());
+        assertEquals("DEFAULT_LOGGING.xml", importer.getConfigFileName());
         assertFalse(importer.getSuppressStdOutLogging());
         assertEquals("logs/geoserver.log", importer.getLogFile());
     }

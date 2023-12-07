@@ -39,6 +39,7 @@ public class ScaleRatioDecoration implements MapDecoration {
         }
     }
 
+    @Override
     public Dimension findOptimalSize(Graphics2D g2d, WMSMapContent mapContent) {
         FontMetrics metrics = g2d.getFontMetrics(g2d.getFont());
         return new Dimension(metrics.stringWidth(getScaleText(mapContent)), metrics.getHeight());
@@ -51,7 +52,8 @@ public class ScaleRatioDecoration implements MapDecoration {
     public String getScaleText(WMSMapContent mapContent) {
         final double scale = getScale(mapContent);
         if (format == null) {
-            return String.format("1 : %0$1.0f", scale);
+            // by spec, the first argument is 1, that is, 1$ (1 based, not zero based)
+            return String.format("1 : %1$1.0f", scale);
         } else {
             DecimalFormatSymbols decimalFormatSymbols;
             if (formatLanguage != null) {
@@ -63,6 +65,7 @@ public class ScaleRatioDecoration implements MapDecoration {
         }
     }
 
+    @Override
     public void paint(Graphics2D g2d, Rectangle paintArea, WMSMapContent mapContent)
             throws Exception {
         FontMetrics metrics = g2d.getFontMetrics(g2d.getFont());

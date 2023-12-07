@@ -5,12 +5,15 @@
  */
 package org.geoserver.web.data.store.shape;
 
+import static org.geotools.data.shapefile.ShapefileDataStoreFactory.SKIP_SCAN;
 import static org.geotools.data.shapefile.ShapefileDataStoreFactory.URLP;
 
+import java.util.Map;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
+import org.geoserver.web.data.store.panel.CheckBoxParamPanel;
 import org.geoserver.web.data.store.panel.DirectoryParamPanel;
 import org.geoserver.web.util.MapModel;
 import org.geoserver.web.wicket.ParamResourceModel;
@@ -28,14 +31,20 @@ public class ShapefileDirectoryEditPanel extends ShapefileStoreEditPanel {
         super(componentId, storeEditForm);
     }
 
-    protected Panel buildFileParamPanel(final IModel paramsModel) {
+    @Override
+    protected Panel buildFileParamPanel(final IModel<Map<String, Object>> paramsModel) {
         DirectoryParamPanel file =
                 new DirectoryParamPanel(
                         "url",
-                        new MapModel(paramsModel, URLP.key),
+                        new MapModel<>(paramsModel, URLP.key),
                         new ParamResourceModel("shapefile", this),
                         true);
-        file.setFileFilter(new Model<ExtensionFileFilter>(new ExtensionFileFilter(".shp")));
+        add(
+                new CheckBoxParamPanel(
+                        "skipScan",
+                        new MapModel<>(paramsModel, SKIP_SCAN.key),
+                        new ParamResourceModel("skipScan", this)));
+        file.setFileFilter(new Model<>(new ExtensionFileFilter(".shp")));
         return file;
     }
 }

@@ -15,6 +15,7 @@ import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geotools.data.DataStoreFinder;
+import org.geotools.data.DataUtilities;
 import org.geotools.jdbc.JDBCDataStore;
 import org.geotools.util.logging.Logging;
 import org.springframework.beans.factory.DisposableBean;
@@ -31,19 +32,18 @@ public class JDBCImportStoreLoader implements DisposableBean {
         return store;
     }
 
-    /**
-     * Loads a new {@link JDBCDatastore} from the data directory, and
-     *
-     * @param dd
-     * @throws IOException
-     */
+    /** Loads a new {@link JDBCDatastore} from the data directory, and */
     public JDBCImportStoreLoader(GeoServerDataDirectory dd) throws IOException {
         // see if we have the JDBCDatastore configuration ready, otherwise create one from the
         // classpath
         this.dataDir = dd;
         try {
             Properties params = getParameters();
-            store = (JDBCDataStore) DataStoreFinder.getDataStore(params);
+
+            store =
+                    (JDBCDataStore)
+                            DataStoreFinder.getDataStore(
+                                    DataUtilities.toConnectionParameters(params));
             if (store == null)
                 throw new RuntimeException(
                         "Failed to create a JDBC store with parameters: " + params);

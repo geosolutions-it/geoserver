@@ -18,6 +18,7 @@ import org.geoserver.platform.resource.LockProvider;
 public interface GeoServerInfo extends Info {
 
     /** Identifier. */
+    @Override
     String getId();
 
     /**
@@ -31,10 +32,18 @@ public interface GeoServerInfo extends Info {
     /** Sets the global settings. */
     void setSettings(SettingsInfo settings);
 
-    /** The flag to use request headers for the proxy URL */
+    /**
+     * The flag to use request headers for the proxy URL. Deprecated, use
+     * SettingsInfo.isUseHeadersProxyURL() instead.
+     */
+    @Deprecated
     Boolean isUseHeadersProxyURL();
 
-    /** Sets the flag to use request headers for the proxy URL */
+    /**
+     * Sets the flag to use request headers for the proxy URL. Deprecated, use
+     * SettingsInfo.setUseHeadersProxyURL instead
+     */
+    @Deprecated
     void setUseHeadersProxyURL(Boolean useHeadersProxyURL);
 
     /** The Java Advanced Imaging configuration. */
@@ -173,10 +182,12 @@ public interface GeoServerInfo extends Info {
      */
     public WebUIMode getWebUIMode();
 
-    /**
-     * Set the WebUIMode
-     *
-     * @param mode
-     */
+    /** Set the WebUIMode */
     public void setWebUIMode(WebUIMode mode);
+
+    /** Determines if Per-workspace Stores Queries are activated. */
+    Boolean isAllowStoredQueriesPerWorkspace();
+
+    /** Sets if Per-workspace Stores Queries are activated. */
+    void setAllowStoredQueriesPerWorkspace(Boolean allowStoredQueriesPerWorkspace);
 }

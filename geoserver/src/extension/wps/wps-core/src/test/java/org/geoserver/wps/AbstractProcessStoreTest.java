@@ -4,7 +4,9 @@
  */
 package org.geoserver.wps;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -62,11 +64,7 @@ public abstract class AbstractProcessStoreTest {
         fillStore();
     }
 
-    /**
-     * Builds the status store for this test
-     *
-     * @throws IOException
-     */
+    /** Builds the status store for this test */
     protected abstract ProcessStatusStore buildStore() throws IOException;
 
     /** Puts all the test statuses in the store */

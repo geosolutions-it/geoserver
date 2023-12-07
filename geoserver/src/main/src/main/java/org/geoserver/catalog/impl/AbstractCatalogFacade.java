@@ -37,7 +37,10 @@ public abstract class AbstractCatalogFacade implements CatalogFacade {
     }
 
     protected void beforeSaved(
-            CatalogInfo object, List propertyNames, List oldValues, List newValues) {
+            CatalogInfo object,
+            List<String> propertyNames,
+            List<Object> oldValues,
+            List<Object> newValues) {
         CatalogInfo real = ModificationProxy.unwrap(object);
 
         // TODO: protect this original object, perhaps with another proxy
@@ -49,6 +52,7 @@ public abstract class AbstractCatalogFacade implements CatalogFacade {
         ModificationProxy h = (ModificationProxy) Proxy.getInvocationHandler(object);
 
         // get the real object
+        @SuppressWarnings("unchecked")
         T real = (T) h.getProxyObject();
 
         // commit to the original object
@@ -58,7 +62,10 @@ public abstract class AbstractCatalogFacade implements CatalogFacade {
     }
 
     protected void afterSaved(
-            CatalogInfo object, List propertyNames, List oldValues, List newValues) {
+            CatalogInfo object,
+            List<String> propertyNames,
+            List<Object> oldValues,
+            List<Object> newValues) {
         CatalogInfo real = ModificationProxy.unwrap(object);
 
         // fire the post modify event
@@ -80,7 +87,7 @@ public abstract class AbstractCatalogFacade implements CatalogFacade {
             layer.setDefaultStyle(style);
         }
 
-        LinkedHashSet<StyleInfo> styles = new LinkedHashSet<StyleInfo>();
+        LinkedHashSet<StyleInfo> styles = new LinkedHashSet<>();
         for (StyleInfo s : layer.getStyles()) {
             s = ResolvingProxy.resolve(getCatalog(), s);
             s = unwrap(s);
@@ -94,8 +101,44 @@ public abstract class AbstractCatalogFacade implements CatalogFacade {
 
         LayerGroupInfoImpl lg = (LayerGroupInfoImpl) layerGroup;
 
-        for (int i = 0; i < lg.getLayers().size(); i++) {
-            PublishedInfo l = lg.getLayers().get(i);
+        resolveLayerGroupLayers(lg.getLayers());
+        resolveLayerGroupStyles(lg.getLayers(), lg.getStyles());
+        // now resolves layers and styles defined in layer group styles
+        for (LayerGroupStyle groupStyle : lg.getLayerGroupStyles()) {
+            resolveLayerGroupLayers(groupStyle.getLayers());
+            resolveLayerGroupStyles(groupStyle.getLayers(), groupStyle.getStyles());
+        }
+    }
+
+    private void resolveLayerGroupStyles(
+            List<PublishedInfo> assignedLayers, List<StyleInfo> styles) {
+        for (int i = 0; i < styles.size(); i++) {
+            StyleInfo s = styles.get(i);
+            if (s != null) {
+                PublishedInfo assignedLayer = assignedLayers.get(i);
+                StyleInfo resolved = null;
+                if (assignedLayer instanceof LayerGroupInfo) {
+                    // special case we might have a StyleInfo representing
+                    // only the name of a LayerGroupStyle thus not present in Catalog.
+                    // We take the ref and create a new object
+                    // without searching in catalog.
+                    String ref = ResolvingProxy.getRef(s);
+                    if (ref != null) {
+                        StyleInfo styleInfo = new StyleInfoImpl(getCatalog());
+                        styleInfo.setName(ref);
+                        resolved = styleInfo;
+                    }
+                }
+                if (resolved == null) resolved = unwrap(ResolvingProxy.resolve(getCatalog(), s));
+
+                styles.set(i, resolved);
+            }
+        }
+    }
+
+    private void resolveLayerGroupLayers(List<PublishedInfo> layers) {
+        for (int i = 0; i < layers.size(); i++) {
+            PublishedInfo l = layers.get(i);
 
             if (l != null) {
                 PublishedInfo resolved;
@@ -117,15 +160,7 @@ public abstract class AbstractCatalogFacade implements CatalogFacade {
                     // Special case for null layer (style group)
                     resolved = unwrap(ResolvingProxy.resolve(getCatalog(), l));
                 }
-                lg.getLayers().set(i, resolved);
-            }
-        }
-
-        for (int i = 0; i < lg.getStyles().size(); i++) {
-            StyleInfo s = lg.getStyles().get(i);
-            if (s != null) {
-                StyleInfo resolved = unwrap(ResolvingProxy.resolve(getCatalog(), s));
-                lg.getStyles().set(i, resolved);
+                layers.set(i, resolved);
             }
         }
     }

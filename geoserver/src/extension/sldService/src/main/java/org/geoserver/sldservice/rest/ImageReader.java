@@ -259,7 +259,11 @@ class ImageReader {
                             .equals(readParameter.getDescriptor().getName())) {
                 ParameterValue pv = (ParameterValue) readParameter;
                 Filter filter = (Filter) pv.getValue();
-                return (Filter) filter.accept(new SimplifyingFilterVisitor(), null);
+                if (filter != null) {
+                    return (Filter) filter.accept(new SimplifyingFilterVisitor(), null);
+                } else {
+                    return null;
+                }
             }
         }
 
@@ -282,8 +286,6 @@ class ImageReader {
     /**
      * Returns true if a band has been selected (and as such, we'll need to add a channel selection
      * in the raster symbolizer)
-     *
-     * @return
      */
     public boolean isBandSelected() {
         return bandSelected;

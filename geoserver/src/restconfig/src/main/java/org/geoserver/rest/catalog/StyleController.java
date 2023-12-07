@@ -4,7 +4,6 @@
  */
 package org.geoserver.rest.catalog;
 
-import com.google.common.io.Files;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -20,7 +20,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.xml.resolver.apps.resolver;
 import org.geoserver.catalog.CascadeDeleteVisitor;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -74,13 +73,12 @@ import org.xml.sax.EntityResolver;
 /** Example style resource controller */
 @RestController
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH,
-    produces = {
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE,
-        MediaType.TEXT_HTML_VALUE
-    }
-)
+        path = RestBaseController.ROOT_PATH,
+        produces = {
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE,
+            MediaType.TEXT_HTML_VALUE
+        })
 public class StyleController extends AbstractCatalogController {
 
     private static final Logger LOGGER = Logging.getLogger(StyleController.class);
@@ -91,8 +89,7 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        value = {"/styles", "/layers/{layerName}/styles", "/workspaces/{workspaceName}/styles"}
-    )
+            value = {"/styles", "/layers/{layerName}/styles", "/workspaces/{workspaceName}/styles"})
     public RestWrapper<?> stylesGet(
             @PathVariable(required = false) String layerName,
             @PathVariable(required = false) String workspaceName) {
@@ -111,15 +108,14 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        value = {"/styles", "/layers/{layerName}/styles", "/workspaces/{workspaceName}/styles"},
-        consumes = {
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE
-        },
-        produces = MediaType.TEXT_PLAIN_VALUE
-    )
+            value = {"/styles", "/layers/{layerName}/styles", "/workspaces/{workspaceName}/styles"},
+            consumes = {
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE
+            },
+            produces = MediaType.TEXT_PLAIN_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public String stylePost(
             @RequestBody StyleInfo style,
@@ -159,9 +155,8 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        value = {"/styles", "/workspaces/{workspaceName}/styles"},
-        consumes = {MediaTypeExtensions.APPLICATION_ZIP_VALUE}
-    )
+            value = {"/styles", "/workspaces/{workspaceName}/styles"},
+            consumes = {MediaTypeExtensions.APPLICATION_ZIP_VALUE})
     public ResponseEntity<String> stylePost(
             InputStream stream,
             @RequestParam(required = false) String name,
@@ -169,42 +164,48 @@ public class StyleController extends AbstractCatalogController {
             UriComponentsBuilder builder)
             throws IOException {
 
-        checkWorkspaceName(workspaceName);
-        checkFullAdminRequired(workspaceName);
+        File directory = null;
+        try {
+            checkWorkspaceName(workspaceName);
+            checkFullAdminRequired(workspaceName);
 
-        File directory = unzipSldPackage(stream);
-        File uploadedFile = getSldFileFromDirectory(directory);
+            directory = unzipSldPackage(stream);
+            stream.close();
 
-        Style styleSld = parseSld(uploadedFile);
+            File uploadedFile = getSldFileFromDirectory(directory);
 
-        if (name == null) {
-            name = getNameFromStyle(styleSld);
+            Style styleSld = parseSld(uploadedFile);
+
+            if (name == null) {
+                name = getNameFromStyle(styleSld);
+            }
+            checkStyleNotExists(workspaceName, name);
+
+            saveImageResources(directory, workspaceName);
+
+            StyleHandler handler = Styles.handler("sld");
+            Version version = handler.version(uploadedFile);
+            StyleInfo styleInfo =
+                    createStyleInfo(workspaceName, name, handler, handler.mimeType(version));
+
+            checkStyleResourceNotExists(styleInfo);
+            writeStyleRaw(styleInfo, uploadedFile);
+
+            catalog.add(styleInfo);
+
+            LOGGER.info("POST Style Package: " + name + ", workspace: " + workspaceName);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setLocation(getUri(name, workspaceName, builder));
+            headers.setContentType(MediaType.TEXT_PLAIN);
+            return new ResponseEntity<>(name, headers, HttpStatus.CREATED);
+        } finally {
+            FileUtils.deleteQuietly(directory);
         }
-        checkStyleNotExists(workspaceName, name);
-
-        saveImageResources(directory, workspaceName);
-
-        StyleHandler handler = Styles.handler("sld");
-        Version version = handler.version(uploadedFile);
-        StyleInfo styleInfo =
-                createStyleInfo(workspaceName, name, handler, handler.mimeType(version));
-
-        checkStyleResourceNotExists(styleInfo);
-        writeStyleRaw(styleInfo, new FileInputStream(uploadedFile));
-
-        catalog.add(styleInfo);
-
-        LOGGER.info("POST Style Package: " + name + ", workspace: " + workspaceName);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(getUri(name, workspaceName, builder));
-        headers.setContentType(MediaType.TEXT_PLAIN);
-        return new ResponseEntity<>(name, headers, HttpStatus.CREATED);
     }
 
     @PostMapping(
-        value = {"/styles", "/workspaces/{workspaceName}/styles"},
-        consumes = {MediaType.ALL_VALUE}
-    )
+            value = {"/styles", "/workspaces/{workspaceName}/styles"},
+            consumes = {MediaType.ALL_VALUE})
     public ResponseEntity<String> styleSLDPost(
             InputStream inputStream,
             @PathVariable(required = false) String workspaceName,
@@ -253,9 +254,8 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        path = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
-        produces = {MediaType.ALL_VALUE}
-    )
+            path = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
+            produces = {MediaType.ALL_VALUE})
     protected RestWrapper<StyleInfo> styleGet(
             @PathVariable String styleName, @PathVariable(required = false) String workspaceName) {
 
@@ -263,9 +263,8 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        path = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
-        produces = {SLDHandler.MIMETYPE_10, SLDHandler.MIMETYPE_11}
-    )
+            path = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
+            produces = {SLDHandler.MIMETYPE_10, SLDHandler.MIMETYPE_11})
     protected StyleInfo styleSLDGet(
             @PathVariable String styleName, @PathVariable(required = false) String workspaceName) {
 
@@ -324,9 +323,8 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
-        consumes = {MediaTypeExtensions.APPLICATION_ZIP_VALUE}
-    )
+            value = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
+            consumes = {MediaTypeExtensions.APPLICATION_ZIP_VALUE})
     public void styleZipPut(
             InputStream is,
             @PathVariable String styleName,
@@ -361,7 +359,7 @@ public class StyleController extends AbstractCatalogController {
 
             // Save the style: serialize the style out into the data directory
             StyleInfo styleInfo = catalog.getStyleByName(workspaceName, styleName);
-            writeStyleRaw(styleInfo, new FileInputStream(uploadedFile));
+            writeStyleRaw(styleInfo, uploadedFile);
             catalog.save(styleInfo);
 
             LOGGER.info("PUT Style Package: " + styleName + ", workspace: " + workspaceName);
@@ -382,8 +380,9 @@ public class StyleController extends AbstractCatalogController {
         PutIgnoringExtensionContentNegotiationStrategy stylePutContentNegotiationStrategy() {
             return new PutIgnoringExtensionContentNegotiationStrategy(
                     new PatternsRequestCondition(
-                            "/styles/{styleName}",
-                            "/workspaces/{workspaceName}/styles/{styleName}"),
+                            RestBaseController.ROOT_PATH + "/styles/{styleName}",
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/{workspaceName}/styles/{styleName}"),
                     Arrays.asList(
                             MediaType.APPLICATION_JSON,
                             MediaType.APPLICATION_XML,
@@ -392,9 +391,8 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
-        consumes = {MediaType.ALL_VALUE}
-    )
+            value = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
+            consumes = {MediaType.ALL_VALUE})
     public void stylePut(
             InputStream inputStream,
             @PathVariable String styleName,
@@ -416,7 +414,7 @@ public class StyleController extends AbstractCatalogController {
         String content = new String(rawData, charset);
         EntityResolver entityResolver = catalog.getResourcePool().getEntityResolver();
         if (raw) {
-            writeStyleRaw(info, new ByteArrayInputStream(rawData));
+            writeStyleRaw(info, rawData);
 
             try {
                 // figure out if we need a version switch
@@ -452,14 +450,13 @@ public class StyleController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
-        consumes = {
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE
-        }
-    )
+            value = {"/styles/{styleName}", "/workspaces/{workspaceName}/styles/{styleName}"},
+            consumes = {
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE
+            })
     public void stylePut(
             @RequestBody StyleInfo info,
             @PathVariable String styleName,
@@ -469,8 +466,8 @@ public class StyleController extends AbstractCatalogController {
         checkFullAdminRequired(workspaceName);
 
         StyleInfo original = catalog.getStyleByName(workspaceName, styleName);
-
         new CatalogBuilder(catalog).updateStyle(original, info);
+
         catalog.save(original);
     }
 
@@ -506,7 +503,7 @@ public class StyleController extends AbstractCatalogController {
         // If there is more than one layer, assume this is a style group and validate accordingly.
         if (sld.getStyledLayers().length > 1) {
             List<Exception> validationErrors = SLDNamedLayerValidator.validate(catalog, sld);
-            if (validationErrors.size() > 0) {
+            if (!validationErrors.isEmpty()) {
                 throw validationErrors.get(0);
             }
         }
@@ -519,11 +516,12 @@ public class StyleController extends AbstractCatalogController {
                 && sld.getStyledLayers().length <= 1
                 && SLDHandler.VERSION_10.equals(version)) {
             info.setFormat(handler.getFormat());
+            info.setFormatVersion(version);
             resourcePool.writeStyle(info, style, true);
         } else {
             info.setFormat(handler.getFormat());
             info.setFormatVersion(version);
-            writeStyleRaw(info, new ByteArrayInputStream(rawData));
+            writeStyleRaw(info, rawData);
         }
     }
 
@@ -531,14 +529,25 @@ public class StyleController extends AbstractCatalogController {
      * Writes the content of an input stream to a style resource, without validation
      *
      * @param info Style info object, containing details about the style format and location
-     * @param input The style contents
+     * @param file The style contents
      * @throws IOException if there was an error persisting the style
      */
-    private void writeStyleRaw(StyleInfo info, InputStream input) throws IOException {
-        try {
+    private void writeStyleRaw(StyleInfo info, File file) throws IOException {
+        try (FileInputStream input = new FileInputStream(file)) {
             catalog.getResourcePool().writeStyle(info, input);
-        } finally {
-            org.geoserver.util.IOUtils.closeQuietly(input);
+        }
+    }
+
+    /**
+     * Writes the content of an input stream to a style resource, without validation
+     *
+     * @param info Style info object, containing details about the style format and location
+     * @param bytes The style contents
+     * @throws IOException if there was an error persisting the style
+     */
+    private void writeStyleRaw(StyleInfo info, byte[] bytes) throws IOException {
+        try (ByteArrayInputStream input = new ByteArrayInputStream(bytes)) {
+            catalog.getResourcePool().writeStyle(info, input);
         }
     }
 
@@ -584,7 +593,7 @@ public class StyleController extends AbstractCatalogController {
      * @throws IOException if there was an error extracting the archive
      */
     private File unzipSldPackage(InputStream object) throws IOException {
-        File tempDir = Files.createTempDir();
+        File tempDir = Files.createTempDirectory("_sld").toFile();
 
         org.geoserver.util.IOUtils.decompress(object, tempDir);
 

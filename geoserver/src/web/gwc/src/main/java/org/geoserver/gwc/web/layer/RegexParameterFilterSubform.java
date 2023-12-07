@@ -15,7 +15,6 @@ import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.validation.IValidatable;
 import org.apache.wicket.validation.IValidator;
 import org.apache.wicket.validation.ValidationError;
-import org.geowebcache.filter.parameters.CaseNormalizer;
 import org.geowebcache.filter.parameters.RegexParameterFilter;
 
 /**
@@ -48,29 +47,20 @@ public class RegexParameterFilterSubform
     /** serialVersionUID */
     private static final long serialVersionUID = 1L;
 
-    private Component normalize;
-
     public RegexParameterFilterSubform(String id, IModel<RegexParameterFilter> model) {
         super(id, model);
 
-        final Component defaultValue;
-
-        defaultValue =
-                new TextField<String>(
-                        "defaultValue", new PropertyModel<String>(model, "defaultValue"));
+        final Component defaultValue =
+                new TextField<>("defaultValue", new PropertyModel<>(model, "defaultValue"));
         add(defaultValue);
 
-        final TextField<String> regex;
-
-        regex = new TextField<String>("regex", new PropertyModel<String>(model, "regex"));
+        final TextField<String> regex =
+                new TextField<>("regex", new PropertyModel<>(model, "regex"));
 
         regex.add(REGEXP_VALIDATOR);
 
         add(regex);
 
-        normalize =
-                new CaseNormalizerSubform(
-                        "normalize", new PropertyModel<CaseNormalizer>(model, "normalize"));
-        add(normalize);
+        addNormalize(model);
     }
 }

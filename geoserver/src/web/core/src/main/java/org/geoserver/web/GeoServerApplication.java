@@ -13,9 +13,12 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.wicket.Application;
+import org.apache.wicket.Component;
 import org.apache.wicket.ConverterLocator;
 import org.apache.wicket.DefaultExceptionMapper;
 import org.apache.wicket.IConverterLocator;
@@ -36,10 +39,15 @@ import org.apache.wicket.request.component.IRequestablePage;
 import org.apache.wicket.request.cycle.AbstractRequestCycleListener;
 import org.apache.wicket.request.cycle.IRequestCycleListener;
 import org.apache.wicket.request.cycle.RequestCycle;
+import org.apache.wicket.request.http.WebRequest;
+import org.apache.wicket.request.http.WebResponse;
+import org.apache.wicket.request.resource.JavaScriptResourceReference;
+import org.apache.wicket.resource.JQueryResourceReference;
 import org.apache.wicket.resource.loader.IStringResourceLoader;
 import org.apache.wicket.settings.RequestCycleSettings.RenderStrategy;
 import org.apache.wicket.util.IProvider;
 import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.ValidationException;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInfo.WebUIMode;
 import org.geoserver.platform.GeoServerExtensions;
@@ -49,6 +57,7 @@ import org.geoserver.web.spring.security.GeoServerSession;
 import org.geoserver.web.util.DataDirectoryConverterLocator;
 import org.geoserver.web.util.GeoToolsConverterAdapter;
 import org.geoserver.web.util.converters.StringBBoxConverter;
+import org.geoserver.web.wicket.ParamResourceModel;
 import org.geotools.data.util.MeasureConverterFactory;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.measure.Measure;
@@ -73,6 +82,11 @@ import org.springframework.security.authentication.event.InteractiveAuthenticati
 public class GeoServerApplication extends WebApplication
         implements ApplicationContextAware, ApplicationListener<ApplicationEvent> {
 
+    /** Name of the cookie used to remember the chosen language across sessions */
+    public static final String LANGUAGE_COOKIE_NAME = "GeoServerUILanguage";
+    /** Default cookie expiration date (one year) */
+    public static final int LANGUAGE_COOKIE_AGE = 365 * 24 * 60 * 60;
+
     /** logger for web application */
     public static Logger LOGGER = Logging.getLogger("org.geoserver.web");
 
@@ -81,7 +95,7 @@ public class GeoServerApplication extends WebApplication
 
     public static final String GEOSERVER_CSRF_DISABLED = "GEOSERVER_CSRF_DISABLED";
     public static final String GEOSERVER_CSRF_WHITELIST = "GEOSERVER_CSRF_WHITELIST";
-
+    public static final String JQUERY_VERSION_3 = "jquery/jquery-3.5.1.js";
     ApplicationContext applicationContext;
 
     /**
@@ -89,6 +103,28 @@ public class GeoServerApplication extends WebApplication
      * (default is true).
      */
     protected boolean defaultIsRedirect = true;
+
+    /**
+     * Turns an exception into an error message. If the exception is a {@link
+     * org.geoserver.catalog.ValidationException} an attempt is made to look up an internationalized
+     * error message for it.
+     */
+    public static String getMessage(Component c, Exception e) {
+        if (e instanceof ValidationException) {
+            ValidationException ve = (ValidationException) e;
+            try {
+                if (ve.getParameters() == null) {
+                    return new ParamResourceModel(ve.getKey(), c, ve.getParameters()).getString();
+                } else {
+                    return new ParamResourceModel(ve.getKey(), c, ve.getParameters()).getString();
+                }
+            } catch (Exception ex) {
+                LOGGER.log(Level.FINE, "i18n not found, proceeding with default message", ex);
+            }
+        }
+        // just use the message or the toString instead
+        return e.getMessage() == null ? e.toString() : e.getMessage();
+    }
 
     /**
      * Get default redirect mode.
@@ -102,14 +138,13 @@ public class GeoServerApplication extends WebApplication
     /**
      * Set default redirect mode. (must be called before init method, usually by Spring
      * PropertyOverriderConfigurer)
-     *
-     * @param defaultIsRedirect
      */
     public void setDefaultIsRedirect(boolean defaultIsRedirect) {
         this.defaultIsRedirect = defaultIsRedirect;
     }
 
     /** The {@link GeoServerHomePage}. */
+    @Override
     public Class<GeoServerHomePage> getHomePage() {
         return GeoServerHomePage.class;
     }
@@ -181,6 +216,7 @@ public class GeoServerApplication extends WebApplication
     }
 
     /** Initialization override which sets up a locator for i18n resources. */
+    @Override
     protected void init() {
         // enable GeoServer custom resource locators
         getResourceSettings().setUseMinifiedResources(false);
@@ -202,7 +238,10 @@ public class GeoServerApplication extends WebApplication
                 .getStringResourceLoaders()
                 .add(0, new GeoServerStringResourceLoader());
         getDebugSettings().setAjaxDebugModeEnabled(false);
-
+        getJavaScriptLibrarySettings()
+                .setJQueryReference(
+                        new JavaScriptResourceReference(
+                                JQueryResourceReference.class, JQUERY_VERSION_3));
         getApplicationSettings().setPageExpiredErrorPage(GeoServerExpiredPage.class);
         // generates infinite redirections, commented out for the moment
         // getSecuritySettings().setCryptFactory(GeoserverWicketEncrypterFactory.get());
@@ -297,13 +336,47 @@ public class GeoServerApplication extends WebApplication
     @Override
     public Session newSession(Request request, Response response) {
         Session s = new GeoServerSession(request);
-        if (s.getLocale() == null) s.setLocale(Locale.ENGLISH);
+
+        // the locale is normally established by the browser's accept language, but it
+        // can be overridden by a cookie (set by GUI in GeoServerWebPage)
+        Locale locale = getLocaleFromCookies(request);
+        if (locale != null) {
+            refreshLocaleCookie(response, locale);
+            s.setLocale(locale);
+        } else if (s.getLocale() == null) {
+            s.setLocale(Locale.ENGLISH);
+        }
+
         return s;
+    }
+
+    /** Grabs the locale from cookies, if possible, otherwise defaults to English */
+    public Locale getLocaleFromCookies(Request request) {
+        if (request instanceof WebRequest) {
+            List<Cookie> cookies = ((WebRequest) request).getCookies();
+
+            for (Cookie cookie : cookies) {
+                if (LANGUAGE_COOKIE_NAME.equals(cookie.getName())) {
+                    cookie.setMaxAge(LANGUAGE_COOKIE_AGE);
+                    return new Locale(cookie.getValue());
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Refreshes the locale cookie, to maintain its presence in future requests */
+    public void refreshLocaleCookie(Response response, Locale locale) {
+        Cookie languageCookie =
+                new Cookie(GeoServerApplication.LANGUAGE_COOKIE_NAME, locale.getLanguage());
+        languageCookie.setMaxAge(GeoServerApplication.LANGUAGE_COOKIE_AGE);
+        ((WebResponse) response).addCookie(languageCookie);
     }
 
     /*
      * Overrides to return a custom converter locator which loads converters from the GeoToools converter subsystem.
      */
+    @Override
     protected IConverterLocator newConverterLocator() {
         // TODO: load converters from application context
         ConverterLocator locator = new ConverterLocator();
@@ -432,6 +505,7 @@ public class GeoServerApplication extends WebApplication
         return ((ServletWebRequest) req).getContainerRequest();
     }
 
+    @Override
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof AuthenticationSuccessEvent
                 || event instanceof InteractiveAuthenticationSuccessEvent) {

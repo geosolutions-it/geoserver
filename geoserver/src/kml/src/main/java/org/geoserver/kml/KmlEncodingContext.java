@@ -70,7 +70,7 @@ public class KmlEncodingContext {
 
     protected SimpleFeature currentFeature;
 
-    protected Map<String, Object> metadata = new HashMap<String, Object>();
+    protected Map<String, Object> metadata = new HashMap<>();
 
     protected boolean descriptionEnabled;
 
@@ -80,7 +80,7 @@ public class KmlEncodingContext {
 
     protected WMS wms;
 
-    protected Map<String, Layer> kmzGroundOverlays = new LinkedHashMap<String, Layer>();
+    protected Map<String, Layer> kmzGroundOverlays = new LinkedHashMap<>();
 
     protected boolean placemarkForced;
 
@@ -104,8 +104,7 @@ public class KmlEncodingContext {
      * Holds the feature iterators that have been opened, but not yet closed, to make sure they get
      * disposed at the end of the encoding even in case of exceptions during the encoding
      */
-    protected IdentityHashMap<FeatureIterator, FeatureIterator> iterators =
-            new IdentityHashMap<FeatureIterator, FeatureIterator>();
+    protected IdentityHashMap<FeatureIterator, FeatureIterator> iterators = new IdentityHashMap<>();
 
     public static final ReferencedEnvelope WORLD_BOUNDS_WGS84 =
             new ReferencedEnvelope(-180, 180, -90, 90, DefaultGeographicCRS.WGS84);
@@ -130,7 +129,7 @@ public class KmlEncodingContext {
         this.kmz = kmz;
         this.service = wms.getServiceInfo();
         this.liveIcons = true;
-        this.iconStyles = new HashMap<String, Style>();
+        this.iconStyles = new HashMap<>();
 
         Boolean autofit =
                 Converters.convert(request.getFormatOptions().get("autofit"), Boolean.class);
@@ -158,16 +157,12 @@ public class KmlEncodingContext {
         }
     }
 
-    private String computeModeOption(Map<String, String> rawKvp) {
+    private String computeModeOption(Map<String, Object> rawKvp) {
         String mode = KvpUtils.caseInsensitiveParam(rawKvp, "mode", null);
         return mode;
     }
 
-    /**
-     * Force the output to be in WGS84
-     *
-     * @param mc
-     */
+    /** Force the output to be in WGS84 */
     private WMSMapContent fixViewport(WMSMapContent mc) {
         MapViewport viewport = mc.getViewport();
         if (!CRS.equalsIgnoreMetadata(
@@ -184,11 +179,7 @@ public class KmlEncodingContext {
     /** Protected constructor used by WFS output format to create a fake kml encoding context */
     protected KmlEncodingContext() {}
 
-    /**
-     * Returns the the kmplacemark value (either specified in the request, or the default one)
-     *
-     * @param mapContent
-     */
+    /** Returns the the kmplacemark value (either specified in the request, or the default one) */
     boolean computeKmplacemark() {
         Object kmplacemark = request.getFormatOptions().get("kmplacemark");
         if (kmplacemark != null) {
@@ -198,11 +189,7 @@ public class KmlEncodingContext {
         }
     }
 
-    /**
-     * Returns the the kmattr value (either specified in the request, or the default one)
-     *
-     * @param mapContent
-     */
+    /** Returns the the kmattr value (either specified in the request, or the default one) */
     boolean computeKMAttr() {
         Object kmattr = request.getFormatOptions().get("kmattr");
         if (kmattr == null) {
@@ -226,11 +213,7 @@ public class KmlEncodingContext {
         return kmScore;
     }
 
-    /**
-     * Checks if the extended data is enabled or not
-     *
-     * @param request
-     */
+    /** Checks if the extended data is enabled or not */
     boolean computeExtendedDataEnabled() {
         Map formatOptions = request.getFormatOptions();
         Boolean extendedData = Converters.convert(formatOptions.get("extendedData"), Boolean.class);
@@ -241,11 +224,7 @@ public class KmlEncodingContext {
         return extendedData;
     }
 
-    /**
-     * Checks if the superoverlay is enabled or not
-     *
-     * @param request
-     */
+    /** Checks if the superoverlay is enabled or not */
     boolean computeSuperOverlayEnabled() {
         Map formatOptions = request.getFormatOptions();
         Boolean superoverlay = (Boolean) formatOptions.get("superoverlay");
@@ -275,7 +254,7 @@ public class KmlEncodingContext {
     public List<KmlDecorator> getDecoratorsForClass(Class<? extends Feature> clazz) {
         List<KmlDecoratorFactory> factories =
                 GeoServerExtensions.extensions(KmlDecoratorFactory.class);
-        List<KmlDecorator> result = new ArrayList<KmlDecorator>();
+        List<KmlDecorator> result = new ArrayList<>();
         for (KmlDecoratorFactory factory : factories) {
             KmlDecorator decorator = factory.getDecorator(clazz, this);
             if (decorator != null) {
@@ -286,37 +265,27 @@ public class KmlEncodingContext {
         return result;
     }
 
-    /**
-     * Adds features to the folder own list
-     *
-     * @param folder
-     * @param features
-     */
+    /** Adds features to the folder own list */
     public void addFeatures(Folder folder, List<Feature> features) {
         List<Feature> originalFeatures = folder.getFeature();
-        if (originalFeatures == null || originalFeatures.size() == 0) {
+        if (originalFeatures == null || originalFeatures.isEmpty()) {
             folder.setFeature(features);
         } else {
             // in this case, compose the already existing features with the
             // dynamically generated ones
-            folder.setFeature(new CompositeList<Feature>(originalFeatures, features));
+            folder.setFeature(new CompositeList<>(originalFeatures, features));
         }
     }
 
-    /**
-     * Adds features to the document own list
-     *
-     * @param folder
-     * @param features
-     */
+    /** Adds features to the document own list */
     public void addFeatures(Document document, List<Feature> features) {
         List<Feature> originalFeatures = document.getFeature();
-        if (originalFeatures == null || originalFeatures.size() == 0) {
+        if (originalFeatures == null || originalFeatures.isEmpty()) {
             document.setFeature(features);
         } else {
             // in this case, compose the already existing features with the
             // dynamically generated ones
-            document.setFeature(new CompositeList<Feature>(originalFeatures, features));
+            document.setFeature(new CompositeList<>(originalFeatures, features));
         }
     }
 
@@ -401,7 +370,6 @@ public class KmlEncodingContext {
      * Adds a layer to be generated as ground overlay in the kmz package
      *
      * @param imagePath The path of the ground overlay image inside the kmz archive
-     * @param layer
      */
     public void addKmzGroundOverlay(String imagePath, Layer layer) {
         if (!kmz) {
@@ -454,7 +422,7 @@ public class KmlEncodingContext {
      * vector layers, a null will be placed where a layer of different nature is found
      */
     public List<SimpleFeatureType> getFeatureTypes() {
-        List<SimpleFeatureType> results = new ArrayList<SimpleFeatureType>();
+        List<SimpleFeatureType> results = new ArrayList<>();
         for (Layer layer : mapContent.layers()) {
             if (layer instanceof FeatureLayer) {
                 results.add((SimpleFeatureType) layer.getFeatureSource().getSchema());
@@ -519,6 +487,7 @@ public class KmlEncodingContext {
         }
     }
 
+    @SuppressWarnings("PMD.CloseResource") // actually closing iterators here
     public void closeIterators() {
         // clean up any un-closed iterator
         for (FeatureIterator fi : iterators.keySet()) {

@@ -100,8 +100,8 @@ public class GuavaAuthenticationCacheImpl implements AuthenticationCache, Dispos
                         .expireAfterWrite(timeToLiveSeconds, TimeUnit.SECONDS)
                         .concurrencyLevel(concurrencyLevel)
                         .build();
-        if (LOGGER.isLoggable(Level.INFO)) {
-            LOGGER.info(
+        if (LOGGER.isLoggable(Level.CONFIG)) {
+            LOGGER.config(
                     "AuthenticationCache Initialized with "
                             + maxEntries
                             + " Max Entries, "
@@ -116,8 +116,8 @@ public class GuavaAuthenticationCacheImpl implements AuthenticationCache, Dispos
         // schedule eviction thread
         scheduler.scheduleAtFixedRate(
                 evictionTask, cleanUpSeconds, cleanUpSeconds, TimeUnit.SECONDS);
-        if (LOGGER.isLoggable(Level.INFO)) {
-            LOGGER.info(
+        if (LOGGER.isLoggable(Level.CONFIG)) {
+            LOGGER.config(
                     "AuthenticationCache Eviction Task created to run every "
                             + cleanUpSeconds
                             + " seconds");
@@ -144,7 +144,7 @@ public class GuavaAuthenticationCacheImpl implements AuthenticationCache, Dispos
             LOGGER.fine("AuthenticationCache removing all entries for " + filterName);
             LOGGER.fine("Cache entries #: " + cache.size());
         }
-        Set<AuthenticationCacheKey> toBeRemoved = new HashSet<AuthenticationCacheKey>();
+        Set<AuthenticationCacheKey> toBeRemoved = new HashSet<>();
         for (AuthenticationCacheKey key : cache.asMap().keySet()) {
             if (filterName.equals(key.getFilterName())) toBeRemoved.add(key);
         }

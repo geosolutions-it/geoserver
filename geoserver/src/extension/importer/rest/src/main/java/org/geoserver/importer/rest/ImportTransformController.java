@@ -12,6 +12,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.geoserver.importer.ImportTask;
 import org.geoserver.importer.Importer;
 import org.geoserver.importer.transform.ImportTransform;
+import org.geoserver.importer.transform.TransformChain;
 import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.rest.converters.FreemarkerHTMLMessageConverter;
@@ -23,15 +24,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @ControllerAdvice
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH + "/imports/{importId}",
-    produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_HTML_VALUE}
-)
+        path = RestBaseController.ROOT_PATH + "/imports/{importId}",
+        produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_HTML_VALUE})
 public class ImportTransformController extends ImportBaseController {
 
     @Autowired
@@ -43,13 +52,14 @@ public class ImportTransformController extends ImportBaseController {
     public ResponseEntity postTransform(
             @PathVariable Long importId,
             @PathVariable Integer taskId,
-            @RequestBody ImportTransform importTransform,
+            @RequestBody ImportTransform tx,
             UriComponentsBuilder builder)
             throws IOException {
 
-        ImportTransform tx = importTransform;
         ImportTask task = task(importId, taskId);
-        task.getTransform().add(tx);
+        @SuppressWarnings("unchecked")
+        TransformChain<ImportTransform> transforms = (TransformChain) task.getTransform();
+        transforms.add(tx);
         importer.changed(task);
 
         HttpHeaders headers = new HttpHeaders();
@@ -58,10 +68,10 @@ public class ImportTransformController extends ImportBaseController {
                         .buildAndExpand(
                                 importId.toString(),
                                 taskId.toString(),
-                                task.getTransform().getTransforms().size() - 1)
+                                transforms.getTransforms().size() - 1)
                         .toUri());
         headers.setContentType(MediaType.TEXT_PLAIN);
-        return new ResponseEntity<String>("", headers, HttpStatus.CREATED);
+        return new ResponseEntity<>("", headers, HttpStatus.CREATED);
     }
 
     @GetMapping(path = {"/tasks/{taskId}/transforms", "/tasks/{taskId}/transforms/{transformId}"})
@@ -86,9 +96,8 @@ public class ImportTransformController extends ImportBaseController {
     }
 
     @PutMapping(
-        path = {"/tasks/{taskId}/transforms/{transformId}"},
-        consumes = {MediaType.APPLICATION_JSON_VALUE, MediaTypeExtensions.TEXT_JSON_VALUE}
-    )
+            path = {"/tasks/{taskId}/transforms/{transformId}"},
+            consumes = {MediaType.APPLICATION_JSON_VALUE, MediaTypeExtensions.TEXT_JSON_VALUE})
     public ImportWrapper putTransform(
             @PathVariable Long importId,
             @PathVariable Integer taskId,
@@ -99,7 +108,9 @@ public class ImportTransformController extends ImportBaseController {
 
         ImportTask task = task(importId, taskId);
         ImportTransform orig = transform(task, transformId, false);
-        OwsUtils.copy(importTransform, orig, (Class) orig.getClass());
+        @SuppressWarnings("unchecked")
+        Class<ImportTransform> txc = (Class<ImportTransform>) orig.getClass();
+        OwsUtils.copy(importTransform, orig, txc);
         importer.changed(task);
 
         return (writer, builder, converter) -> {
@@ -118,13 +129,15 @@ public class ImportTransformController extends ImportBaseController {
 
         ImportTask task = task(importId, taskId);
         ImportTransform tx = transform(task, transformId, true);
-        boolean result = task.getTransform().remove(tx);
+        @SuppressWarnings("unchecked")
+        TransformChain<ImportTransform> transforms = (TransformChain) task.getTransform();
+        boolean result = transforms.remove(tx);
 
         if (result) {
             importer.changed(task);
-            return new ResponseEntity<String>("", HttpStatus.OK);
+            return new ResponseEntity<>("", HttpStatus.OK);
         } else {
-            return new ResponseEntity<String>("", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("", HttpStatus.NOT_FOUND);
         }
     }
 

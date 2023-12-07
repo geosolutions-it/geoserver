@@ -73,7 +73,7 @@ class CRSAreaOfValidityMapBuilder {
 
     private final int mapHeight;
 
-    private static Map<String, Style> STYLES = new WeakHashMap<String, Style>();
+    private static Map<String, Style> STYLES = new WeakHashMap<>();
 
     private static WeakReference<DataStore> LATLON = null;
 
@@ -86,9 +86,8 @@ class CRSAreaOfValidityMapBuilder {
         this.mapHeight = mapHeight;
     }
 
-    @SuppressWarnings("unchecked")
     private SimpleFeatureSource getFeatureSource(final URL shpfile) throws IOException {
-        Map params = new HashMap<String, String>();
+        Map<String, Object> params = new HashMap<>();
         params.put(ShapefileDataStoreFactory.CREATE_SPATIAL_INDEX.key, "false");
         params.put(ShapefileDataStoreFactory.URLP.key, shpfile);
         DataStore ds = DataStoreFinder.getDataStore(params);
@@ -151,7 +150,7 @@ class CRSAreaOfValidityMapBuilder {
         final double dx = (eastBoundLongitude - westBoundLongitude) / numSteps;
         final double dy = (northBoundLatitude - southBoundLatitude) / numSteps;
 
-        List<Coordinate> coords = new ArrayList<Coordinate>(4 * numSteps + 1);
+        List<Coordinate> coords = new ArrayList<>(4 * numSteps + 1);
 
         double x = westBoundLongitude;
         for (int i = 0; i < numSteps; i++) {
@@ -246,7 +245,6 @@ class CRSAreaOfValidityMapBuilder {
     }
 
     private SimpleFeature createCrsBoundsFeature(Geometry geom, CoordinateReferenceSystem crs) {
-        SimpleFeatureType featureType;
 
         SimpleFeatureTypeBuilder sftb = new SimpleFeatureTypeBuilder();
         sftb.setName("Bounds");
@@ -256,7 +254,7 @@ class CRSAreaOfValidityMapBuilder {
             throw new RuntimeException(e);
         }
 
-        featureType = sftb.buildFeatureType();
+        SimpleFeatureType featureType = sftb.buildFeatureType();
 
         SimpleFeature feature = SimpleFeatureBuilder.template(featureType, null);
         feature.setAttribute("the_geom", geom);
@@ -281,13 +279,9 @@ class CRSAreaOfValidityMapBuilder {
 
         MapContent mapContent = new MapContent();
 
-        Style style;
-        URL shpfile;
-        SimpleFeatureSource source;
-
-        shpfile = getClass().getResource("TM_WORLD_BORDERS.shp");
-        source = getFeatureSource(shpfile);
-        style = getStyle("TM_WORLD_BORDERS.sld");
+        URL shpfile = getClass().getResource("TM_WORLD_BORDERS.shp");
+        SimpleFeatureSource source = getFeatureSource(shpfile);
+        Style style = getStyle("TM_WORLD_BORDERS.sld");
         mapContent.addLayer(new FeatureLayer(source, style));
 
         source = getLatLonFeatureSource();
@@ -310,7 +304,7 @@ class CRSAreaOfValidityMapBuilder {
             DataStore ds = LATLON == null ? null : LATLON.get();
             if (ds == null) {
                 ds = createLatLonDataStore();
-                LATLON = new WeakReference<DataStore>(ds);
+                LATLON = new WeakReference<>(ds);
             }
             return ds.getFeatureSource("latlon");
         } catch (Exception e) {
@@ -329,54 +323,50 @@ class CRSAreaOfValidityMapBuilder {
 
         ds.createSchema(type);
 
-        FeatureWriter<SimpleFeatureType, SimpleFeature> writer;
-        writer = ds.getFeatureWriterAppend("latlon", Transaction.AUTO_COMMIT);
+        try (FeatureWriter<SimpleFeatureType, SimpleFeature> writer =
+                ds.getFeatureWriterAppend("latlon", Transaction.AUTO_COMMIT)) {
+            for (int lon = -180; lon < 180; lon += 5) {
+                for (int lat = -90; lat < 90; lat += 5) {
 
-        for (int lon = -180; lon < 180; lon += 5) {
-            for (int lat = -90; lat < 90; lat += 5) {
-                LineString geom;
-                int level;
+                    LineString geom =
+                            gf.createLineString(
+                                    new Coordinate[] {
+                                        new Coordinate(lon, lat), new Coordinate(lon, lat + 5)
+                                    });
 
-                geom =
-                        gf.createLineString(
-                                new Coordinate[] {
-                                    new Coordinate(lon, lat), new Coordinate(lon, lat + 5)
-                                });
+                    int level = 1;
+                    if (lon % 10 == 0) {
+                        level = 10;
+                    }
+                    if (lon % 30 == 0) {
+                        level = 30;
+                    }
 
-                level = 1;
-                if (lon % 10 == 0) {
-                    level = 10;
+                    SimpleFeature f = writer.next();
+                    f.setAttribute(0, geom);
+                    f.setAttribute(1, Integer.valueOf(level));
+                    writer.write();
+
+                    geom =
+                            gf.createLineString(
+                                    new Coordinate[] {
+                                        new Coordinate(lon, lat), new Coordinate(lon + 5, lat)
+                                    });
+
+                    level = 1;
+                    if (lat % 10 == 0) {
+                        level = 10;
+                    }
+                    if (lat % 30 == 0) {
+                        level = 30;
+                    }
+                    f = writer.next();
+                    f.setAttribute(0, geom);
+                    f.setAttribute(1, Integer.valueOf(level));
+                    writer.write();
                 }
-                if (lon % 30 == 0) {
-                    level = 30;
-                }
-
-                SimpleFeature f;
-                f = writer.next();
-                f.setAttribute(0, geom);
-                f.setAttribute(1, Integer.valueOf(level));
-                writer.write();
-
-                geom =
-                        gf.createLineString(
-                                new Coordinate[] {
-                                    new Coordinate(lon, lat), new Coordinate(lon + 5, lat)
-                                });
-
-                level = 1;
-                if (lat % 10 == 0) {
-                    level = 10;
-                }
-                if (lat % 30 == 0) {
-                    level = 30;
-                }
-                f = writer.next();
-                f.setAttribute(0, geom);
-                f.setAttribute(1, Integer.valueOf(level));
-                writer.write();
             }
         }
-        writer.close();
 
         return ds;
     }

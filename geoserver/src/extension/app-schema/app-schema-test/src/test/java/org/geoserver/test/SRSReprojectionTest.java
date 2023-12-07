@@ -6,12 +6,15 @@
 
 package org.geoserver.test;
 
+import static org.geoserver.test.GeoPackageUtil.isGeopkgTest;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.IOException;
+import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.ProjectionPolicy;
 import org.geotools.appschema.filter.FilterFactoryImplNamespaceAware;
 import org.geotools.appschema.jdbc.NestedFilterToSQL;
 import org.geotools.data.FeatureSource;
@@ -61,10 +64,10 @@ public class SRSReprojectionTest extends AbstractAppSchemaTestSupport {
     /** Tests re-projection of NonFeatureTypeProxy. */
     @Test
     public void testNonFeatureTypeProxy() {
-        Document doc = null;
-        doc =
+        Document doc =
                 getAsDOM(
-                        "wfs?request=GetFeature&version=1.1.0&typename=gsml:MappedFeature&srsName=EPSG:4326");
+                        "wfs?request=GetFeature&version=1.1"
+                                + ".0&typename=gsml:MappedFeature&srsName=EPSG:4326");
         LOGGER.info("WFS GetFeature&typename=gsml:MappedFeature response:\n" + prettyString(doc));
         assertXpathEvaluatesTo(
                 "value01",
@@ -124,8 +127,8 @@ public class SRSReprojectionTest extends AbstractAppSchemaTestSupport {
         Document doc = getAsDOM("wfs?request=GetFeature&version=1.1.0&typename=ex:geomContainer");
         LOGGER.info("WFS GetFeature&typename=ex:geomContainer response:\n" + prettyString(doc));
         // Generate test geometries and its results after re-projection.
-        CoordinateReferenceSystem sourceCRS = (CoordinateReferenceSystem) CRS.decode(EPSG_4283);
-        CoordinateReferenceSystem targetCRS = (CoordinateReferenceSystem) CRS.decode(EPSG_4326);
+        CoordinateReferenceSystem sourceCRS = CRS.decode(EPSG_4283);
+        CoordinateReferenceSystem targetCRS = CRS.decode(EPSG_4326);
         MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS);
         GeometryFactory factory = new GeometryFactory();
         Polygon srcPolygon =
@@ -221,6 +224,7 @@ public class SRSReprojectionTest extends AbstractAppSchemaTestSupport {
 
     @Test
     public void testNestedSpatialFilterEncoding() throws IOException, FilterToSQLException {
+        if (isGeopkgTest()) return;
         FeatureTypeInfo ftInfo = getCatalog().getFeatureTypeByName("ex", "geomContainer");
         FeatureSource fs = ftInfo.getFeatureSource(new NullProgressListener(), null);
         AppSchemaDataAccess da = (AppSchemaDataAccess) fs.getDataStore();
@@ -282,5 +286,29 @@ public class SRSReprojectionTest extends AbstractAppSchemaTestSupport {
         NestedFilterToSQL nestedFilterToSQL = createNestedFilterEncoder(rootMapping);
         String encodedFilter = nestedFilterToSQL.encodeToString(unrolled);
         assertTrue(encodedFilter.contains("EXISTS"));
+    }
+
+    /** Tests reprojection from native to declared for complex features. */
+    @Test
+    public void testReprojection() throws Exception {
+        final Catalog catalog = getCatalog();
+        try {
+            FeatureTypeInfo typeInfo = catalog.getFeatureTypeByName("gsml:MappedFeature");
+            typeInfo.setSRS("EPSG:3857");
+            typeInfo.setProjectionPolicy(ProjectionPolicy.REPROJECT_TO_DECLARED);
+            catalog.save(typeInfo);
+            Document doc =
+                    getAsDOM("wfs?request=GetFeature&version=1.1.0&typename=gsml:MappedFeature");
+            print(doc);
+            assertXpathEvaluatesTo(
+                    "urn:x-ogc:def:crs:EPSG:3857",
+                    "//gsml:MappedFeature[@gml:id='gsml.mappedfeature.mf1']/gsml:shape/gml:Point/@srsName",
+                    doc);
+        } finally {
+            FeatureTypeInfo typeInfo = catalog.getFeatureTypeByName("gsml:MappedFeature");
+            typeInfo.setSRS("EPSG:4326");
+            typeInfo.setProjectionPolicy(ProjectionPolicy.NONE);
+            catalog.save(typeInfo);
+        }
     }
 }

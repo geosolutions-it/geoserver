@@ -73,8 +73,8 @@ public class ImportDataPage extends GeoServerSecuredPage {
     WebMarkupContainer sourcePanel;
 
     WorkspaceDetachableModel workspace;
-    DropDownChoice workspaceChoice;
-    TextField workspaceNameTextField;
+    DropDownChoice<WorkspaceInfo> workspaceChoice;
+    TextField<String> workspaceNameTextField;
     Component statusLabel;
 
     StoreModel<StoreInfo> store;
@@ -126,7 +126,7 @@ public class ImportDataPage extends GeoServerSecuredPage {
         // workspace chooser
         workspace = new WorkspaceDetachableModel(catalog.getDefaultWorkspace());
         workspaceChoice =
-                new DropDownChoice(
+                new DropDownChoice<>(
                         "workspace",
                         workspace,
                         new WorkspacesModel(),
@@ -147,7 +147,7 @@ public class ImportDataPage extends GeoServerSecuredPage {
         workspaceNameContainer.setOutputMarkupId(true);
         form.add(workspaceNameContainer);
 
-        workspaceNameTextField = new TextField("workspaceName", new Model());
+        workspaceNameTextField = new TextField<>("workspaceName", new Model<>());
         workspaceNameTextField.setOutputMarkupId(true);
         boolean defaultWorkspace = catalog.getDefaultWorkspace() != null;
         workspaceNameTextField.setVisible(!defaultWorkspace);
@@ -155,14 +155,15 @@ public class ImportDataPage extends GeoServerSecuredPage {
         workspaceNameContainer.add(workspaceNameTextField);
 
         // store chooser
-        WorkspaceInfo ws = (WorkspaceInfo) workspace.getObject();
-        store = new StoreModel<StoreInfo>(ws != null ? catalog.getDefaultDataStore(ws) : null);
+        WorkspaceInfo ws = workspace.getObject();
+        store = new StoreModel<>(ws != null ? catalog.getDefaultDataStore(ws) : null);
         storeChoice =
                 new DropDownChoice<StoreInfo>(
                         "store",
                         store,
                         new EnabledStoresModel(workspace),
                         new StoreChoiceRenderer()) {
+                    @Override
                     protected String getNullValidKey() {
                         return ImportDataPage.class.getSimpleName() + "." + super.getNullValidKey();
                     };
@@ -173,148 +174,8 @@ public class ImportDataPage extends GeoServerSecuredPage {
         form.add(storeChoice);
 
         form.add(statusLabel = new Label("status", new Model()).setOutputMarkupId(true));
-        form.add(
-                new AjaxSubmitLink("next", form) {
-                    @Override
-                    protected void disableLink(ComponentTag tag) {
-                        super.disableLink(tag);
-                        tag.setName("a");
-                        tag.addBehavior(AttributeModifier.replace("class", "disabled"));
-                    }
-
-                    protected void onError(AjaxRequestTarget target, Form<?> form) {
-                        addFeedbackPanels(target);
-                    }
-
-                    protected void onSubmit(AjaxRequestTarget target, final Form<?> form) {
-
-                        // update status to indicate we are working
-                        statusLabel.add(AttributeModifier.replace("class", "working-link"));
-                        statusLabel.setDefaultModelObject("Working");
-                        target.add(statusLabel);
-
-                        // enable cancel and disable this
-                        Component cancel = form.get("cancel");
-                        cancel.setEnabled(true);
-                        target.add(cancel);
-
-                        setEnabled(false);
-                        target.add(this);
-
-                        final AjaxSubmitLink self = this;
-
-                        final Long jobid;
-                        try {
-                            jobid = createContext();
-                        } catch (Exception e) {
-                            error(e);
-                            LOGGER.log(Level.WARNING, "Error creating import", e);
-                            resetButtons(form, target);
-                            return;
-                        }
-
-                        cancel.setDefaultModelObject(jobid);
-                        this.add(
-                                new AbstractAjaxTimerBehavior(Duration.seconds(3)) {
-                                    @Override
-                                    protected void onTimer(AjaxRequestTarget target) {
-                                        Importer importer = ImporterWebUtils.importer();
-                                        Task<ImportContext> t = importer.getTask(jobid);
-
-                                        if (t.isDone()) {
-                                            try {
-                                                if (t.getError() != null) {
-                                                    error(t.getError());
-                                                } else if (!t.isCancelled()) {
-                                                    ImportContext imp = t.get();
-
-                                                    // check the import for actual things to do
-                                                    boolean proceed = !imp.getTasks().isEmpty();
-
-                                                    if (proceed) {
-                                                        imp.setArchive(false);
-                                                        importer.changed(imp);
-
-                                                        PageParameters pp = new PageParameters();
-                                                        pp.add("id", imp.getId());
-
-                                                        setResponsePage(ImportPage.class, pp);
-                                                    } else {
-                                                        info("No data to import was found");
-                                                        importer.delete(imp);
-                                                    }
-                                                }
-                                            } catch (Exception e) {
-                                                error(e);
-                                                LOGGER.log(Level.WARNING, "", e);
-                                            } finally {
-                                                stop(null);
-
-                                                // update the button back to original state
-                                                resetButtons(form, target);
-
-                                                addFeedbackPanels(target);
-                                            }
-                                            return;
-                                        }
-
-                                        ProgressMonitor m = t.getMonitor();
-                                        String msg =
-                                                m.getTask() != null
-                                                        ? m.getTask().toString()
-                                                        : "Working";
-
-                                        statusLabel.setDefaultModelObject(msg);
-                                        target.add(statusLabel);
-                                    };
-
-                                    @Override
-                                    public boolean canCallListenerInterface(
-                                            Component component, Method method) {
-                                        if (self.equals(component)
-                                                && method.getDeclaringClass()
-                                                        .equals(
-                                                                org.apache.wicket.behavior
-                                                                        .IBehaviorListener.class)
-                                                && method.getName().equals("onRequest")) {
-                                            return true;
-                                        }
-                                        return super.canCallListenerInterface(component, method);
-                                    }
-                                });
-                    }
-                });
-
-        form.add(
-                new AjaxLink<Long>("cancel", new Model<Long>()) {
-                    protected void disableLink(ComponentTag tag) {
-                        super.disableLink(tag);
-                        ImporterWebUtils.disableLink(tag);
-                    };
-
-                    @Override
-                    public void onClick(AjaxRequestTarget target) {
-                        Importer importer = ImporterWebUtils.importer();
-                        Long jobid = getModelObject();
-                        Task<ImportContext> task = importer.getTask(jobid);
-                        if (task != null && !task.isDone() && !task.isCancelled()) {
-                            task.getMonitor().setCanceled(true);
-                            task.cancel(false);
-                            try {
-                                task.get();
-                            } catch (Exception e) {
-                            }
-                        }
-
-                        setEnabled(false);
-
-                        Component next = getParent().get("next");
-                        next.setEnabled(true);
-
-                        target.add(this);
-                        target.add(next);
-                    }
-                }.setOutputMarkupId(true).setEnabled(false));
+        form.add(new SubmitLink(form));
+        form.add(new CancelLink().setOutputMarkupId(true).setEnabled(false));
 
         importTable =
                 new ImportContextTable(
@@ -329,6 +190,7 @@ public class ImportDataPage extends GeoServerSecuredPage {
                             }
                         },
                         true) {
+                    @Override
                     protected void onSelectionUpdate(AjaxRequestTarget target) {
                         removeImportLink.setEnabled(!getSelection().isEmpty());
                         target.add(removeImportLink);
@@ -394,7 +256,7 @@ public class ImportDataPage extends GeoServerSecuredPage {
         ImportSourcePanel panel = (ImportSourcePanel) sourcePanel.get("content");
         ImportData source = panel.createImportSource();
 
-        WorkspaceInfo targetWorkspace = (WorkspaceInfo) workspace.getObject();
+        WorkspaceInfo targetWorkspace = workspace.getObject();
         if (targetWorkspace == null) {
             Catalog cat = getCatalog();
 
@@ -424,7 +286,7 @@ public class ImportDataPage extends GeoServerSecuredPage {
     }
 
     void updateTargetStore(AjaxRequestTarget target) {
-        WorkspaceInfo ws = (WorkspaceInfo) workspace.getObject();
+        WorkspaceInfo ws = workspace.getObject();
         store.setObject(
                 ws != null
                         ? GeoServerApplication.get().getCatalog().getDefaultDataStore(ws)
@@ -537,38 +399,21 @@ public class ImportDataPage extends GeoServerSecuredPage {
             }
         };
 
-        //        directory(new PackageResourceReference(GeoServerApplication.class,
-        // "img/icons/silk/folder.png"),
-        //                DirectoryPage.class,
-        // "org.geotools.data.shapefile.ShapefileDataStoreFactory"), //
-        //        postgis(new PackageResourceReference(GeoServerApplication.class,
-        //                "img/icons/geosilk/database_vector.png"), PostGISPage.class,
-        //                "org.geotools.data.postgis.PostgisNGDataStoreFactory"), //
-        //        oracle(new PackageResourceReference(GeoServerApplication.class,
-        //                "img/icons/geosilk/database_vector.png"), OraclePage.class,
-        //                "org.geotools.data.oracle.OracleNGDataStoreFactory"), //
-        //        sqlserver(new PackageResourceReference(GeoServerApplication.class,
-        //                "img/icons/geosilk/database_vector.png"), SQLServerPage.class,
-        //                "org.geotools.data.sqlserver.SQLServerDataStoreFactory"), //
-        //        arcsde(new PackageResourceReference(GeoServerApplication.class,
-        //                "img/icons/geosilk/database_vector.png"), ArcSDEPage.class,
-        //                "org.geotools.arcsde.data.ArcSDEDataStoreFactory");
-
         DataIcon icon;
 
         Source(DataIcon icon) {
             this.icon = icon;
         }
 
-        IModel getName(Component component) {
+        IModel<String> getName(Component component) {
             return new ParamResourceModel(this.name().toLowerCase() + "_name", component);
         }
 
-        IModel getDescription(Component component) {
+        IModel<String> getDescription(Component component) {
             return new ParamResourceModel(this.name().toLowerCase() + "_description", component);
         }
 
-        IModel getHelpLink(Component component) {
+        IModel<String> getHelpLink(Component component) {
             return new ParamResourceModel(this.name().toLowerCase() + "_helpLink", component);
         }
 
@@ -581,14 +426,7 @@ public class ImportDataPage extends GeoServerSecuredPage {
         }
 
         boolean isDataStoreFactoryAvaiable(String className) {
-            Class<DataStoreFactorySpi> clazz = null;
-            try {
-                clazz = (Class<DataStoreFactorySpi>) Class.forName(className);
-            } catch (Exception e) {
-                if (LOGGER.isLoggable(Level.FINE)) {
-                    LOGGER.log(Level.FINE, "DataStore class not available: " + className, e);
-                }
-            }
+            Class<DataStoreFactorySpi> clazz = getDataStoreFactorySpi(className);
             if (clazz == null) {
                 return false;
             }
@@ -609,6 +447,167 @@ public class ImportDataPage extends GeoServerSecuredPage {
             return factory.isAvailable();
         }
 
+        @SuppressWarnings("unchecked")
+        private Class<DataStoreFactorySpi> getDataStoreFactorySpi(String className) {
+            try {
+                return (Class<DataStoreFactorySpi>) Class.forName(className);
+            } catch (Exception e) {
+                if (LOGGER.isLoggable(Level.FINE)) {
+                    LOGGER.log(Level.FINE, "DataStore class not available: " + className, e);
+                }
+            }
+            return null;
+        }
+
         abstract ImportSourcePanel createPanel(String panelId);
+    }
+
+    private class SubmitLink extends AjaxSubmitLink {
+        public SubmitLink(Form form) {
+            super("next", form);
+        }
+
+        @Override
+        protected void disableLink(ComponentTag tag) {
+            super.disableLink(tag);
+            tag.setName("a");
+            tag.addBehavior(AttributeModifier.replace("class", "disabled"));
+        }
+
+        @Override
+        protected void onError(AjaxRequestTarget target, Form<?> form) {
+            addFeedbackPanels(target);
+        }
+
+        @Override
+        protected void onSubmit(AjaxRequestTarget target, final Form<?> form) {
+
+            // update status to indicate we are working
+            statusLabel.add(AttributeModifier.replace("class", "working-link"));
+            statusLabel.setDefaultModelObject("Working");
+            target.add(statusLabel);
+
+            // enable cancel and disable this
+            Component cancel = form.get("cancel");
+            cancel.setEnabled(true);
+            target.add(cancel);
+
+            setEnabled(false);
+            target.add(this);
+
+            final AjaxSubmitLink self = this;
+
+            final Long jobid;
+            try {
+                jobid = createContext();
+            } catch (Exception e) {
+                error(e);
+                LOGGER.log(Level.WARNING, "Error creating import", e);
+                resetButtons(form, target);
+                return;
+            }
+
+            cancel.setDefaultModelObject(jobid);
+            this.add(
+                    new AbstractAjaxTimerBehavior(Duration.seconds(3)) {
+                        @Override
+                        protected void onTimer(AjaxRequestTarget target) {
+                            Importer importer = ImporterWebUtils.importer();
+                            Task<ImportContext> t = importer.getTask(jobid);
+
+                            if (t.isDone()) {
+                                try {
+                                    if (t.getError() != null) {
+                                        error(t.getError());
+                                    } else if (!t.isCancelled()) {
+                                        ImportContext imp = t.get();
+
+                                        // check the import for actual things to do
+                                        boolean proceed = !imp.getTasks().isEmpty();
+
+                                        if (proceed) {
+                                            imp.setArchive(false);
+                                            importer.changed(imp);
+
+                                            PageParameters pp = new PageParameters();
+                                            pp.add("id", imp.getId());
+
+                                            setResponsePage(ImportPage.class, pp);
+                                        } else {
+                                            info("No data to import was found");
+                                            importer.delete(imp);
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    error(e);
+                                    LOGGER.log(Level.WARNING, "", e);
+                                } finally {
+                                    stop(null);
+
+                                    // update the button back to original state
+                                    resetButtons(form, target);
+
+                                    addFeedbackPanels(target);
+                                }
+                                return;
+                            }
+
+                            ProgressMonitor m = t.getMonitor();
+                            String msg = m.getTask() != null ? m.getTask().toString() : "Working";
+
+                            statusLabel.setDefaultModelObject(msg);
+                            target.add(statusLabel);
+                        };
+
+                        @Override
+                        public boolean canCallListenerInterface(
+                                Component component, Method method) {
+                            if (self.equals(component)
+                                    && method.getDeclaringClass()
+                                            .equals(
+                                                    org.apache.wicket.behavior.IBehaviorListener
+                                                            .class)
+                                    && method.getName().equals("onRequest")) {
+                                return true;
+                            }
+                            return super.canCallListenerInterface(component, method);
+                        }
+                    });
+        }
+    }
+
+    private class CancelLink extends AjaxLink<Long> {
+        public CancelLink() {
+            super("cancel", new Model<>());
+        }
+
+        @Override
+        protected void disableLink(ComponentTag tag) {
+            super.disableLink(tag);
+            ImporterWebUtils.disableLink(tag);
+        };
+
+        @Override
+        public void onClick(AjaxRequestTarget target) {
+            Importer importer = ImporterWebUtils.importer();
+            Long jobid = getModelObject();
+            Task<ImportContext> task = importer.getTask(jobid);
+            if (task != null && !task.isDone() && !task.isCancelled()) {
+                task.getMonitor().setCanceled(true);
+                task.cancel(false);
+                try {
+                    task.get();
+                } catch (Exception e) {
+                }
+            }
+
+            setEnabled(false);
+
+            Component next = getParent().get("next");
+            next.setEnabled(true);
+
+            target.add(this);
+            target.add(next);
+        }
     }
 }

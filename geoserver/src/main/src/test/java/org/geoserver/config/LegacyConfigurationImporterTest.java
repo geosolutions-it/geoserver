@@ -5,7 +5,10 @@
  */
 package org.geoserver.config;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.geoserver.config.impl.GeoServerFactoryImpl;
 import org.geoserver.config.impl.GeoServerImpl;
@@ -35,7 +38,7 @@ public class LegacyConfigurationImporterTest {
         LoggingInfo logging = importer.getConfiguration().getLogging();
         assertNotNull(logging);
 
-        assertEquals("DEFAULT_LOGGING.properties", logging.getLevel());
+        assertEquals("DEFAULT_LOGGING", logging.getLevel());
         assertTrue(logging.isStdOutLogging());
         assertEquals("logs/geoserver.log", logging.getLocation());
         assertFalse(info.getSettings().isVerbose());

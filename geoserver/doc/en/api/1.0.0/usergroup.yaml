@@ -4,15 +4,22 @@ info:
   version: 1.0.0
   title: Users and Groups
   description: Organisation of security users and groups
+  contact:
+    name: GeoServer
+    email: 'geoserver-users@sourceforge.net'
+    url: 'http://geoserver.org/comm/'
+host: localhost:8080
+basePath: /geoserver/rest/security
 
 paths:
   /usergroup/users/:
     get:
       operationId: usersDefaultGet
+      tags:
+       - "UserGroup"
       summary: Query all users
       description: Query all users in the default user/group service.
       produces:
-        - text/html
         - application/xml
         - application/json
       responses:
@@ -22,6 +29,8 @@ paths:
             $ref: "#/definitions/Users"    
     post:
       operationId: usersDefaultPost
+      tags:
+       - "UserGroup"
       summary: Add a new user
       description: Add a new user to the default user/group service      
       parameters:
@@ -44,10 +53,11 @@ paths:
   /usergroup/service/{serviceName}/users/:
     get:
       operationId: usersGet
+      tags:
+       - "UserGroup"
       summary: Query all users
       description: Query all users in a particular user/group service.
       produces:
-        - text/html
         - application/xml
         - application/json        
       parameters:
@@ -63,6 +73,8 @@ paths:
             $ref: "#/definitions/Users"   
     post:
       operationId: usersPost
+      tags:
+       - "UserGroup"
       summary: Add a new user
       description: Add a new user to a particular user/group service.
       consumes: 
@@ -87,28 +99,11 @@ paths:
             ID:
               description: ID of the newly created user
               type: string
-  /usergroup/users/{user}:
-    get:
-      operationId: userDefaultGet
-      summary: Query a user
-      description: Query a user in the default user/group service.
-      produces:
-        - text/html
-        - application/xml
-        - application/json
-      parameters:       
-        - name: user
-          description: the name of the user
-          in: path
-          required: true
-          type: string
-      responses:
-        200:
-          description: OK
-          schema:
-            $ref: "#/definitions/User"  
+  /usergroup/user/{user}:
     post:
       operationId: userDefaultPost
+      tags:
+       - "UserGroup"
       summary: Modify a user
       description: Modify a user in the default user/group service, unspecified fields remain unchanged.
       consumes: 
@@ -131,6 +126,8 @@ paths:
           description: OK
     delete:
       operationId: userDefaultDelete
+      tags:
+       - "UserGroup"
       summary: Delete a user
       description: Delete a user in the default user/group service.
       consumes: 
@@ -145,34 +142,11 @@ paths:
       responses:
         200:
           description: OK
-  /usergroup/service/{serviceName}/users/{user}:
-    get:
-      operationId: userGet
-      summary: Query a user
-      description: Query a user in a particular user/group service.
-      produces:
-        - text/html
-        - application/xml
-        - application/json
-      parameters:
-        - name: serviceName
-          description: the name of the user/group service
-          in: path
-          required: true
-          type: string          
-        - name: user
-          description: the name of the user
-          in: path
-          required: true
-          type: string
-      responses:
-        200:
-          description: OK
-          schema:
-            $ref: "#/definitions/User"  
-           
+  /usergroup/service/{serviceName}/user/{user}:
     post:
       operationId: userPost
+      tags:
+       - "UserGroup"
       summary: Modify a user
       description: Modify a user in a particular user/group service, unspecified fields remain unchanged.
       consumes: 
@@ -200,6 +174,8 @@ paths:
           description: OK
     delete:
       operationId: userDelete
+      tags:
+       - "UserGroup"
       summary: Delete a user
       description: Delete a user in a particular user/group service.
       consumes: 
@@ -219,33 +195,19 @@ paths:
       responses:
         200:
           description: OK
-          
-  /usergroup/groups/:
+  /usergroup/group/{group}/users:
     get:
-      operationId: groupsDefaultGet
-      summary: Query all groups
-      description: Query all groups in the default user/group service.
+      operationId: groupDefaultUserGet
+      tags:
+       - "UserGroup"
+      summary: Query all users for a group
+      description: Query all users for a group in the default user/group service.
       produces:
-        - text/html
         - application/xml
         - application/json
-      responses:
-        200:
-          description: OK
-          schema:
-            $ref: "#/definitions/Groups"              
-  /usergroup/service/{serviceName}/groups/:
-    get:
-      operationId: groupsGet
-      summary: Query all groups
-      description: Query all groups in a particular user/group service.
-      produces:
-        - text/html
-        - application/xml
-        - application/json        
       parameters:
-        - name: serviceName
-          description: the name of the group group service
+        - name: group
+          description: the name of the group
           in: path
           required: true
           type: string
@@ -253,10 +215,204 @@ paths:
         200:
           description: OK
           schema:
-            $ref: "#/definitions/Groups"   
-  /usergroup/groups/{group}:
+            $ref: "#/definitions/Users" 
+  /usergroup/user/{user}/groups:
+    get:
+      operationId: userDefaultGroupGet
+      tags:
+       - "UserGroup"
+      summary: Query all groups for a user
+      description: Query all groups for a user in the default user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: user
+          description: the name of the user
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Groups"  
+  /usergroup/user/{user}/group/{group}:
+    post:
+      operationId: userGroupDefaultPost
+      tags:
+       - "UserGroup"
+      summary: Associate a user with a group
+      description: Associate a user with a group in the default user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: user
+          description: the name of the user
+          in: path
+          required: true
+          type: string
+        - name: group
+          description: the name of the group
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+    delete:
+      operationId: userGroupDefaultDelete
+      tags:
+       - "UserGroup"
+      summary: Unassociate a user from a group
+      description: Unassociate a user from a group in the default user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: user
+          description: the name of the user
+          in: path
+          required: true
+          type: string
+        - name: group
+          description: the name of the group
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+  /usergroup/service/{serviceName}/group/{group}/users:
+    get:
+      operationId: groupUserGet
+      tags:
+       - "UserGroup"
+      summary: Query all users for a group
+      description: Query all users for a group in a particular user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: serviceName
+          description: the name of the user/group service
+          in: path
+          required: true
+          type: string    
+        - name: group
+          description: the name of the group
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Users"
+  /usergroup/service/{serviceName}/user/{user}/groups:
+    get:
+      operationId: userGroupGet
+      tags:
+       - "UserGroup"
+      summary: Query all groups for a user
+      description: Query all groups for a user in a particular user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: serviceName
+          description: the name of the user/group service
+          in: path
+          required: true
+          type: string          
+        - name: user
+          description: the name of the user
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Groups"  
+  /usergroup/service/{serviceName}/user/{user}/group/{group}:
+    post:
+      operationId: userGroupPost
+      tags:
+       - "UserGroup"
+      summary: Associate a user with a group
+      description: Associate a user with a group in a particular user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: serviceName
+          description: the name of the user/group service
+          in: path
+          required: true
+          type: string          
+        - name: user
+          description: the name of the user
+          in: path
+          required: true
+          type: string
+        - name: group
+          description: the name of the group
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+    delete:
+      operationId: userGroupDelete
+      tags:
+       - "UserGroup"
+      summary: Unassociate a user from a group
+      description: Unassociate a user from a group in a particular user/group service.
+      produces:
+        - application/xml
+        - application/json
+      parameters:
+        - name: serviceName
+          description: the name of the user/group service
+          in: path
+          required: true
+          type: string          
+        - name: user
+          description: the name of the user
+          in: path
+          required: true
+          type: string
+        - name: group
+          description: the name of the group
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+  /usergroup/groups/:
+    get:
+      operationId: groupsDefaultGet
+      tags:
+       - "UserGroup"
+      summary: Query all groups
+      description: Query all groups in the default user/group service.
+      produces:
+        - application/xml
+        - application/json
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Groups"
+  /usergroup/group/{group}:
     post:
       operationId: groupDefaultPost
+      tags:
+       - "UserGroup"
       summary: Add a group
       description: Add a group in the default user/group service.
       consumes: 
@@ -273,6 +429,8 @@ paths:
           description: OK
     delete:
       operationId: groupDefaultDelete
+      tags:
+       - "UserGroup"
       summary: Delete a group
       description: Delete a group in the default user/group service.
       consumes: 
@@ -287,9 +445,32 @@ paths:
       responses:
         200:
           description: OK
-  /usergroup/service/{serviceName}/groups/{group}:
+  /usergroup/service/{serviceName}/groups/:
+    get:
+      operationId: groupsGet
+      tags:
+       - "UserGroup"
+      summary: Query all groups
+      description: Query all groups in a particular user/group service.
+      produces:
+        - application/xml
+        - application/json        
+      parameters:
+        - name: serviceName
+          description: the name of the group group service
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Groups"
+  /usergroup/service/{serviceName}/group/{group}:
     post:
       operationId: groupPost
+      tags:
+       - "UserGroup"
       summary: Add a group
       description: Add a group in a particular user/group service.
       consumes: 
@@ -311,6 +492,8 @@ paths:
           description: OK
     delete:
       operationId: groupDelete
+      tags:
+       - "UserGroup"
       summary: Delete a group
       description: Delete a group in a particular user/group service.
       consumes: 
@@ -351,7 +534,7 @@ definitions:
          password: 
            type: string
          enabled: 
-           type: string
+           type: boolean
            enum:
              - true
              - false

@@ -119,7 +119,7 @@ public class SuperOverlayNetworkLinkBuilder extends AbstractNetworkLinkBuilder {
         link.setViewRefreshMode(ViewRefreshMode.NEVER);
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     private void encodeLayerSuperOverlay(
             Document container,
             MapLayerInfo layerInfo,
@@ -168,13 +168,7 @@ public class SuperOverlayNetworkLinkBuilder extends AbstractNetworkLinkBuilder {
         }
     }
 
-    /**
-     * Encode the network links for the specified envelope and zoom level
-     *
-     * @param layer
-     * @param top
-     * @param zoomLevel
-     */
+    /** Encode the network links for the specified envelope and zoom level */
     void encodeNetworkLinks(Folder folder, Layer layer, Envelope top, int zoomLevel) {
         // encode the network links
         if (top != KmlEncodingContext.WORLD_BOUNDS_WGS84) {
@@ -336,10 +330,9 @@ public class SuperOverlayNetworkLinkBuilder extends AbstractNetworkLinkBuilder {
         return false;
     }
 
-    @SuppressWarnings("rawtypes")
     void encodeKMLLink(Folder container, Layer layer, String name, int drawOrder, Envelope box) {
         // copy the format options
-        CaseInsensitiveMap fo = new CaseInsensitiveMap(new HashMap());
+        CaseInsensitiveMap<String, Object> fo = new CaseInsensitiveMap<>(new HashMap<>());
         fo.putAll(mapContent.getRequest().getFormatOptions());
 
         // we want to pass through format options except for superoverlay, we need to
@@ -398,7 +391,6 @@ public class SuperOverlayNetworkLinkBuilder extends AbstractNetworkLinkBuilder {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     private int featuresInTile(Layer layer, Envelope bounds, boolean regionate) {
         if (!isVectorLayer(layer)) return 1; // for coverages, we want raster tiles everywhere
         Envelope originalBounds = mapContent.getRequest().getBbox();
@@ -481,12 +473,7 @@ public class SuperOverlayNetworkLinkBuilder extends AbstractNetworkLinkBuilder {
         setEnvelope(box, llBox);
     }
 
-    /**
-     * Returns true if the request is GWC compatible
-     *
-     * @param mapContent
-     */
-    @SuppressWarnings("unchecked")
+    /** Returns true if the request is GWC compatible */
     private boolean isRequestGWCCompatible(GetMapRequest request, int layerIndex, WMS wms) {
         // check the kml params are the same as the defaults (GWC uses always the defaults)
         boolean requestKmAttr = context.isDescriptionEnabled();
@@ -518,13 +505,13 @@ public class SuperOverlayNetworkLinkBuilder extends AbstractNetworkLinkBuilder {
 
         // check there is no extra filtering applied to the layer
         List<Filter> filters = request.getFilter();
-        if (filters != null && filters.size() > 0 && filters.get(layerIndex) != Filter.INCLUDE) {
+        if (filters != null && !filters.isEmpty() && filters.get(layerIndex) != Filter.INCLUDE) {
             return false;
         }
 
         // no extra sorts
         List<List<SortBy>> sortBy = request.getSortBy();
-        if (sortBy != null && sortBy.size() > 0) {
+        if (sortBy != null && !sortBy.isEmpty()) {
             return false;
         }
 

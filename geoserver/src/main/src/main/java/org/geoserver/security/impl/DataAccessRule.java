@@ -45,17 +45,13 @@ public class DataAccessRule implements Comparable<DataAccessRule>, Serializable 
         this.layer = layer;
         this.globalGroupRule = (layer == null);
         this.accessMode = accessMode;
-        if (roles == null) this.roles = new HashSet<String>();
-        else this.roles = new HashSet<String>(roles);
+        if (roles == null) this.roles = new HashSet<>();
+        else this.roles = new HashSet<>(roles);
     }
 
     /** Builds a new rule */
     public DataAccessRule(String root, String layer, AccessMode accessMode, String... roles) {
-        this(
-                root,
-                layer,
-                accessMode,
-                roles == null ? null : new HashSet<String>(Arrays.asList(roles)));
+        this(root, layer, accessMode, roles == null ? null : new HashSet<>(Arrays.asList(roles)));
     }
 
     /** Copy constructor */
@@ -64,7 +60,7 @@ public class DataAccessRule implements Comparable<DataAccessRule>, Serializable 
         this.layer = other.layer;
         this.accessMode = other.accessMode;
         this.globalGroupRule = other.globalGroupRule;
-        this.roles = new HashSet<String>(other.roles);
+        this.roles = new HashSet<>(other.roles);
     }
 
     /** Builds the default rule: *.*.r=* */
@@ -136,6 +132,7 @@ public class DataAccessRule implements Comparable<DataAccessRule>, Serializable 
      * Comparison implemented so that generic rules get first, specific one are compared by name,
      * and if anything else is equal, read comes before write
      */
+    @Override
     public int compareTo(DataAccessRule other) {
         int compareRoot = compareCatalogItems(root, other.root);
         if (compareRoot != 0) return compareRoot;
@@ -176,7 +173,9 @@ public class DataAccessRule implements Comparable<DataAccessRule>, Serializable 
         if (item == null) {
             return otherItem != null ? -1 : 0;
         }
-        if (item.equals(otherItem)) return 0;
+        if (item.equals(otherItem)
+                || (ANY.equals(item) && otherItem == null)
+                || (item == null && ANY.equals(otherItem))) return 0;
         else if (ANY.equals(item)) return -1;
         else if (ANY.equals(otherItem)) return 1;
         else return item.compareTo(otherItem);

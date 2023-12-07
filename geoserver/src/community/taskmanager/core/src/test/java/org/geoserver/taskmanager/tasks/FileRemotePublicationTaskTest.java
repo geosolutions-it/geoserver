@@ -10,10 +10,21 @@ import static org.junit.Assert.assertTrue;
 
 import it.geosolutions.geoserver.rest.GeoServerRESTManager;
 import it.geosolutions.geoserver.rest.decoder.RESTCoverage;
+import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
+import it.geosolutions.geoserver.rest.decoder.RESTLayer;
+import java.io.InputStream;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
+import javax.xml.namespace.QName;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.Keyword;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.impl.AuthorityURL;
+import org.geoserver.catalog.impl.LayerIdentifier;
 import org.geoserver.taskmanager.AbstractTaskManagerTest;
 import org.geoserver.taskmanager.beans.TestTaskTypeImpl;
 import org.geoserver.taskmanager.data.Batch;
@@ -22,10 +33,12 @@ import org.geoserver.taskmanager.data.Task;
 import org.geoserver.taskmanager.data.TaskManagerDao;
 import org.geoserver.taskmanager.data.TaskManagerFactory;
 import org.geoserver.taskmanager.external.ExternalGS;
+import org.geoserver.taskmanager.external.FileService;
 import org.geoserver.taskmanager.schedule.BatchJobService;
 import org.geoserver.taskmanager.util.LookupService;
 import org.geoserver.taskmanager.util.TaskManagerDataUtil;
 import org.geoserver.taskmanager.util.TaskManagerTaskUtil;
+import org.geotools.data.complex.AppSchemaDataAccessFactory;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -63,6 +76,10 @@ public class FileRemotePublicationTaskTest extends AbstractTaskManagerTest {
 
     @Autowired private Scheduler scheduler;
 
+    @Autowired private LookupService<FileService> fileServices;
+
+    @Autowired private ExternalGS externalGS;
+
     private Configuration config;
 
     private Batch batch;
@@ -70,6 +87,27 @@ public class FileRemotePublicationTaskTest extends AbstractTaskManagerTest {
     @Override
     public boolean setupDataDirectory() throws Exception {
         DATA_DIRECTORY.addWcs11Coverages();
+        Map<String, Serializable> params = new HashMap<>();
+
+        FileService fileService = fileServices.get("data-directory");
+        if (!fileService.checkFileExists("MappedFeature.xml")) {
+            try (InputStream in =
+                    getClass().getResource("appschema/MappedFeature.xml").openStream()) {
+                fileService.create("MappedFeature.xml", in);
+            }
+        }
+        try (InputStream in =
+                getClass().getResource("appschema/MappedFeature.properties").openStream()) {
+            externalGS
+                    .getRESTManager()
+                    .getResourceManager()
+                    .upload("uploaded-stores/MappedFeature.properties", in);
+        }
+
+        params.put(AppSchemaDataAccessFactory.URL.key, "file:data/MappedFeature.xml");
+        params.put(AppSchemaDataAccessFactory.DBTYPE.key, AppSchemaDataAccessFactory.DBTYPE_STRING);
+        DATA_DIRECTORY.addCustomType(
+                new QName("urn:cgi:xmlns:CGI:GeoSciML:2.0", "MappedFeature", "gsml"), params);
 
         return true;
     }
@@ -118,7 +156,7 @@ public class FileRemotePublicationTaskTest extends AbstractTaskManagerTest {
     }
 
     @Test
-    public void testSuccessAndCleanup()
+    public void testRasterSuccessAndCleanup()
             throws SchedulerException, SQLException, MalformedURLException {
         // set some metadata
         CoverageInfo ci = geoServer.getCatalog().getCoverageByName("DEM");
@@ -128,6 +166,25 @@ public class FileRemotePublicationTaskTest extends AbstractTaskManagerTest {
         ci.getDimensions().get(0).setName("CUSTOM_DIMENSION");
         ci.getKeywords().add(new Keyword("demmiedem"));
         geoServer.getCatalog().save(ci);
+
+        LayerInfo li = geoServer.getCatalog().getLayerByName("mydem");
+        LayerIdentifier lid1 = new LayerIdentifier();
+        lid1.setAuthority("auth1");
+        lid1.setIdentifier("id1");
+        li.getIdentifiers().add(lid1);
+        LayerIdentifier lid2 = new LayerIdentifier();
+        lid2.setAuthority("auth2");
+        lid2.setIdentifier("id2");
+        li.getIdentifiers().add(lid2);
+        AuthorityURL url1 = new AuthorityURL();
+        url1.setName("name1");
+        url1.setHref("href1");
+        li.getAuthorityURLs().add(url1);
+        AuthorityURL url2 = new AuthorityURL();
+        url2.setName("name2");
+        url2.setHref("href2");
+        li.getAuthorityURLs().add(url2);
+        geoServer.getCatalog().save(li);
 
         dataUtil.setConfigurationAttribute(config, ATT_LAYER, "mydem");
         dataUtil.setConfigurationAttribute(config, ATT_EXT_GS, "mygs");
@@ -154,6 +211,18 @@ public class FileRemotePublicationTaskTest extends AbstractTaskManagerTest {
                 cov.getEncodedDimensionsInfoList().get(0).getName());
         assertTrue(cov.getKeywords().contains("demmiedem"));
 
+        RESTLayer layer = restManager.getReader().getLayer("wcs", "mydem");
+        assertEquals(2, layer.getEncodedAuthorityURLInfoList().size());
+        assertEquals("name1", layer.getEncodedAuthorityURLInfoList().get(0).getName());
+        assertEquals("href1", layer.getEncodedAuthorityURLInfoList().get(0).getHref());
+        assertEquals("name2", layer.getEncodedAuthorityURLInfoList().get(1).getName());
+        assertEquals("href2", layer.getEncodedAuthorityURLInfoList().get(1).getHref());
+        assertEquals(2, layer.getEncodedIdentifierInfoList().size());
+        assertEquals("auth1", layer.getEncodedIdentifierInfoList().get(0).getAuthority());
+        assertEquals("id1", layer.getEncodedIdentifierInfoList().get(0).getIdentifier());
+        assertEquals("auth2", layer.getEncodedIdentifierInfoList().get(1).getAuthority());
+        assertEquals("id2", layer.getEncodedIdentifierInfoList().get(1).getIdentifier());
+
         assertTrue(taskUtil.cleanup(config));
 
         assertFalse(restManager.getReader().existsCoveragestore("wcs", "DEM"));
@@ -163,6 +232,43 @@ public class FileRemotePublicationTaskTest extends AbstractTaskManagerTest {
         // restore name
         ci.setName("DEM");
         geoServer.getCatalog().save(ci);
+    }
+
+    @Test
+    public void testVectorSuccessAndCleanup()
+            throws SchedulerException, SQLException, MalformedURLException {
+        // set some metadata
+        FeatureTypeInfo fi = geoServer.getCatalog().getFeatureTypeByName("MappedFeature");
+        fi.setTitle("my title ë");
+        fi.setAbstract("my abstract ë");
+        geoServer.getCatalog().save(fi);
+
+        dataUtil.setConfigurationAttribute(config, ATT_LAYER, "MappedFeature");
+        dataUtil.setConfigurationAttribute(config, ATT_EXT_GS, "mygs");
+        config = dao.save(config);
+
+        Trigger trigger =
+                TriggerBuilder.newTrigger().forJob(batch.getId().toString()).startNow().build();
+        scheduler.scheduleJob(trigger);
+
+        while (scheduler.getTriggerState(trigger.getKey()) != TriggerState.NONE) {}
+
+        GeoServerRESTManager restManager = extGeoservers.get("mygs").getRESTManager();
+
+        assertTrue(restManager.getReader().existsDatastore("gsml", "gsml"));
+        assertTrue(restManager.getReader().existsFeatureType("gsml", "gsml", "MappedFeature"));
+        assertTrue(restManager.getReader().existsLayer("gsml", "MappedFeature", true));
+
+        RESTLayer layer = restManager.getReader().getLayer("gsml", "MappedFeature");
+        RESTFeatureType ft = restManager.getReader().getFeatureType(layer);
+        assertEquals(fi.getTitle(), ft.getTitle());
+        assertEquals(fi.getAbstract(), ft.getAbstract());
+
+        assertTrue(taskUtil.cleanup(config));
+
+        assertFalse(restManager.getReader().existsDatastore("gsml", "gsml"));
+        assertFalse(restManager.getReader().existsFeatureType("gsml", "gsml", "MappedFeature"));
+        assertFalse(restManager.getReader().existsLayer("gsml", "MappedFeature", true));
     }
 
     @Test

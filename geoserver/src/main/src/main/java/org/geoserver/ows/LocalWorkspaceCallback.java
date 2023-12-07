@@ -25,6 +25,13 @@ import org.geotools.util.logging.Logging;
  * Dispatcher callback that sets and clears the {@link LocalWorkspace} and {@link LocalPublished}
  * thread locals.
  *
+ * <p>This class is responsible for parsing request context information ({@code workspace/ows?},
+ * {@code layergroup/wms?}, {@code workspace/layer}) and resolving the intended local workspace,
+ * layer group, and/or layer information which are stored in a thread locale for reference.
+ *
+ * <p>The logic used here is duplicated by GeoServerHomePage which provides a user interface
+ * reflecting this context lookup process.
+ *
  * @author Justin Deoliveira, OpenGeo
  */
 public class LocalWorkspaceCallback implements DispatcherCallback, ExtensionPriority {
@@ -39,6 +46,7 @@ public class LocalWorkspaceCallback implements DispatcherCallback, ExtensionPrio
         catalog = gs.getCatalog();
     }
 
+    @Override
     @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
     public Request init(Request request) {
         WorkspaceInfo ws = null;
@@ -93,7 +101,7 @@ public class LocalWorkspaceCallback implements DispatcherCallback, ExtensionPrio
             } else {
                 LOGGER.log(
                         Level.FINE,
-                        "Could not lookup context {0] as a workspace, trying as group",
+                        "Could not lookup context {0} as a workspace, trying as group",
                         first);
                 lg = catalog.getLayerGroupByName((WorkspaceInfo) null, first);
                 if (lg != null) {
@@ -109,7 +117,10 @@ public class LocalWorkspaceCallback implements DispatcherCallback, ExtensionPrio
                 // if no workspace context specified and server configuration not allowing global
                 // services throw an error
                 if (!gs.getGlobal().isGlobalServices()) {
-                    throw new ServiceException("No such workspace '" + request.context + "'");
+                    throw new ServiceException(
+                            "Could not determine workspace or workspace/layer-or-layergroup from request: '"
+                                    + request.context
+                                    + "', and global services are off.");
                 }
             }
         } else if (!gs.getGlobal().isGlobalServices()) {
@@ -119,28 +130,34 @@ public class LocalWorkspaceCallback implements DispatcherCallback, ExtensionPrio
         return request;
     }
 
+    @Override
     public Operation operationDispatched(Request request, Operation operation) {
         return null;
     }
 
+    @Override
     public Object operationExecuted(Request request, Operation operation, Object result) {
         return null;
     }
 
+    @Override
     public Response responseDispatched(
             Request request, Operation operation, Object result, Response response) {
         return null;
     }
 
+    @Override
     public Service serviceDispatched(Request request, Service service) throws ServiceException {
         return null;
     }
 
+    @Override
     public void finished(Request request) {
         LocalWorkspace.remove();
         LocalPublished.remove();
     }
 
+    @Override
     public int getPriority() {
         return HIGHEST;
     }

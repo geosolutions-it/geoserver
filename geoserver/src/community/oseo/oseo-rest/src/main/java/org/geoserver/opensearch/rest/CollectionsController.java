@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,14 +19,16 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.opensearch.eo.OpenSearchAccessProvider;
+import org.geoserver.opensearch.eo.OseoEvent;
+import org.geoserver.opensearch.eo.OseoEventListener;
+import org.geoserver.opensearch.eo.OseoEventType;
 import org.geoserver.opensearch.eo.store.CollectionLayer;
 import org.geoserver.opensearch.eo.store.OpenSearchAccess;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.rest.ResourceNotFoundException;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.rest.RestException;
@@ -57,7 +58,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -79,12 +79,10 @@ import org.springframework.web.bind.annotation.RestController;
 @ControllerAdvice
 @RequestMapping(path = RestBaseController.ROOT_PATH + "/oseo/collections")
 public class CollectionsController extends AbstractOpenSearchController {
-
+    protected List<OseoEventListener> eventListeners = new ArrayList<>();
     /** List of parts making up a zipfile for a collection */
     enum CollectionPart implements ZipPart {
         Collection("collection.json"),
-        Description("description.html"),
-        Metadata("metadata.xml"),
         Thumbnail("thumbnail\\.[png|jpeg|jpg]"),
         OwsLinks("owsLinks.json");
 
@@ -118,6 +116,7 @@ public class CollectionsController extends AbstractOpenSearchController {
             Catalog catalog) {
         super(accessProvider, jsonConverter);
         this.catalog = catalog;
+        eventListeners.addAll(GeoServerExtensions.extensions(OseoEventListener.class));
     }
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -174,6 +173,9 @@ public class CollectionsController extends AbstractOpenSearchController {
         // insert the new feature
         runTransactionOnCollectionStore(fs -> fs.addFeatures(singleton(collectionFeature)));
 
+        Feature collectionAfter = queryCollection(eoId, q -> {});
+        broadcastOseoEvent(OseoEventType.POST_INSERT, eoId, null, collectionAfter);
+
         // if got here, all is fine
         return returnCreatedCollectionReference(request, eoId);
     }
@@ -208,8 +210,6 @@ public class CollectionsController extends AbstractOpenSearchController {
                 simpleToComplex(jsonFeature, getCollectionSchema(), COLLECTION_HREFS);
 
         // grab the other parts
-        byte[] description = parts.get(CollectionPart.Description);
-        byte[] metadata = parts.get(CollectionPart.Metadata);
         byte[] rawLinks = parts.get(CollectionPart.OwsLinks);
         SimpleFeatureCollection linksCollection;
         if (rawLinks != null) {
@@ -224,22 +224,7 @@ public class CollectionsController extends AbstractOpenSearchController {
                 fs -> {
                     fs.addFeatures(singleton(collectionFeature));
 
-                    final String nsURI = fs.getSchema().getName().getNamespaceURI();
                     Filter filter = FF.equal(FF.property(COLLECTION_ID), FF.literal(eoId), true);
-
-                    if (description != null) {
-                        String descriptionString = new String(description);
-                        fs.modifyFeatures(
-                                new NameImpl(nsURI, OpenSearchAccess.DESCRIPTION),
-                                descriptionString,
-                                filter);
-                    }
-
-                    if (metadata != null) {
-                        String descriptionString = new String(metadata);
-                        fs.modifyFeatures(
-                                OpenSearchAccess.METADATA_PROPERTY_NAME, descriptionString, filter);
-                    }
 
                     if (linksCollection != null) {
                         fs.modifyFeatures(
@@ -247,13 +232,14 @@ public class CollectionsController extends AbstractOpenSearchController {
                     }
                 });
 
+        Feature collectionAfter = queryCollection(eoId, q -> {});
+        broadcastOseoEvent(OseoEventType.POST_INSERT, eoId, null, collectionAfter);
         return returnCreatedCollectionReference(request, eoId);
     }
 
     @GetMapping(
-        path = "{collection}",
-        produces = {MediaType.APPLICATION_JSON_VALUE}
-    )
+            path = "{collection}",
+            produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public SimpleFeature getCollection(
             HttpServletRequest request,
@@ -302,7 +288,7 @@ public class CollectionsController extends AbstractOpenSearchController {
             @RequestBody(required = true) SimpleFeature feature)
             throws IOException, URISyntaxException {
         // check the collection exists
-        queryCollection(collection, q -> {});
+        Feature collectionBefore = queryCollection(collection, q -> {});
 
         // check the id, mind, could be different from the collection one if the client
         // is trying to change
@@ -316,19 +302,35 @@ public class CollectionsController extends AbstractOpenSearchController {
         for (Property p : collectionFeature.getProperties()) {
             // skip over the large/complex attributes that are being modified via separate calls
             final Name propertyName = p.getName();
-            if (OpenSearchAccess.METADATA_PROPERTY_NAME.equals(propertyName)
-                    || OpenSearchAccess.OGC_LINKS_PROPERTY_NAME.equals(propertyName)
+            if (OpenSearchAccess.OGC_LINKS_PROPERTY_NAME.equals(propertyName)
                     || OpenSearchAccess.DESCRIPTION.equals(propertyName.getLocalPart())) {
                 continue;
             }
             names.add(propertyName);
             values.add(p.getValue());
         }
-        Name[] attributeNames = (Name[]) names.toArray(new Name[names.size()]);
-        Object[] attributeValues = (Object[]) values.toArray();
+        broadcastOseoEvent(OseoEventType.PRE_UPDATE, collection, collectionBefore, null);
+        Name[] attributeNames = names.toArray(new Name[names.size()]);
+        Object[] attributeValues = values.toArray();
         Filter filter = FF.equal(FF.property(COLLECTION_ID), FF.literal(collection), true);
+
         runTransactionOnCollectionStore(
                 fs -> fs.modifyFeatures(attributeNames, attributeValues, filter));
+        Feature collectionAfter = queryCollection(collection, q -> {});
+        broadcastOseoEvent(
+                OseoEventType.POST_UPDATE, collection, collectionBefore, collectionAfter);
+    }
+
+    private void broadcastOseoEvent(
+            OseoEventType eventType,
+            String collectionName,
+            Feature collection,
+            Feature collectionAfter) {
+        OseoListenerMux oseoListenerMux = new OseoListenerMux();
+        OseoEvent oseovent = new OseoEvent();
+        oseovent.setType(eventType);
+        oseovent.setCollectionName(collectionName);
+        oseoListenerMux.dataStoreChange(oseovent);
     }
 
     @DeleteMapping(path = "{collection}")
@@ -336,7 +338,9 @@ public class CollectionsController extends AbstractOpenSearchController {
             @PathVariable(required = true, name = "collection") String collection)
             throws IOException {
         // check the collection exists
-        queryCollection(collection, q -> {});
+        Feature collectionBefore = queryCollection(collection, q -> {});
+
+        broadcastOseoEvent(OseoEventType.PRE_DELETE, collection, collectionBefore, null);
 
         // TODO: handle cascading on products, and removing the publishing side without removing the
         // metadata
@@ -345,9 +349,8 @@ public class CollectionsController extends AbstractOpenSearchController {
     }
 
     @GetMapping(
-        path = "{collection}/layer",
-        produces = {MediaType.APPLICATION_JSON_VALUE}
-    )
+            path = "{collection}/layer",
+            produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public CollectionLayer getDefaultCollectionLayer(
             HttpServletRequest request,
@@ -372,7 +375,7 @@ public class CollectionsController extends AbstractOpenSearchController {
             Predicate<CollectionLayer> previousLayerPredicate)
             throws IOException {
         // check the collection is there
-        queryCollection(collection, q -> {});
+        Feature collectionBefore = queryCollection(collection, q -> {});
 
         // validate the layer
         validateLayer(layer);
@@ -409,7 +412,7 @@ public class CollectionsController extends AbstractOpenSearchController {
             // rethrow to make the transaction fail
             throw new RuntimeException(e);
         }
-
+        broadcastOseoEvent(OseoEventType.POST_INSERT, collection, collectionBefore, null);
         // see if we have to return a creation or not
         if (previousLayer != null) {
             return new ResponseEntity<>(HttpStatus.OK);
@@ -461,12 +464,7 @@ public class CollectionsController extends AbstractOpenSearchController {
         return layers;
     }
 
-    /**
-     * Validates the layer and throws appropriate exceptions in case mandatory bits are missing
-     *
-     * @param layer
-     * @param catalog2
-     */
+    /** Validates the layer and throws appropriate exceptions in case mandatory bits are missing */
     private void validateLayer(CollectionLayer layer) {
         if (layer.getWorkspace() == null) {
             throw new RestException(
@@ -642,9 +640,8 @@ public class CollectionsController extends AbstractOpenSearchController {
     }
 
     @GetMapping(
-        path = "{collection}/ogcLinks",
-        produces = {MediaType.APPLICATION_JSON_VALUE}
-    )
+            path = "{collection}/ogcLinks",
+            produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public OgcLinks getCollectionOgcLinks(
             HttpServletRequest request,
@@ -695,134 +692,6 @@ public class CollectionsController extends AbstractOpenSearchController {
                 fs -> fs.modifyFeatures(OpenSearchAccess.OGC_LINKS_PROPERTY_NAME, null, filter));
     }
 
-    @GetMapping(
-        path = "{collection}/metadata",
-        produces = {MediaType.TEXT_XML_VALUE}
-    )
-    public void getCollectionMetadata(
-            @PathVariable(name = "collection", required = true) String collection,
-            HttpServletResponse response)
-            throws IOException {
-        // query one collection and grab its OGC links
-        Feature feature =
-                queryCollection(
-                        collection,
-                        q -> {
-                            q.setProperties(
-                                    Collections.singletonList(
-                                            FF.property(OpenSearchAccess.METADATA_PROPERTY_NAME)));
-                        });
-
-        // grab the metadata
-        Property metadataProperty = feature.getProperty(OpenSearchAccess.METADATA_PROPERTY_NAME);
-        if (metadataProperty != null && metadataProperty.getValue() instanceof String) {
-            String value = (String) metadataProperty.getValue();
-            response.setContentType("text/xml");
-            StreamUtils.copy(value, Charset.forName("UTF-8"), response.getOutputStream());
-        } else {
-            throw new ResourceNotFoundException(
-                    "Metadata for collection '" + collection + "' could not be found");
-        }
-    }
-
-    @PutMapping(path = "{collection}/metadata", consumes = MediaType.TEXT_XML_VALUE)
-    public void putCollectionMetadata(
-            @PathVariable(name = "collection", required = true) String collection,
-            HttpServletRequest request)
-            throws IOException {
-        // check the collection is there
-        queryCollection(collection, q -> {});
-
-        // TODO: validate it's actual ISO metadata
-        String metadata = IOUtils.toString(request.getReader());
-        checkWellFormedXML(metadata);
-
-        // prepare the update
-        Filter filter = FF.equal(FF.property(COLLECTION_ID), FF.literal(collection), true);
-        runTransactionOnCollectionStore(
-                fs -> fs.modifyFeatures(OpenSearchAccess.METADATA_PROPERTY_NAME, metadata, filter));
-    }
-
-    @DeleteMapping(path = "{collection}/metadata")
-    public void deleteCollectionMetadata(
-            @PathVariable(name = "collection", required = true) String collection)
-            throws IOException {
-        // check the collection is there
-        queryCollection(collection, q -> {});
-
-        // prepare the update
-        Filter filter = FF.equal(FF.property(COLLECTION_ID), FF.literal(collection), true);
-        runTransactionOnCollectionStore(
-                fs -> fs.modifyFeatures(OpenSearchAccess.METADATA_PROPERTY_NAME, null, filter));
-    }
-
-    @GetMapping(
-        path = "{collection}/description",
-        produces = {MediaType.TEXT_HTML_VALUE}
-    )
-    public void getCollectionDescription(
-            @PathVariable(name = "collection", required = true) String collection,
-            HttpServletResponse response)
-            throws IOException {
-        // query one collection and grab its OGC links
-        Feature feature =
-                queryCollection(
-                        collection,
-                        q -> {
-                            q.setPropertyNames(new String[] {OpenSearchAccess.DESCRIPTION});
-                        });
-
-        // grab the description
-        Property descriptionProperty = feature.getProperty(OpenSearchAccess.DESCRIPTION);
-        if (descriptionProperty != null && descriptionProperty.getValue() instanceof String) {
-            String value = (String) descriptionProperty.getValue();
-            response.setContentType("text/html");
-            StreamUtils.copy(value, Charset.forName("UTF-8"), response.getOutputStream());
-        } else {
-            throw new ResourceNotFoundException(
-                    "Description for collection '" + collection + "' could not be found");
-        }
-    }
-
-    @PutMapping(path = "{collection}/description", consumes = MediaType.TEXT_HTML_VALUE)
-    public void putCollectionDescription(
-            @PathVariable(name = "collection", required = true) String collection,
-            HttpServletRequest request)
-            throws IOException {
-        // check the collection is there
-        queryCollection(collection, q -> {});
-
-        String description = IOUtils.toString(request.getReader());
-
-        updateDescription(collection, description);
-    }
-
-    @DeleteMapping(path = "{collection}/description")
-    public void deleteCollectionDescritiopn(
-            @PathVariable(name = "collection", required = true) String collection)
-            throws IOException {
-        // check the collection is there
-        queryCollection(collection, q -> {});
-
-        // set it to null
-        updateDescription(collection, null);
-    }
-
-    private void updateDescription(String collection, String description) throws IOException {
-        // prepare the update
-        Filter filter = FF.equal(FF.property(COLLECTION_ID), FF.literal(collection), true);
-        runTransactionOnCollectionStore(
-                fs -> {
-                    // set the description to null
-                    final FeatureSource<FeatureType, Feature> collectionSource =
-                            getOpenSearchAccess().getCollectionSource();
-                    final FeatureType schema = collectionSource.getSchema();
-                    final String nsURI = schema.getName().getNamespaceURI();
-                    fs.modifyFeatures(
-                            new NameImpl(nsURI, OpenSearchAccess.DESCRIPTION), description, filter);
-                });
-    }
-
     private void runTransactionOnCollectionStore(IOConsumer<FeatureStore> featureStoreConsumer)
             throws IOException {
         FeatureStore store = (FeatureStore) getOpenSearchAccess().getCollectionSource();
@@ -855,9 +724,8 @@ public class CollectionsController extends AbstractOpenSearchController {
     }
 
     @GetMapping(
-        path = "{collection}/layers",
-        produces = {MediaType.APPLICATION_JSON_VALUE}
-    )
+            path = "{collection}/layers",
+            produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public LayerReferences getCollectionLayers(
             HttpServletRequest request,
@@ -903,9 +771,8 @@ public class CollectionsController extends AbstractOpenSearchController {
     }
 
     @GetMapping(
-        path = "{collection}/layers/{layer}",
-        produces = {MediaType.APPLICATION_JSON_VALUE}
-    )
+            path = "{collection}/layers/{layer}",
+            produces = {MediaType.APPLICATION_JSON_VALUE})
     @ResponseBody
     public CollectionLayer getCollectionLayer(
             HttpServletRequest request,
@@ -931,5 +798,19 @@ public class CollectionsController extends AbstractOpenSearchController {
             throws IOException {
         return createReplaceLayer(
                 collection, collectionLayer, l -> collectionLayer.getLayer().equals(l.getLayer()));
+    }
+
+    class OseoListenerMux implements OseoEventListener {
+        public void dataStoreChange(List listeners, OseoEvent event) {
+            for (Object o : listeners) {
+                OseoEventListener listener = (OseoEventListener) o;
+                listener.dataStoreChange(event);
+            }
+        }
+
+        @Override
+        public void dataStoreChange(OseoEvent event) {
+            dataStoreChange(eventListeners, event);
+        }
     }
 }

@@ -43,7 +43,7 @@ public abstract class GeoServerWicketCoverageTestSupport extends GeoServerWicket
         catalog = getCatalog();
 
         // init xmlunit
-        Map<String, String> namespaces = new HashMap<String, String>();
+        Map<String, String> namespaces = new HashMap<>();
         namespaces.put("ows", "http://www.opengis.net/ows/1.1");
         namespaces.put("gml", "http://www.opengis.net/gml");
         namespaces.put("wfs", "http://www.opengis.net/wfs");
@@ -58,16 +58,12 @@ public abstract class GeoServerWicketCoverageTestSupport extends GeoServerWicket
         addWcs11Coverages(testData);
     }
 
-    /**
-     * Adds the wcs 1.1 coverages.
-     *
-     * @param testData
-     */
+    /** Adds the wcs 1.1 coverages. */
     public void addWcs11Coverages(SystemTestData testData) throws Exception {
         String styleName = "raster";
         testData.addStyle(styleName, "raster.sld", MockData.class, getCatalog());
 
-        Map<LayerProperty, Object> props = new HashMap<SystemTestData.LayerProperty, Object>();
+        Map<LayerProperty, Object> props = new HashMap<>();
         props.put(LayerProperty.STYLE, styleName);
 
         // wcs 1.1

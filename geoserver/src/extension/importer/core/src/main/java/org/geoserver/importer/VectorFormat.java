@@ -34,16 +34,17 @@ public abstract class VectorFormat extends DataFormat {
     /** Disposes the reader for the specified import item. */
     public abstract void dispose(FeatureReader reader, ImportTask item) throws IOException;
 
-    /** Get the number of features from the data for the specified import item. */
+    /**
+     * Get the number of features from the data for the specified import item.
+     *
+     * @return number of features if known, or {@code -1} if unknown.
+     */
     public abstract int getFeatureCount(ImportData data, ImportTask item) throws IOException;
 
     /**
      * Builds a {@link SimpleFeatureType} from the attributes declared in a {@link FeatureTypeInfo}
-     *
-     * @param fti
      */
     protected SimpleFeatureType buildFeatureTypeFromInfo(FeatureTypeInfo fti) {
-        SimpleFeatureType ft;
         SimpleFeatureTypeBuilder ftb = new SimpleFeatureTypeBuilder();
         ftb.setName(fti.getName());
         List<AttributeTypeInfo> attributes = fti.getAttributes();
@@ -54,7 +55,7 @@ public abstract class VectorFormat extends DataFormat {
                 ftb.add(attr.getName(), attr.getBinding());
             }
         }
-        ft = ftb.buildFeatureType();
+        SimpleFeatureType ft = ftb.buildFeatureType();
         return ft;
     }
 }

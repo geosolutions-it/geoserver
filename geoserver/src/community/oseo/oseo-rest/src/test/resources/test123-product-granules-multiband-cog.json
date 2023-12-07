@@ -1,0 +1,145 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -158.7477998,
+              -81.0164388
+            ],
+            [
+              -159.4473047,
+              -81.9945459
+            ],
+            [
+              -152.3683774,
+              -82.044055
+            ],
+            [
+              -152.4373911,
+              -81.0604569
+            ],
+            [
+              -158.7477998,
+              -81.0164388
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "location": "https://s3-us-west-2.amazonaws.com/sentinel-cogs/sentinel-s2-l2a-cogs/5/C/MK/2018/10/S2B_5CMK_20181019_0_L2A/B02.tif",
+        "band" : "B02"
+      },
+      "id": "GRANULE.1"
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -158.7477998,
+              -81.0164388
+            ],
+            [
+              -159.4473047,
+              -81.9945459
+            ],
+            [
+              -152.3683774,
+              -82.044055
+            ],
+            [
+              -152.4373911,
+              -81.0604569
+            ],
+            [
+              -158.7477998,
+              -81.0164388
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "location": "https://s3-us-west-2.amazonaws.com/sentinel-cogs/sentinel-s2-l2a-cogs/5/C/MK/2018/10/S2B_5CMK_20181019_0_L2A/B03.tif",
+        "band" : "B03"
+      },
+      "id": "GRANULE.2"
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -158.7477998,
+              -81.0164388
+            ],
+            [
+              -159.4473047,
+              -81.9945459
+            ],
+            [
+              -152.3683774,
+              -82.044055
+            ],
+            [
+              -152.4373911,
+              -81.0604569
+            ],
+            [
+              -158.7477998,
+              -81.0164388
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "location": "https://s3-us-west-2.amazonaws.com/sentinel-cogs/sentinel-s2-l2a-cogs/5/C/MK/2018/10/S2B_5CMK_20181019_0_L2A/B04.tif",
+        "band" : "B04"
+      },
+      "id": "GRANULE.3"
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -158.7477998,
+              -81.0164388
+            ],
+            [
+              -159.4473047,
+              -81.9945459
+            ],
+            [
+              -152.3683774,
+              -82.044055
+            ],
+            [
+              -152.4373911,
+              -81.0604569
+            ],
+            [
+              -158.7477998,
+              -81.0164388
+            ]
+          ]
+        ]
+      },
+      "properties": {
+        "location": "https://s3-us-west-2.amazonaws.com/sentinel-cogs/sentinel-s2-l2a-cogs/5/C/MK/2018/10/S2B_5CMK_20181019_0_L2A/B08.tif",
+        "band" : "B08"
+      },
+      "id": "GRANULE.4"
+    }
+  ]
+}

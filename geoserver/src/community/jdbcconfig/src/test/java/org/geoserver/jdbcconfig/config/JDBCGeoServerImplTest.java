@@ -5,10 +5,23 @@
  */
 package org.geoserver.jdbcconfig.config;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Collection;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.impl.CatalogImpl;
 import org.geoserver.config.GeoServerImplTest;
@@ -125,6 +138,40 @@ public class JDBCGeoServerImplTest extends GeoServerImplTest {
         assertNull(s3);
     }
 
+    @Test
+    public void testGlobalIsProperlyLocked() throws Exception {
+
+        GeoServerInfo global = geoServer.getFactory().createGlobal();
+        geoServer.setGlobal(global);
+
+        Executors.newSingleThreadExecutor()
+                .execute(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                testSupport
+                                        .getFacade()
+                                        .getConfigDatabase()
+                                        .lock(geoServer.getGlobal().getId(), 60000);
+                            }
+                        });
+
+        RunnableFuture<Void> future =
+                new FutureTask<Void>(
+                        new Callable<Void>() {
+                            @Override
+                            public Void call() throws Exception {
+                                geoServer.save(geoServer.getGlobal());
+                                return null;
+                            }
+                        });
+        assertThrows(
+                TimeoutException.class,
+                () -> {
+                    future.get(5, TimeUnit.SECONDS);
+                });
+    }
+
     // Would have put this on GeoServerImplTest, but it depends on WMS and WFS InfoImpl classes
     // which would lead to circular dependencies.
     @SuppressWarnings("unchecked")
@@ -196,6 +243,18 @@ public class JDBCGeoServerImplTest extends GeoServerImplTest {
         assertThat(
                 (Collection<ServiceInfo>) geoServer.getServices(ws2),
                 allOf(hasItems(ws2wms, ws2wfs), not(hasItems(gwms, gwfs, ws1wms, ws1wfs))));
+    }
+
+    @Override
+    public void testServiceWithWorkspace() throws Exception {
+        super.testServiceWithWorkspace();
+
+        // check removing workspace
+        geoServer
+                .getCatalog()
+                .remove(geoServer.getCatalog().getWorkspaceByName("TEST-WORKSPACE-1"));
+
+        assertNull(geoServer.getServiceByName("SERVICE-1-WS-1", ServiceInfo.class));
     }
 
     @Override

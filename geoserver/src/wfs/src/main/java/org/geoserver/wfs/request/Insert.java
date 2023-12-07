@@ -26,6 +26,8 @@ public abstract class Insert extends TransactionElement {
 
     public abstract void setFeatures(List features);
 
+    public abstract void addFeatures(List features);
+
     public boolean isIdGenUseExisting() {
         return false;
     }
@@ -47,11 +49,17 @@ public abstract class Insert extends TransactionElement {
         }
 
         @Override
+        public void addFeatures(List features) {
+            eAdd(adaptee, "feature", features);
+        }
+
+        @Override
         public boolean isIdGenUseExisting() {
             return ((InsertElementType) adaptee).getIdgen()
                     == IdentifierGenerationOptionType.USE_EXISTING_LITERAL;
         }
 
+        @SuppressWarnings("unchecked")
         public static InsertElementType unadapt(Insert insert) {
             if (insert instanceof WFS11) {
                 return (InsertElementType) insert.getAdaptee();
@@ -79,6 +87,11 @@ public abstract class Insert extends TransactionElement {
         @Override
         public void setFeatures(List features) {
             eSet(adaptee, "any", features);
+        }
+
+        @Override
+        public void addFeatures(List features) {
+            eAdd(adaptee, "any", features);
         }
     }
 }

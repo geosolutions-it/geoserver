@@ -31,10 +31,9 @@ import org.opengis.filter.FilterFactory;
  * @author Mauro Bartolomeoli
  */
 @DescribeProcess(
-    title = "PagedUnique",
-    description =
-            "Gets the list of unique values for the given featurecollection on a specified field, allows optional paging"
-)
+        title = "PagedUnique",
+        description =
+                "Gets the list of unique values for the given featurecollection on a specified field, allows optional paging")
 public class PagedUniqueProcess implements GeoServerProcess {
 
     /** The LOGGER. */
@@ -76,32 +75,28 @@ public class PagedUniqueProcess implements GeoServerProcess {
     @DescribeResult(name = "result", type = Results.class, description = "List of values")
     public Results execute(
             @DescribeParameter(
-                        name = "features",
-                        min = 1,
-                        max = 1,
-                        description = "Layer from which field values should be retrieved"
-                    )
+                            name = "features",
+                            min = 1,
+                            max = 1,
+                            description = "Layer from which field values should be retrieved")
                     SimpleFeatureCollection features,
             @DescribeParameter(
-                        name = "fieldName",
-                        min = 1,
-                        max = 1,
-                        description = "Field from which the values should be retrieved"
-                    )
+                            name = "fieldName",
+                            min = 1,
+                            max = 1,
+                            description = "Field from which the values should be retrieved")
                     String fieldName,
             @DescribeParameter(
-                        name = "startIndex",
-                        min = 0,
-                        max = 1,
-                        description = "The index of the first feature to retrieve"
-                    )
+                            name = "startIndex",
+                            min = 0,
+                            max = 1,
+                            description = "The index of the first feature to retrieve")
                     Integer startIndex,
             @DescribeParameter(
-                        name = "maxFeatures",
-                        min = 0,
-                        max = 1,
-                        description = "The maximum numbers of features to fetch"
-                    )
+                            name = "maxFeatures",
+                            min = 0,
+                            max = 1,
+                            description = "The maximum numbers of features to fetch")
                     Integer maxFeatures)
             throws IOException, CQLException {
 
@@ -130,16 +125,16 @@ public class PagedUniqueProcess implements GeoServerProcess {
                 };
 
         Integer listSize = 0;
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
 
         try {
             // counts total elements
             features.accepts(visitor, null);
-            if (visitor.getResult() == null || visitor.getResult().toList() == null) {
+            if (visitor.getResult() == null || visitorAsList(visitor) == null) {
                 listSize = 0;
-                list = new ArrayList<String>(0);
+                list = new ArrayList<>(0);
             } else {
-                listSize = visitor.getResult().toList().size();
+                listSize = visitorAsList(visitor).size();
                 if (maxFeatures == null || maxFeatures > listSize) {
                     maxFeatures = listSize;
                 }
@@ -154,15 +149,20 @@ public class PagedUniqueProcess implements GeoServerProcess {
                 visitor.setPreserveOrder(true);
 
                 features.accepts(visitor, null);
-                if (visitor.getResult() == null || visitor.getResult().toList() == null) {
-                    list = new ArrayList<String>(0);
+                if (visitor.getResult() == null || visitorAsList(visitor) == null) {
+                    list = new ArrayList<>(0);
                 } else {
-                    list = visitor.getResult().toList();
+                    list = visitorAsList(visitor);
                 }
             }
             return new Results(featureTypeName, fieldName, listSize, list);
         } catch (Exception e) {
             throw new ProcessException("Error extracting unique values", e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> visitorAsList(UniqueVisitor visitor) {
+        return visitor.getResult().toList();
     }
 }

@@ -8,11 +8,20 @@ import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import freemarker.template.ObjectWrapper;
 import freemarker.template.SimpleHash;
-import freemarker.template.TemplateModelException;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
-import org.geoserver.catalog.*;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CatalogBuilder;
+import org.geoserver.catalog.CatalogInfo;
+import org.geoserver.catalog.NamespaceInfo;
+import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.rest.ObjectToMapWrapper;
 import org.geoserver.rest.ResourceNotFoundException;
@@ -30,19 +39,26 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH + "/namespaces",
-    produces = {
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE,
-        MediaType.TEXT_HTML_VALUE
-    }
-)
+        path = RestBaseController.ROOT_PATH + "/namespaces",
+        produces = {
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE,
+            MediaType.TEXT_HTML_VALUE
+        })
 public class NamespaceController extends AbstractCatalogController {
 
     private static final Logger LOGGER = Logging.getLogger(NamespaceController.class);
@@ -53,13 +69,12 @@ public class NamespaceController extends AbstractCatalogController {
     }
 
     @GetMapping(
-        value = "/{namespaceName}",
-        produces = {
-            MediaType.APPLICATION_JSON_VALUE,
-            MediaType.TEXT_HTML_VALUE,
-            MediaType.APPLICATION_XML_VALUE
-        }
-    )
+            value = "/{namespaceName}",
+            produces = {
+                MediaType.APPLICATION_JSON_VALUE,
+                MediaType.TEXT_HTML_VALUE,
+                MediaType.APPLICATION_XML_VALUE
+            })
     public RestWrapper<NamespaceInfo> namespaceGet(@PathVariable String namespaceName) {
 
         NamespaceInfo namespace = catalog.getNamespaceByPrefix(namespaceName);
@@ -81,13 +96,12 @@ public class NamespaceController extends AbstractCatalogController {
     }
 
     @PostMapping(
-        consumes = {
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_JSON_VALUE
-        }
-    )
+            consumes = {
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_JSON_VALUE
+            })
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<String> namespacePost(
             @RequestBody NamespaceInfo namespace, UriComponentsBuilder builder) {
@@ -115,14 +129,13 @@ public class NamespaceController extends AbstractCatalogController {
     }
 
     @PutMapping(
-        value = "/{prefix}",
-        consumes = {
-            MediaType.TEXT_XML_VALUE,
-            MediaType.APPLICATION_XML_VALUE,
-            MediaTypeExtensions.TEXT_JSON_VALUE,
-            MediaType.APPLICATION_JSON_VALUE
-        }
-    )
+            value = "/{prefix}",
+            consumes = {
+                MediaType.TEXT_XML_VALUE,
+                MediaType.APPLICATION_XML_VALUE,
+                MediaTypeExtensions.TEXT_JSON_VALUE,
+                MediaType.APPLICATION_JSON_VALUE
+            })
     public void namespacePut(
             @RequestBody NamespaceInfo namespace,
             @PathVariable String prefix,
@@ -167,9 +180,8 @@ public class NamespaceController extends AbstractCatalogController {
     }
 
     private UriComponents getUriComponents(String name, UriComponentsBuilder builder) {
-        UriComponents uriComponents;
 
-        uriComponents = builder.path("/namespaces/{id}").buildAndExpand(name);
+        UriComponents uriComponents = builder.path("/namespaces/{id}").buildAndExpand(name);
 
         return uriComponents;
     }
@@ -178,14 +190,10 @@ public class NamespaceController extends AbstractCatalogController {
     protected <T> ObjectWrapper createObjectWrapper(Class<T> clazz) {
         return new ObjectToMapWrapper<NamespaceInfo>(NamespaceInfo.class) {
             @Override
-            protected void wrapInternal(Map properties, SimpleHash model, NamespaceInfo namespace) {
+            protected void wrapInternal(
+                    Map<String, Object> properties, SimpleHash model, NamespaceInfo namespace) {
                 if (properties == null) {
-                    try {
-                        properties = model.toMap();
-                    } catch (TemplateModelException e) {
-                        // if the above threw an exception, properties will NPE below anyways
-                        throw new RuntimeException(e);
-                    }
+                    properties = hashToProperties(model);
                 }
 
                 NamespaceInfo def = catalog.getDefaultNamespace();
@@ -208,8 +216,7 @@ public class NamespaceController extends AbstractCatalogController {
             }
 
             @Override
-            protected void wrapInternal(
-                    SimpleHash model, @SuppressWarnings("rawtypes") Collection object) {
+            protected void wrapInternal(SimpleHash model, Collection object) {
 
                 for (Object w : object) {
                     NamespaceInfo ns = (NamespaceInfo) w;

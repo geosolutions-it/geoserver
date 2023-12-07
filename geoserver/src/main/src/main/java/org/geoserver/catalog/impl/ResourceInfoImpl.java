@@ -19,13 +19,16 @@ import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
+import org.geoserver.util.InternationalStringUtils;
 import org.geotools.feature.NameImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
+import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
 import org.opengis.feature.type.Name;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.util.InternationalString;
 
 /** Default implementation of {@link ResourceInfo}. */
 @SuppressWarnings("serial")
@@ -39,7 +42,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
 
     protected String nativeName;
 
-    protected List<String> alias = new ArrayList<String>();
+    protected List<String> alias = new ArrayList<>();
 
     protected NamespaceInfo namespace;
 
@@ -49,11 +52,11 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
 
     protected String _abstract;
 
-    protected List<KeywordInfo> keywords = new ArrayList<KeywordInfo>();
+    protected List<KeywordInfo> keywords = new ArrayList<>();
 
-    protected List<MetadataLinkInfo> metadataLinks = new ArrayList<MetadataLinkInfo>();
+    protected List<MetadataLinkInfo> metadataLinks = new ArrayList<>();
 
-    protected List<DataLinkInfo> dataLinks = new ArrayList<DataLinkInfo>();
+    protected List<DataLinkInfo> dataLinks = new ArrayList<>();
 
     protected CoordinateReferenceSystem nativeCRS;
 
@@ -77,7 +80,13 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
 
     protected List<String> disabledServices = new ArrayList<>();
 
+    protected Boolean simpleConversionEnabled = false;
+
     protected transient Catalog catalog;
+
+    protected GrowableInternationalString internationalTitle;
+
+    protected GrowableInternationalString internationalAbstract;
 
     protected ResourceInfoImpl() {}
 
@@ -94,80 +103,99 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         this.id = id;
     }
 
+    @Override
     public String getId() {
         return id;
     }
 
+    @Override
     public Catalog getCatalog() {
         return catalog;
     }
 
+    @Override
     public void setCatalog(Catalog catalog) {
         this.catalog = catalog;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public void setName(String name) {
         this.name = name;
     }
 
     /** @see org.geoserver.catalog.ResourceInfo#getQualifiedName() */
+    @Override
     public Name getQualifiedName() {
         return new NameImpl(getNamespace().getURI(), getName());
     }
 
+    @Override
     public String getNativeName() {
         return nativeName;
     }
 
+    @Override
     public void setNativeName(String nativeName) {
         this.nativeName = nativeName;
     }
 
     /** @see org.geoserver.catalog.ResourceInfo#getQualifiedNativeName() */
+    @Override
     public Name getQualifiedNativeName() {
         return new NameImpl(getNamespace().getURI(), getNativeName());
     }
 
+    @Override
     public NamespaceInfo getNamespace() {
         return namespace;
     }
 
+    @Override
     public void setNamespace(NamespaceInfo namespace) {
         this.namespace = namespace;
     }
 
+    @Override
     public String prefixedName() {
         return getNamespace().getPrefix() + ":" + getName();
     }
 
+    @Override
     public String getTitle() {
-        return title;
+        return InternationalStringUtils.getOrDefault(title, internationalTitle);
     }
 
+    @Override
     public void setTitle(String title) {
         this.title = title;
     }
 
+    @Override
     public String getDescription() {
         return description;
     }
 
+    @Override
     public void setDescription(String description) {
         this.description = description;
     }
 
+    @Override
     public String getAbstract() {
-        return _abstract;
+        return InternationalStringUtils.getOrDefault(_abstract, internationalAbstract);
     }
 
+    @Override
     public void setAbstract(String _abstract) {
         this._abstract = _abstract;
     }
 
+    @Override
     public List<KeywordInfo> getKeywords() {
         return keywords;
     }
@@ -176,8 +204,9 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         this.keywords = keywords;
     }
 
+    @Override
     public List<String> keywordValues() {
-        List<String> values = new ArrayList<String>();
+        List<String> values = new ArrayList<>();
         if (keywords != null) {
             for (KeywordInfo kw : keywords) {
                 values.add(kw.getValue());
@@ -186,76 +215,118 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         return values;
     }
 
+    @Override
     public List<MetadataLinkInfo> getMetadataLinks() {
         return metadataLinks;
     }
 
+    @Override
     public List<DataLinkInfo> getDataLinks() {
         return dataLinks;
     }
 
+    @Override
     public String getSRS() {
         return srs;
     }
 
+    @Override
     public void setSRS(String srs) {
         this.srs = srs;
     }
 
+    @Override
     public ReferencedEnvelope boundingBox() throws Exception {
         CoordinateReferenceSystem declaredCRS = getCRS();
         CoordinateReferenceSystem nativeCRS = getNativeCRS();
         ProjectionPolicy php = getProjectionPolicy();
 
-        ReferencedEnvelope nativeBox = this.nativeBoundingBox;
+        ReferencedEnvelope nativeBox = getNativeBoundingBox();
         if (nativeBox == null) {
             // back project from lat lon
             try {
-                nativeBox = getLatLonBoundingBox().transform(declaredCRS, true);
+                if (declaredCRS != null) {
+                    nativeBox = getLatLonBoundingBox().transform(declaredCRS, true);
+                } else {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Failed to derive native bbox, there is no declared CRS provided");
+                    return null;
+                }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Failed to derive native bbox from declared one", e);
                 return null;
             }
+        } else if (nativeBox.getCoordinateReferenceSystem() == null) {
+            if (nativeCRS != null) {
+                // Ensure provided nativeBox using nativeCRS
+                nativeBox = ReferencedEnvelope.create(nativeBox, nativeCRS);
+            }
+        } else if (nativeCRS != null
+                && !CRS.equalsIgnoreMetadata(nativeBox.getCoordinateReferenceSystem(), nativeCRS)) {
+            LOGGER.log(Level.FINE, "The native bounding box srs does not match native crs");
         }
 
-        ReferencedEnvelope result;
         if (!CRS.equalsIgnoreMetadata(declaredCRS, nativeCRS)
                 && php == ProjectionPolicy.REPROJECT_TO_DECLARED) {
-            result = nativeBox.transform(declaredCRS, true);
+            if (nativeBox.getCoordinateReferenceSystem() == null) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to reproject to declared crs (native bounding box srs and native crs are not defined)");
+                return null;
+            }
+            // transform below makes a copy, in no case the actual field value is returned to the
+            // client, this
+            // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own
+            return nativeBox.transform(declaredCRS, true);
         } else if (php == ProjectionPolicy.FORCE_DECLARED) {
-            result = ReferencedEnvelope.create((Envelope) nativeBox, declaredCRS);
+            // create below makes a copy, in no case the actual field value is returned to the
+            // client, this
+            // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own
+            return ReferencedEnvelope.create((Envelope) nativeBox, declaredCRS);
         } else {
-            result = nativeBox;
+            if (nativeBox == null || nativeBox.getCoordinateReferenceSystem() == null) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to determine native bounding crs (both native bounding box srs and native crs are not defined)");
+                // return null;
+            }
+            // create below makes a copy, in no case the actual field value is returned to the
+            // client, this
+            // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own
+            return ReferencedEnvelope.create(nativeBox);
         }
-
-        // make sure that in no case the actual field value is returned to the client, this
-        // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own
-        return ReferencedEnvelope.create(result);
     }
 
+    @Override
     public ReferencedEnvelope getLatLonBoundingBox() {
         return latLonBoundingBox;
     }
 
+    @Override
     public void setLatLonBoundingBox(ReferencedEnvelope box) {
         this.latLonBoundingBox = box;
     }
 
+    @Override
     public boolean isEnabled() {
         return enabled;
     }
 
     /** @see ResourceInfo#enabled() */
+    @Override
     public boolean enabled() {
         StoreInfo store = getStore();
         boolean storeEnabled = store != null && store.isEnabled();
         return storeEnabled && this.isEnabled();
     }
 
+    @Override
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
+    @Override
     public MetadataMap getMetadata() {
         return metadata;
     }
@@ -272,14 +343,17 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         this.dataLinks = dataLinks;
     }
 
+    @Override
     public StoreInfo getStore() {
         return store;
     }
 
+    @Override
     public void setStore(StoreInfo store) {
         this.store = store;
     }
 
+    @Override
     public <T extends Object> T getAdapter(Class<T> adapterClass, Map<?, ?> hints) {
         // subclasses should override
         return null;
@@ -294,6 +368,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
                 .toString();
     }
 
+    @Override
     public List<String> getAlias() {
         return alias;
     }
@@ -302,6 +377,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         this.alias = alias;
     }
 
+    @Override
     public CoordinateReferenceSystem getCRS() {
         if (getSRS() == null) {
             return null;
@@ -312,30 +388,36 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
             return CRS.decode(getSRS());
         } catch (Exception e) {
             throw new RuntimeException(
-                    "This is unexpected, the layer seems to be mis-configured", e);
+                    "This is unexpected, the layer srs seems to be mis-configured", e);
         }
     }
 
+    @Override
     public ReferencedEnvelope getNativeBoundingBox() {
         return nativeBoundingBox;
     }
 
+    @Override
     public void setNativeBoundingBox(ReferencedEnvelope box) {
         this.nativeBoundingBox = box;
     }
 
+    @Override
     public CoordinateReferenceSystem getNativeCRS() {
         return nativeCRS;
     }
 
+    @Override
     public void setNativeCRS(CoordinateReferenceSystem nativeCRS) {
         this.nativeCRS = nativeCRS;
     }
 
+    @Override
     public ProjectionPolicy getProjectionPolicy() {
         return projectionPolicy;
     }
 
+    @Override
     public void setProjectionPolicy(ProjectionPolicy projectionPolicy) {
         this.projectionPolicy = projectionPolicy;
     }
@@ -383,6 +465,37 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         this.disabledServices = disabledServices;
     }
 
+    @Override
+    public boolean isSimpleConversionEnabled() {
+        return simpleConversionEnabled == null ? false : simpleConversionEnabled;
+    }
+
+    @Override
+    public void setSimpleConversionEnabled(boolean simpleConversionEnabled) {
+        this.simpleConversionEnabled = simpleConversionEnabled;
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalTitle() {
+        return this.internationalTitle;
+    }
+
+    @Override
+    public void setInternationalTitle(InternationalString internationalTitle) {
+        this.internationalTitle = InternationalStringUtils.growable(internationalTitle);
+    }
+
+    @Override
+    public GrowableInternationalString getInternationalAbstract() {
+        return this.internationalAbstract;
+    }
+
+    @Override
+    public void setInternationalAbstract(InternationalString internationalAbstract) {
+        this.internationalAbstract = InternationalStringUtils.growable(internationalAbstract);
+    }
+
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -416,9 +529,9 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         if (id == null) {
             if (other.getId() != null) return false;
         } else if (!id.equals(other.getId())) return false;
-        if (_abstract == null) {
+        if (getAbstract() == null) {
             if (other.getAbstract() != null) return false;
-        } else if (!_abstract.equals(other.getAbstract())) return false;
+        } else if (!getAbstract().equals(other.getAbstract())) return false;
         if (alias == null) {
             if (other.getAlias() != null) return false;
         } else if (!alias.equals(other.getAlias())) return false;
@@ -459,9 +572,9 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         if (store == null) {
             if (other.getStore() != null) return false;
         } else if (!store.equals(other.getStore())) return false;
-        if (title == null) {
+        if (this.getTitle() == null) {
             if (other.getTitle() != null) return false;
-        } else if (!title.equals(other.getTitle())) return false;
+        } else if (!this.getTitle().equals(other.getTitle())) return false;
         return true;
     }
 }

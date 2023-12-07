@@ -5,17 +5,21 @@
  */
 package org.geoserver.wms.map;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import java.awt.image.ColorModel;
 import java.awt.image.RenderedImage;
 import java.awt.image.SampleModel;
+import java.awt.image.renderable.ParameterBlock;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Vector;
+import javax.media.jai.Interpolation;
+import javax.media.jai.RenderedOp;
 import javax.xml.namespace.QName;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -83,7 +87,7 @@ public class RenderedImageMapOutputFormatExtendedTest extends WMSTestSupport {
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
-        Map properties = new HashMap();
+        Map<LayerProperty, Object> properties = new HashMap<>();
         properties.put(LayerProperty.STYLE, "raster");
         final Catalog cat = getCatalog();
         testData.addRasterLayer(
@@ -193,11 +197,98 @@ public class RenderedImageMapOutputFormatExtendedTest extends WMSTestSupport {
         assertNotNull(destImage);
         ColorModel cm = destImage.getColorModel();
         SampleModel sm = destImage.getSampleModel();
-        assertTrue(cm.getColorSpace().getNumComponents() == 1);
-        assertTrue(sm.getNumBands() == 1);
+        assertEquals(1, cm.getColorSpace().getNumComponents());
+        assertEquals(1, sm.getNumBands());
         dstImageMap.dispose();
 
         map.dispose();
+    }
+
+    /**
+     * Test to check that the interpolation is being propagated down to the reader when a rendering
+     * transformation is in the mix.
+     */
+    @Test
+    public void testInterpolationAppliedWithRenderingTransformation() throws Exception {
+
+        final Catalog catalog = getCatalog();
+
+        // Get the RGB-IR View which is combining an RGB GeoTIFF and an IR GeoTIFF
+        final CoverageInfo ci = catalog.getCoverageByName(RGB_IR_VIEW);
+
+        final GridCoverage2DReader reader =
+                (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
+        final ReferencedEnvelope bbox = new ReferencedEnvelope(reader.getOriginalEnvelope());
+
+        final GetMapRequest request = new GetMapRequest();
+        request.setBbox(bbox);
+        request.setSRS("urn:x-ogc:def:crs:EPSG:32632");
+        request.setFormat("image/png");
+        request.setInterpolations(
+                Collections.singletonList(
+                        Interpolation.getInstance(Interpolation.INTERP_BILINEAR)));
+
+        final WMSMapContent map = new WMSMapContent(request);
+        map.setMapWidth(20);
+        map.setMapHeight(20);
+        map.setTransparent(false);
+        map.getViewport().setBounds(bbox);
+
+        // Setup a style
+        final SLDParser parser = new SLDParser(CommonFactoryFinder.getStyleFactory());
+        parser.setInput(
+                RasterSymbolizerVisitorTest.class.getResource("CropTransformAndChannelSelect.sld"));
+        final StyledLayerDescriptor sld = parser.parseSLD();
+        final NamedLayer ul = (NamedLayer) sld.getStyledLayers()[0];
+        final Style style = ul.getStyles()[0];
+
+        final Layer dl = new CachedGridReaderLayer(reader, style);
+        map.addLayer(dl);
+
+        RenderedImageMap dstImageMap = this.rasterMapProducer.produceMap(map);
+        RenderedImage destImage = dstImageMap.getImage();
+
+        assertNotNull(destImage);
+
+        Interpolation interpolation = getScalingInterpolation(destImage);
+        assertNotNull(interpolation);
+        assertEquals(interpolation, Interpolation.getInstance(Interpolation.INTERP_BILINEAR));
+        dstImageMap.dispose();
+
+        map.dispose();
+    }
+
+    private Interpolation getScalingInterpolation(RenderedImage destImage) {
+        RenderedOp scalingOp = getScalingOpImage(destImage);
+        ParameterBlock parameterBlock = scalingOp.getParameterBlock();
+        Interpolation interpolation = null;
+        for (int i = 0; i < parameterBlock.getNumParameters(); i++) {
+            Object param = parameterBlock.getObjectParameter(i);
+            if (param instanceof Interpolation) {
+                interpolation = (Interpolation) param;
+                continue;
+            }
+        }
+        return interpolation;
+    }
+
+    @SuppressWarnings("PMD.ReplaceVectorWithList")
+    private RenderedOp getScalingOpImage(RenderedImage destImage) {
+        if (destImage != null) {
+            Vector<RenderedImage> sources = destImage.getSources();
+            for (RenderedImage source : sources) {
+                if (source instanceof RenderedOp) {
+                    RenderedOp op = (RenderedOp) source;
+                    String opName = op.getOperationName();
+                    if ("Scale".equalsIgnoreCase(opName)) {
+                        return op;
+                    }
+                    RenderedOp opImage = getScalingOpImage(source);
+                    if (opImage != null) return opImage;
+                }
+            }
+        }
+        return null;
     }
 
     /** Test to check that disabling ADVANCED PROJECTION HANDLING will not return a blank image */

@@ -9,10 +9,7 @@ import org.apache.wicket.behavior.AttributeAppender;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.model.Model;
 import org.geoserver.GeoServerNodeData;
-import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.web.spring.security.GeoServerSession;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 
 /**
  * Default node id customizer, will respond to a system variable, env variable or servlet context
@@ -41,8 +38,7 @@ public class DefaultGeoServerNodeInfo implements GeoServerNodeInfo {
 
     @Override
     public void customize(WebMarkupContainer container) {
-        container.add(
-                new AttributeAppender("style", new Model<String>(NODE_DATA.getIdStyle()), ";"));
+        container.add(new AttributeAppender("style", new Model<>(NODE_DATA.getIdStyle()), ";"));
         container.setVisible(isNodeIdVisible(container));
     }
 
@@ -50,25 +46,12 @@ public class DefaultGeoServerNodeInfo implements GeoServerNodeInfo {
         NODE_DATA = GeoServerNodeData.createFromEnvironment();
     }
 
-    /**
-     * The element is visible if an admin is logged in, and the id is not null
-     *
-     * @param parent
-     */
+    /** The element is visible if an admin is logged in, and the id is not null */
     protected boolean isNodeIdVisible(WebMarkupContainer parent) {
         if (NODE_DATA.getId() == null) {
             return false;
         }
         // we don't show the node id to all users, only to the admin
-        Authentication auth = ((GeoServerSession) parent.getSession()).getAuthentication();
-        if (auth == null
-                || !auth.isAuthenticated()
-                || auth instanceof AnonymousAuthenticationToken) {
-            return false;
-        } else {
-            GeoServerSecurityManager securityManager =
-                    GeoServerApplication.get().getSecurityManager();
-            return securityManager.checkAuthenticationForAdminRole(auth);
-        }
+        return ((GeoServerSession) parent.getSession()).isAdmin();
     }
 }

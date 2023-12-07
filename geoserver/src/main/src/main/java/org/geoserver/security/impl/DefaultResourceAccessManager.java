@@ -10,6 +10,7 @@ import static org.geoserver.security.impl.DataAccessRule.ANY;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -32,6 +33,7 @@ import org.geoserver.catalog.WMTSLayerInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.AccessMode;
 import org.geoserver.security.AdminRequest;
 import org.geoserver.security.CatalogMode;
@@ -82,6 +84,13 @@ import org.springframework.security.core.Authentication;
 public class DefaultResourceAccessManager implements ResourceAccessManager {
     static final Logger LOGGER = Logging.getLogger(DefaultResourceAccessManager.class);
 
+    /**
+     * Flag to enable previous resource filter building logic. This could be used to prevent
+     * performance regressions in JDCBConfig. Defaults to False.
+     */
+    static final Boolean RESOURCE_EQUALITY_FILTER_ENABLED =
+            Boolean.getBoolean("geoserver.access.resourceEqualityFilterEnabled");
+
     /** A {@link LayerGroupSummary} extended with the associated secure tree node */
     static class SecuredGroupSummary extends LayerGroupSummary {
 
@@ -114,15 +123,20 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
     /**
      * Pass a reference to the raw, unsecured catalog. The reference is used to evaluate the
      * relationship between layers and the groups containing them
-     *
-     * @param dao
-     * @param rawCatalog
      */
     public DefaultResourceAccessManager(DataAccessRuleDAO dao, Catalog rawCatalog) {
         this.dao = dao;
         this.rawCatalog = rawCatalog;
         this.root = buildAuthorizationTree(dao);
-        this.groupsCache = new LayerGroupContainmentCache(rawCatalog);
+    }
+
+    /**
+     * Sets the layer group cache
+     *
+     * @param groupsCache
+     */
+    public void setGroupsCache(LayerGroupContainmentCache groupsCache) {
+        this.groupsCache = groupsCache;
     }
 
     public CatalogMode getMode() {
@@ -151,11 +165,6 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
      * Returns true if the user can access the specified node, or one of the nodes below it
      *
      * <p>the specified nodes
-     *
-     * @param node
-     * @param user
-     * @param mode
-     * @return
      */
     private boolean canAccessChild(SecureTreeNode node, Authentication user, AccessMode mode) {
         if (node.canAccess(user, mode)) {
@@ -214,7 +223,8 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
 
         // grab the groups containing the resource, if any. If none, there is no group related logic
         // to apply
-        Collection<LayerGroupSummary> containers = groupsCache.getContainerGroupsFor(resource);
+        Collection<LayerGroupSummary> containers =
+                getLayerGroupsCache().getContainerGroupsFor(resource);
         if (containers.isEmpty()) {
             return rulesAllowAccess;
         }
@@ -222,8 +232,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         // there are groups, so there might be more specific rules overriding the catalog one,
         // search for them
         List<LayerGroupSummary> groupOverrides =
-                containers
-                        .stream()
+                containers.stream()
                         .filter(
                                 sg -> {
                                     LayerGroupInfo gi = rawCatalog.getLayerGroup(sg.getId());
@@ -238,8 +247,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         if (!groupOverrides.isEmpty()) {
             // if there are overrides, see if at least one of them allows access
             rulesAllowAccess =
-                    groupOverrides
-                            .stream()
+                    groupOverrides.stream()
                             .anyMatch(
                                     sg -> {
                                         if (directAccess && sg.getMode() == Mode.OPAQUE_CONTAINER) {
@@ -260,8 +268,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
 
         // the rules allow no access, but there might still be a non secured layer group allowing
         // access to the resource
-        return containers
-                .stream()
+        return containers.stream()
                 .anyMatch(
                         sg -> {
                             if (directAccess && sg.getMode() == Mode.OPAQUE_CONTAINER) {
@@ -381,12 +388,13 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
                                 + rule
                                 + " is overriding another rule targetting the same resource");
             }
-            node.setAuthorizedRoles(accessMode, rule.getRoles());
+            node.setAuthorizedRoles(accessMode, new HashSet<>(rule.getRoles()));
         }
 
         return root;
     }
 
+    @Override
     public DataAccessLimits getAccessLimits(
             Authentication user, LayerInfo layer, List<LayerGroupInfo> context) {
         final boolean directAccess = context == null || context.isEmpty();
@@ -397,6 +405,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         return buildLimits(layer.getResource().getClass(), readFilter, writeFilter);
     }
 
+    @Override
     public DataAccessLimits getAccessLimits(Authentication user, ResourceInfo resource) {
         boolean read = canAccess(user, resource, AccessMode.READ, true);
         boolean write = canAccess(user, resource, AccessMode.WRITE, true);
@@ -437,6 +446,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         }
     }
 
+    @Override
     public WorkspaceAccessLimits getAccessLimits(Authentication user, WorkspaceInfo workspace) {
         boolean readable = canAccess(user, workspace, AccessMode.READ);
         boolean writable = canAccess(user, workspace, AccessMode.WRITE);
@@ -445,8 +455,8 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         CatalogMode mode = getMode();
 
         if (readable && writable) {
-            if (AdminRequest.get() == null) {
-                // not admin request, read+write means full acesss
+            if (!adminable && AdminRequest.get() == null) {
+                // It is not an admin request, read+write means full access
                 return null;
             }
         }
@@ -478,15 +488,14 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
             // grab the groups containing the group, if any. If none, there is no group related
             // logic to apply
             Collection<LayerGroupSummary> directContainers =
-                    groupsCache.getContainerGroupsFor(layerGroup);
+                    getLayerGroupsCache().getContainerGroupsFor(layerGroup);
             if (directContainers.isEmpty()) {
                 allowAccess = true;
             } else {
                 // do we have at least one path that authorizes access to this group? need to check
                 // group by group
                 allowAccess =
-                        directContainers
-                                .stream()
+                        directContainers.stream()
                                 .anyMatch(
                                         sg -> {
                                             if (directAccess
@@ -505,9 +514,6 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
 
     /**
      * Returns the possible location of the group in the secured tree based on name and workspace
-     *
-     * @param layerGroup
-     * @return
      */
     private String[] getLayerGroupPath(LayerGroupInfo layerGroup) {
         if (layerGroup.getWorkspace() == null) {
@@ -542,7 +548,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
                     }
                 }
             }
-            if (exceptions.size() == 0) {
+            if (exceptions.isEmpty()) {
                 return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
             } else {
                 return rootAccess ? Predicates.and(exceptions) : Predicates.or(exceptions);
@@ -550,78 +556,10 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         } else if (PublishedInfo.class.isAssignableFrom(clazz)
                 || ResourceInfo.class.isAssignableFrom(clazz)
                 || CoverageInfo.class.isAssignableFrom(clazz)) {
-            // base access
-            boolean rootAccess = canAccess(user, root);
-            List<Filter> exceptions = new ArrayList<>();
-
-            // get the right ws property name
-            String wsNameProperty;
-            if (PublishedInfo.class.isAssignableFrom(clazz)) {
-                wsNameProperty = "resource.store.workspace.name";
+            if (RESOURCE_EQUALITY_FILTER_ENABLED) {
+                return buildEqualityResourceFilter(user, clazz);
             } else {
-                wsNameProperty = "store.workspace.name";
-            }
-
-            // workspace exceptions
-            for (Map.Entry<String, SecureTreeNode> wsEntry : root.getChildren().entrySet()) {
-                String wsName = wsEntry.getKey();
-                SecureTreeNode wsNode = wsEntry.getValue();
-                boolean wsAccess = canAccess(user, wsNode);
-
-                List<Filter> layerExceptions = new ArrayList<>();
-                for (Map.Entry<String, SecureTreeNode> layerEntry :
-                        wsNode.getChildren().entrySet()) {
-                    String layerName = layerEntry.getKey();
-                    SecureTreeNode layerNode = layerEntry.getValue();
-                    boolean layerAccess = canAccess(user, layerNode);
-                    if (layerAccess != wsAccess) {
-                        if (wsAccess) {
-                            layerExceptions.add(
-                                    Predicates.notEqual("prefixedName", wsName + ":" + layerName));
-                        } else {
-                            layerExceptions.add(
-                                    Predicates.equal("prefixedName", wsName + ":" + layerName));
-                        }
-                    }
-                }
-
-                Filter wsFilter = null;
-                if (rootAccess && !wsAccess) {
-                    wsFilter = Predicates.notEqual(wsNameProperty, wsName);
-                } else if (!rootAccess && wsAccess) {
-                    wsFilter = Predicates.equal(wsNameProperty, wsName);
-                }
-
-                if (layerExceptions.isEmpty()) {
-                    if (wsFilter != null) {
-                        exceptions.add(wsFilter);
-                    }
-                } else {
-                    if (wsFilter != null) {
-                        layerExceptions.add(wsFilter);
-                    }
-                    Filter combined =
-                            wsAccess
-                                    ? Predicates.and(layerExceptions)
-                                    : Predicates.or(layerExceptions);
-                    exceptions.add(combined);
-                }
-            }
-
-            if (exceptions.size() == 0) {
-                return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
-            } else {
-                Filter filter = rootAccess ? Predicates.and(exceptions) : Predicates.or(exceptions);
-                // in case of published info, we have to filter the layer groups as a separate
-                // entity
-                if (PublishedInfo.class.equals(clazz)) {
-                    Filter layerFilter =
-                            Predicates.and(Predicates.isInstanceOf(LayerInfo.class), filter);
-                    Filter layerGroupFilter = Predicates.isInstanceOf(LayerGroupInfo.class);
-                    return Predicates.or(layerFilter, layerGroupFilter);
-                } else {
-                    return filter;
-                }
+                return buildInFunctionResourceFilter(user, clazz);
             }
         } else if (StyleInfo.class.isAssignableFrom(clazz)
                 || LayerGroupInfo.class.isAssignableFrom(clazz)) {
@@ -641,7 +579,7 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
                     }
                 }
             }
-            if (exceptions.size() == 0) {
+            if (exceptions.isEmpty()) {
                 return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
             } else {
                 return rootAccess ? Predicates.and(exceptions) : Predicates.or(exceptions);
@@ -650,6 +588,196 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
             // for the other types we have no clue, use the in memory filtering
             return InMemorySecurityFilter.buildUserAccessFilter(this, user);
         }
+    }
+
+    private Filter buildEqualityResourceFilter(
+            Authentication user, Class<? extends CatalogInfo> clazz) {
+        // base access
+        boolean rootAccess = canAccess(user, root);
+        List<Filter> exceptions = new ArrayList<>();
+
+        // workspace exceptions
+        for (Map.Entry<String, SecureTreeNode> wsEntry : root.getChildren().entrySet()) {
+            String wsName = wsEntry.getKey();
+            SecureTreeNode wsNode = wsEntry.getValue();
+            boolean wsAccess = canAccess(user, wsNode);
+
+            List<Filter> layerExceptions = new ArrayList<>();
+            for (Map.Entry<String, SecureTreeNode> layerEntry : wsNode.getChildren().entrySet()) {
+                String layerName = layerEntry.getKey();
+                SecureTreeNode layerNode = layerEntry.getValue();
+                String prefixedName = wsName + ":" + layerName;
+                Filter typeFilter = getTypeFilter(prefixedName, clazz);
+                if (typeFilter == null) {
+                    // dangling rule, referencing a non existing layer/group, continue
+                    continue;
+                }
+
+                boolean layerAccess = canAccess(user, layerNode);
+                if (layerAccess != wsAccess) {
+                    Filter prefixedNameFilter =
+                            Predicates.and(
+                                    typeFilter, Predicates.equal("prefixedName", prefixedName));
+                    if (wsAccess) {
+                        layerExceptions.add(Predicates.not(prefixedNameFilter));
+                    } else {
+                        layerExceptions.add(prefixedNameFilter);
+                    }
+                }
+            }
+
+            // get the right ws property name
+            Filter wsNamePropertyFilter;
+            if (LayerGroupInfo.class.isAssignableFrom(clazz)) {
+                // resource.store.workspace.name is not applicable for layergroups
+                wsNamePropertyFilter = Predicates.equal("workspace.name", wsName);
+            } else if (LayerInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter = Predicates.equal("resource.store.workspace.name", wsName);
+            } else if (PublishedInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter =
+                        Predicates.or(
+                                Predicates.and(
+                                        Predicates.isInstanceOf(LayerInfo.class),
+                                        Predicates.equal("resource.store.workspace.name", wsName)),
+                                Predicates.and(
+                                        Predicates.isInstanceOf(PublishedInfo.class),
+                                        Predicates.equal("workspace.name", wsName)));
+            } else {
+                wsNamePropertyFilter = Predicates.equal("store.workspace.name", wsName);
+            }
+
+            Filter wsFilter = null;
+            if (rootAccess && !wsAccess) {
+                wsFilter = Predicates.not(wsNamePropertyFilter);
+            } else if (!rootAccess && wsAccess) {
+                wsFilter = wsNamePropertyFilter;
+            }
+
+            if (layerExceptions.isEmpty()) {
+                if (wsFilter != null) {
+                    exceptions.add(wsFilter);
+                }
+            } else {
+                if (wsFilter != null) {
+                    layerExceptions.add(wsFilter);
+                }
+                Filter combined =
+                        wsAccess ? Predicates.and(layerExceptions) : Predicates.or(layerExceptions);
+                exceptions.add(combined);
+            }
+        }
+
+        if (exceptions.isEmpty()) {
+            return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
+        } else {
+            return rootAccess ? Predicates.and(exceptions) : Predicates.or(exceptions);
+        }
+    }
+
+    protected Filter buildInFunctionResourceFilter(
+            Authentication user, Class<? extends CatalogInfo> clazz) {
+        // base access
+        boolean rootAccess = canAccess(user, root);
+
+        List<Filter> filters = new ArrayList<>();
+        // workspace exceptions
+        for (Map.Entry<String, SecureTreeNode> wsEntry : root.getChildren().entrySet()) {
+            String wsName = wsEntry.getKey();
+            if (rawCatalog.getWorkspaceByName(wsName) == null) {
+                // dangling rule, workspace does not exist, skip it
+                continue;
+            }
+            SecureTreeNode wsNode = wsEntry.getValue();
+            boolean wsAccess = canAccess(user, wsNode);
+
+            List<String> layerExceptionIds = new ArrayList<>();
+            for (Map.Entry<String, SecureTreeNode> layerEntry : wsNode.getChildren().entrySet()) {
+                String layerName = layerEntry.getKey();
+                SecureTreeNode layerNode = layerEntry.getValue();
+                String prefixedName = wsName + ":" + layerName;
+                PublishedInfo published = rawCatalog.getLayerByName(prefixedName);
+                if (published == null) {
+                    published = rawCatalog.getLayerGroupByName(prefixedName);
+                    if (published == null) {
+                        // dangling rule, referencing a non-existing layer/group, continue
+                        continue;
+                    }
+                }
+                boolean layerAccess = canAccess(user, layerNode);
+                if (layerAccess != wsAccess) {
+                    if (ResourceInfo.class.isAssignableFrom(clazz)
+                            && published instanceof LayerInfo) {
+                        layerExceptionIds.add(((LayerInfo) published).getResource().getId());
+                    } else {
+                        layerExceptionIds.add(published.getId());
+                    }
+                }
+            }
+
+            // get the right ws property name
+            Filter wsNamePropertyFilter;
+            if (LayerGroupInfo.class.isAssignableFrom(clazz)) {
+                // resource.store.workspace.name is not applicable for layergroups
+                wsNamePropertyFilter = Predicates.equal("workspace.name", wsName);
+            } else if (LayerInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter = Predicates.equal("resource.store.workspace.name", wsName);
+            } else if (PublishedInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter =
+                        Predicates.or(
+                                Predicates.and(
+                                        Predicates.isInstanceOf(LayerInfo.class),
+                                        Predicates.equal("resource.store.workspace.name", wsName)),
+                                Predicates.and(
+                                        Predicates.isInstanceOf(PublishedInfo.class),
+                                        Predicates.equal("workspace.name", wsName)));
+            } else {
+                wsNamePropertyFilter = Predicates.equal("store.workspace.name", wsName);
+            }
+
+            Filter wsFilter = null;
+            if (rootAccess && !wsAccess) {
+                wsFilter = Predicates.not(wsNamePropertyFilter);
+            } else if (!rootAccess && wsAccess) {
+                wsFilter = wsNamePropertyFilter;
+            }
+
+            if (layerExceptionIds.isEmpty()) {
+                if (wsFilter != null) {
+                    filters.add(wsFilter);
+                }
+            } else {
+                Filter id = Predicates.in("id", layerExceptionIds);
+
+                if (wsAccess) {
+                    id = Predicates.not(id);
+                }
+                if (wsFilter != null) {
+                    filters.add(Predicates.and(wsFilter, id));
+                } else {
+                    filters.add(id);
+                }
+            }
+        }
+
+        if (filters.isEmpty()) {
+            return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
+        } else {
+            return rootAccess ? Predicates.and(filters) : Predicates.or(filters);
+        }
+    }
+
+    private Filter getTypeFilter(String prefixedName, Class<?> clazz) {
+        if (rawCatalog.getLayerByName(prefixedName) != null)
+            if (clazz.equals(PublishedInfo.class)) {
+                // restrict to layers in this case
+                return Predicates.isInstanceOf(LayerInfo.class);
+            } else {
+                // otherwise use the native type, e.g., CoverageInfo, FeatureTypeInfo, LayerInfo
+                return Predicates.isInstanceOf(clazz);
+            }
+        else if (rawCatalog.getLayerGroupByName(prefixedName) != null)
+            return Predicates.isInstanceOf(LayerGroupInfo.class);
+        else return null;
     }
 
     private boolean canAccess(Authentication user, SecureTreeNode node) {
@@ -670,5 +798,17 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
     @Override
     public LayerGroupAccessLimits getAccessLimits(Authentication user, LayerGroupInfo layerGroup) {
         return getAccessLimits(user, layerGroup, Collections.emptyList());
+    }
+
+    /**
+     * Retrieves the layer group containment cache. If empty, it will fetch it from the context
+     *
+     * @return The layer group cantainment cache
+     */
+    protected LayerGroupContainmentCache getLayerGroupsCache() {
+        if (groupsCache == null) {
+            groupsCache = GeoServerExtensions.bean(LayerGroupContainmentCache.class);
+        }
+        return groupsCache;
     }
 }

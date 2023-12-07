@@ -7,24 +7,37 @@ package org.geoserver.rest.catalog;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geoserver.rest.RestBaseController.ROOT_PATH;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.endsWith;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
 import net.sf.json.JSON;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
+import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.rest.RestBaseController;
 import org.geotools.data.DataStore;
+import org.geotools.data.property.PropertyDataStore;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
+import org.opengis.feature.type.FeatureType;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -129,8 +142,6 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
         assertEquals("sf", xp.evaluate("/dataStore/name", dom));
         assertEquals("sf", xp.evaluate("/dataStore/workspace/name", dom));
         assertXpathExists("/dataStore/connectionParameters", dom);
-
-        Document dom2 = getAsDOM(ROOT_PATH + "/workspaces/sf/datastores/sf.xml");
         assertXpathEvaluatesTo("true", "/dataStore/enabled", dom);
 
         String xml =
@@ -233,6 +244,7 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
 
         DataStoreInfo newDataStore = catalog.getDataStoreByName("newDataStore");
         assertNotNull(newDataStore);
+        assertNotNull(newDataStore.getDateCreated());
 
         DataStore ds = (DataStore) newDataStore.getDataStore(null);
         assertNotNull(ds);
@@ -263,6 +275,7 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
 
         DataStoreInfo newDataStore = catalog.getDataStoreByName("newDataStore");
         assertNotNull(newDataStore);
+        assertNotNull(newDataStore.getDateCreated());
 
         DataStore ds = (DataStore) newDataStore.getDataStore(null);
         assertNotNull(ds);
@@ -295,6 +308,7 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
 
         DataStoreInfo newDataStore = catalog.getDataStoreByName("newDataStore");
         assertNotNull(newDataStore);
+        assertNotNull(newDataStore.getDateCreated());
 
         DataStore ds = (DataStore) newDataStore.getDataStore(null);
         assertNotNull(ds);
@@ -326,6 +340,7 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
         assertXpathEvaluatesTo("false", "/dataStore/enabled", dom);
 
         assertFalse(catalog.getDataStoreByName("sf", "sf").isEnabled());
+        assertNotNull(catalog.getDataStoreByName("sf", "sf").getDateModified());
     }
 
     @Test
@@ -354,6 +369,7 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
         assertEquals(2, ds.getConnectionParameters().size());
         assertTrue(ds.getConnectionParameters().containsKey("one"));
         assertTrue(ds.getConnectionParameters().containsKey("two"));
+        assertNotNull(ds.getDateModified());
     }
 
     @Test
@@ -507,21 +523,70 @@ public class DataStoreControllerTest extends CatalogRESTTestSupport {
     }
 
     @Test
-    public void testPutNameChangeForbidden() throws Exception {
-        getTestData().addVectorLayer(SystemTestData.PRIMITIVEGEOFEATURE, getCatalog());
-        String xml = "<dataStore>" + "<name>newName</name>" + "</dataStore>";
+    public void testPutNameChange() throws Exception {
+        assertNotNull(catalog.getDataStoreByName("sf", "sf"));
+        String xml = "<dataStore>" + "<name>sff</name>" + "</dataStore>";
         assertEquals(
-                403,
+                200,
                 putAsServletResponse(ROOT_PATH + "/workspaces/sf/datastores/sf", xml, "text/xml")
                         .getStatus());
+        assertNotNull(catalog.getDataStoreByName("sf", "sff"));
+        removeStore("sf", "sff");
     }
 
     @Test
-    public void testPutWorkspaceChangeForbidden() throws Exception {
+    public void testPutWorkspaceChange() throws Exception {
         String xml = "<dataStore>" + "<workspace>gs</workspace>" + "</dataStore>";
         assertEquals(
-                403,
+                200,
                 putAsServletResponse(ROOT_PATH + "/workspaces/sf/datastores/sf", xml, "text/xml")
                         .getStatus());
+        assertNotNull(catalog.getDataStoreByName("gs", "sf"));
+        removeStore("gs", "sf");
+    }
+
+    @Test
+    public void testDataStoreReset() throws Exception {
+        // force initialization, grab the store, check it's not wrapped
+        DataStoreInfo store =
+                getCatalog().getDataStoreByName(SystemTestData.PRIMITIVEGEOFEATURE.getPrefix());
+        DataStore dataStore = (DataStore) store.getDataStore(null);
+        assertNotNull(dataStore);
+        assertThat(dataStore, Matchers.instanceOf(PropertyDataStore.class));
+
+        // force feature type initialization too, check it has the expected structure
+        FeatureTypeInfo fti =
+                getCatalog().getFeatureTypeByName(getLayerId(SystemTestData.PRIMITIVEGEOFEATURE));
+        FeatureType featureType = fti.getFeatureType();
+        assertNotNull(featureType.getDescriptor("description"));
+        assertNull(featureType.getDescriptor("identifier"));
+
+        // now go and clear
+        MockHttpServletResponse response =
+                postAsServletResponse(ROOT_PATH + "/workspaces/sf/datastores/sf/reset", "", null);
+        assertEquals(200, response.getStatus());
+
+        // copy over a different file, will change the feature type structure enough
+        try (InputStream is =
+                        SystemTestData.class.getResourceAsStream(
+                                "PrimitiveGeoFeatureId.properties");
+                OutputStream os =
+                        getDataDirectory().get("sf/PrimitiveGeoFeature.properties").out()) {
+            IOUtils.copy(is, os);
+        }
+
+        // we still get the store, but it's not the same object
+        store = getCatalog().getDataStoreByName(SystemTestData.PRIMITIVEGEOFEATURE.getPrefix());
+        DataStore dataStoreNew = (DataStore) store.getDataStore(null);
+        assertNotNull(dataStoreNew);
+        assertThat(dataStoreNew, Matchers.instanceOf(PropertyDataStore.class));
+        assertNotSame(dataStoreNew, dataStore);
+
+        // feature type is not the same object, and has a different structure
+        fti = getCatalog().getFeatureTypeByName(getLayerId(SystemTestData.PRIMITIVEGEOFEATURE));
+        FeatureType featureTypeNew = fti.getFeatureType();
+        assertNotSame(featureTypeNew, featureType);
+        assertNotNull(featureTypeNew.getDescriptor("description"));
+        assertNotNull(featureTypeNew.getDescriptor("identifier"));
     }
 }

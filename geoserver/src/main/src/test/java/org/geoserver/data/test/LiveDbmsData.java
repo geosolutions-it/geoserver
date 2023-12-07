@@ -41,6 +41,10 @@ import org.geotools.util.logging.Logging;
  *
  * @author Andrea Aime - TOPP
  */
+@SuppressWarnings({
+    "PMD.JUnit4TestShouldUseBeforeAnnotation",
+    "PMD.JUnit4TestShouldUseAfterAnnotation"
+})
 public class LiveDbmsData extends LiveSystemTestData {
     private static final Logger LOGGER = Logging.getLogger(LiveDbmsData.class);
 
@@ -54,7 +58,7 @@ public class LiveDbmsData extends LiveSystemTestData {
      * List of file paths (relative to the source data directory) that will be subjected to token
      * filtering. By default only <code>catalog.xml</code> will be filtered.
      */
-    protected List<String> filteredPaths = new ArrayList<String>(Arrays.asList("catalog.xml"));
+    protected List<String> filteredPaths = new ArrayList<>(Arrays.asList("catalog.xml"));
 
     protected File sqlScript;
 
@@ -79,10 +83,6 @@ public class LiveDbmsData extends LiveSystemTestData {
      *       no initialization is needed). It's advisable to prepare a sql script that first drops
      *       all tables and views and then recreates them, if a statement fails it'll be logged and
      *       skipped anyways. This makes it possible to inspect the database contents
-     *
-     * @param dataDirSourceDirectory
-     * @param filterMap
-     * @param sqlScript
      */
     public LiveDbmsData(File dataDirSourceDirectory, String fixtureId, File sqlScript)
             throws IOException {
@@ -92,11 +92,7 @@ public class LiveDbmsData extends LiveSystemTestData {
         this.sqlScript = sqlScript;
     }
 
-    /**
-     * Looks up the fixture file in the home directory provided that the
-     *
-     * @param fixtureId
-     */
+    /** Looks up the fixture file in the home directory provided that the */
     private File lookupFixture(String fixtureId) {
         // first of all, make sure the fixture was not disabled using a system
         // variable
@@ -126,11 +122,13 @@ public class LiveDbmsData extends LiveSystemTestData {
         return fixtureFile;
     }
 
+    @Override
     public boolean isTestDataAvailable() {
         return fixture != null;
     }
 
     @Override
+    @SuppressWarnings({"PMD.CloseResource", "PMD.UseTryWithResources"})
     public void setUp() throws Exception {
         // if the test was disabled we don't need to run the setup
         if (fixture == null) return;
@@ -141,10 +139,11 @@ public class LiveDbmsData extends LiveSystemTestData {
         // Map<String, String>
         Properties p = new Properties();
         p.load(new FileInputStream(fixture));
-        Map<String, String> filters = new HashMap(p);
+        Map<String, String> filters = new HashMap<>();
+        p.forEach((k, v) -> filters.put((String) k, (String) v));
 
         // replace the keys contained in catalog.xml with the actual values
-        if (filteredPaths != null && filteredPaths.size() > 0) {
+        if (filteredPaths != null && !filteredPaths.isEmpty()) {
             for (String path : filteredPaths) {
                 File from = new File(source, path);
                 File to = new File(data, path);
@@ -219,9 +218,6 @@ public class LiveDbmsData extends LiveSystemTestData {
     /**
      * Uses the current {@link JDBCDataStore} facilities to grab a connection, subclasses can
      * override to use other methods
-     *
-     * @param ds
-     * @throws IOException
      */
     protected Connection getDatabaseConnection(DataStore ds) throws IOException {
         if (ds instanceof JDBCDataStore) {
@@ -239,8 +235,6 @@ public class LiveDbmsData extends LiveSystemTestData {
     /**
      * Permanently disable this test logging the specificed warning message (the reason why the test
      * is being disabled)
-     *
-     * @param warning
      */
     private void disableTest(final String warning) {
         LOGGER.warning(warning);

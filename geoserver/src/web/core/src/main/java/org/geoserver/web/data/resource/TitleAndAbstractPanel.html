@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns:wicket="http://wicket.apache.org/">
+<head />
+<body>
+<wicket:panel>
+    <ul class="i18n-tile-and-abstract">
+        <li>
+            <span wicket:id="titleLabel">
+                  <label class="float-start" for="title" wicket:id="titleLabel" />
+                  <input class="float-start" type="checkbox" wicket:id="titleLabel_i18nCheckbox" />
+                  <wicket:message key="i18nCheckBox">i18n</wicket:message>
+            </span>
+        </li>
+        <li>
+            <input class="text" type="text" wicket:id="title" />
+        </li>
+        <li>
+            <div wicket:id="internationalTitle" />
+        </li>
+        <li>
+            <span wicket:id="abstractLabel">
+               <label class="float-start" for="abstract" wicket:id="abstractLabel" />
+               <input class="float-start" type="checkbox" wicket:id="abstractLabel_i18nCheckbox" />
+               <wicket:message key="i18nCheckBox">i18n</wicket:message>
+            </span>
+        </li>
+        <li>
+            <textarea wicket:id="abstract" class="field textarea" rows="10" cols="30" />
+        </li>
+        <li>
+            <div wicket:id="internationalAbstract" />
+        </li>
+    </ul>
+</wicket:panel>
+</body>
+</html>

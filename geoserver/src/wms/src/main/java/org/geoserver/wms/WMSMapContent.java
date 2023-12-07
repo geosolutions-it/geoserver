@@ -204,7 +204,7 @@ public class WMSMapContent extends MapContent {
 
     @Override
     public int addLayers(Collection<? extends Layer> layers) {
-        List<Layer> filtered = new ArrayList<Layer>(layers.size());
+        List<Layer> filtered = new ArrayList<>(layers.size());
         for (Layer layer : layers) {
             layer = fireLayerCallbacks(layer);
             if (layer != null) {
@@ -212,10 +212,10 @@ public class WMSMapContent extends MapContent {
             }
         }
 
-        if (filtered.size() > 0) {
-            return super.addLayers(filtered);
-        } else {
+        if (filtered.isEmpty()) {
             return 0;
+        } else {
+            return super.addLayers(filtered);
         }
     }
 
@@ -298,11 +298,12 @@ public class WMSMapContent extends MapContent {
             String keywords = (String) obj;
             return keywords.split(",");
         } else if (obj instanceof String[]) {
-            String keywords[] = (String[]) obj;
+            String[] keywords = (String[]) obj;
             String[] copy = new String[keywords.length];
             System.arraycopy(keywords, 0, copy, 0, keywords.length);
             return copy;
         } else if (obj instanceof Collection) {
+            @SuppressWarnings("unchecked")
             Collection<String> keywords = (Collection) obj;
             return keywords.toArray(new String[keywords.size()]);
         } else {
@@ -348,7 +349,7 @@ public class WMSMapContent extends MapContent {
     }
 
     public double getScaleDenominator(boolean considerDPI) {
-        java.util.Map hints = new HashMap();
+        Map<String, Object> hints = new HashMap<>();
         if (considerDPI) {
             // compute the DPI
             if (request.getFormatOptions().get("dpi") != null) {
@@ -379,11 +380,7 @@ public class WMSMapContent extends MapContent {
         }
     }
 
-    /**
-     * Computes the StreamingRenderer scale computation method hint based on the current request
-     *
-     * @param request
-     */
+    /** Computes the StreamingRenderer scale computation method hint based on the current request */
     public String getRendererScaleMethod() {
         if (request.getScaleMethod() == ScaleComputationMethod.Accurate) {
             return StreamingRenderer.SCALE_ACCURATE;
@@ -396,8 +393,6 @@ public class WMSMapContent extends MapContent {
      * Generic map attached to the map content, can be used to persist information around the life
      * cycle when the {@link WebMap} is not appropriate, or to persist state across the various
      * response callbacks
-     *
-     * @return
      */
     public Map<String, Object> getMetadata() {
         return metadata;

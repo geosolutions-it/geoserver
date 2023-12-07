@@ -6,10 +6,11 @@
 package org.geoserver.wps.gs;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -25,8 +26,10 @@ import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.data.test.SystemTestData;
+import org.geoserver.threadlocals.ThreadLocalsTransfer;
 import org.geoserver.wps.WPSTestSupport;
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.data.DataUtilities;
 import org.geotools.data.Query;
 import org.geotools.data.crs.ForceCoordinateSystemFeatureResults;
 import org.geotools.data.simple.SimpleFeatureCollection;
@@ -40,11 +43,18 @@ import org.geotools.process.ProcessException;
 import org.geotools.referencing.CRS;
 import org.geotools.util.SimpleInternationalString;
 import org.junit.After;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.filter.FilterFactory;
 
 public class ImportProcessTest extends WPSTestSupport {
+
+    @Before
+    public void login() {
+        login("admin", "geoserver", "ROLE_ADMINISTRATOR");
+    }
 
     @After
     public void removeNewLayers() {
@@ -121,6 +131,7 @@ public class ImportProcessTest extends WPSTestSupport {
 
     @Test
     public void testImportBuildingsCancellation() throws Exception {
+        Assume.assumeFalse(System.getProperty("macos-github-build") != null);
         FeatureTypeInfo ti =
                 getCatalog().getFeatureTypeByName(getLayerId(SystemTestData.BUILDINGS));
         SimpleFeatureCollection rawSource =
@@ -144,14 +155,14 @@ public class ImportProcessTest extends WPSTestSupport {
 
         final ImportProcess importer = new ImportProcess(getCatalog());
         final DefaultProgressListener listener = new DefaultProgressListener();
+        ThreadLocalsTransfer transfer = new ThreadLocalsTransfer();
         ExecutorService executor = Executors.newCachedThreadPool();
         try {
             Future<?> future =
                     executor.submit(
-                            new Runnable() {
-
-                                @Override
-                                public void run() {
+                            () -> {
+                                transfer.apply();
+                                try {
                                     importer.execute(
                                             testFeatureCollection,
                                             null,
@@ -162,6 +173,8 @@ public class ImportProcessTest extends WPSTestSupport {
                                             null,
                                             null,
                                             listener);
+                                } finally {
+                                    transfer.cleanup();
                                 }
                             });
             // cancel the import
@@ -228,16 +241,13 @@ public class ImportProcessTest extends WPSTestSupport {
 
         FilterFactory ff = CommonFactoryFinder.getFilterFactory(null);
 
-        SimpleFeatureIterator fi =
-                fs.getFeatures(ff.equals(ff.property("FID"), ff.literal("113"))).features();
-        SimpleFeature f = fi.next();
-        fi.close();
+        SimpleFeature f =
+                DataUtilities.first(
+                        fs.getFeatures(ff.equals(ff.property("FID"), ff.literal("113"))));
         assertEquals("113", f.getAttribute("FID"));
         assertEquals("123 Main Street", f.getAttribute("ADDRESS"));
 
-        fi = fs.getFeatures(ff.equals(ff.property("FID"), ff.literal("114"))).features();
-        f = fi.next();
-        fi.close();
+        f = DataUtilities.first(fs.getFeatures(ff.equals(ff.property("FID"), ff.literal("114"))));
         assertEquals("114", f.getAttribute("FID"));
         assertEquals("215 Main Street", f.getAttribute("ADDRESS"));
     }
@@ -267,6 +277,33 @@ public class ImportProcessTest extends WPSTestSupport {
         assertEquals(result, SystemTestData.CITE_PREFIX + ":" + "Buildings4");
     }
 
+    @Test
+    public void testCreateCoverageStoreAccessDenied() throws Exception {
+        logout();
+        String storeName = SystemTestData.CITE_PREFIX + "raster";
+        // use Coverage2RenderedImageAdapterTest's method, just need any sample raster
+        GridCoverage2D sampleCoverage =
+                Coverage2RenderedImageAdapterTest.createTestCoverage(500, 500, 0, 0, 10, 10);
+        CoverageStoreInfo storeInfo = catalog.getCoverageStoreByName(storeName);
+        assertNull("Store already exists " + storeInfo, storeInfo);
+        ImportProcess importer = new ImportProcess(getCatalog());
+        ProcessException exception =
+                assertThrows(
+                        ProcessException.class,
+                        () ->
+                                importer.execute(
+                                        null,
+                                        sampleCoverage,
+                                        SystemTestData.CITE_PREFIX,
+                                        storeName,
+                                        "Buildings7",
+                                        CRS.decode("EPSG:4326"),
+                                        null,
+                                        null,
+                                        null));
+        assertEquals("Operation unallowed with the current privileges", exception.getMessage());
+    }
+
     /** Test creating a vector store when a store name is specified but does not exist */
     @Test
     public void testCreateDataStore() throws Exception {
@@ -293,5 +330,35 @@ public class ImportProcessTest extends WPSTestSupport {
                         null);
         // expect workspace:layername
         assertEquals(result, SystemTestData.CITE_PREFIX + ":" + "Buildings5");
+    }
+
+    @Test
+    public void testCreateDataStoreAccessDenied() throws Exception {
+        logout();
+        FeatureTypeInfo ti =
+                getCatalog().getFeatureTypeByName(getLayerId(SystemTestData.BUILDINGS));
+        SimpleFeatureCollection rawSource =
+                (SimpleFeatureCollection) ti.getFeatureSource(null, null).getFeatures();
+        ForceCoordinateSystemFeatureResults sampleData =
+                new ForceCoordinateSystemFeatureResults(rawSource, CRS.decode("EPSG:4326"));
+        String storeName = SystemTestData.CITE_PREFIX + "data";
+        DataStoreInfo storeInfo = catalog.getDataStoreByName(storeName);
+        assertNull("Store already exists " + storeInfo, storeInfo);
+        ImportProcess importer = new ImportProcess(getCatalog());
+        ProcessException exception =
+                assertThrows(
+                        ProcessException.class,
+                        () ->
+                                importer.execute(
+                                        sampleData,
+                                        null,
+                                        SystemTestData.CITE_PREFIX,
+                                        storeName,
+                                        "Buildings8",
+                                        CRS.decode("EPSG:4326"),
+                                        null,
+                                        null,
+                                        null));
+        assertEquals("Operation unallowed with the current privileges", exception.getMessage());
     }
 }

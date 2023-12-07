@@ -106,13 +106,7 @@ public class ImageMosaicAdditionalResourceReader extends ImageMosaicAdditionalRe
         }
     }
 
-    /**
-     * @param sourceBackupFolder
-     * @param mosaicIndexBase
-     * @param res
-     * @throws IOException
-     * @throws FileNotFoundException
-     */
+    /** */
     private void resolveTemplate(
             final Resource sourceBackupFolder, final Resource mosaicIndexBase, Resource res)
             throws IOException, FileNotFoundException {
@@ -124,7 +118,7 @@ public class ImageMosaicAdditionalResourceReader extends ImageMosaicAdditionalRe
         for (Entry<Object, Object> propEntry : templateProperties.entrySet()) {
             String value = (String) propEntry.getValue();
 
-            if (GeoServerEnvironment.ALLOW_ENV_PARAMETRIZATION) {
+            if (GeoServerEnvironment.allowEnvParametrization()) {
                 value = (String) gsEnvironment.resolveValue(value);
             }
 
@@ -142,12 +136,7 @@ public class ImageMosaicAdditionalResourceReader extends ImageMosaicAdditionalRe
         resolvedProperties.store(new FileOutputStream(targetFile), null);
     }
 
-    /**
-     * @param sourceBackupFolder
-     * @param mosaicIndexBase
-     * @param res
-     * @throws IOException
-     */
+    /** */
     private boolean copyFile(
             final Resource sourceBackupFolder,
             final Resource mosaicIndexBase,

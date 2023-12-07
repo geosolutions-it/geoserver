@@ -12,7 +12,6 @@ import org.geotools.gml3.GML;
 import org.geotools.gml3.bindings.GML3EncodingUtils;
 import org.geotools.xsd.ElementInstance;
 import org.geotools.xsd.Node;
-import org.opengis.filter.FilterFactory;
 import org.opengis.filter.FilterFactory2;
 import org.opengis.filter.expression.PropertyName;
 import org.xml.sax.helpers.NamespaceSupport;
@@ -27,16 +26,13 @@ public class PropertyNameTypeBinding extends OGCPropertyNameTypeBinding {
     /** the geoserver catalog */
     Catalog catalog;
 
-    /** parser namespace mappings */
-    NamespaceSupport namespaceSupport;
-
     public PropertyNameTypeBinding(
-            FilterFactory filterFactory, NamespaceSupport namespaceSupport, Catalog catalog) {
-        super(filterFactory);
-        this.namespaceSupport = namespaceSupport;
+            FilterFactory2 filterFactory, NamespaceSupport namespaceSupport, Catalog catalog) {
+        super(filterFactory, namespaceSupport);
         this.catalog = catalog;
     }
 
+    @Override
     public Object parse(ElementInstance instance, Node node, Object value) throws Exception {
         PropertyName propertyName = (PropertyName) super.parse(instance, node, value);
 
@@ -56,10 +52,9 @@ public class PropertyNameTypeBinding extends OGCPropertyNameTypeBinding {
         }
 
         if (factory instanceof FilterFactory2) {
-            return ((FilterFactory2) factory)
-                    .property(
-                            propertyName.getPropertyName(),
-                            GML3EncodingUtils.copyNamespaceSupport(namespaceSupport));
+            return factory.property(
+                    propertyName.getPropertyName(),
+                    GML3EncodingUtils.copyNamespaceSupport(namespaceSupport));
         }
 
         return propertyName;

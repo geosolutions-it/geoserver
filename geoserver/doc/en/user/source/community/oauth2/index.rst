@@ -4,7 +4,7 @@ Authentication with OAuth2
 ==========================
 
 This tutorial introduces GeoServer OAuth2 support and walks through the process of
-setting up authentication aganist an OAuth2 provider. It is recommended that the 
+setting up authentication against an OAuth2 provider. It is recommended that the 
 :ref:`security_auth_chain` section be read before proceeding.
 
 OAuth2 Protocol and GeoServer OAuth2 core module
@@ -12,20 +12,19 @@ OAuth2 Protocol and GeoServer OAuth2 core module
 
 This module allows GeoServer to authenticate against the `OAuth2 Protocol <https://tools.ietf.org/html/rfc6749>`_.
 
-In order to let the module work, it's mandatory to setup and configure both ``oauth2`` and ``oauth2-xxxx-extension``.
+In order to let the module work, it is mandatory to setup and configure both the ``oauth2`` and ``oauth2-xxxx-extension`` (where xxxx is the provider e.g. google, github, openid, geonode).  Both files are included in one ZIP file, obtained from the  `GeoServer build server <https://build.geoserver.org/geoserver/2.19.x/community-latest/>`_ (change version as necessary) - search for `sec-oauth2`.
 
 The first one contains the necessary dependencies of the OAuth2 core module. This module contains the implementation of the 
 GeoServer security filter, the base classes for the OAuth2 Token services and the GeoServer GUI panel.
 
-Since in almost all cases the only thing different between OAuth2 Providers are the endpoint URIs and the client connection
-information (not only the keys - public and secret - but also the user profile representations), in order to allow GeoServer
+The second one provides the OAuth2 implementation for each provider.  Since in almost all cases the only thing different between OAuth2 Providers are the endpoint URIs and the client connection information (not only the keys - public and secret - but also the user profile representations), in order to allow GeoServer
 connecting to a specific OAuth2 provider it is sufficient to install the OAuth2 Core module plugin (and correctly configure
 the parameters through the GeoServer GUI - see next section for the details) and the concrete implementation of the OAuth2
 REST token template and resource details.
 
 Currently this module is shipped with a sample extension for Google OAuth2 Provider. This is a particular case since the 
 Google JWT response is not standard and therefore we had to define and inject also a ``GoogleUserAuthenticationConverter`` taking
-the Google REST response against a valid ``access_token`` and converting it to a OAuth2 standard one.
+the Google REST response against a valid ``access_token`` and converting it to an OAuth2 standard one.
 
 Other than this the most interesting part is the implementation of the base class ``GeoServerOAuth2SecurityConfiguration``.
 
@@ -37,7 +36,7 @@ Google OAuth2 Provider.
 Configure the Google authentication provider
 --------------------------------------------
 
-The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID`` and ``Client Sectet`` keys.
+The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID`` and ``Client Secret`` keys.
 
 #. Obtain OAuth 2.0 credentials from the Google API Console.
 
@@ -50,7 +49,7 @@ The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID
         .. figure:: images/google_api_console001.png
            :align: center
 
-   * Click on ``API Manager``
+   * Click on ``APIs & Services``
    
         .. figure:: images/google_api_console002.png
            :align: center
@@ -77,14 +76,12 @@ The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID
 
 #. Select an existing (or create a new one) ``OAuth Client ID``
 
-   Click on the ``Client credentials`` context menu as shown in the figure below.
-   
     .. figure:: images/google_api_console007.png
        :align: center
 
 #. Configure a new ``Web application``
 
-   * If it is the first time you create a ``OAuth Client ID``, you will be asked to create a new ``consent screen``
+   * If it is the first time you create an ``OAuth Client ID``, you will be asked to create a new ``consent screen``
    
         .. figure:: images/google_api_console008.png
            :align: center
@@ -92,17 +89,21 @@ The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID
    * Customize the ``consent screen``
     
         .. warning:: This step is mandatory only if it's the first time you are defining a ``Web application`` on a new project.
+         If you don't have an organization, you can only choose type External from the screen below.
 
         .. figure:: images/google_api_console009.png
+           :align: center
+   * Fill the form below and click on ``save and continue`` untill all tabs are filled.
+         .. figure:: images/google_api_console010.png
            :align: center
    
         .. note:: It can be edited and updated also later (see last point of this section below)
         
-   * Select ``Application type`` -> ``Web application``
+   * From the credentials page, click on ``CREATE CREDENTIALS``> ``OAuth Client ID`` and select ``Application type`` -> ``Web application``
    
         .. warning:: This step is mandatory only if it's the first time you are defining a ``Web application`` on a new project.
 
-        .. figure:: images/google_api_console010.png
+        .. figure:: images/google_api_console010a.png
            :align: center
    
    * Add a ``Name`` and the ``Authorized redirect URIs`` like shown here below.
@@ -111,8 +112,8 @@ The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID
                   
                   However it is possible to add as many ``Authorized redirect URIs`` you need to a new ``Web application``. 
                   
-                  It is also possible create many ``Client credentials`` with customised ``consent screen`` and ``Web application``, depending on your specific needs.
-                  Every public GeoServer instance (or cluster of GeoServer belonging to a specific project) should have it's own specific ``Client credentials``.
+                  It is also possible to create many ``Client credentials`` with customised ``consent screen`` and ``Web application``, depending on your specific needs.
+                  Every public GeoServer instance (or cluster of GeoServer belonging to a specific project) should have its own specific ``Client credentials``.
        
         .. figure:: images/google_api_console011.png
            :align: center
@@ -122,10 +123,10 @@ The first thing to do is to configure the OAuth2 Provider and obtain ``Client ID
         .. figure:: images/google_api_console012.png
            :align: center
 
-#. Click on ``Create`` and take note of the ``Client ID`` and the ``Client Sectet``.
+#. Click on ``Create`` and take note of the ``Client ID`` and the ``Client Secret``.
 
-   At the end of the procedure Google will show-up a small dialog box with the ``Client ID`` and the ``Client Sectet``.
-   Those info can be always accessed and updated from the `Google API Console <https://console.developers.google.com/>`_
+   At the end of the procedure Google will show-up a small dialog box with the ``Client ID`` and the ``Client Secret``.
+   That info can be always accessed and updated from the `Google API Console <https://console.developers.google.com/>`_
    
     .. figure:: images/google_api_console013.png
        :align: center
@@ -162,7 +163,7 @@ Configure the GeoServer OAuth2 filter
     .. figure:: images/oauth2chain001.png
        :align: center
 
-    The default values provided with the plugin are valid for the Google OAuth2 Provider and are the following one:
+    The default values provided with the plugin are valid for the Google OAuth2 Provider and are the following:
     
     .. code-block:: shell
 
@@ -180,33 +181,33 @@ Configure the GeoServer OAuth2 filter
 	   
 	   #. Choose a ``Role Service`` able to recognize user emails as IDs. By default a connected user will have ``ROLE_USER`` role
        
-    .. warning:: Few workds on **Enable Redirect Authentication EntryPoint** option
+    .. warning:: A few words on the **Enable Redirect Authentication EntryPoint** option
     
-            This option allows you to decide whether or not *force* automatic redirection to OAuth2 Access Token URI or not for authentication.
+            This option allows you to decide whether or not to *force* automatic redirection to OAuth2 Access Token URI or not for authentication.
             
-            What does that means?
+            What does that mean?
             
             * *Enable Redirect Authentication EntryPoint* = True
             
                 If not already authenticated (or no valid **Access Token** is provided in the query string), this option will **force** a redirection to the OAuth2 Provider Login page.
                 
-                This may cause unwanted behavior since it will override every other esplicit login method like ``form``. In other words if the filter is applied for instance to the ``web`` endpoint, it won't be possible to access to the GeoServer Admin GUI using the standard login method via browser.
+                This may cause unwanted behavior since it will override every other explicit login method like ``form``. In other words if the filter is applied for instance to the ``web`` endpoint, it won't be possible to access to the GeoServer Admin GUI using the standard login method via browser.
                 
             * *Enable Redirect Authentication EntryPoint* = False
             
-                In order to avoid the above issue, by disabling this option you will be **forced** to use an esplicit Authentication Endpoint to login via the OAuth2 Provider login page.
+                In order to avoid the above issue, by disabling this option you will be **forced** to use an explicit Authentication Endpoint to login via the OAuth2 Provider login page.
                 
                 If not already authenticated (or no valid **Access Token** is provided in the query string), you **must** authenticate through the following URLs:
                 
-                #. *GeoServer OAuth2 Authorization Endpoint*; ``http://<host:port>/geoserver/j_spring_outh2_login``
+                #. *GeoServer OAuth2 Authorization Endpoint*; ``http://<host:port>/geoserver/j_spring_oauth2_login``
                 
-                #. *OAuth2 Provider Esplicit User Authorization Endpoint*; this must be adapted for your specific OAuth2 Provider, the protocol stated that it should be 
+                #. *OAuth2 Provider Explicit User Authorization Endpoint*; this must be adapted for your specific OAuth2 Provider, the protocol stated that it should be 
                 
                     ::
                     
                         https://<USER_AUTHORIZATION_URI>?scope=<SCOPES>&response_type=code&redirect_uri=<REDIRECT_URI>&client_id=<CLIENT_ID>
                 
-                    For google OAuth2 Provider is:
+                    For Google OAuth2 Provider is:
                     
                     ::
                     
@@ -238,9 +239,9 @@ Configure the GeoServer OAuth2 filter
    
    * ``default``
    
-   The order of the authentication filters depends basically on which method you would like GeoServer *try first*.
+   The order of the authentication filters depends basically on which method you would like GeoServer to *try first*.
    
-   .. note:: During the authtentication process, the authentication filters of a ``Filter Chain`` are executed serially until one succeed (for more details please see the section :ref:`security_auth_chain`)
+   .. note:: During the authentication process, the authentication filters of a ``Filter Chain`` are executed serially until one succeed (for more details please see the section :ref:`security_auth_chain`)
    
    .. warning:: If *Enable Redirect Authentication EntryPoint* = **True** for OAuth2 Filter, the ``web`` chain won't be able to login through the ``form`` method.
    
@@ -287,29 +288,100 @@ needed, and can be filled with two made up values (the validation just checks th
 but they will be used only in the "authorisation flow", but not when doing OGC requests
 where the client is supposed to have autonomously retrieved a valid bearer token).
 
-.. warning:: The oauth2-openid-connect does not implement the full protocol and has been tested
-   against a single server, more development and testing is needed before it can be consumed by
-   a wider audience. `Pull requests <https://github.com/geoserver/geoserver/blob/master/CONTRIBUTING.md>`_
-   to improve the module are welcomed.
+The configuration GUI supports OpenID Discovery documents.  If the server supports them
+it's sufficient to provide the path to the document, or to the authentication service root,
+and the GUI will auto-fill itself based on the document contents:
+
+   .. figure:: images/discovery.png
+      :align: center
+
+The UI allow to set also the ``Post Logout Redirect URI`` which will be used to populate the  ``post_logout_redirect_uri`` request param, when doing the global logout from the GeoServer UI. The OpenId provider will use the URI to redirect to the desired app page.
+
+In addition, the OpenID connect authentication is able to extract the user roles from
+either the ID token or the Access Token:
+
+   .. figure:: images/openidconnect-roles.png
+      :align: center
+
+The chosen attribute must be present in either the Access Token or in the Id token, 
+and be either a string or an array of strings.
+
+From UI it is also possible to set the ``Response Mode`` value. The field can be kept empty but it is needed when the OpenId server used as Identity Provider doesn't send by default the authorization code as a query string (that is mandatory in order to allow GeoServer and OpenId integration to work properly).
+
+Finally the admin can allow the sending of the client_secret during an access_token request trough the ``Send Client Secret in Token Request``. Some OpenId implementation requires it for the Authorization Code flow when the client app is a confidential client and can safely store the client_secret.
+
+OpenID Connect With Attached Access Bearer Tokens
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The OpenID Connect plugin allows the use of Attached Bearer Access Tokens. This is typically used by automated (i.e. desktop or external Web Service) to access the Geoserver REST API.
+
+The setup process is as follows:
+
+#. Setup your OAuth2 OpenID Connect configuration as normal
+#. On the OpenID Connect configuration screen (bottom), makes sure "Allow Attached Bearer Tokens" is checked
+#. You can not use ID Tokens as a Role Source for the attached Bearer Tokens (see below)
+
+To Use:
+
+#. Obtain an Access Token from the underlying IDP
+#. Attach the access token to your HTTP request headers
+
+`Authorization: Bearer <token>`
+
+The Access Token (JWT) is validated;
+
+#. The Access Token is used to get the "userinfo" endpoint.  The underlying IDP will verify the token (i.e. signature and expiry)
+#. The Audience of the Token is checked that it contains the GeoServer configured Client Id.  This make sure an Access Token for another application is not being inappropriately reused in GeoServer (cf. `AudienceAccessTokenValidator.java`).
+#. The Subject of the `userinfo` and Access Token are verified to be about the same person.  The OpenID specification recommends checking this (cf. `SubjectTokenValidator.java`).
+
+
+For KeyCloak, consider using the "userinfo endpoint" role source and configure Keycloak to put groups in the "userinfo."
+
+For Azure AD, configure Azure to allow access to the MS Graph API (memberOf) and use the "Microsoft Graph API (Azure AD)" role source. 
+
+To configure Azure AD for "memberOf" ("GroupMember.Read.All" permission) access;
+
+#. go to your application in Azure AD (in the portal) 
+#. On the left, go to "API permissions" 
+#. click "Add a permission" 
+#. press "Microsoft Graph" 
+#. press "Delegated permission" 
+#. Scroll down to "GroupMember" 
+#. Choose "GroupMemeber.Read.All" 
+#. press "Add permission" 
+#. on the API Permission screen, press the "Grant admin consent for ..." text
+
+This has been tested with KeyCloak (with groups in the `userinfo` endpoint response), and with MS Azure AD (with the groups from the GraphAPI).  This should work with other IDPs - however, make sure that the Subject and Audience token verification works with their tokens. 
+  
+
+If you do not need Bearer Token functionality, it is recommended to turn this off.
+
+
+Azure AD and ADFS setup
+^^^^^^^^^^^^^^^^^^^^^^^
+To make the OpenIdConnect filter to work properly with an Azure AD or ADFS server via the OpenId protocol, the user must set, in addition to the other configuration parameters, the ``Response Mode`` to query (otherwise by default ADFS will return a url fragment) and check the checkbox ``Send Client Secret in Token Request`` (the client_secret is mandatory in token request according to the `Microsoft documentation <https://docs.microsoft.com/en-us/windows-server/identity/ad-fs/overview/ad-fs-openid-connect-oauth-flows-scenarios#request-an-access-token>`_).
+
+   .. figure:: images/adfs-setup.png
+      :align: center
 
 
 SSL Trusted Certificates
 ------------------------
 
-When using a custom ``Keystore`` or trying to access a non-trusted or self-signed SSL-protected OAuth2 Provider from a non-SSH connection, you will need to add the certificated to the JVM ``Keystore``.
+When using a custom ``Keystore`` or trying to access a non-trusted or self-signed SSL-protected OAuth2 Provider from a non-SSH connection, you will need to add the certificates to the JVM ``Keystore``.
 
 In order to do this you can follow the next steps:
 
     In this example we are going to
 	
-	#. Retrieve SSL Certificates from Google domains:
+	#. Retrieve SSL certificates from Google domains:
 	
 		"Access Token URI" = https://accounts.google.com/o/oauth2/token therefore we need to trust ``https://accounts.google.com`` or (``accounts.google.com:443``)
 		"Check Token Endpoint URL" = https://www.googleapis.com/oauth2/v1/tokeninfo therefore we need to trust ``https://www.googleapis.com`` or (``www.googleapis.com:443``)
 		
-		.. note:: You will need to get and trust certificated from every different HTTPS URL used on OAuth2 Endpoints.
+		.. note:: You will need to get and trust certificates from every different HTTPS URL used on OAuth2 Endpoints.
 	
-	#. Store SSL Certificates on local hard-disk
+	#. Store SSL Certificates on local hard disk
 
 	#. Add SSL Certificates to the Java Keystore
 	
@@ -337,7 +409,7 @@ In order to do this you can follow the next steps:
 		.. figure:: images/google_ssl_002.png
 		   :align: center
 
-2. Store SSL Certificates on local hard-disk
+2. Store SSL Certificates on local hard disk
 
 	Copy-and-paste the two sections ``-BEGIN CERTIFICATE-``, ``-END CERTIFICATE-`` and save them into two different ``.cert`` files
 	
@@ -412,7 +484,7 @@ In order to do this you can follow the next steps:
 
 5. Restart your server
 
-.. note:: Here below you can find a bash script which simplifies the Keystore SSL Certificates importing. Use it at your conveninece.
+.. note:: Here below you can find a bash script which simplifies the Keystore SSL Certificates importing. Use it at your convenience.
 
 	.. code-block:: shell
 

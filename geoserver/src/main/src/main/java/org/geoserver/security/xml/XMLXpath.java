@@ -6,7 +6,10 @@
 
 package org.geoserver.security.xml;
 
-import static org.geoserver.security.xml.XMLConstants.*;
+import static org.geoserver.security.xml.XMLConstants.NSP_RR;
+import static org.geoserver.security.xml.XMLConstants.NSP_UR;
+import static org.geoserver.security.xml.XMLConstants.NS_RR;
+import static org.geoserver.security.xml.XMLConstants.NS_UR;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -30,18 +33,22 @@ public abstract class XMLXpath {
      *
      * @author christian
      */
+    @SuppressWarnings("unchecked") // Java 8 and Java 11 interfaces differ
     public class NamespaceContextImpl implements NamespaceContext {
-        private Map<String, String> prefix_ns_Map = new HashMap<String, String>();
-        private Map<String, String> ns_prefix_Map = new HashMap<String, String>();
+        private Map<String, String> prefix_ns_Map = new HashMap<>();
+        private Map<String, String> ns_prefix_Map = new HashMap<>();
 
+        @Override
         public String getNamespaceURI(String prefix) {
             return prefix_ns_Map.get(prefix);
         }
 
+        @Override
         public String getPrefix(String namespaceURI) {
             return ns_prefix_Map.get(namespaceURI);
         }
 
+        @Override
         public Iterator getPrefixes(String namespaceURI) {
             return prefix_ns_Map.keySet().iterator();
         }
@@ -66,12 +73,7 @@ public abstract class XMLXpath {
         rrContext.register(NSP_RR, NS_RR);
     }
 
-    /**
-     * Compile XPath Strings to {@link XPathExpression}
-     *
-     * @param xpath
-     * @param expression
-     */
+    /** Compile XPath Strings to {@link XPathExpression} */
     protected XPathExpression compile(XPath xpath, String expression) {
         try {
             return xpath.compile(expression);
@@ -81,13 +83,7 @@ public abstract class XMLXpath {
         }
     }
 
-    /**
-     * Creates a relatvie XPathExpression for a XML attribute, needs name space prefix
-     *
-     * @param xpath
-     * @param attrName
-     * @param prefix
-     */
+    /** Creates a relatvie XPathExpression for a XML attribute, needs name space prefix */
     protected XPathExpression compileRelativeAttribute(
             XPath xpath, String attrName, String prefix) {
         // return compile(xpath,"@"+prefix+":"+attrName);

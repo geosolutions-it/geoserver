@@ -4,8 +4,13 @@
  */
 package org.geoserver.rest;
 
+import static org.geoserver.template.TemplateUtils.FM_VERSION;
+
+import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.SimpleHash;
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import org.geoserver.rest.wrapper.RestWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -14,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.condition.PatternsRequestCondition;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -24,24 +30,22 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
  */
 @RestController
 @RequestMapping(
-    path = RestBaseController.ROOT_PATH,
-    produces = {
-        MediaType.APPLICATION_JSON_VALUE,
-        MediaType.APPLICATION_XML_VALUE,
-        MediaType.TEXT_HTML_VALUE
-    }
-)
+        path = RestBaseController.ROOT_PATH,
+        produces = {
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.APPLICATION_XML_VALUE,
+            MediaType.TEXT_HTML_VALUE
+        })
 public class IndexController extends RestBaseController {
 
     @Autowired private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
     @GetMapping(
-        value = {"", "index"},
-        produces = {MediaType.TEXT_HTML_VALUE}
-    )
+            value = {"", "index"},
+            produces = {MediaType.TEXT_HTML_VALUE})
     public RestWrapper get() {
 
-        SimpleHash model = new SimpleHash();
+        SimpleHash model = new SimpleHash(new DefaultObjectWrapper(FM_VERSION));
         model.put("links", getLinks());
         model.put("page", RequestInfo.get());
 
@@ -61,23 +65,25 @@ public class IndexController extends RestBaseController {
 
             // Only list "get" endpoints
             if (mapping.getMethodsCondition().getMethods().contains(RequestMethod.GET)) {
-                for (String pattern : mapping.getPatternsCondition().getPatterns()) {
+                PatternsRequestCondition patternsRequestCondition = mapping.getPatternsCondition();
+                if (patternsRequestCondition != null
+                        && patternsRequestCondition.getPatterns() != null) {
+                    for (String pattern : patternsRequestCondition.getPatterns()) {
+                        if (!pattern.contains("{")) {
+                            String path = pattern;
+                            // exclude other rest apis, like gwc/rest
+                            final int rootSize = RestBaseController.ROOT_PATH.length() + 1;
+                            if (path.startsWith(RestBaseController.ROOT_PATH)
+                                    && path.length() > rootSize) {
+                                // trim root path
+                                path = path.substring(rootSize);
 
-                    if (!pattern.contains("{")) {
-
-                        String path = pattern;
-                        // exclude other rest apis, like gwc/rest
-                        final int rootSize = RestBaseController.ROOT_PATH.length() + 1;
-                        if (path.startsWith(RestBaseController.ROOT_PATH)
-                                && path.length() > rootSize) {
-                            // trim root path
-                            path = path.substring(rootSize);
-
-                            if (path.endsWith("/**")) {
-                                path = path.substring(0, path.length() - 3);
-                            }
-                            if (path.length() > 0) {
-                                s.add(path);
+                                if (path.endsWith("/**")) {
+                                    path = path.substring(0, path.length() - 3);
+                                }
+                                if (path.length() > 0) {
+                                    s.add(path);
+                                }
                             }
                         }
                     }

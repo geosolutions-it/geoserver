@@ -13,6 +13,8 @@ import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.ResourceModel;
+import org.apache.wicket.validation.IValidatable;
+import org.apache.wicket.validation.ValidationError;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope3D;
 import org.locationtech.jts.geom.Envelope;
@@ -44,7 +46,7 @@ public class EnvelopePanel extends FormComponentPanel<ReferencedEnvelope> {
     }
 
     public EnvelopePanel(String id, ReferencedEnvelope e) {
-        this(id, new Model<ReferencedEnvelope>(e));
+        this(id, new Model<>(e));
     }
 
     public EnvelopePanel(String id, IModel<ReferencedEnvelope> model) {
@@ -68,8 +70,6 @@ public class EnvelopePanel extends FormComponentPanel<ReferencedEnvelope> {
     /**
      * Makes the CRS bounds a required component of the envelope. It is warmly suggested that the
      * crs field be made visible too
-     *
-     * @param crsRequired
      */
     public void setCrsRequired(boolean crsRequired) {
         this.crsRequired = crsRequired;
@@ -98,12 +98,14 @@ public class EnvelopePanel extends FormComponentPanel<ReferencedEnvelope> {
         add(maxYLabel = new Label("maxYL", new ResourceModel("maxY")));
         add(maxZLabel = new Label("maxZL", new ResourceModel("maxZ")));
 
-        add(minXInput = new DecimalTextField("minX", new PropertyModel<Double>(this, "minX")));
-        add(minYInput = new DecimalTextField("minY", new PropertyModel<Double>(this, "minY")));
-        add(minZInput = new DecimalTextField("minZ", new PropertyModel<Double>(this, "minZ")));
-        add(maxXInput = new DecimalTextField("maxX", new PropertyModel<Double>(this, "maxX")));
-        add(maxYInput = new DecimalTextField("maxY", new PropertyModel<Double>(this, "maxY")));
-        add(maxZInput = new DecimalTextField("maxZ", new PropertyModel<Double>(this, "maxZ")));
+        add(minXInput = new DecimalTextField("minX", new PropertyModel<>(this, "minX")));
+        add(minYInput = new DecimalTextField("minY", new PropertyModel<>(this, "minY")));
+        add(minZInput = new DecimalTextField("minZ", new PropertyModel<>(this, "minZ")));
+        add(maxXInput = new DecimalTextField("maxX", new PropertyModel<>(this, "maxX")));
+        add(maxYInput = new DecimalTextField("maxY", new PropertyModel<>(this, "maxY")));
+        add(maxZInput = new DecimalTextField("maxZ", new PropertyModel<>(this, "maxZ")));
+
+        addBoundingBoxValidators();
 
         minZInput.setVisible(is3D());
         minZLabel.setVisible(is3D());
@@ -112,9 +114,42 @@ public class EnvelopePanel extends FormComponentPanel<ReferencedEnvelope> {
 
         crsContainer = new WebMarkupContainer("crsContainer");
         crsContainer.setVisible(false);
-        crsPanel = new CRSPanel("crs", new PropertyModel<CoordinateReferenceSystem>(this, "crs"));
+        crsPanel = new CRSPanel("crs", new PropertyModel<>(this, "crs"));
         crsContainer.add(crsPanel);
         add(crsContainer);
+    }
+
+    private void addBoundingBoxValidators() {
+        minXInput.add(validatable -> validateAxis(validatable, maxXInput, "X"));
+
+        minYInput.add(validatable -> validateAxis(validatable, maxYInput, "Y"));
+
+        if (is3D()) {
+            minZInput.add(validatable -> validateAxis(validatable, maxZInput, "Z"));
+        }
+    }
+
+    /**
+     * Validate if bounding box min value is lower then max value for specific axis
+     *
+     * @param validatable
+     * @param maxValueField
+     * @param axis
+     */
+    private void validateAxis(
+            IValidatable<Double> validatable, DecimalTextField maxValueField, String axis) {
+        // if max is not valid, form will fail anyway, and there is nothing to compare against
+        if (maxValueField.isValid()) {
+            maxValueField.convertInput();
+            Double convertedValue = maxValueField.getConvertedInput();
+            if (convertedValue != null && validatable.getValue() >= convertedValue) {
+                ValidationError error = new ValidationError();
+                error.setMessage(
+                        new ParamResourceModel("validation.boundingBoxAxisNonPositive", this, axis)
+                                .getObject());
+                validatable.error(error);
+            }
+        }
     }
 
     @Override
@@ -124,7 +159,7 @@ public class EnvelopePanel extends FormComponentPanel<ReferencedEnvelope> {
     }
 
     private void updateFields() {
-        ReferencedEnvelope e = (ReferencedEnvelope) getModelObject();
+        ReferencedEnvelope e = getModelObject();
         if (e != null) {
             this.minX = e.getMinX();
             this.minY = e.getMinY();

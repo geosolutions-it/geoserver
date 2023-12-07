@@ -5,10 +5,17 @@ WFS settings
 
 This page details the configuration options for WFS in the web administration interface.
 
+Workspace
+---------
+
+Select :guilabel:`workspace` empty to configure global WFS settings.
+
+See the section on :ref:`workspace_services` to override settings used by WFS :ref:`virtual_services`.
+
 Service Metadata
 ----------------
 
-See the section on :ref:`service_metadata`.   
+For a description of WFS service options, see the section on :ref:`service_metadata`.
 
 Features
 --------
@@ -27,6 +34,8 @@ The `Open Geospatial Consortium <http://www.opengeospatial.org/>`_ (OGC) Web Fea
 
 **Ignore maximum number of features when calculating hits** - When calculating the total number of hits, ignore the Maximum number of features setting. This can be used to get the count of matching features, even if they would not be made available for download because they exceed the maximum count specified. On very large data sets, this can slow down the response.
 
+**Activate complex to simple features conversion** - Enables the conversion of complex features to simple features, using only SF-0 (simple) attributes for compatible output formats like CSV, KML, SHAPE-ZIP.
+
 Service Levels
 --------------
 
@@ -42,8 +51,10 @@ GeoServer is compliant with the full "Transactional Web Feature Server" (WFS-T) 
 
 **Complete** — Includes LockFeature support to the suite of transactional level operations. LockFeature operations help resolve links between related resources by processing lock requests on one or more instances of a feature type. 
 
-Configuring additional SRS
---------------------------
+
+
+Extra SRS codes for WFS capabilities generation
+-----------------------------------------------
 
 WFS 1.1.0 onwards adds the ability to reproject GetFeature output to a user specified target SRS. The list of applicable target SRS is defined on a feature type basis in the capabilities documents, and GeoServer allows reprojection to any supported SRS in its internal database. To declare that GeoServer would have to add 5000+ ``otherSRS/otherCRS`` elements per feature type, which is clearly impractical. As a result, no declaration is made by default.
 
@@ -54,6 +65,77 @@ A list of values to be declared in all feature types can be provided in the WFS 
    WFS otherSRS/otherCRS configuration
 
 The list will be used only for the capabilities document generation. It does not limit the actual target SRS usage in GetFeature requests.
+
+
+CSV
+---
+.. figure:: img/services_WFS_csv.png
+
+   WFS configuration options - CSV section 
+
+CSV is still widely used as a format to exchange tabular data. For GeoServer CSV output format, the date field format can specified using the Date Format text box as shown above.
+Here are some common formatting patterns supported
+
+.. list-table::
+   :widths: 25 25
+   :header-rows: 1
+
+   * - Date and Time Pattern 
+     - Result
+   * - ``yyyy.MM.dd G 'at' HH:mm:ss z``
+     - 2001.07.04 AD at 12:08:56 PDT  
+   * - ``EEE, MMM d, ''yy``
+     - Wed, Jul 4, '01
+   * - ``yyyy-MM-dd'T'HH:mm:ss.SSSZ``
+     - 2001-07-04T12:08:56.235-0700 
+   * - ``yyyy-MM-dd'T'HH:mm:ss.SSSXXX``
+     - 2001-07-04T12:08:56.235-07:00
+
+
+Here, **yyyy-MM-dd'T'HH:mm:ss.SSS'Z'** pattern represents the year, month, day, hour, minute, second and milliseconds. The components are separated by a hyphen character. A literal 'T' character is used to separate the date and time parts. A literal 'Z' character represents the UTC time zone. For instance, yyyy represents the year with four digits, MM represents the month with leading zeros, dd represents the day with leading zeros, and so on.
+
+Similarly, patterns can be formed by using the characters provided below
+
+::
+
+  y- Year (four digits) 
+  yy- Year (two digits) 
+  yyyy- Year (four digits) 
+  M- Month (1 or 2 digits) 
+  MM- Month (2 digits, with leading zero) 
+  MMM- Month abbreviation (e.g., 'Jan', 'Feb') 
+  MMMM- Full month name (e.g., 'January', 'February') 
+  d- Day of the month (1 or 2 digits) 
+  dd- Day of the month (2 digits, with leading zero) 
+  E- Day of the week abbreviation (e.g., 'Mon', 'Tue') 
+  EEEE- Full day of the week (e.g., 'Monday', 'Tuesday') 
+  H- Hour in 24-hour format (0 to 23) 
+  HH- Hour in 24-hour format (2 digits, with leading zero) 
+  h- Hour in 12-hour format (1 to 12) 
+  hh- Hour in 12-hour format (2 digits, with leading zero) 
+  m- Minute (1 or 2 digits) 
+  mm- Minute (2 digits, with leading zero) 
+  s- Second (1 or 2 digits) 
+  ss- Second (2 digits, with leading zero) 
+  SSS- Represents the milliseconds in a three-digit format (e.g., 750)
+  a- AM/PM marker 
+  n- Nanosecond 
+  Z- Time zone offset (e.g., '+0800') 
+  zzzz- Time zone full name (e.g., 'Pacific Standard Time')
+
+Reference SimpleDateFormat Link : https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/text/SimpleDateFormat.html
+
+
+Configuration of Output Format types allowed in GetFeature
+----------------------------------------------------------
+
+Checking the ``Enable Output Format type checking`` checkbox will enable restrictions on the available output formats for GetFeature requests.  It will also limit what Output Format types will be displayed as available in GetCapabilities responses. GetFeature requests with Output types not included in the ``Allowed Output types`` panel will result in an ``Invalid Parameter ServiceException`` response. 
+
+Note that if the Allowed Output Types panel is left as empty and the ``Enable Output Format Type checking`` is checked, all Output types will be restricted.
+
+.. figure:: img/services_WFS_outputformat.png
+
+   Output Format types configuration
 
 GML
 ---
@@ -79,6 +161,30 @@ WFS 2.0.0 request return GML 3.2 as the default format, WFS 1.1.0 requests retur
 **OGC HTTP URI** - Returns a URI that identifies each EPSG code: ``http://www.opengis.net/def/crs/EPSG/0/XXXX`` (e.g. ``http://www.opengis.net/def/crs/EPSG/0/4326``). 
 
 For each GML type, there is also an "Override GML Attributes" checkbox. Selecting this (checking the checkbox) will cause attributes to be redefined in the application schema.
+
+Override GML 3.2 MIME type
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The default MIME used for GML 3.2 encoded responses is ``application/gml+xml; version=3.2`` which is the MIME type mandated by OGC WFS 2.0 specification. This MIME type is not identified as XML by most common clients such as browsers. 
+
+Option :guilabel:`Override MIME Type` allows the selection of the MIME type that should be used for the responses encoded in GML 3.2.  
+
+.. figure:: img/services_WFS_mimetype.png
+
+The available MIME types are: ``application/gml+xml; version=3.2``, ``text/xml; subtype=gml/3.2`` and ``text/xml``. 
+
+Configure XML Entity Expansion limit on WFS XML readers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default, the WFS XML reader sets Entity Expansion limit to ``100``, but it can be configured via the ``org.geoserver.wfs.xml.entityExpansionLimit`` system property, or using the :file:`web.xml` init parameter, or by Environment variable.
+
+For example, using the command line the limit can be adjusted using a parameter:
+
+    -Dorg.geoserver.wfs.xml.entityExpansionLimit=50
+
+Or in Tomcat properties file (``{TOMCAT_HOME}/conf/catalina.properties``) adding the line:
+
+    org.geoserver.wfs.xml.entityExpansionLimit=50
 
 Conformance
 -----------
@@ -112,26 +218,22 @@ is not selected, OGC WKT format will be used. If this checkbox is selected, ESRI
 
 Note: this requires an ``esri.properties`` file to be provided in the ``user_projections`` subdirectory of the GeoServer data directory. This may be obtained from the GeoTools EPSG extension.
 
-Override GML 3.2 MIME type
---------------------------
+Selecting the :guilabel:`Include WFS request dump file` checkbox specifies if the file 'wfsrequest.txt' will be included in the Shapefile zip output. 'wfsrequest.txt' contains a dump of the full request URL used to get the Shapefile zip output.  If this checkbox is not selected, 'wfsrequest.txt' will not be included in the output. If this checkbox is selected, 'wfsrequest.txt' will be included in the output.
 
-The default MIME used for GML 3.2 encoded responses is ``application/gml+xml; version=3.2`` which is the MIME type mandated by OGC WFS 2.0 specification. This MIME type is not identified as XML by most common clients like browsers. 
+Stored Queries
+--------------
 
-Option :guilabel:`Override MIME Type` allows the selection of the MIME type that should be used for the responses encoded in GML 3.2.  
+.. figure:: img/global-queries.png
 
-.. figure:: img/services_WFS_mimetype.png
+Selecting the :guilabel:`Allow Global Stored Queries` checkbox determines if global stored queries will included for usage in workspace virtual services, or not. When disabled, only stored queries created inside the workspace will be visible.
 
-The available MIME types are: ``application/gml+xml; version=3.2``, ``text/xml; subtype=gml/3.2`` and ``text/xml``. 
+i18n Settings
+-------------
 
-Configure XML Entity Expansion limit on WFS XML readers
--------------------------------------------------------
+Select default language for WFS Service.
 
-By default WFS XML readers sets Entity Expansion limit to 100, but it can be configured via the ``org.geoserver.wfs.xml.entityExpansionLimit`` system property / web.xml init parameter / Environment variable.
+.. figure:: img/i18n_default_language.png
+   
+   Default language
 
-For example on command line we can adjust adding parameter:
-
-    -Dorg.geoserver.wfs.xml.entityExpansionLimit=50
-	
-Or in Tomcat properties file (``{TOMCAT_HOME}/conf/catalina.properties``) adding the line:
-
-    org.geoserver.wfs.xml.entityExpansionLimit=50
+See :ref:`internationalization` section for a how this setting is used.

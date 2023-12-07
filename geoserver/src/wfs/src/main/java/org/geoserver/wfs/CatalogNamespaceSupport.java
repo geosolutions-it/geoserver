@@ -13,6 +13,7 @@ import org.geoserver.catalog.util.CloseableIterator;
 import org.xml.sax.helpers.NamespaceSupport;
 
 /** NamespaceContext based on GeoServer catalog. */
+@SuppressWarnings("unchecked") // due to Java 8 and Java 11 differences in interface
 public class CatalogNamespaceSupport extends NamespaceSupport {
 
     Catalog catalog;
@@ -29,6 +30,7 @@ public class CatalogNamespaceSupport extends NamespaceSupport {
 
     @Override
     public Enumeration getPrefixes() {
+        @SuppressWarnings("PMD.CloseResource") // best effort closing
         final CloseableIterator<NamespaceInfo> it =
                 catalog.list(NamespaceInfo.class, Predicates.acceptAll());
         return new Enumeration() {

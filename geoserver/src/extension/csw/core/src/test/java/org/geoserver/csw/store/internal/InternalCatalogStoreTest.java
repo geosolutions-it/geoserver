@@ -4,14 +4,19 @@
  */
 package org.geoserver.csw.store.internal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.concurrent.TimeUnit;
+import org.awaitility.Awaitility;
 import org.geoserver.csw.CSWTestSupport;
+import org.geoserver.security.PropertyFileWatcher;
 import org.junit.Test;
 
 public class InternalCatalogStoreTest extends CSWTestSupport {
@@ -37,28 +42,27 @@ public class InternalCatalogStoreTest extends CSWTestSupport {
         File record = new File(csw, "Record.properties");
         assertTrue(record.exists());
 
-        assertNotNull(store.getMapping("Record"));
-        assertNotNull(store.getMapping("Record").getElement("identifier.value"));
+        assertNotNull(store.getMappings("Record"));
+        assertEquals(1, store.getMappings("Record").size());
+        CatalogStoreMapping mapping = store.getMappings("Record").get(0);
+        assertNotNull(mapping.getElement("identifier.value"));
+        assertNull(mapping.getElement("format.value"));
 
-        assertNull(store.getMapping("Record").getElement("format.value"));
+        // On Linux and older versions of JDK last modification resolution is one second,
+        // and we need the watcher to see the file as changed. Account for slow build servers too.
+        PropertyFileWatcher watcher = store.watchers.get("Record").iterator().next();
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .until(
+                        () -> {
+                            try (PrintWriter out = new PrintWriter(new FileWriter(record, true))) {
+                                out.println("\nformat.value='img/jpeg'");
+                            }
+                            return watcher.isStale();
+                        });
 
-        // modify mapping file
-
-        // wait one second, so the modification time will change and change is detected (on linux
-        // the resolution is 1s instead of 1ms)
-        Thread.sleep(1001);
-
-        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(record, true)));
-        out.println("\nformat.value='img/jpeg'");
-        out.close();
-
-        // wait one second, that is exactly what it takes FileWatcher to update
-        Thread.sleep(1001);
-
-        // mapping should be automatically reloaded
-
-        assertEquals(
-                "img/jpeg",
-                store.getMapping("Record").getElement("format.value").getContent().toString());
+        mapping = store.getMappings("Record").get(0);
+        // mapping should be automatically reloaded now
+        assertEquals("img/jpeg", mapping.getElement("format.value").getContent().toString());
     }
 }

@@ -82,7 +82,7 @@ Examples
         <PropertyName>GEOMETRY</PropertyName>
       </ogc:Function>
       <Literal>1000000</Literal>
-   </PropertyIsEqualTo>
+   </PropertyIsGreaterThan>
 
    
 Spatial operators
@@ -101,8 +101,7 @@ These operators test topological spatial relationships using the standard OGC Si
    * ``<Touches>``
    * ``<Within>``
    * ``<Overlaps>``
-   * ``<Crosses>``
-   * ``<Intersects>``
+   * ``<Crosses>``   
    * ``<Contains>``
    
 The content for these operators is a ``<PropertyName>`` element 

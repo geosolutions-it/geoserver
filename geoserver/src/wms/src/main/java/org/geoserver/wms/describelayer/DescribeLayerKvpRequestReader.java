@@ -35,7 +35,7 @@ public class DescribeLayerKvpRequestReader extends KvpRequestReader {
      *     not exists on this server instance, or the version parameter was not provided.
      * @see org.geoserver.ows.KvpRequestReader#read(java.lang.Object, java.util.Map, java.util.Map)
      */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    @SuppressWarnings("unchecked")
     @Override
     public Object read(Object req, Map kvp, Map rawKvp) throws Exception {
 
@@ -54,7 +54,7 @@ public class DescribeLayerKvpRequestReader extends KvpRequestReader {
             throw new ServiceException(
                     "Wrong value for version parameter: "
                             + version
-                            + ". This server accetps version "
+                            + ". This server accepts version "
                             + wms.getVersion(),
                     "InvalidVersion",
                     getClass().getSimpleName());
@@ -63,9 +63,9 @@ public class DescribeLayerKvpRequestReader extends KvpRequestReader {
         List<MapLayerInfo> layers =
                 new MapLayerInfoKvpParser("LAYERS", wms).parse((String) rawKvp.get("LAYERS"));
         request.setLayers(layers);
-        if (layers == null || layers.size() == 0) {
+        if (layers == null || layers.isEmpty()) {
             throw new ServiceException(
-                    "No LAYERS has been requested", "NoLayerRequested", getClass().getName());
+                    "No LAYERS have been requested", "NoLayerRequested", getClass().getName());
         }
         return request;
     }

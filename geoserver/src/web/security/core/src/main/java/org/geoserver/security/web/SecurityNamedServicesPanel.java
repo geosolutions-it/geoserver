@@ -53,6 +53,7 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
         add(
                 new AjaxLink("add") {
                     @Override
+                    @SuppressWarnings("unchecked")
                     public void onClick(AjaxRequestTarget target) {
                         // create a new config class and instantiate the page
                         SecurityNamedServiceNewPage newPage =
@@ -62,62 +63,7 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
                     }
                 }.setEnabled(isAdmin));
 
-        add(
-                removeLink =
-                        new AjaxLink("remove") {
-                            @Override
-                            public void onClick(AjaxRequestTarget target) {
-                                boolean ok = true;
-                                for (T config : tablePanel.getSelection()) {
-                                    // first determine if the config can be removed
-                                    try {
-                                        validateRemoveConfig(config);
-                                    } catch (Exception e) {
-                                        handleException(e, null);
-                                        ok = false;
-                                    }
-                                }
-
-                                if (ok) {
-                                    // proceed with the removal, confirming first
-                                    dialog.showOkCancel(
-                                            target,
-                                            new GeoServerDialog.DialogDelegate() {
-                                                @Override
-                                                protected Component getContents(String id) {
-                                                    return new ConfirmRemovalNamedServicePanel(
-                                                            id, tablePanel.getSelection());
-                                                }
-
-                                                @Override
-                                                protected boolean onSubmit(
-                                                        AjaxRequestTarget target,
-                                                        Component contents) {
-                                                    for (T config : tablePanel.getSelection()) {
-                                                        try {
-                                                            removeConfig(config);
-                                                            feedbackPanel.info(
-                                                                    config.getName() + " removed");
-                                                            tablePanel.clearSelection();
-                                                        } catch (Exception e) {
-                                                            handleException(e, feedbackPanel);
-                                                        }
-                                                    }
-                                                    return true;
-                                                }
-
-                                                @Override
-                                                public void onClose(AjaxRequestTarget target) {
-                                                    target.add(tablePanel);
-                                                    target.add(feedbackPanel);
-                                                }
-                                            });
-                                }
-
-                                // render any feedback
-                                target.add(feedbackPanel);
-                            }
-                        });
+        add(removeLink = new RemoveLink());
         removeLink.setEnabled(false);
 
         add(
@@ -154,7 +100,7 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
     }
 
     /** Create a new configuration object. */
-    protected abstract Class getServiceClass();
+    protected abstract Class<?> getServiceClass();
 
     /** Do pre validation before a configuration object is removed. */
     protected abstract void validateRemoveConfig(T config) throws SecurityConfigException;
@@ -163,17 +109,18 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
     protected abstract void removeConfig(T config) throws Exception;
 
     SecurityNamedServicePanelInfo lookupPageInfo(SecurityNamedServiceConfig config) {
-        Class serviceClass = null;
+        Class<?> serviceClass = null;
         try {
             serviceClass = Class.forName(config.getClassName());
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
-        List<SecurityNamedServicePanelInfo> pageInfos = new ArrayList();
+        List<SecurityNamedServicePanelInfo> pageInfos = new ArrayList<>();
         for (SecurityNamedServicePanelInfo pageInfo :
                 GeoServerApplication.get().getBeansOfType(SecurityNamedServicePanelInfo.class)) {
-            if (pageInfo.getServiceClass().isAssignableFrom(serviceClass)) {
+            Class<?> pageClass = pageInfo.getServiceClass();
+            if (pageClass.isAssignableFrom(serviceClass)) {
                 pageInfos.add(pageInfo);
             }
         }
@@ -187,7 +134,7 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
         }
         if (pageInfos.size() > 1) {
             // filter by strict equals
-            List<SecurityNamedServicePanelInfo> l = new ArrayList(pageInfos);
+            List<SecurityNamedServicePanelInfo> l = new ArrayList<>(pageInfos);
             for (Iterator<SecurityNamedServicePanelInfo> it = l.iterator(); it.hasNext(); ) {
                 if (!it.next().getServiceClass().equals(serviceClass)) {
                     it.remove();
@@ -211,11 +158,9 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
     void goToPage(SecurityNamedServicePanelInfo pageInfo, IModel model) {
         // instantiate the page
         try {
+            Class<?> cc = pageInfo.getComponentClass();
             AbstractSecurityPage editPage =
-                    (AbstractSecurityPage)
-                            pageInfo.getComponentClass()
-                                    .getConstructor(IModel.class)
-                                    .newInstance(model);
+                    (AbstractSecurityPage) cc.getConstructor(IModel.class).newInstance(model);
             editPage.setReturnPage(getPage());
             setResponsePage(editPage);
         } catch (Exception e) {
@@ -249,13 +194,15 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
             return new Label(id, property.getModel(itemModel));
         }
 
-        Component createEditLink(String id, final IModel model, Property<T> property) {
-            return new SimpleAjaxLink(id, property.getModel(model)) {
+        Component createEditLink(String id, final IModel<T> model, Property<T> property) {
+            @SuppressWarnings("unchecked")
+            IModel<Object> cast = (IModel<Object>) property.getModel(model);
+            return new SimpleAjaxLink<Object>(id, cast) {
 
                 @Override
                 protected void onClick(AjaxRequestTarget target) {
                     SecurityNamedServiceEditPage<T> editPage =
-                            new SecurityNamedServiceEditPage<T>(model);
+                            new SecurityNamedServiceEditPage<>(model);
 
                     editPage.setReturnPage(getPage());
                     setResponsePage(editPage);
@@ -264,9 +211,67 @@ public abstract class SecurityNamedServicesPanel<T extends SecurityNamedServiceC
         }
     }
 
+    @Override
     protected void onBeforeRender() {
         tablePanel.clearSelection();
         removeLink.setEnabled(false);
         super.onBeforeRender();
     };
+
+    private class RemoveLink extends AjaxLink {
+        public RemoveLink() {
+            super("remove");
+        }
+
+        @Override
+        public void onClick(AjaxRequestTarget target) {
+            boolean ok = true;
+            for (T config : tablePanel.getSelection()) {
+                // first determine if the config can be removed
+                try {
+                    validateRemoveConfig(config);
+                } catch (Exception e) {
+                    handleException(e, null);
+                    ok = false;
+                }
+            }
+
+            if (ok) {
+                // proceed with the removal, confirming first
+                GeoServerDialog.DialogDelegate delegate =
+                        new GeoServerDialog.DialogDelegate() {
+                            @Override
+                            protected Component getContents(String id) {
+                                return new ConfirmRemovalNamedServicePanel<>(
+                                        id, tablePanel.getSelection());
+                            }
+
+                            @Override
+                            protected boolean onSubmit(
+                                    AjaxRequestTarget target, Component contents) {
+                                for (T config : tablePanel.getSelection()) {
+                                    try {
+                                        removeConfig(config);
+                                        feedbackPanel.info(config.getName() + " removed");
+                                        tablePanel.clearSelection();
+                                    } catch (Exception e) {
+                                        handleException(e, feedbackPanel);
+                                    }
+                                }
+                                return true;
+                            }
+
+                            @Override
+                            public void onClose(AjaxRequestTarget target) {
+                                target.add(tablePanel);
+                                target.add(feedbackPanel);
+                            }
+                        };
+                dialog.showOkCancel(target, delegate);
+            }
+
+            // render any feedback
+            target.add(feedbackPanel);
+        }
+    }
 }

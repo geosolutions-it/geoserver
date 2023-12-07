@@ -20,6 +20,7 @@ package org.geoserver.filters;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.logging.Logger;
 import javax.servlet.ServletOutputStream;
@@ -51,6 +52,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
      * The default behavior of this method is to return setHeader(String name, String value) on the
      * wrapped response object.
      */
+    @Override
     public void setHeader(String name, String value) {
         if (name.equalsIgnoreCase("Content-Length")) {
             try {
@@ -67,6 +69,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
      * The default behavior of this method is to return addHeader(String name, String value) on the
      * wrapped response object.
      */
+    @Override
     public void addHeader(String name, String value) {
         if (name.equalsIgnoreCase("Content-Length")) {
             try {
@@ -83,6 +86,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
      * The default behavior of this method is to call setIntHeader(String name, int value) on the
      * wrapped response object.
      */
+    @Override
     public void setIntHeader(String name, int value) {
         if (name.equalsIgnoreCase("Content-Length")) {
             contentLength = value;
@@ -95,6 +99,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
      * The default behavior of this method is to call addIntHeader(String name, int value) on the
      * wrapped response object.
      */
+    @Override
     public void addIntHeader(String name, int value) {
         if (name.equalsIgnoreCase("Content-Length")) {
             contentLength = value;
@@ -103,6 +108,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
         }
     }
 
+    @Override
     public void setContentType(String type) {
         //        if (stream != null && stream.isDirty()){
         //            logger.warning("Setting mimetype after acquiring stream! was:" +
@@ -125,6 +131,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
         }
     }
 
+    @Override
     public void flushBuffer() throws IOException {
         if (stream != null) {
             // Try to make sure Content-Encoding header gets set.
@@ -138,6 +145,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
         }
     }
 
+    @Override
     public ServletOutputStream getOutputStream() throws IOException {
         if (writer != null) {
             throw new IllegalStateException("getWriter() has already been called!");
@@ -147,6 +155,7 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
         return (stream);
     }
 
+    @Override
     public PrintWriter getWriter() throws IOException {
         if (writer != null) {
             return (writer);
@@ -157,10 +166,11 @@ public class GZIPResponseWrapper extends HttpServletResponseWrapper {
         }
 
         stream = createOutputStream();
-        writer = new PrintWriter(new OutputStreamWriter(stream, "UTF-8"));
+        writer = new PrintWriter(new OutputStreamWriter(stream, StandardCharsets.UTF_8));
         return (writer);
     }
 
+    @Override
     public void setContentLength(int length) {
         this.contentLength = length;
     }

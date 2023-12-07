@@ -11,8 +11,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,6 +29,7 @@ import org.geoserver.filters.GeoServerFilter;
 import org.geoserver.monitor.RequestData.Status;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.SecurityUtils;
+import org.geoserver.wms.map.RenderTimeStatistics;
 import org.geotools.util.logging.Logging;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -51,8 +54,22 @@ public class MonitorFilter implements GeoServerFilter {
         this.monitor = monitor;
         this.requestFilter = requestFilter;
 
-        postProcessExecutor = Executors.newFixedThreadPool(2);
+        postProcessExecutor =
+                Executors.newFixedThreadPool(
+                        monitor.getConfig().getPostProcessorThreads(),
+                        new ThreadFactory() {
+                            // This wrapper overrides the thread names
+                            ThreadFactory parent = Executors.defaultThreadFactory();
+                            int count = 1;
 
+                            @Override
+                            public synchronized Thread newThread(Runnable runnable) {
+                                Thread t = parent.newThread(runnable);
+                                t.setName("monitor-" + count);
+                                count++;
+                                return t;
+                            }
+                        });
         if (monitor.isEnabled()) {
             LOGGER.info("Monitor extension enabled");
         } else {
@@ -64,8 +81,10 @@ public class MonitorFilter implements GeoServerFilter {
         }
     }
 
+    @Override
     public void init(FilterConfig filterConfig) throws ServletException {}
 
+    @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
@@ -169,6 +188,19 @@ public class MonitorFilter implements GeoServerFilter {
 
         data.setEndTime(new Date());
         data.setTotalTime(data.getEndTime().getTime() - data.getStartTime().getTime());
+        RenderTimeStatistics statistics =
+                (RenderTimeStatistics) request.getAttribute(RenderTimeStatistics.ID);
+        if (statistics != null) {
+            List<Long> renderingTimeLayers =
+                    new ArrayList<>(statistics.getRenderingLayersIdxs().size());
+            data.setLabellingProcessingTime(statistics.getLabellingTime());
+            data.setResources(statistics.getLayerNames());
+            for (Integer idx : statistics.getRenderingLayersIdxs()) {
+                renderingTimeLayers.add(statistics.getRenderingTime(idx));
+            }
+            data.setResourcesProcessingTime(renderingTimeLayers);
+            if (data.getEndTime() == null) data.setEndTime(new Date());
+        }
         monitor.update();
         data = monitor.current();
 
@@ -195,6 +227,7 @@ public class MonitorFilter implements GeoServerFilter {
         }
     }
 
+    @Override
     public void destroy() {
         postProcessExecutor.shutdown();
         monitor.dispose();
@@ -241,7 +274,7 @@ public class MonitorFilter implements GeoServerFilter {
 
     /**
      * Audit consumer function to be executed on the underlying PostProcessTask thread. Will receive
-     * {@link RequestData} and {@link Authentication} from thread execution.
+     * {@link org.geoserver.monitor.RequestData} and {@link Authentication} from thread execution.
      */
     void setExecutionAudit(BiConsumer<RequestData, Authentication> executionAudit) {
         this.executionAudit = executionAudit;
@@ -270,16 +303,20 @@ public class MonitorFilter implements GeoServerFilter {
             this.propagatedAuth = propagatedAuth;
         }
 
+        @Override
         public void run() {
             try {
                 SecurityContextHolder.getContext().setAuthentication(propagatedAuth);
-                List<RequestPostProcessor> pp = new ArrayList();
-                pp.add(new ReverseDNSPostProcessor());
+                List<RequestPostProcessor> pp = new ArrayList<>();
+
+                pp.add(ReverseDNSPostProcessor.get(monitor.getConfig()));
                 pp.addAll(GeoServerExtensions.extensions(RequestPostProcessor.class));
+                Set<String> ignoreList = this.monitor.getConfig().getIgnorePostProcessors();
 
                 for (RequestPostProcessor p : pp) {
                     try {
-                        p.run(data, request, response);
+                        if (!ignoreList.contains(p.getName())) p.run(data, request, response);
+
                     } catch (Exception e) {
                         LOGGER.log(Level.WARNING, "Post process task failed", e);
                     }
@@ -299,8 +336,8 @@ public class MonitorFilter implements GeoServerFilter {
         }
 
         /**
-         * Audit consumer function. Will receive post processed {@link RequestData} and run time
-         * {@link Authentication}.
+         * Audit consumer function. Will receive post processed {@link
+         * org.geoserver.monitor.RequestData} and run time {@link Authentication}.
          */
         void setExecutionAudit(BiConsumer<RequestData, Authentication> executionAudit) {
             this.executionAudit = executionAudit;

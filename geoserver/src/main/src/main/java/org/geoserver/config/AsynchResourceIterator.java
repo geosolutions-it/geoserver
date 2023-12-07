@@ -34,7 +34,7 @@ public class AsynchResourceIterator<T> implements Iterator<T>, Closeable {
 
     static final Logger LOGGER = Logging.getLogger(AsynchResourceIterator.class);
 
-    static final int ASYNCH_RESOURCE_THREADS;
+    public static final int ASYNCH_RESOURCE_THREADS;
 
     static {
         String value = GeoServerExtensions.getProperty("org.geoserver.catalog.loadingThreads");
@@ -45,6 +45,36 @@ public class AsynchResourceIterator<T> implements Iterator<T>, Closeable {
             // available CPUs, but by how well the disk handles parallel access, different
             // disk subsystems will have a different optimal value
             ASYNCH_RESOURCE_THREADS = 4;
+        }
+    }
+
+    private class MapperRunner implements Runnable {
+        private final BlockingQueue<Object> sourceQueue;
+        private final ResourceMapper<T> mapper;
+
+        public MapperRunner(BlockingQueue<Object> sourceQueue, ResourceMapper<T> mapper) {
+            this.sourceQueue = sourceQueue;
+            this.mapper = mapper;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Object o;
+                while (!completed && (o = sourceQueue.take()) != TERMINATOR) {
+                    Resource r = (Resource) o;
+                    try {
+                        T mapped = mapper.apply(r);
+                        if (mapped != null) {
+                            queue.put(mapped);
+                        }
+                    } catch (IOException e) {
+                        LOGGER.log(Level.WARNING, "Failed to load resource '" + r.name() + "'", e);
+                    }
+                }
+            } catch (InterruptedException e) {
+                return;
+            }
         }
     }
 
@@ -95,61 +125,31 @@ public class AsynchResourceIterator<T> implements Iterator<T>, Closeable {
             queue = new LinkedBlockingQueue<>(10000);
             // create a background thread allowing this constructor to return immediately and
             // start accumulating in the queue asynchronously
-            thread =
-                    new Thread(
-                            () -> {
-                                // parallelize IO in a local thread pool
-                                ExecutorService executor =
-                                        Executors.newFixedThreadPool(ASYNCH_RESOURCE_THREADS);
-                                BlockingQueue<Object> sourceQueue =
-                                        new LinkedBlockingQueue<>(resources);
-                                for (int i = 0; i < ASYNCH_RESOURCE_THREADS; i++) {
-                                    // each IO thread will exit when close is called or when the
-                                    // terminator is
-                                    // reached, we need one terminator per IO thread
-                                    sourceQueue.add(TERMINATOR);
-                                    executor.submit(
-                                            () -> {
-                                                try {
-                                                    Object o;
-                                                    while (!completed
-                                                            && (o = sourceQueue.take())
-                                                                    != TERMINATOR) {
-                                                        Resource r = (Resource) o;
-                                                        try {
-                                                            T mapped = mapper.apply(r);
-                                                            if (mapped != null) {
-                                                                queue.put(mapped);
-                                                            }
-                                                        } catch (IOException e) {
-                                                            LOGGER.log(
-                                                                    Level.WARNING,
-                                                                    "Failed to load resource '"
-                                                                            + r.name()
-                                                                            + "'",
-                                                                    e);
-                                                        }
-                                                    }
-                                                } catch (InterruptedException e) {
-                                                    return;
-                                                }
-                                            });
-                                }
-                                // wait for everything to comlete and then add the terminator marker
-                                try {
-                                    executor.shutdown();
-                                    executor.awaitTermination(
-                                            Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-                                    // add the terminator
-                                    queue.put(TERMINATOR);
-                                } catch (InterruptedException e) {
-                                    LOGGER.log(
-                                            Level.WARNING,
-                                            "Failed to put the terminator in the queue",
-                                            e);
-                                }
-                            },
-                            "Loader" + root.name());
+            Runnable runnable =
+                    () -> {
+                        // parallelize IO in a local thread pool
+                        ExecutorService executor =
+                                Executors.newFixedThreadPool(ASYNCH_RESOURCE_THREADS);
+                        BlockingQueue<Object> sourceQueue = new LinkedBlockingQueue<>(resources);
+                        for (int i = 0; i < ASYNCH_RESOURCE_THREADS; i++) {
+                            // each IO thread will exit when close is called or when the
+                            // terminator is
+                            // reached, we need one terminator per IO thread
+                            sourceQueue.add(TERMINATOR);
+                            executor.submit(new MapperRunner(sourceQueue, mapper));
+                        }
+                        // wait for everything to comlete and then add the terminator marker
+                        try {
+                            executor.shutdown();
+                            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+                            // add the terminator
+                            queue.put(TERMINATOR);
+                        } catch (InterruptedException e) {
+                            LOGGER.log(
+                                    Level.WARNING, "Failed to put the terminator in the queue", e);
+                        }
+                    };
+            thread = new Thread(runnable, "Loader" + root.name());
             thread.start();
         } else if (resources.size() == 1) {
             // don't start a thread for a single resource, there is no parallelism advantage
@@ -185,7 +185,9 @@ public class AsynchResourceIterator<T> implements Iterator<T>, Closeable {
                 completed = true;
                 return false;
             } else {
-                mapped = (T) o;
+                @SuppressWarnings("unchecked")
+                T cast = (T) o;
+                mapped = cast;
                 return true;
             }
         } catch (InterruptedException e) {

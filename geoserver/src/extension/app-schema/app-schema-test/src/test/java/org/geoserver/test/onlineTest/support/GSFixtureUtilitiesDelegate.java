@@ -7,7 +7,6 @@ package org.geoserver.test.onlineTest.support;
 
 import java.io.File;
 import java.util.Properties;
-import junit.framework.TestCase;
 import org.geotools.test.FixtureUtilities;
 import org.geotools.test.OnlineTestCase;
 import org.geotools.test.OnlineTestSupport;
@@ -46,10 +45,8 @@ public class GSFixtureUtilitiesDelegate {
      * file directory. For example, an id <code>a.b.foo</code> would be resolved to
      * <code>.geotools/a/b/foo.properties<code>.
      *
-     * @param fixtureDirectory
      *            the base fixture configuration file directory, typically ".geotools" in the user
      *            home directory.
-     * @param fixtureId
      *            the fixture id
      */
     public static File getFixtureFile(File fixtureDirectory, String fixtureId) {
@@ -82,9 +79,7 @@ public class GSFixtureUtilitiesDelegate {
      *
      * <p>A JUnit 4 test fixture can readily be disabled in the absence of a fixture configuration
      * file by placing <code>Assume.assumeNotNull(FixtureUtilities.loadFixture(fixtureId))</code> or
-     * similar in its <code>@BeforeClass</code> method. JUnit 3 tests must provide their own logic,
-     * typically overriding {@link TestCase#run()} or {@link TestCase#runTest()}, or providing a
-     * suite.
+     * similar in its <code>@BeforeClass</code> method.
      *
      * @param fixtureId the fixture id, where dots "." are converted to subdirectories.
      * @return the fixture Properties or null

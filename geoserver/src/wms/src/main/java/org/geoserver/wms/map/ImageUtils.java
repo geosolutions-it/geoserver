@@ -93,7 +93,12 @@ public class ImageUtils {
      *     </code> parameter.
      */
     public static BufferedImage createImage(
-            final int width, int height, final IndexColorModel palette, final boolean transparent) {
+            int width, int height, final IndexColorModel palette, final boolean transparent) {
+        // tolerance against image generation with zero width/height (can happen in various places
+        // for the legend generation code, easier to handle it once here)
+        height = Math.max(1, height);
+        width = Math.max(1, width);
+
         // WARNING: whenever this method is changed, change getDrawingSurfaceMemoryUse
         // accordingly
         if (palette != null) {
@@ -112,25 +117,12 @@ public class ImageUtils {
             return new BufferedImage(width, height, BufferedImage.TYPE_4BYTE_ABGR);
         }
 
-        // in case there was no active rule, the height is going to be zero, push it up
-        // so that we build a transparent image
-        if (height == 0) {
-            height = 1;
-        }
-
         // don't use alpha channel if the image is not transparent (load testing shows this
         // image setup is the fastest to draw and encode on
         return new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
     }
 
-    /**
-     * Computes the memory usage of the buffered image used as the drawing surface.
-     *
-     * @param width
-     * @param height
-     * @param palette
-     * @param transparent
-     */
+    /** Computes the memory usage of the buffered image used as the drawing surface. */
     public static long getDrawingSurfaceMemoryUse(
             final int width,
             final int height,
@@ -179,9 +171,9 @@ public class ImageUtils {
         // fill the background with no antialiasing
         Map<RenderingHints.Key, Object> hintsMap;
         if (extraHints == null) {
-            hintsMap = new HashMap<RenderingHints.Key, Object>();
+            hintsMap = new HashMap<>();
         } else {
-            hintsMap = new HashMap<RenderingHints.Key, Object>(extraHints);
+            hintsMap = new HashMap<>(extraHints);
         }
         hintsMap.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
         graphic.setRenderingHints(hintsMap);
@@ -206,10 +198,7 @@ public class ImageUtils {
         return graphic;
     }
 
-    /**
-     * @param originalImage
-     * @param invColorMap may be {@code null}
-     */
+    /** @param invColorMap may be {@code null} */
     public static RenderedImage forceIndexed8Bitmask(
             RenderedImage originalImage, final InverseColorMapOp invColorMap) {
         if (LOGGER.isLoggable(Level.FINER)) {

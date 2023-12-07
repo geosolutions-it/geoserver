@@ -28,6 +28,7 @@ public class RawDataEncoderDelegate implements EncoderDelegate {
         this.rawData = rawData;
     }
 
+    @Override
     public void encode(ContentHandler output) throws Exception {
 
         try (InputStream is = rawData.getInputStream()) {

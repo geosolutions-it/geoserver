@@ -1,13 +1,12 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-	<groupId>org.geoserver</groupId>
-	<artifactId>community</artifactId>
-    <version>2.16-EOWS-p8</version>
+    <groupId>org.geoserver</groupId>
+    <artifactId>community</artifactId>
+    <version>2.23-SNAPSHOT</version>
   </parent>
 
   <groupId>org.geoserver.community</groupId>
@@ -15,48 +14,57 @@
   <packaging>pom</packaging>
   <name>GeoServer Config Backup And Restore</name>
 
+  <modules>
+    <module>core</module>
+    <module>rest</module>
+    <module>extension</module>
+    <module>web</module>
+  </modules>
+
   <dependencies>
 
-	<dependency>
+    <dependency>
       <groupId>org.geoserver</groupId>
       <artifactId>gs-main</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.jdom</groupId>
+      <artifactId>jdom2</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jaxb</groupId>
+      <artifactId>jaxb-runtime</artifactId>
+    </dependency>
 
-	<!-- Test Dependencies -->
-	<dependency>
-		<groupId>org.geoserver</groupId>
-		<artifactId>gs-main</artifactId>
-		<classifier>tests</classifier>
-		<scope>test</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.springframework</groupId>
-		<artifactId>spring-test</artifactId>
-		<scope>test</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.geotools.jdbc</groupId>
-		<artifactId>gt-jdbc-h2</artifactId>
-		<version>${gt.version}</version>
-		<scope>test</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.easymock</groupId>
-		<artifactId>easymock</artifactId>
-		<scope>test</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.hamcrest</groupId>
-		<artifactId>hamcrest-library</artifactId>
-		<scope>test</scope>
-	</dependency>
-	<dependency>
-		<groupId>org.geoserver</groupId>
-		<artifactId>gs-platform</artifactId>
-		<version>${project.version}</version>
-		<classifier>tests</classifier>
-		<scope>test</scope>
-	</dependency>
+    <!-- Test Dependencies -->
+    <dependency>
+      <groupId>org.geoserver</groupId>
+      <artifactId>gs-main</artifactId>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geotools.jdbc</groupId>
+      <artifactId>gt-jdbc-h2</artifactId>
+      <version>${gt.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver</groupId>
+      <artifactId>gs-platform</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 
@@ -86,12 +94,5 @@
       </plugin>
     </plugins>
   </build>
-
-  <modules>
-    <module>core</module>
-    <module>rest</module>
-    <module>extension</module>
-    <module>web</module>
-  </modules>
 
 </project>

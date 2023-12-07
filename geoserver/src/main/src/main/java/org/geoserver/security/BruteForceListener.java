@@ -121,8 +121,7 @@ public class BruteForceListener
             return false;
         }
 
-        return config.getWhitelistAddressMatchers()
-                .stream()
+        return config.getWhitelistAddressMatchers().stream()
                 .anyMatch(matcher -> matcher.matches(request));
     }
 
@@ -132,12 +131,7 @@ public class BruteForceListener
         return min + (long) ((max - min) * Math.random());
     }
 
-    /**
-     * Returns the username for this authentication, or null if missing or cannot be determined
-     *
-     * @param authentication
-     * @return
-     */
+    /** Returns the username for this authentication, or null if missing or cannot be determined */
     private String getUserName(Authentication authentication) {
         if (authentication == null) {
             return null;
