@@ -1,7 +1,7 @@
 include:
-  - project: 'eows/common/cicd-pipeline'
-    ref: feature/pipelineWMS
-    file: '/wms/maven.gitlab-ci.yml'
+  - project: 'pathfinders/wms/cicd-pipeline'
+    ref: main
+    file: '/maven.gitlab-ci.yml'
 
 
 variables:
