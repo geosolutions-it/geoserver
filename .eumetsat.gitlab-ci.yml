@@ -48,18 +48,18 @@ tests:
 package:
   image: docker:stable
   script:
-    - apt update && apt install -y zip
-    - zip docker/resources/geoserver/geoserver.war.zip geoserver/src/web/app/target/geoserver.war
+    - mv geoserver/src/web/app/target/geoserver.war docker/resources/geoserver/geoserver.war
     - cp -v -r datadir/* docker/resources/geoserver-datadir/
     - apk add wget
-    - wget -O docker/resources/fonts/osm-fonts.tar.xz https://www.dropbox.com/s/ges2v64on30katy/osm-fonts.tar.xz
     - chmod +x docker/resources/geoserver-datadir/importer/scripts/*.sh
     - cd docker
+    - ls ./*
+    - ls ./resources/*
     - docker build --no-cache
       --build-arg "GEOSERVER_HOME=${GEOSERVER_HOME}"
-      --build-arg "GEOSERVER_WEBAPP_SRC="docker/resources/geoserver/geoserver.war.zip"
-      --build-arg "GEOSERVER_DATA_DIR_SRC="docker/resources/geoserver-datadir/"
-      --build-arg "CUSTOM_FONTS=docker/resources/fonts/*"
+      --build-arg "GEOSERVER_WEBAPP_SRC="./resources/geoserver/geoserver.war"
+      --build-arg "GEOSERVER_DATA_DIR_SRC="./resources/geoserver-datadir/*"
+      --build-arg "CUSTOM_FONTS=./resources/fonts"
       --build-arg "APP_LOCATION=${APP_LOCATION}"
       --build-arg "GEOSERVER_LOG_LOCATION=${GEOSERVER_LOG_LOCATION}"
       --build-arg "GEOWEBCACHE_CACHE_DIR=${GEOWEBCACHE_CACHE_DIR}"
