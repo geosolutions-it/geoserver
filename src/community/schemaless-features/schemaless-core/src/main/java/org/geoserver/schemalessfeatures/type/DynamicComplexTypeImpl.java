@@ -20,8 +20,6 @@ import org.geotools.feature.type.AttributeTypeImpl;
 /** Concrete implementation of a DynamicComplexType */
 public class DynamicComplexTypeImpl extends AttributeTypeImpl implements DynamicComplexType {
 
-    private final Collection<PropertyDescriptor> properties;
-
     private final Map<Name, PropertyDescriptor> propertyMap;
 
     public DynamicComplexTypeImpl(
@@ -48,7 +46,6 @@ public class DynamicComplexTypeImpl extends AttributeTypeImpl implements Dynamic
                 localPropertyMap.put(pd.getName(), pd);
             }
         }
-        this.properties = properties;
         this.propertyMap = localPropertyMap;
     }
 
@@ -60,7 +57,7 @@ public class DynamicComplexTypeImpl extends AttributeTypeImpl implements Dynamic
 
     @Override
     public Collection<PropertyDescriptor> getDescriptors() {
-        return properties;
+        return propertyMap.values();
     }
 
     @Override
@@ -85,7 +82,7 @@ public class DynamicComplexTypeImpl extends AttributeTypeImpl implements Dynamic
     }
 
     private PropertyDescriptor getDescriptorByLocalPart(String localPart) {
-        for (PropertyDescriptor pd : properties) {
+        for (PropertyDescriptor pd : propertyMap.values()) {
             if (pd.getName().getLocalPart().equals(localPart)) {
                 return pd;
             }
@@ -111,23 +108,19 @@ public class DynamicComplexTypeImpl extends AttributeTypeImpl implements Dynamic
             return false;
         }
         DynamicComplexTypeImpl other = (DynamicComplexTypeImpl) o;
-        if (!properties.equals(other.properties)) {
-            return false;
-        }
-        return true;
+        return !propertyMap.equals(other.propertyMap);
     }
 
     @Override
     public void addPropertyDescriptor(PropertyDescriptor descriptor) {
-        if (!properties.contains(descriptor)) {
-            properties.add(descriptor);
+        if (!propertyMap.containsValue(descriptor)) {
             propertyMap.put(descriptor.getName(), descriptor);
         }
     }
 
+    @Override
     public void removePropertyDescriptor(PropertyDescriptor descriptor) {
-        if (properties.contains(descriptor)) {
-            properties.remove(descriptor);
+        if (propertyMap.containsValue(descriptor)) {
             propertyMap.remove(descriptor.getName());
         }
     }
