@@ -1123,6 +1123,139 @@
       <tileWidth>256</tileWidth>
       <yCoordinateFirst>false</yCoordinateFirst>
     </gridSet>
+    <gridSet>
+      <name>EPSG:3976 - 256</name>
+      <srs>
+        <number>3976</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>99218.75</double>
+        <double>49609.375</double>
+        <double>24804.6875</double>
+        <double>12402.34375</double>
+        <double>6201.171875</double>
+        <double>3100.5859375</double>
+        <double>1550.29296875</double>
+        <double>775.146484375</double>
+        <double>387.5732421875</double>
+        <double>193.78662109375</double>
+        <double>96.893310546875</double>
+        <double>48.4466552734375</double>
+        <double>24.22332763671875</double>
+        <double>12.111663818359375</double>
+        <double>6.0558319091796875</double>
+        <double>3.0279159545898438</double>
+        <double>1.5139579772949219</double>
+        <double>0.7569789886474609</double>
+        <double>0.3784894943237305</double>
+        <double>0.1892447471618652</double>
+        <double>0.0946223735809326</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:3976 - 256:0</string>
+        <string>EPSG:3976 - 256:1</string>
+        <string>EPSG:3976 - 256:2</string>
+        <string>EPSG:3976 - 256:3</string>
+        <string>EPSG:3976 - 256:4</string>
+        <string>EPSG:3976 - 256:5</string>
+        <string>EPSG:3976 - 256:6</string>
+        <string>EPSG:3976 - 256:7</string>
+        <string>EPSG:3976 - 256:8</string>
+        <string>EPSG:3976 - 256:9</string>
+        <string>EPSG:3976 - 256:10</string>
+        <string>EPSG:3976 - 256:11</string>
+        <string>EPSG:3976 - 256:12</string>
+        <string>EPSG:3976 - 256:13</string>
+        <string>EPSG:3976 - 256:14</string>
+        <string>EPSG:3976 - 256:15</string>
+        <string>EPSG:3976 - 256:16</string>
+        <string>EPSG:3976 - 256:17</string>
+        <string>EPSG:3976 - 256:18</string>
+        <string>EPSG:3976 - 256:19</string>
+        <string>EPSG:3976 - 256:20</string>
+      </scaleNames>
+      <tileHeight>256</tileHeight>
+      <tileWidth>256</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
+    <gridSet>
+      <name>EPSG:3976 - 512</name>
+      <description>NSIDC Sea Ice Polar Stereographic South Gridset with 512x512 pixels tiles</description>
+      <srs>
+        <number>3976</number>
+      </srs>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+      <alignTopLeft>false</alignTopLeft>
+      <resolutions>
+        <double>49609.375</double>
+        <double>24804.6875</double>
+        <double>12402.34375</double>
+        <double>6201.171875</double>
+        <double>3100.5859375</double>
+        <double>1550.29296875</double>
+        <double>775.146484375</double>
+        <double>387.5732421875</double>
+        <double>193.78662109375</double>
+        <double>96.893310546875</double>
+        <double>48.4466552734375</double>
+        <double>24.22332763671875</double>
+        <double>12.111663818359375</double>
+        <double>6.0558319091796875</double>
+        <double>3.0279159545898438</double>
+        <double>1.5139579772949219</double>
+        <double>0.7569789886474609</double>
+        <double>0.3784894943237305</double>
+        <double>0.1892447471618652</double>
+        <double>0.0946223735809326</double>
+        <double>0.0473111867904663</double>
+      </resolutions>
+      <metersPerUnit>1.0</metersPerUnit>
+      <pixelSize>2.8E-4</pixelSize>
+      <scaleNames>
+        <string>EPSG:3976 - 512:0</string>
+        <string>EPSG:3976 - 512:1</string>
+        <string>EPSG:3976 - 512:2</string>
+        <string>EPSG:3976 - 512:3</string>
+        <string>EPSG:3976 - 512:4</string>
+        <string>EPSG:3976 - 512:5</string>
+        <string>EPSG:3976 - 512:6</string>
+        <string>EPSG:3976 - 512:7</string>
+        <string>EPSG:3976 - 512:8</string>
+        <string>EPSG:3976 - 512:9</string>
+        <string>EPSG:3976 - 512:10</string>
+        <string>EPSG:3976 - 512:11</string>
+        <string>EPSG:3976 - 512:12</string>
+        <string>EPSG:3976 - 512:13</string>
+        <string>EPSG:3976 - 512:14</string>
+        <string>EPSG:3976 - 512:15</string>
+        <string>EPSG:3976 - 512:16</string>
+        <string>EPSG:3976 - 512:17</string>
+        <string>EPSG:3976 - 512:18</string>
+        <string>EPSG:3976 - 512:19</string>
+        <string>EPSG:3976 - 512:20</string>
+      </scaleNames>
+      <tileHeight>512</tileHeight>
+      <tileWidth>512</tileWidth>
+      <yCoordinateFirst>false</yCoordinateFirst>
+    </gridSet>
   </gridSets>
   <layers/>
 </gwcConfiguration>

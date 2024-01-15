@@ -80,6 +80,12 @@
       </extent>
       <zoomStart>0</zoomStart>
     </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 256</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 512</gridSetName>
+    </gridSubset>
   </gridSubsets>
   <metaWidthHeight>
     <int>2</int>
