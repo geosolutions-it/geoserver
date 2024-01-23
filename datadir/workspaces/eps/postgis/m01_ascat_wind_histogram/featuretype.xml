@@ -47,7 +47,6 @@
       <dimensionInfo>
         <enabled>true</enabled>
         <attribute>time</attribute>
-        <endAttribute>time</endAttribute>
         <presentation>DISCRETE_INTERVAL</presentation>
         <resolution>3600000</resolution>
         <units>ISO8601</units>
