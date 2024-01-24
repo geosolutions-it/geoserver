@@ -43,6 +43,8 @@
     <string>EPSG:4326</string>
     <string>EPSG:70211</string>
     <string>EPSG:70201</string>
+    <string>EPSG:3976 - 256</string>
+    <string>EPSG:3976 - 512</string>
   </defaultCachingGridSetIds>
   <defaultCoverageCacheFormats>
     <string>image/png</string>

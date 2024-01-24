@@ -67,6 +67,12 @@
     <gridSubset>
       <gridSetName>EPSG:70201</gridSetName>
     </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 256</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 512</gridSetName>
+    </gridSubset>
   </gridSubsets>
   <metaWidthHeight>
     <int>3</int>

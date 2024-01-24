@@ -84,6 +84,12 @@
         </coords>
       </extent>
     </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 256</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 512</gridSetName>
+    </gridSubset>
   </gridSubsets>
   <metaWidthHeight>
     <int>1</int>
