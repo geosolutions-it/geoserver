@@ -5,6 +5,7 @@
 package org.geoserver.mapml;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geowebcache.grid.GridSubsetFactory.createGridSubSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -24,8 +25,6 @@ import java.util.Locale;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.bind.DataBindingException;
-import org.custommonkey.xmlunit.NamespaceContext;
-import org.custommonkey.xmlunit.SimpleNamespaceContext;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.Catalog;
@@ -73,13 +72,15 @@ public class MapMLWMSTest extends WMSTestSupport {
 
     private XpathEngine xpath;
 
+    @Override
+    protected void registerNamespaces(Map<String, String> namespaces) {
+        namespaces.put("wms", "http://www.opengis.net/wms");
+        namespaces.put("ows", "http://www.opengis.net/ows");
+        namespaces.put("html", "http://www.w3.org/1999/xhtml");
+    }
+
     @Before
     public void setup() {
-        HashMap<String, String> m = new HashMap<>();
-        m.put("html", "http://www.w3.org/1999/xhtml");
-
-        NamespaceContext ctx = new SimpleNamespaceContext(m);
-        XMLUnit.setXpathNamespaceContext(ctx);
         xpath = XMLUnit.newXpathEngine();
 
         Catalog catalog = getCatalog();
@@ -154,6 +155,16 @@ public class MapMLWMSTest extends WMSTestSupport {
     @Before
     public void resetLayers() throws IOException {
         revertLayer(SystemTestData.ROAD_SEGMENTS);
+    }
+
+    @Test
+    public void testCRSInCapabilities() throws Exception {
+        org.w3c.dom.Document dom = getAsDOM("wms?request=getCapabilities&acceptsVersions=1.3.0");
+
+        assertXpathExists("//wms:CRS[text() = 'MapML:WGS84']", dom);
+        assertXpathExists("//wms:CRS[text() = 'MapML:OSMTILE']", dom);
+        assertXpathExists("//wms:CRS[text() = 'MapML:APSTILE']", dom);
+        assertXpathExists("//wms:CRS[text() = 'MapML:CBMTILE']", dom);
     }
 
     @Test
@@ -508,7 +519,18 @@ public class MapMLWMSTest extends WMSTestSupport {
     }
 
     @Test
-    public void testDefaultConfiguredMapMLLayer() throws Exception {
+    public void testDefaultConfiguredMapMLLayerEPSG() throws Exception {
+        // works with a standard EPSG code, as found in the capabiltied document
+        testDefaultConfiguredMapMLLayer("EPSG:3857");
+    }
+
+    @Test
+    public void testDefaultConfiguredMapMLLayerTCRS() throws Exception {
+        // but also works with a native MapML TCRS code
+        testDefaultConfiguredMapMLLayer("MapML:OSMTILE");
+    }
+
+    private void testDefaultConfiguredMapMLLayer(String srs) throws Exception {
         MockRequestResponse requestResponse =
                 getMockRequestResponse(
                         MockData.ROAD_SEGMENTS.getPrefix()
@@ -516,7 +538,7 @@ public class MapMLWMSTest extends WMSTestSupport {
                                 + MockData.ROAD_SEGMENTS.getLocalPart(),
                         null,
                         Locale.FRENCH,
-                        "EPSG:3857",
+                        srs,
                         null);
 
         org.w3c.dom.Document doc =
@@ -524,6 +546,7 @@ public class MapMLWMSTest extends WMSTestSupport {
                         new ByteArrayInputStream(
                                 requestResponse.response.getContentAsString().getBytes()),
                         true);
+        print(doc);
 
         assertXpathEvaluatesTo("1", "count(//html:map-link[@rel='image'][@tref])", doc);
         URL url = new URL(xpath.evaluate("//html:map-link[@rel='image']/@tref", doc));
