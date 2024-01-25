@@ -127,7 +127,7 @@ public class TiledCRSConstants {
         tiledCRSBySrsName.put(OSMTILE_SRSNAME, tiledCRSDefinitions.get(OSMTILE_NAME));
 
         final String CBMTILE_NAME = "CBMTILE";
-        final String CBMTILE_CODE = "urn:x-ogc:def:crs:EPSG:3978";
+        final String CBMTILE_CODE = "EPSG:3978";
         final CoordinateReferenceSystem CRS_CBMTILE;
         String CBMTILE_SRSNAME = null;
         try {
@@ -184,7 +184,7 @@ public class TiledCRSConstants {
 
         /* Arctic Polar Stereographic, origin and scales defined by map service at http://maps8.arcgisonline.com/arcgis/rest/services/Arctic_Polar_Ocean_Base/MapServer */
         final String APSTILE_NAME = "APSTILE";
-        final String APSTILE_CODE = "urn:x-ogc:def:crs:EPSG:5936";
+        final String APSTILE_CODE = "EPSG:5936";
         final CoordinateReferenceSystem CRS_APSTILE;
         String APSTILE_SRSNAME = null;
         try {
