@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
@@ -134,8 +135,8 @@ public class PreviewLayer {
         }
     }
 
-    /** Builds a fake GetMap request */
-    GetMapRequest getRequest() {
+    /** Builds GetMap request */
+    public GetMapRequest getRequest() {
         if (request == null) {
             GeoServerApplication app = GeoServerApplication.get();
             request = new GetMapRequest();
@@ -213,6 +214,11 @@ public class PreviewLayer {
 
     /** Given a request and a target format, builds the WMS request */
     public String getWmsLink() {
+        // build link with no customization
+        return getWmsLink((r, m) -> {});
+    }
+
+    public String getWmsLink(BiConsumer<GetMapRequest, Map<String, String>> parameterCustomizer) {
         GetMapRequest request = getRequest();
         final Envelope bbox = request.getBbox();
         if (bbox == null) return null;
@@ -231,6 +237,8 @@ public class PreviewLayer {
         params.put(
                 "styles",
                 request.getStyles().size() > 0 ? request.getStyles().get(0).getName() : "");
+        // allow customization of parameters
+        parameterCustomizer.accept(request, params);
         return ResponseUtils.buildURL(getBaseURL(), getPath("wms", false), params, URLType.SERVICE);
     }
 

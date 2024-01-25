@@ -556,7 +556,7 @@ public class MapMLWMSTest extends WMSTestSupport {
         assertTrue(vars.get("service").equalsIgnoreCase("WMS"));
         assertTrue(vars.get("version").equalsIgnoreCase("1.3.0"));
         assertTrue(vars.get("layers").equalsIgnoreCase(MockData.ROAD_SEGMENTS.getLocalPart()));
-        assertTrue(vars.get("crs").equalsIgnoreCase("urn:x-ogc:def:crs:EPSG:3857"));
+        assertTrue(vars.get("crs").equalsIgnoreCase("MapML:OSMTILE"));
         assertTrue(vars.get("bbox").equalsIgnoreCase("{xmin},{ymin},{xmax},{ymax}"));
         assertTrue(vars.get("format").equalsIgnoreCase("image/png"));
         assertTrue(vars.get("width").equalsIgnoreCase("{w}"));
@@ -573,7 +573,7 @@ public class MapMLWMSTest extends WMSTestSupport {
         assertTrue(vars.get("service").equalsIgnoreCase("WMS"));
         assertTrue(vars.get("version").equalsIgnoreCase("1.3.0"));
         assertTrue(vars.get("layers").equalsIgnoreCase(MockData.ROAD_SEGMENTS.getLocalPart()));
-        assertTrue(vars.get("crs").equalsIgnoreCase("urn:x-ogc:def:crs:EPSG:3857"));
+        assertTrue(vars.get("crs").equalsIgnoreCase("MapML:OSMTILE"));
         assertTrue(vars.get("bbox").equalsIgnoreCase("{xmin},{ymin},{xmax},{ymax}"));
         assertTrue(vars.get("width").equalsIgnoreCase("{w}"));
         assertTrue(vars.get("height").equalsIgnoreCase("{h}"));
@@ -846,7 +846,7 @@ public class MapMLWMSTest extends WMSTestSupport {
         assertTrue(vars.get("service").equalsIgnoreCase("WMS"));
         assertTrue(vars.get("version").equalsIgnoreCase("1.3.0"));
         assertTrue(vars.get("layers").equalsIgnoreCase(MockData.BASIC_POLYGONS.getLocalPart()));
-        assertTrue(vars.get("crs").equalsIgnoreCase("urn:x-ogc:def:crs:EPSG:3857"));
+        assertTrue(vars.get("crs").equalsIgnoreCase("MapML:OSMTILE"));
         assertTrue(vars.get("bbox").equalsIgnoreCase("{xmin},{ymin},{xmax},{ymax}"));
         assertTrue(vars.get("width").equalsIgnoreCase("{w}"));
         assertTrue(vars.get("height").equalsIgnoreCase("{h}"));
