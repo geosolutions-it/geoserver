@@ -4,20 +4,38 @@
  */
 package org.geoserver.mapml.tcrs;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.geotools.api.metadata.Identifier;
 import org.geotools.api.metadata.citation.Citation;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.IdentifiedObject;
 import org.geotools.api.referencing.NoSuchAuthorityCodeException;
+import org.geotools.api.referencing.ReferenceIdentifier;
 import org.geotools.api.referencing.crs.CRSAuthorityFactory;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.crs.GeographicCRS;
+import org.geotools.api.referencing.crs.ProjectedCRS;
+import org.geotools.api.referencing.crs.SingleCRS;
+import org.geotools.api.referencing.cs.CartesianCS;
+import org.geotools.api.referencing.cs.CoordinateSystem;
+import org.geotools.api.referencing.cs.EllipsoidalCS;
+import org.geotools.api.referencing.datum.Datum;
+import org.geotools.api.referencing.datum.GeodeticDatum;
+import org.geotools.api.referencing.operation.Conversion;
 import org.geotools.gml2.SrsSyntax;
 import org.geotools.gml2.bindings.GML2EncodingUtils;
 import org.geotools.metadata.iso.IdentifierImpl;
 import org.geotools.metadata.iso.citation.CitationImpl;
 import org.geotools.metadata.iso.citation.Citations;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.NamedIdentifier;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.referencing.crs.DefaultProjectedCRS;
 import org.geotools.referencing.factory.AllAuthoritiesFactory;
 import org.geotools.referencing.factory.AuthorityFactoryAdapter;
 import org.geotools.util.factory.Hints;
@@ -38,40 +56,6 @@ public class TiledCRSFactory extends AuthorityFactoryAdapter implements CRSAutho
         c.getIdentifiers().add(new IdentifierImpl(AUTHORITY));
         c.freeze();
         MAPML = c;
-    }
-
-    /**
-     * Returns {@code false} if {@link Hints#FORCE_LONGITUDE_FIRST_AXIS_ORDER} should be set to
-     * {@link Boolean#FALSE}. This method compares {@link Hints#FORCE_AXIS_ORDER_HONORING} with the
-     * specified authority.
-     *
-     * @param hints The hints to use (may be {@code null}).
-     * @param authority The authority factory under creation.
-     * @todo Should not looks at system hints; this is {@link ReferencingFactoryFinder}'s job.
-     */
-    static boolean defaultAxisOrderHints(final Hints hints, final String authority) {
-        Object value = null;
-        if (hints != null) {
-            value = hints.get(Hints.FORCE_AXIS_ORDER_HONORING);
-        }
-        if (value == null) {
-            value = Hints.getSystemDefault(Hints.FORCE_AXIS_ORDER_HONORING);
-        }
-        if (value instanceof CharSequence) {
-            final String list = value.toString();
-            int i = 0;
-            while ((i = list.indexOf(authority, i)) >= 0) {
-                if (i == 0 || !Character.isJavaIdentifierPart(list.charAt(i - 1))) {
-                    final int j = i + authority.length();
-                    if (j == list.length() || !Character.isJavaIdentifierPart(list.charAt(j))) {
-                        // Found the authority in the list: we need to use the global setting.
-                        return true;
-                    }
-                }
-                i++;
-            }
-        }
-        return false;
     }
 
     /** Builds the MapML CRS factory with no hints. */
@@ -96,6 +80,18 @@ public class TiledCRSFactory extends AuthorityFactoryAdapter implements CRSAutho
         return TiledCRSConstants.tiledCRSDefinitions.values().stream()
                 .map(TiledCRSParams::getName)
                 .collect(Collectors.toSet());
+    }
+
+    @Override
+    public CoordinateReferenceSystem createCoordinateReferenceSystem(String code)
+            throws FactoryException, NoSuchAuthorityCodeException {
+        final CRSAuthorityFactory factory = getCRSAuthorityFactory(code);
+        CoordinateReferenceSystem crs =
+                factory.createCoordinateReferenceSystem(toBackingFactoryCode(code));
+        final CoordinateReferenceSystem replaced = replace(crs, code);
+        notifySuccess("createCoordinateReferenceSystem", code, factory, replaced);
+
+        return replaced;
     }
 
     @Override
@@ -126,5 +122,70 @@ public class TiledCRSFactory extends AuthorityFactoryAdapter implements CRSAutho
             identifier = identifier.substring(AUTHORITY.length());
         }
         return identifier;
+    }
+
+    /**
+     * Replaces the CRS with one that has the MapML identifiers. Avoids going throught the CRS
+     * factory to avoid axis flipping issues.
+     *
+     * @throws FactoryException if the CRS is not supported
+     */
+    protected CoordinateReferenceSystem replace(CoordinateReferenceSystem crs, String code)
+            throws FactoryException {
+
+        final Datum datum;
+        if (crs instanceof SingleCRS) {
+            datum = ((SingleCRS) crs).getDatum();
+        } else {
+            datum = null;
+        }
+        CoordinateSystem cs = crs.getCoordinateSystem();
+        final Map<String, ?> properties = getProperties(crs, code);
+
+        if (crs instanceof ProjectedCRS) {
+            final ProjectedCRS projectedCRS = (ProjectedCRS) crs;
+            final CoordinateReferenceSystem baseCRS = projectedCRS.getBaseCRS();
+            Conversion fromBase = projectedCRS.getConversionFromBase();
+            return new DefaultProjectedCRS(
+                    properties,
+                    fromBase,
+                    (GeographicCRS) baseCRS,
+                    ((ProjectedCRS) crs).getConversionFromBase().getMathTransform(),
+                    (CartesianCS) cs);
+        } else if (crs instanceof GeographicCRS) {
+            return new DefaultGeographicCRS(properties, (GeodeticDatum) datum, (EllipsoidalCS) cs);
+        }
+
+        // do not know of a way to attach the code to the copy
+        throw new IllegalArgumentException("Unsupported crs: " + crs);
+    }
+
+    /**
+     * Returns the properties to be given to an object replacing an original one. If the new object
+     * keep the same authority, then all metadata are preserved. Otherwise (i.e. if a new authority
+     * is given to the new object), then the old identifiers will be removed from the new object
+     * metadata.
+     *
+     * @param object The original object.
+     * @return The properties to be given to the object created as a substitute of {@code object}.
+     */
+    private Map<String, Object> getProperties(final IdentifiedObject object, String code) {
+        final Citation authority = getAuthority();
+        String identifier = getIdentifier(code);
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(IdentifiedObject.NAME_KEY, identifier);
+        properties.put(Identifier.AUTHORITY_KEY, authority);
+        List<ReferenceIdentifier> aliases = new ArrayList<>(object.getIdentifiers());
+        List<ReferenceIdentifier> identifiers = new ArrayList<>();
+        aliases.add(0, new NamedIdentifier(authority, identifier));
+        properties.put(
+                IdentifiedObject.IDENTIFIERS_KEY,
+                aliases.toArray(new ReferenceIdentifier[identifiers.size()]));
+        properties.put(
+                IdentifiedObject.ALIAS_KEY,
+                aliases.toArray(new ReferenceIdentifier[aliases.size()]));
+
+        return properties;
     }
 }

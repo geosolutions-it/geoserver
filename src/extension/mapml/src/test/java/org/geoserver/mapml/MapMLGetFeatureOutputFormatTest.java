@@ -6,6 +6,8 @@ package org.geoserver.mapml;
 
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -424,6 +426,19 @@ public class MapMLGetFeatureOutputFormatTest extends WFSTestSupport {
                 "With forcedDecimals=false, very large or very small numbers should be returned as scientific notation",
                 "-1.03526624685E7 504135.1496",
                 coords);
+
+        // check links for alternate projections
+        String linkPath =
+                "//html:map-head/html:map-link[@rel='alternate' and @projection='%s']/@href";
+        assertThat(
+                xpath.evaluate(String.format(linkPath, "OSMTILE"), doc),
+                containsString("SRSNAME=MapML:OSMTILE"));
+        assertThat(
+                xpath.evaluate(String.format(linkPath, "CBMTILE"), doc),
+                containsString("SRSNAME=MapML:CBMTILE"));
+        assertThat(
+                xpath.evaluate(String.format(linkPath, "WGS84"), doc),
+                containsString("SRSNAME=MapML:WGS84"));
     }
 
     @Test

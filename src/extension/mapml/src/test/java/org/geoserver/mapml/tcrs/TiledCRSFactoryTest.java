@@ -7,14 +7,17 @@ package org.geoserver.mapml.tcrs;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Set;
+import org.geoserver.catalog.ResourcePool;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.operation.projection.Mercator;
+import org.geotools.util.factory.Hints;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -24,6 +27,8 @@ public class TiledCRSFactoryTest {
     public static void setup() {
         CRS.reset("all");
         System.setProperty("org.geotools.referencing.forceXY", "true");
+        Hints.putSystemDefault(Hints.FORCE_AXIS_ORDER_HONORING, "http");
+        Hints.putSystemDefault(Hints.LENIENT_DATUM_SHIFT, true);
     }
 
     @Test
@@ -38,6 +43,9 @@ public class TiledCRSFactoryTest {
         CoordinateReferenceSystem expected = CRS.decode("EPSG:4326", true);
         assertFalse(CRS.isTransformationRequired(crs, expected));
         assertTrue(CRS.equalsIgnoreMetadata(crs, expected));
+        assertEquals("MapML", crs.getName().getCodeSpace());
+        assertEquals("WGS84", crs.getName().getCode());
+        assertEquals("MapML:WGS84", ResourcePool.lookupIdentifier(crs, false));
     }
 
     @Test
@@ -46,6 +54,9 @@ public class TiledCRSFactoryTest {
         CoordinateReferenceSystem expected = CRS.decode("EPSG:3857");
         assertFalse(CRS.isTransformationRequired(crs, expected));
         assertTrue(CRS.equalsIgnoreMetadata(crs, expected));
+        assertEquals("MapML", crs.getName().getCodeSpace());
+        assertEquals("OSMTILE", crs.getName().getCode());
+        assertEquals("MapML:OSMTILE", ResourcePool.lookupIdentifier(crs, false));
     }
 
     @Test
@@ -54,6 +65,9 @@ public class TiledCRSFactoryTest {
         CoordinateReferenceSystem expected = CRS.decode("EPSG:5936");
         assertFalse(CRS.isTransformationRequired(crs, expected));
         assertTrue(CRS.equalsIgnoreMetadata(crs, expected));
+        assertEquals("MapML", crs.getName().getCodeSpace());
+        assertEquals("APSTILE", crs.getName().getCode());
+        assertEquals("MapML:APSTILE", ResourcePool.lookupIdentifier(crs, false));
     }
 
     @Test
@@ -62,6 +76,9 @@ public class TiledCRSFactoryTest {
         CoordinateReferenceSystem expected = CRS.decode("EPSG:3978");
         assertFalse(CRS.isTransformationRequired(crs, expected));
         assertTrue(CRS.equalsIgnoreMetadata(crs, expected));
+        assertEquals("MapML", crs.getName().getCodeSpace());
+        assertEquals("CBMTILE", crs.getName().getCode());
+        assertEquals("MapML:CBMTILE", ResourcePool.lookupIdentifier(crs, false));
     }
 
     /** @throws Exception */
