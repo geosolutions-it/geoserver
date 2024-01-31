@@ -15,8 +15,6 @@ import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.operation.projection.Mercator;
-import org.geotools.referencing.operation.projection.MercatorPseudoProvider;
-import org.hamcrest.CoreMatchers;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -66,10 +64,7 @@ public class TiledCRSFactoryTest {
         assertTrue(CRS.equalsIgnoreMetadata(crs, expected));
     }
 
-    /**
-     * 
-     * @throws Exception
-     */
+    /** @throws Exception */
     @Test
     public void testTransform() throws Exception {
         CoordinateReferenceSystem wgs84 = CRS.decode("MapML:WGS84");

@@ -33,6 +33,7 @@ public class MapMLFormatLink extends CommonFormatLink {
         return olLink;
     }
 
+    /** Customize the request to use the MapML format and a native MapML CRS if possible */
     private void customizeRequest(GetMapRequest request, Map<String, String> params) {
         // set the format
         params.put("format", MapMLConstants.MAPML_HTML_MIME_TYPE);
@@ -50,6 +51,7 @@ public class MapMLFormatLink extends CommonFormatLink {
                         });
     }
 
+    /** Check if the request CRS matches the given TiledCRSParams */
     private static boolean matches(GetMapRequest request, TiledCRSParams tcrs) {
         try {
             return CRS.equalsIgnoreMetadata(CRS.decode(tcrs.getCode()), request.getCrs());
@@ -58,6 +60,7 @@ public class MapMLFormatLink extends CommonFormatLink {
         }
     }
 
+    /** Get the WGS84 bounds of the request */
     private static String getWGS84Bounds(GetMapRequest request) {
         try {
             ReferencedEnvelope re =
