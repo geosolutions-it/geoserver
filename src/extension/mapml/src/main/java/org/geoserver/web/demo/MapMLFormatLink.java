@@ -34,7 +34,7 @@ public class MapMLFormatLink extends CommonFormatLink {
     }
 
     /** Customize the request to use the MapML format and a native MapML CRS if possible */
-    private void customizeRequest(GetMapRequest request, Map<String, String> params) {
+    void customizeRequest(GetMapRequest request, Map<String, String> params) {
         // set the format
         params.put("format", MapMLConstants.MAPML_HTML_MIME_TYPE);
 
@@ -44,7 +44,7 @@ public class MapMLFormatLink extends CommonFormatLink {
                 .filter(tcrs -> matches(request, tcrs))
                 .findFirst()
                 .ifPresentOrElse(
-                        tcrs -> params.put("srs", "MapML:" + tcrs.getName()),
+                        tcrs -> params.put("srs", tcrs.getSRSName()),
                         () -> {
                             params.put("srs", "MapML:WGS84");
                             params.put("bbox", getWGS84Bounds(request));
@@ -54,7 +54,7 @@ public class MapMLFormatLink extends CommonFormatLink {
     /** Check if the request CRS matches the given TiledCRSParams */
     private static boolean matches(GetMapRequest request, TiledCRSParams tcrs) {
         try {
-            return CRS.equalsIgnoreMetadata(CRS.decode(tcrs.getCode()), request.getCrs());
+            return CRS.equalsIgnoreMetadata(CRS.decode(tcrs.getSRSName()), request.getCrs());
         } catch (FactoryException e) {
             throw new RuntimeException(e);
         }

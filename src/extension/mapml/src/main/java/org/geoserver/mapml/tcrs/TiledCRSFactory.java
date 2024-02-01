@@ -47,7 +47,7 @@ import org.geotools.util.factory.Hints;
  */
 public class TiledCRSFactory extends AuthorityFactoryAdapter implements CRSAuthorityFactory {
     /** The authority prefix */
-    private static final String AUTHORITY = "MapML";
+    public static final String AUTHORITY = "MapML";
 
     public static final Citation MAPML;
 
