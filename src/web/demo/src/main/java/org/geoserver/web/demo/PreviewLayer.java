@@ -22,6 +22,7 @@ import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.PublishedType;
+import org.geoserver.catalog.ResourcePool;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.security.DisabledServiceResourceFilter;
@@ -34,6 +35,8 @@ import org.geoserver.wms.MapLayerInfo;
 import org.geotools.api.feature.type.AttributeType;
 import org.geotools.api.feature.type.FeatureType;
 import org.geotools.api.feature.type.Name;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.util.ProgressListener;
 import org.geotools.data.util.DefaultProgressListener;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -149,10 +152,8 @@ public class PreviewLayer {
             if (groupInfo != null) {
                 ReferencedEnvelope bounds = groupInfo.getBounds();
                 request.setBbox(bounds);
-                String srs =
-                        GML2EncodingUtils.toURI(
-                                bounds.getCoordinateReferenceSystem(), SrsSyntax.AUTH_CODE, false);
-                request.setSRS(srs);
+                request.setCrs(bounds.getCoordinateReferenceSystem());
+                request.setSRS(lookupSRSFromBounds(bounds));
             }
             try {
                 DefaultWebMapService.autoSetBoundsAndSize(request);
@@ -165,6 +166,18 @@ public class PreviewLayer {
             }
         }
         return request;
+    }
+
+    private static String lookupSRSFromBounds(ReferencedEnvelope bounds) {
+        // try first a method that retains the native authority code, otherwise fall back on
+        // GML2EncodingUtils, which prefers the EPSG authority
+        CoordinateReferenceSystem crs = bounds.getCoordinateReferenceSystem();
+        if (crs == null) return null;
+        try {
+            return ResourcePool.lookupIdentifier(crs, false);
+        } catch (FactoryException e) {
+            return GML2EncodingUtils.toURI(crs, SrsSyntax.AUTH_CODE, false);
+        }
     }
 
     /** Expands the specified name into a list of layer info names */
@@ -355,6 +368,7 @@ public class PreviewLayer {
         AttributeType parent = featureType.getSuper();
         return findFeatureTypeGmlVersion(parent);
     }
+
     /**
      * Returns true if serviceName is available for resource, otherwise false
      *
