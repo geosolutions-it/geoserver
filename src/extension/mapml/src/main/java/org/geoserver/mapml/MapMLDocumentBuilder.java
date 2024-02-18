@@ -377,10 +377,14 @@ public class MapMLDocumentBuilder {
      */
     private boolean allLayersUsingFeatures(List<RawLayer> layers) {
         for (RawLayer layer : layers) {
-            Boolean useFeatures =
-                    layer.getPublishedInfo().getMetadata().get(MAPML_USE_FEATURES, Boolean.class);
-            Boolean isVector = (PublishedType.VECTOR == layer.getPublishedInfo().getType());
-            if (useFeatures == null || isVector == null || !useFeatures || !isVector) {
+            boolean useFeatures =
+                    Optional.ofNullable(layer.getPublishedInfo())
+                            .filter(l -> l instanceof LayerInfo)
+                            .map(l -> ((LayerInfo) l).getResource())
+                            .map(r -> r.getMetadata().get(MAPML_USE_FEATURES, Boolean.class))
+                            .orElse(false);
+            boolean isVector = (PublishedType.VECTOR == layer.getPublishedInfo().getType());
+            if (!useFeatures || !isVector) {
                 return false;
             }
         }
@@ -1632,7 +1636,8 @@ public class MapMLDocumentBuilder {
                                 height,
                                 escapeHtml4(proj),
                                 styleName,
-                                format))
+                                format,
+                                useFeaturesAllLayers))
                 .append("\" checked></layer->\n")
                 .append("</mapml-viewer>\n")
                 .append("</body>\n")
@@ -1648,7 +1653,8 @@ public class MapMLDocumentBuilder {
             int width,
             String proj,
             String styleName,
-            Optional<Object> format) {
+            Optional<Object> format,
+            Boolean useFeaturesAllLayers) {
         Map<String, String> kvp = new LinkedHashMap<>();
         kvp.put("LAYERS", escapeHtml4(layer));
         kvp.put("BBOX", toCommaDelimitedBbox(projectedBbox));
@@ -1657,11 +1663,13 @@ public class MapMLDocumentBuilder {
         kvp.put("SRS", escapeHtml4(proj));
         kvp.put("STYLES", escapeHtml4(styleName));
         kvp.put("FORMAT", MAPML_MIME_TYPE);
-        kvp.put(
-                "format_options",
+        String formatOptions =
                 MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION
                         + ":"
-                        + escapeHtml4((String) format.orElse("image/png")));
+                        + escapeHtml4((String) format.orElse("image/png"));
+        if (!useFeaturesAllLayers) {
+            kvp.put("format_options", formatOptions);
+        }
         kvp.put("SERVICE", "WMS");
         kvp.put("REQUEST", "GetMap");
         kvp.put("VERSION", "1.3.0");
