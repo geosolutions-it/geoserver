@@ -52,6 +52,9 @@
       </map>
     </metadata>
     <localWorkspaceIncludesPrefix>false</localWorkspaceIncludesPrefix>
+    <showCreatedTimeColumnsInAdminList>false</showCreatedTimeColumnsInAdminList>
+    <showModifiedTimeColumnsInAdminList>false</showModifiedTimeColumnsInAdminList>
+    <useHeadersProxyURL>true</useHeadersProxyURL>
   </settings>
   <jai>
     <allowInterpolation>false</allowInterpolation>
@@ -182,10 +185,9 @@
     <entry key="logHeadersEnabled">false</entry>
     <entry key="logBodiesEnabled">false</entry>
   </metadata>
-  <updateSequence>5337</updateSequence>
+  <updateSequence>5356</updateSequence>
   <featureTypeCacheSize>1000</featureTypeCacheSize>
   <globalServices>true</globalServices>
-  <useHeadersProxyURL>true</useHeadersProxyURL>
   <xmlPostRequestLogBufferSize>1024</xmlPostRequestLogBufferSize>
   <xmlExternalEntitiesEnabled>false</xmlExternalEntitiesEnabled>
   <webUIMode>DEFAULT</webUIMode>

@@ -1,15 +1,15 @@
 <coverage>
-  <id>CoverageInfoImpl-1e3d726a:189f3949016:-7ffb</id>
-  <name>ir105_hrfi</name>
-  <nativeName>ir105_hrfi</nativeName>
+  <id>CoverageInfoImpl--36231a2:18dc1a36d35:-7ffb</id>
+  <name>rgb_geocolour</name>
+  <nativeName>rgb_geocolour</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>FCI HRFI IR10.5 μm Image - MTG - 0 degree</title>
+  <title>Geo Colour RGB - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>Rectified (level 1c) Meteosat FCI full disk image data in high spatial resolution (1km). Level 1c image data corresponds to the geolocated and radiometrically pre-processed image data, ready for further processing, e.g. the extraction of meteorological products. Any spacecraft-specific effects have been removed, and in particular, linearisation and equalisation of the image radiometry have been performed for all FCI channels. The onboard blackbody data has been processed. Both radiometric and geometric quality control information is included.</abstract>
+  <abstract>Geo Colour RGB - MTG - 0 degree</abstract>
   <keywords>
-    <string>mtg_fd_ir105_hrfi</string>
+    <string>mtg_fd_rgb_geocolour</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
@@ -24,17 +24,17 @@
   AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
   <srs>EPSG:4326</srs>
   <nativeBoundingBox>
-    <minx>-70.0</minx>
-    <maxx>70.0</maxx>
-    <miny>-70.0</miny>
-    <maxy>70.0</maxy>
+    <minx>-81.2777938842773</minx>
+    <maxx>81.2807235717773</maxx>
+    <miny>-77.3506393432617</miny>
+    <maxy>77.3563919067383</maxy>
     <crs>EPSG:4326</crs>
   </nativeBoundingBox>
   <latLonBoundingBox>
-    <minx>-70.0</minx>
-    <maxx>70.0</maxx>
-    <miny>-70.0</miny>
-    <maxy>70.0</maxy>
+    <minx>-81.2777938842773</minx>
+    <maxx>81.2807235717773</maxx>
+    <miny>-77.3506393432617</miny>
+    <maxy>77.3563919067383</maxy>
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
@@ -70,29 +70,55 @@
         <copyAttributes>false</copyAttributes>
         <copyGlobalAttributes>false</copyGlobalAttributes>
         <dataPacking>NONE</dataPacking>
+        <metadata>
+          <map>
+            <entry>
+              <string>ghrsst</string>
+              <boolean>false</boolean>
+            </entry>
+            <entry>
+              <string>ghrsst.productString</string>
+              <null/>
+            </entry>
+            <entry>
+              <string>ghrsst.rdac</string>
+              <null/>
+            </entry>
+            <entry>
+              <string>ghrsst.sstType</string>
+              <null/>
+            </entry>
+            <entry>
+              <string>ghrsst.processingLevel</string>
+              <null/>
+            </entry>
+          </map>
+        </metadata>
+        <layerUOM>W.m-2.Sr-1</layerUOM>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">ir105_hrfi_mtg_fd_ir105_hrfi</entry>
+    <entry key="dirName">rgb_geocolour_mtg_fd_rgb_geocolour</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-8000</id>
+    <id>CoverageStoreInfoImpl--36231a2:18dc1a36d35:-8000</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
   <internationalTitle/>
   <internationalAbstract/>
   <nativeFormat>ImageMosaic</nativeFormat>
   <grid dimension="2">
     <range>
       <low>0 0</low>
-      <high>14000 14000</high>
+      <high>11408 10857</high>
     </range>
     <transform>
-      <scaleX>0.01</scaleX>
-      <scaleY>-0.01</scaleY>
+      <scaleX>0.014249518230806784</scaleX>
+      <scaleY>-0.014249518230806784</scaleY>
       <shearX>0.0</shearX>
       <shearY>0.0</shearY>
-      <translateX>-69.995</translateX>
-      <translateY>69.995</translateY>
+      <translateX>-81.2706691251619</translateX>
+      <translateY>77.3492671476229</translateY>
     </transform>
     <crs>EPSG:4326</crs>
   </grid>
@@ -111,7 +137,7 @@
   <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
   <dimensions>
     <coverageDimension>
-      <name>GRAY_INDEX</name>
+      <name>RED_BAND</name>
       <description>GridSampleDimension[-Infinity,Infinity]</description>
       <range>
         <min>-inf</min>
@@ -120,12 +146,13 @@
       <nullValues>
         <double>0.0</double>
       </nullValues>
+      <unit>W.m-2.Sr-1</unit>
       <dimensionType>
         <name>UNSIGNED_8BITS</name>
       </dimensionType>
     </coverageDimension>
     <coverageDimension>
-      <name>Band2</name>
+      <name>GREEN_BAND</name>
       <description>GridSampleDimension[-Infinity,Infinity]</description>
       <range>
         <min>-inf</min>
@@ -134,6 +161,22 @@
       <nullValues>
         <double>0.0</double>
       </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+    <coverageDimension>
+      <name>BLUE_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
       <dimensionType>
         <name>UNSIGNED_8BITS</name>
       </dimensionType>
@@ -164,7 +207,7 @@
     </entry>
     <entry>
       <string>MaxAllowedTiles</string>
-      <int>1</int>
+      <int>-1</int>
     </entry>
     <entry>
       <string>ExcessGranuleRemoval</string>
@@ -204,12 +247,12 @@
     </entry>
     <entry>
       <string>SORTING</string>
-      <string>fid D</string>
+      <null/>
     </entry>
     <entry>
       <string>FootprintBehavior</string>
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mtg_fd_ir105_hrfi</nativeCoverageName>
+  <nativeCoverageName>mtg_fd_rgb_geocolour</nativeCoverageName>
 </coverage>

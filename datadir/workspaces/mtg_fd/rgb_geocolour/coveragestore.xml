@@ -1,0 +1,15 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl--36231a2:18dc1a36d35:-8000</id>
+  <name>rgb_geocolour</name>
+  <description>MTG 0DEG RGB Geo Colour</description>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--6acf4bb5:1888a571431:-8000</id>
+  </workspace>
+  <__default>false</__default>
+  <dateCreated>2024-02-19 13:52:09.525 UTC</dateCreated>
+  <dateModified>2024-02-19 13:52:16.287 UTC</dateModified>
+  <disableOnConnFailure>false</disableOnConnFailure>
+  <url>file:data/LIC_FREE/mtg_fd_rgb_geocolour</url>
+</coverageStore>
