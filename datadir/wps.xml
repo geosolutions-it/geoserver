@@ -40,6 +40,14 @@
       <factoryClass>org.geotools.process.vector.VectorProcessFactory</factoryClass>
       <enabled>true</enabled>
     </processGroup>
+    <processGroup>
+      <factoryClass>org.geotools.process.geometry.CenterLineProcess</factoryClass>
+      <enabled>true</enabled>
+    </processGroup>
+    <processGroup>
+      <factoryClass>org.geotools.process.geometry.SkeletonizeProcess</factoryClass>
+      <enabled>true</enabled>
+    </processGroup>
   </processGroups>
   <storageDirectory>file:///var/geoserver/wps-output</storageDirectory>
   <catalogMode>HIDE</catalogMode>
@@ -49,4 +57,3 @@
   <maxAsynchronousTotalTime>12000</maxAsynchronousTotalTime>
   <remoteInputDisabled>true</remoteInputDisabled>
 </wps>
-

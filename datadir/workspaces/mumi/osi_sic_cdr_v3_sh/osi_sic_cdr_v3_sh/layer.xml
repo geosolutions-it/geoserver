@@ -1,0 +1,16 @@
+<layer>
+  <name>osi_sic_cdr_v3_sh</name>
+  <id>LayerInfoImpl--36231a2:18dc1a36d35:-7ff4</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-38ee2db0:187bd1b5cc9:-7ff9</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--36231a2:18dc1a36d35:-7ff5</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2024-02-19 14:02:10.195 UTC</dateCreated>
+</layer>
