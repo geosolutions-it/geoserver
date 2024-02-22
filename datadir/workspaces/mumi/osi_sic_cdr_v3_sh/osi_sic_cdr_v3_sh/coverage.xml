@@ -1,40 +1,58 @@
 <coverage>
-  <id>CoverageInfoImpl-1e3d726a:189f3949016:-7ffb</id>
-  <name>ir105_hrfi</name>
-  <nativeName>ir105_hrfi</nativeName>
+  <id>CoverageInfoImpl--36231a2:18dc1a36d35:-7ff5</id>
+  <name>osi_sic_cdr_v3_sh</name>
+  <nativeName>osi_sic_cdr_v3_sh</nativeName>
   <namespace>
-    <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
+    <id>NamespaceInfoImpl--453fcc61:1760a405bda:-7ffd</id>
   </namespace>
-  <title>FCI HRFI IR10.5 μm Image - MTG - 0 degree</title>
+  <title>OSI SAF Blended Global Sea Ice Concentration Climate and Interim Climate Data Records for Southern Hemisphere - DMSP</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>Rectified (level 1c) Meteosat FCI full disk image data in high spatial resolution (1km). Level 1c image data corresponds to the geolocated and radiometrically pre-processed image data, ready for further processing, e.g. the extraction of meteorological products. Any spacecraft-specific effects have been removed, and in particular, linearisation and equalisation of the image radiometry have been performed for all FCI channels. The onboard blackbody data has been processed. Both radiometric and geometric quality control information is included.</abstract>
+  <abstract>This layer is the blended version of the Global Sea Ice Concentration Climate Data Record (OSI-450-a) and Global Sea Ice Concentration Interim Climate Data Record (OSI-430-a) for the Southern Hemisphere. &#xd;
+&#xd;
+OSI-450-a is the third major version of the OSI SAF Global Sea Ice Concentration Climate Data Record (SIC CDR v3.0). OSI-430-a is the corresponding Interim CDR, an operational extension with a latency of 16 days.&#xd;
+&#xd;
+OSI-450-a is a full reprocessing of sea ice concentration, with improved algorithms and an upgraded processing chain, covering the period 1978.10.01 to 2020.12.31. The sea ice concentration is computed from the SMMR (1978-1987), SSM/I (1987-2008), and SSMIS (2006-2020) instruments, as well as ECMWF ERA5.&#xd;
+&#xd;
+The basic principles and methodologies that were the backbone of the previous version (OSI-450) are also on board OSI-450-a (e.g. atmospheric correction of brightness temperature with NWP re-analysis data, dynamic tie-points, uncertainties, etc.) but they were partly revisited through dedicated R&amp;D in the OSISAF project and, notably, through the ESA CCI EXT Sea Ice projects, whose contribution is acknowledged.&#xd;
+&#xd;
+OSI-430-a extends OSI-450-a from 2021 onwards. It uses SSMIS data from NOAA CLASS, and preliminary daily updates of the ERA5 analysis from ECMWF (ERA5T). Otherwise, the same processing chain and algorithms are used for OSI-450-a and OSI-430-a, ensuring temporal consistency.</abstract>
   <keywords>
-    <string>mtg_fd_ir105_hrfi</string>
+    <string>mumi_osi_sic_cdr_v3_sh</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
-  <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
-  DATUM[&quot;World Geodetic System 1984&quot;, 
-    SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
-    AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
-  PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
-  UNIT[&quot;degree&quot;, 0.017453292519943295], 
-  AXIS[&quot;Geodetic longitude&quot;, EAST], 
-  AXIS[&quot;Geodetic latitude&quot;, NORTH], 
-  AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
-  <srs>EPSG:4326</srs>
+  <nativeCRS class="projected">PROJCS[&quot;WGS 84 / NSIDC Sea Ice Polar Stereographic South&quot;, 
+  GEOGCS[&quot;WGS 84&quot;, 
+    DATUM[&quot;World Geodetic System 1984&quot;, 
+      SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+      AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+    PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+    UNIT[&quot;degree&quot;, 0.017453292519943295], 
+    AXIS[&quot;Geodetic longitude&quot;, EAST], 
+    AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]], 
+  PROJECTION[&quot;Polar Stereographic (variant B)&quot;, AUTHORITY[&quot;EPSG&quot;,&quot;9829&quot;]], 
+  PARAMETER[&quot;central_meridian&quot;, 0.0], 
+  PARAMETER[&quot;Standard_Parallel_1&quot;, -70.0], 
+  PARAMETER[&quot;false_easting&quot;, 0.0], 
+  PARAMETER[&quot;false_northing&quot;, 0.0], 
+  UNIT[&quot;m&quot;, 1.0], 
+  AXIS[&quot;Easting&quot;, &quot;North along 90 deg East&quot;], 
+  AXIS[&quot;Northing&quot;, &quot;North along 0 deg&quot;], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;3976&quot;]]</nativeCRS>
+  <srs>EPSG:3976</srs>
   <nativeBoundingBox>
-    <minx>-70.0</minx>
-    <maxx>70.0</maxx>
-    <miny>-70.0</miny>
-    <maxy>70.0</maxy>
-    <crs>EPSG:4326</crs>
+    <minx>-6531995.5</minx>
+    <maxx>6543005.0</maxx>
+    <miny>-6543005.0</miny>
+    <maxy>6531995.5</maxy>
+    <crs class="projected">EPSG:3976</crs>
   </nativeBoundingBox>
   <latLonBoundingBox>
-    <minx>-70.0</minx>
-    <maxx>70.0</maxx>
-    <miny>-70.0</miny>
-    <maxy>70.0</maxy>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>-16.331555954431668</maxy>
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
@@ -50,14 +68,14 @@
       <dimensionInfo>
         <enabled>true</enabled>
         <presentation>DISCRETE_INTERVAL</presentation>
-        <resolution>600000</resolution>
+        <resolution>86400000</resolution>
         <units>ISO8601</units>
         <defaultValue>
           <strategy>MAXIMUM</strategy>
         </defaultValue>
         <nearestMatchEnabled>true</nearestMatchEnabled>
         <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
-        <acceptableInterval>PT10M/PT0H</acceptableInterval>
+        <acceptableInterval>PT24H/PT0H</acceptableInterval>
         <startValue></startValue>
         <endValue></endValue>
       </dimensionInfo>
@@ -72,29 +90,30 @@
         <dataPacking>NONE</dataPacking>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">ir105_hrfi_mtg_fd_ir105_hrfi</entry>
+    <entry key="dirName">osi_sic_cdr_v3_sh_mumi_osi_sic_cdr_v3_sh</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl-1e3d726a:189f3949016:-8000</id>
+    <id>CoverageStoreInfoImpl--36231a2:18dc1a36d35:-7ff8</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
   <internationalTitle/>
   <internationalAbstract/>
   <nativeFormat>ImageMosaic</nativeFormat>
   <grid dimension="2">
     <range>
       <low>0 0</low>
-      <high>14000 14000</high>
+      <high>523 523</high>
     </range>
     <transform>
-      <scaleX>0.01</scaleX>
-      <scaleY>-0.01</scaleY>
+      <scaleX>25000.0</scaleX>
+      <scaleY>-25000.0</scaleY>
       <shearX>0.0</shearX>
       <shearY>0.0</shearY>
-      <translateX>-69.995</translateX>
-      <translateY>69.995</translateY>
+      <translateX>-6519495.5</translateX>
+      <translateY>6519495.5</translateY>
     </transform>
-    <crs>EPSG:4326</crs>
+    <crs>EPSG:3976</crs>
   </grid>
   <supportedFormats>
     <string>GIF</string>
@@ -118,21 +137,7 @@
         <max>inf</max>
       </range>
       <nullValues>
-        <double>0.0</double>
-      </nullValues>
-      <dimensionType>
-        <name>UNSIGNED_8BITS</name>
-      </dimensionType>
-    </coverageDimension>
-    <coverageDimension>
-      <name>Band2</name>
-      <description>GridSampleDimension[-Infinity,Infinity]</description>
-      <range>
-        <min>-inf</min>
-        <max>inf</max>
-      </range>
-      <nullValues>
-        <double>0.0</double>
+        <double>255.0</double>
       </nullValues>
       <dimensionType>
         <name>UNSIGNED_8BITS</name>
@@ -140,10 +145,10 @@
     </coverageDimension>
   </dimensions>
   <requestSRS>
-    <string>EPSG:4326</string>
+    <string>EPSG:3976</string>
   </requestSRS>
   <responseSRS>
-    <string>EPSG:4326</string>
+    <string>EPSG:3976</string>
   </responseSRS>
   <parameters>
     <entry>
@@ -164,7 +169,7 @@
     </entry>
     <entry>
       <string>MaxAllowedTiles</string>
-      <int>1</int>
+      <int>-1</int>
     </entry>
     <entry>
       <string>ExcessGranuleRemoval</string>
@@ -204,12 +209,12 @@
     </entry>
     <entry>
       <string>SORTING</string>
-      <string>fid D</string>
+      <null/>
     </entry>
     <entry>
       <string>FootprintBehavior</string>
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mtg_fd_ir105_hrfi</nativeCoverageName>
+  <nativeCoverageName>mumi_osi_sic_cdr_v3_sh</nativeCoverageName>
 </coverage>

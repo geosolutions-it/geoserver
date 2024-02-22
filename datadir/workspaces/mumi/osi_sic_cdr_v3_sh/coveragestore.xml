@@ -1,0 +1,14 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl--36231a2:18dc1a36d35:-7ff8</id>
+  <name>osi_sic_cdr_v3_sh</name>
+  <description>The Sea-Ice Concentration Climate Data Record covering the Southern Hemisphere.</description>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--453fcc61:1760a405bda:-7ffe</id>
+  </workspace>
+  <__default>false</__default>
+  <dateCreated>2024-02-19 13:58:53.365 UTC</dateCreated>
+  <disableOnConnFailure>false</disableOnConnFailure>
+  <url>file:data/LIC_FREE/mumi_osi_sic_cdr_v3_sh</url>
+</coverageStore>
