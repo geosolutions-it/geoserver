@@ -6,10 +6,12 @@ package org.geoserver.mapml;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StyleInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.SettingsInfo;
 import org.geoserver.feature.ReprojectingFeatureCollection;
@@ -24,6 +26,7 @@ import org.geotools.api.feature.type.FeatureType;
 import org.geotools.api.feature.type.GeometryDescriptor;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.Style;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.SchemaException;
@@ -104,6 +107,21 @@ public class MapMLFeaturesBuilder {
             reprojectedFeatureCollection = fc;
         }
 
+        MapMLStyleVisitor styleVisitor = new MapMLStyleVisitor();
+        Style style = getMapRequest.getStyles().get(0);
+        if (style == null) {
+            StyleInfo styleInfo = getMapRequest.getLayers().get(0).getLayerInfo().getDefaultStyle();
+            if (styleInfo != null && styleInfo.getStyle() != null) {
+                style = styleInfo.getStyle();
+            } else {
+                throw new ServiceException(
+                        "No style or default style found for layer"
+                                + getMapRequest.getLayers().get(0).getLayerInfo().getName());
+            }
+        }
+        style.accept(styleVisitor);
+        Map<String, MapMLStyle> styles = styleVisitor.getStyles();
+
         LayerInfo layerInfo = geoServer.getCatalog().getLayerByName(fc.getSchema().getTypeName());
         CoordinateReferenceSystem crs = mapContent.getRequest().getCrs();
         FeatureType featureType = fc.getSchema();
@@ -116,7 +134,8 @@ public class MapMLFeaturesBuilder {
                 null, // for WMS GetMap we don't include alternate projections
                 getNumberOfDecimals(meta),
                 getForcedDecimal(meta),
-                getPadWithZeros(meta));
+                getPadWithZeros(meta),
+                styles);
     }
 
     /**
