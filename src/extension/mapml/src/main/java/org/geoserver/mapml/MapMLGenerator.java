@@ -8,17 +8,23 @@ package org.geoserver.mapml;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import javax.xml.bind.JAXBElement;
 import org.apache.commons.text.StringEscapeUtils;
+import org.geoserver.mapml.xml.Coordinates;
 import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.GeometryContent;
 import org.geoserver.mapml.xml.ObjectFactory;
 import org.geoserver.mapml.xml.PropertyContent;
+import org.geoserver.mapml.xml.Span;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.type.AttributeDescriptor;
 import org.geotools.api.feature.type.GeometryType;
 import org.geotools.gml.producer.CoordinateFormatter;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.CoordinateSequence;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.impl.CoordinateArraySequence;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.PlaceholderConfigurerSupport;
@@ -36,11 +42,12 @@ public class MapMLGenerator {
 
     private int DEFAULT_NUM_DECIMALS = 8;
     private CoordinateFormatter formatter = new CoordinateFormatter(DEFAULT_NUM_DECIMALS);
+    private Envelope clipBounds;
 
     /**
      * @param sf a feature
      * @param featureCaptionTemplate - template optionally containing ${placeholders}. Can be null.
-     * @return the feature
+     * @return the feature, or null if clipping removed its geometry
      * @throws IOException - IOException
      */
     public Feature buildFeature(SimpleFeature sf, String featureCaptionTemplate)
@@ -68,10 +75,10 @@ public class MapMLGenerator {
                         + "<th role=\"columnheader\" scope=\"col\">Property value</th>"
                         + "</tr></thead><tbody>");
 
-        org.locationtech.jts.geom.Geometry g = null;
+        Geometry g = null;
         for (AttributeDescriptor attr : sf.getFeatureType().getAttributeDescriptors()) {
             if (attr.getType() instanceof GeometryType) {
-                g = (org.locationtech.jts.geom.Geometry) (sf.getAttribute(attr.getName()));
+                g = (Geometry) (sf.getAttribute(attr.getName()));
             } else {
                 String escapedName = StringEscapeUtils.escapeXml10(attr.getLocalName());
                 String value =
@@ -90,11 +97,22 @@ public class MapMLGenerator {
         }
         sb.append("</tbody></table>");
         pc.setAnyElement(sb.toString());
+
+        // if clipping is enabled, clip the geometry and return null if the clip removed it entirely
+        if (g != null && !g.isEmpty() && clipBounds != null) {
+            MapMLGeometryClipper clipper = new MapMLGeometryClipper(g, clipBounds);
+            g = clipper.clipAndTag();
+            if (g == null || g.isEmpty()) return null;
+        }
         f.setGeometry(buildGeometry(g));
         return f;
     }
 
-    private class AttributeValueResolver {
+    public void setClipBounds(Envelope clipBounds) {
+        this.clipBounds = clipBounds;
+    }
+
+    private static class AttributeValueResolver {
 
         private final Constants constants = new Constants(PlaceholderConfigurerSupport.class);
         private final PropertyPlaceholderHelper helper =
@@ -107,6 +125,7 @@ public class MapMLGenerator {
         private final SimpleFeature feature;
         private final PropertyPlaceholderHelper.PlaceholderResolver resolver =
                 (name) -> resolveAttributeNames(name);
+
         /**
          * Wrap the feature to caption via this constructor
          *
@@ -115,6 +134,7 @@ public class MapMLGenerator {
         protected AttributeValueResolver(SimpleFeature feature) {
             this.feature = feature;
         }
+
         /**
          * Take an attribute name, return the attribute. "attribute" may be a band name. Band names
          * can have spaces in them, but these seem to require that the space be replaced by an
@@ -130,6 +150,7 @@ public class MapMLGenerator {
             if (attribute == null) return nullValue;
             return feature.getAttribute(attributeName).toString();
         }
+
         /**
          * Invokes PropertyPlaceholderHelper.replacePlaceholders, which iterates over the
          * userTemplate string to replace placeholders with attribute values of the attribute of
@@ -186,6 +207,7 @@ public class MapMLGenerator {
 
         return geom;
     }
+
     /**
      * @param g a JTS Geometry
      * @return
@@ -212,6 +234,7 @@ public class MapMLGenerator {
                 throw new IOException("Unknown geometry type: " + g.getGeometryType());
         }
     }
+
     /**
      * @param gc a JTS GeometryCollection
      * @return
@@ -227,6 +250,7 @@ public class MapMLGenerator {
         }
         return geomColl;
     }
+
     /**
      * @param mpg a JTS MultiPolygo
      * @return
@@ -240,6 +264,7 @@ public class MapMLGenerator {
         }
         return multiPoly;
     }
+
     /**
      * @param ml a JTS MultiLineString
      * @return
@@ -259,6 +284,7 @@ public class MapMLGenerator {
         }
         return multiLine;
     }
+
     /**
      * @param l a JTS LineString
      * @return
@@ -270,6 +296,7 @@ public class MapMLGenerator {
         buildCoordinates(l.getCoordinateSequence(), lsCoords);
         return lineString;
     }
+
     /**
      * @param mp a JTS MultiPoint
      * @return
@@ -281,6 +308,7 @@ public class MapMLGenerator {
         buildCoordinates(new CoordinateArraySequence(mp.getCoordinates()), mpCoords);
         return multiPoint;
     }
+
     /**
      * @param p a JTS Point
      * @return
@@ -291,22 +319,71 @@ public class MapMLGenerator {
                 .add(this.formatter.format(p.getX()) + " " + this.formatter.format(p.getY()));
         return point;
     }
+
     /**
      * @param p a JTS Polygon
      * @return
      */
     private org.geoserver.mapml.xml.Polygon buildPolygon(org.locationtech.jts.geom.Polygon p) {
+        if (p.getUserData() instanceof TaggedPolygon)
+            return buildTaggedPolygon((TaggedPolygon) p.getUserData());
+
         org.geoserver.mapml.xml.Polygon poly = new org.geoserver.mapml.xml.Polygon();
-        List<JAXBElement<List<String>>> ringList = poly.getThreeOrMoreCoordinatePairs();
-        List<String> coordList =
-                buildCoordinates(p.getExteriorRing().getCoordinateSequence(), null);
-        ringList.add(factory.createPolygonCoordinates(coordList));
+        List<Coordinates> ringList = poly.getThreeOrMoreCoordinatePairs();
+        String coordList = buildCoordinates(p.getExteriorRing().getCoordinateSequence());
+        ringList.add(new Coordinates(coordList));
         for (int i = 0; i < p.getNumInteriorRing(); i++) {
-            coordList = buildCoordinates(p.getInteriorRingN(i).getCoordinateSequence(), null);
-            ringList.add(factory.createPolygonCoordinates(coordList));
+            coordList = buildCoordinates(p.getInteriorRingN(i).getCoordinateSequence());
+            ringList.add(new Coordinates(coordList));
         }
         return poly;
     }
+
+    private org.geoserver.mapml.xml.Polygon buildTaggedPolygon(TaggedPolygon taggedPolygon) {
+        org.geoserver.mapml.xml.Polygon poly = new org.geoserver.mapml.xml.Polygon();
+        List<Coordinates> ringList = poly.getThreeOrMoreCoordinatePairs();
+        ringList.add(new Coordinates(buildTaggedLinestring(taggedPolygon.getBoundary())));
+        for (TaggedPolygon.TaggedLineString hole : taggedPolygon.getHoles()) {
+            ringList.add(new Coordinates(buildTaggedLinestring(hole)));
+        }
+        return poly;
+    }
+
+    private List<Object> buildTaggedLinestring(TaggedPolygon.TaggedLineString ls) {
+        List<Object> result = new ArrayList<>();
+        List<TaggedPolygon.TaggedCoordinateSequence> coordinates = ls.getCoordinates();
+        int last = coordinates.size();
+        for (int i = 0; i < last; i++) {
+            TaggedPolygon.TaggedCoordinateSequence cs = coordinates.get(i);
+            Object value = buildTaggedCoordinateSequence(cs);
+            // client oddity: needs spaces before and after the map-span elements to work
+            if (value instanceof String) {
+                if (i > 0) {
+                    value = " " + value;
+                }
+                if (i < last - 1) {
+                    value = value + " ";
+                }
+            }
+            result.add(value);
+        }
+
+        return result;
+    }
+
+    private Object buildTaggedCoordinateSequence(TaggedPolygon.TaggedCoordinateSequence cs) {
+        if (cs.isVisible()) {
+            return buildCoordinates(cs.getCoordinates());
+        } else {
+            return new Span(
+                    "bbox",
+                    buildCoordinates(
+                            new CoordinateArraySequence(
+                                    cs.getCoordinates().toArray(n -> new Coordinate[n])),
+                            null));
+        }
+    }
+
     /**
      * @param cs a JTS CoordinateSequence
      * @param coordList a list of coordinate strings to add to
@@ -322,6 +399,35 @@ public class MapMLGenerator {
         }
         return coordList;
     }
+
+    /**
+     * Builds a space separated representation of the coordinate sequence
+     *
+     * @param cs a JTS CoordinateSequence
+     * @return
+     */
+    private String buildCoordinates(CoordinateSequence cs) {
+        StringJoiner joiner = new StringJoiner(" ");
+        for (int i = 0; i < cs.size(); i++) {
+            joiner.add(this.formatter.format(cs.getX(i)) + " " + this.formatter.format(cs.getY(i)));
+        }
+        return joiner.toString();
+    }
+
+    /**
+     * Builds a space separated representation of the list of coordinates
+     *
+     * @param cs a Coordinate list
+     * @return
+     */
+    private String buildCoordinates(List<Coordinate> cs) {
+        StringJoiner joiner = new StringJoiner(" ");
+        for (Coordinate c : cs) {
+            joiner.add(this.formatter.format(c.getX()) + " " + this.formatter.format(c.getY()));
+        }
+        return joiner.toString();
+    }
+
     /** @param numDecimals */
     public void setNumDecimals(int numDecimals) {
         // make a copy of relevant object state
@@ -333,10 +439,12 @@ public class MapMLGenerator {
         this.formatter.setForcedDecimal(fd);
         this.formatter.setPadWithZeros(pad);
     }
+
     /** @param forcedDecimal */
     public void setForcedDecimal(boolean forcedDecimal) {
         this.formatter.setForcedDecimal(forcedDecimal);
     }
+
     /** @param padWithZeros */
     public void setPadWithZeros(boolean padWithZeros) {
         this.formatter.setPadWithZeros(padWithZeros);

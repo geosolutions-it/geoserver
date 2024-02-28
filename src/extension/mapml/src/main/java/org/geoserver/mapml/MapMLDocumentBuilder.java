@@ -57,6 +57,7 @@ import org.geoserver.mapml.xml.InputType;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.Meta;
+import org.geoserver.mapml.xml.MimeType;
 import org.geoserver.mapml.xml.Option;
 import org.geoserver.mapml.xml.PositionType;
 import org.geoserver.mapml.xml.ProjType;
@@ -1052,10 +1053,10 @@ public class MapMLDocumentBuilder {
             generateWMSClientLinks(mapMLLayerMetadata);
         }
 
-        // query inputs
+        // Query inputs: query links for WMS with images, and WMTS always
+        // (for WMS features, the client is self sufficient, while it's not with tiled features yet)
         if (mapMLLayerMetadata.isQueryable()
-                && !mapMLLayerMetadata
-                        .isUseFeatures()) { // No query links for feature representations
+                && (!mapMLLayerMetadata.isUseFeatures() || mapMLLayerMetadata.isUseTiles())) {
             if (mapMLLayerMetadata.isUseTiles() && mapMLLayerMetadata.isTileLayerExists()) {
                 generateWMTSQueryClientLinks(mapMLLayerMetadata);
             } else {
@@ -1126,7 +1127,13 @@ public class MapMLDocumentBuilder {
         params.put("tilematrix", "{z}");
         params.put("TileCol", "{x}");
         params.put("TileRow", "{y}");
-        params.put("format", imageFormat);
+        if (mapMLLayerMetadata.isUseFeatures()) {
+            params.put("format", MAPML_MIME_TYPE);
+            params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
+            tileLink.setType(MimeType.TEXT_MAPML);
+        } else {
+            params.put("format", imageFormat);
+        }
         String urlTemplate = "";
         try {
             urlTemplate =
@@ -1250,7 +1257,13 @@ public class MapMLDocumentBuilder {
             params.put("elevation", "{elevation}");
         }
         params.put("bbox", "{txmin},{tymin},{txmax},{tymax}");
-        params.put("format", imageFormat);
+        if (mapMLLayerMetadata.isUseFeatures()) {
+            params.put("format", MAPML_MIME_TYPE);
+            params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
+            tileLink.setType(MimeType.TEXT_MAPML);
+        } else {
+            params.put("format", imageFormat);
+        }
         params.put("transparent", Boolean.toString(mapMLLayerMetadata.isTransparent()));
         params.put("width", "256");
         params.put("height", "256");

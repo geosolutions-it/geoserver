@@ -112,6 +112,7 @@ public class MapMLFeaturesBuilder {
         return MapMLFeatureUtil.featureCollectionToMapML(
                 reprojectedFeatureCollection,
                 layerInfo,
+                getMapRequest.getBbox(), // clip on bound
                 crs,
                 null, // for WMS GetMap we don't include alternate projections
                 getNumberOfDecimals(meta),

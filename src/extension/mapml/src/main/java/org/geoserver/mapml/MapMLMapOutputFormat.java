@@ -6,6 +6,7 @@ package org.geoserver.mapml;
 
 import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FORMAT_OPTIONS;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -13,6 +14,8 @@ import java.util.List;
 import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import org.geoserver.config.GeoServer;
+import org.geoserver.gwc.layer.GeoServerTileLayer;
+import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.platform.ServiceException;
@@ -22,11 +25,13 @@ import org.geoserver.wms.MapProducerCapabilities;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.WebMap;
+import org.geoserver.wms.map.RawMap;
 import org.geoserver.wms.map.StyleQueryUtil;
 import org.geotools.api.data.Query;
 
 /** Handles a GetMap request that for a map in MapML format. */
 public class MapMLMapOutputFormat implements GetMapOutputFormat {
+    private final MapMLEncoder encoder;
     private WMS wms;
     private GeoServer geoServer;
     private final Set<String> OUTPUT_FORMATS =
@@ -39,9 +44,10 @@ public class MapMLMapOutputFormat implements GetMapOutputFormat {
      *
      * @param wms the WMS
      */
-    public MapMLMapOutputFormat(WMS wms, GeoServer geoServer) {
+    public MapMLMapOutputFormat(WMS wms, GeoServer geoServer, MapMLEncoder encoder) {
         this.wms = wms;
         this.geoServer = geoServer;
+        this.encoder = encoder;
     }
 
     /**
@@ -55,9 +61,8 @@ public class MapMLMapOutputFormat implements GetMapOutputFormat {
     @Override
     public WebMap produceMap(WMSMapContent mapContent) throws ServiceException, IOException {
         Request request = Dispatcher.REQUEST.get();
-        HttpServletRequest httpServletRequest = request.getHttpRequest();
-        String formatOptions = httpServletRequest.getParameter("format_options");
-        if (formatOptions != null && formatOptions.contains(MAPML_FEATURE_FORMAT_OPTIONS)) {
+        Mapml mapMLDocument;
+        if (isFeaturesRequest(request)) {
             if (mapContent.layers() != null && mapContent.layers().size() > 1) {
                 throw new ServiceException(
                         "MapML WMS Feature format does not currently support Multiple Feature Type output.");
@@ -79,12 +84,28 @@ public class MapMLMapOutputFormat implements GetMapOutputFormat {
             }
             MapMLFeaturesBuilder mapMLFeaturesBuilder =
                     new MapMLFeaturesBuilder(mapContent, geoServer, query);
-            return new MapMLMap(mapContent, mapMLFeaturesBuilder.getMapMLDocument());
+            mapMLDocument = mapMLFeaturesBuilder.getMapMLDocument();
         } else {
             MapMLDocumentBuilder mapMLDocumentBuilder =
-                    new MapMLDocumentBuilder(mapContent, wms, geoServer, httpServletRequest);
-            return new MapMLMap(mapContent, mapMLDocumentBuilder.getMapMLDocument());
+                    new MapMLDocumentBuilder(mapContent, wms, geoServer, request.getHttpRequest());
+            mapMLDocument = mapMLDocumentBuilder.getMapMLDocument();
         }
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        encoder.encode(mapMLDocument, bos);
+        return new RawMap(mapContent, bos, MapMLConstants.MAPML_MIME_TYPE);
+    }
+
+    /** Checks if the request should dump features instead of HTML */
+    private static boolean isFeaturesRequest(Request request) {
+        HttpServletRequest httpServletRequest = request.getHttpRequest();
+
+        // case 1: the format_options parameter is set to include the mapml feature format
+        String formatOptions = httpServletRequest.getParameter("format_options");
+        if (formatOptions != null && formatOptions.contains(MAPML_FEATURE_FORMAT_OPTIONS))
+            return true;
+
+        // case 2: it's a GWC tile seeding request, can only be a features request
+        return "true".equals(request.getRawKvp().get(GeoServerTileLayer.GWC_SEED_INTERCEPT_TOKEN));
     }
 
     @Override

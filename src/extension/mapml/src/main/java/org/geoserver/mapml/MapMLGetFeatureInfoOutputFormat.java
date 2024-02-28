@@ -149,9 +149,12 @@ public class MapMLGetFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat 
                                     featureBuilder.buildFeature(
                                             feature,
                                             captionTemplates.get(fc.getSchema().getName()));
-                            // might be interesting to be able to put features
-                            // from different layers into a layer-specific div
-                            features.add(f);
+                            // returning null features is WMS specific, but just in case, check
+                            if (f != null) {
+                                // might be interesting to be able to put features
+                                // from different layers into a layer-specific div
+                                features.add(f);
+                            }
                         } catch (IllegalStateException e) {
                             LOGGER.log(Level.INFO, "Error transforming feature.");
                         }
