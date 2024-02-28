@@ -403,7 +403,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                         "layerGroup" + "," + MockData.POLYGONS.getLocalPart(),
                         null,
                         null,
-                        null,
+                        "-20000000,-20000000,20000000,20000000",
                         "EPSG:3857",
                         null,
                         false);
@@ -417,7 +417,8 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 parsedSelfLink,
                 hasEntry(
                         CoreMatchers.equalTo("bbox"),
-                        new BboxMatcher(new Envelope(0, 1, 0, 1), 1)));
+                        new BboxMatcher(
+                                new Envelope(-20000000, 20000000, -20000000, 20000000), 1)));
         assertThat(parsedSelfLink, hasEntry("width", "150"));
         assertThat(parsedSelfLink, hasEntry("height", "150"));
 
@@ -436,9 +437,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 parsedAlternateLink,
                 hasEntry(
                         CoreMatchers.equalTo("bbox"),
-                        new BboxMatcher(
-                                new Envelope(0, 8.983152841195214E-6, 0, 8.983152841195214E-6),
-                                1e-2)));
+                        new BboxMatcher(new Envelope(-179.7, 179.7, -85, 85), 1e-1)));
         assertEquals(
                 "There should be one extent object that combines the attributes of all layers",
                 1,

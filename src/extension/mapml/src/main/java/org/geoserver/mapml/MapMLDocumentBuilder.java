@@ -57,6 +57,7 @@ import org.geoserver.mapml.xml.InputType;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.Meta;
+import org.geoserver.mapml.xml.MimeType;
 import org.geoserver.mapml.xml.Option;
 import org.geoserver.mapml.xml.PositionType;
 import org.geoserver.mapml.xml.ProjType;
@@ -1213,7 +1214,13 @@ public class MapMLDocumentBuilder {
             params.put("elevation", "{elevation}");
         }
         params.put("bbox", "{txmin},{tymin},{txmax},{tymax}");
-        params.put("format", imageFormat);
+        if (mapMLLayerMetadata.isUseFeatures()) {
+            params.put("format", MAPML_MIME_TYPE);
+            params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
+            tileLink.setType(MimeType.TEXT_MAPML);
+        } else {
+            params.put("format", imageFormat);
+        }
         params.put("transparent", Boolean.toString(mapMLLayerMetadata.isTransparent()));
         params.put("width", "256");
         params.put("height", "256");
@@ -1625,7 +1632,8 @@ public class MapMLDocumentBuilder {
                                 escapeHtml4(proj),
                                 styleName,
                                 format))
-                .append("\" checked></layer->\n")
+                .append("\" checked>")
+                .append("</layer->\n")
                 .append("</mapml-viewer>\n")
                 .append("</body>\n")
                 .append("</html>");

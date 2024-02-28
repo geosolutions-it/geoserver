@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -25,6 +24,7 @@ import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.MultiPolygon;
+import org.geoserver.mapml.xml.Polygon;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMSMapContent;
@@ -108,9 +108,8 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                 "Basic Polygons layer has three features, so one should show up in the conversion",
                 3,
                 mapmlFeatures.getBody().getFeatures().size());
-        assertEquals(
-                "Polygons layer coordinates should match original feature's coordinates",
-                "0,-1,1,0,0,1,-1,0,0,-1",
+
+        Polygon polygon =
                 ((MultiPolygon)
                                 mapmlFeatures
                                         .getBody()
@@ -119,9 +118,12 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                                         .getGeometry()
                                         .getGeometryContent()
                                         .getValue())
-                        .getPolygon().get(0).getThreeOrMoreCoordinatePairs().get(0).getValue()
-                                .stream()
-                                .collect(Collectors.joining(",")));
+                        .getPolygon()
+                        .get(0);
+        assertEquals(
+                "Polygons layer coordinates should match original feature's coordinates",
+                "0 -1 1 0 0 1 -1 0 0 -1",
+                polygon.getThreeOrMoreCoordinatePairs().get(0).getCoordinates().get(0));
     }
 
     @Test

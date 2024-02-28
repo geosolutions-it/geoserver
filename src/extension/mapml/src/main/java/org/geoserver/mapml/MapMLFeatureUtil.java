@@ -37,6 +37,7 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.metadata.iso.citation.Citations;
 import org.geotools.referencing.CRS;
+import org.locationtech.jts.geom.Envelope;
 
 public class MapMLFeatureUtil {
     /**
@@ -44,6 +45,7 @@ public class MapMLFeatureUtil {
      *
      * @param featureCollection the feature collection to be converted to MapML
      * @param layerInfo metadata for the feature class
+     * @param clipBounds the bounds to clip the features to (or null if not clipping is desired)
      * @param requestCRS the CRS requested by the client
      * @param alternateProjections alternate projections for the feature collection
      * @param numDecimals number of decimal places to use for coordinates
@@ -55,6 +57,7 @@ public class MapMLFeatureUtil {
     public static Mapml featureCollectionToMapML(
             FeatureCollection featureCollection,
             LayerInfo layerInfo,
+            Envelope clipBounds,
             CoordinateReferenceSystem requestCRS,
             List<Link> alternateProjections,
             int numDecimals,
@@ -89,6 +92,9 @@ public class MapMLFeatureUtil {
         if (alternateProjections != null) {
             links.addAll(alternateProjections);
         }
+        if (clipBounds != null) {
+            head.setStyle(".bbox{display:none}\n.polygon{fill:yellow; stroke: orange}");
+        }
 
         String licenseLink = layerMeta.get("mapml.licenseLink", String.class);
         String licenseTitle = layerMeta.get("mapml.licenseTitle", String.class);
@@ -116,13 +122,16 @@ public class MapMLFeatureUtil {
         featureBuilder.setNumDecimals(numDecimals);
         featureBuilder.setForcedDecimal(forcedDecimal);
         featureBuilder.setPadWithZeros(padWithZeros);
+        featureBuilder.setClipBounds(clipBounds);
         try (SimpleFeatureIterator iterator = fc.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
                 // convert feature to xml
 
                 Feature f = featureBuilder.buildFeature(feature, fCaptionTemplate);
-                features.add(f);
+                if (f != null) {
+                    features.add(f);
+                }
             }
         }
         return mapml;
