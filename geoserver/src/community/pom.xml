@@ -247,6 +247,7 @@
         <module>vector-mosaic</module>
         <module>datadir-catalog-loader</module>
         <module>wps-longitudinal-profile</module>
+        <module>graticule</module>
       </modules>
     </profile>
     <profile>
@@ -698,6 +699,24 @@
       <id>wps-longitudinal-profile</id>
       <modules>
         <module>wps-longitudinal-profile</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>graticule</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <descriptors>
+                <descriptor>release/ext-graticule.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+      <modules>
+        <module>graticule</module>
       </modules>
     </profile>
   </profiles>

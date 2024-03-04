@@ -1,0 +1,17 @@
+<layer>
+  <name>graticules-light</name>
+  <id>LayerInfoImpl--448e112d:18d16c4f2f1:-7ff6</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--35ddc404:18cf8ac32ab:-3f55</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--448e112d:18d16c4f2f1:-7ff7</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2024-01-17 09:36:42.939 UTC</dateCreated>
+  <dateModified>2024-01-17 09:41:17.711 UTC</dateModified>
+</layer>
