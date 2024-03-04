@@ -1,0 +1,17 @@
+<layer>
+  <name>graticules-dark</name>
+  <id>LayerInfoImpl-3783ffc7:18cf85ac9f9:-7ff9</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-3783ffc7:18cf85ac9f9:-7ff8</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-3783ffc7:18cf85ac9f9:-7ffa</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2024-01-11 11:50:32.789 UTC</dateCreated>
+  <dateModified>2024-01-17 09:36:58.322 UTC</dateModified>
+</layer>
