@@ -134,7 +134,6 @@ public class MapMLDocumentBuilder {
 
     private Input zoomInput;
 
-    private boolean useFeaturesAllLayers = true;
     private List<MapMLLayerMetadata> mapMLLayerMetadataList = new ArrayList<>();
 
     private Mapml mapml;
@@ -285,7 +284,6 @@ public class MapMLDocumentBuilder {
             MapMLLayerMetadata mapMLLayerMetadata = layersToOneMapMLLayerMetadata(layers);
             mapMLLayerMetadataList.add(mapMLLayerMetadata);
         }
-        useFeaturesAllLayers = allLayersUsingFeatures(layers);
         // populate Map-wide variables using the first layer
         if (!mapMLLayerMetadataList.isEmpty()) {
             defaultStyle =
@@ -355,6 +353,12 @@ public class MapMLDocumentBuilder {
         MapMLLayerMetadata mapMLLayerMetadata = new MapMLLayerMetadata();
         mapMLLayerMetadata.setLayerMeta(new MetadataMap());
         mapMLLayerMetadata.setUseTiles(false);
+        boolean useFeatures = false;
+        if (layers.size() == 1) {
+            useFeatures =
+                    useFeatures(layers.get(0), layers.get(0).getPublishedInfo().getMetadata());
+        }
+        mapMLLayerMetadata.setUseFeatures(useFeatures);
         mapMLLayerMetadata.setLayerName(layersCommaDelimited);
         mapMLLayerMetadata.setStyleName(stylesCommaDelimited);
         mapMLLayerMetadata.setTimeEnabled(false);
@@ -367,28 +371,6 @@ public class MapMLDocumentBuilder {
         mapMLLayerMetadata.setProjType(projType);
 
         return mapMLLayerMetadata;
-    }
-
-    /**
-     * Check if all layers in the request use features
-     *
-     * @param layers List of RawLayer objects
-     * @return boolean
-     */
-    private boolean allLayersUsingFeatures(List<RawLayer> layers) {
-        for (RawLayer layer : layers) {
-            boolean useFeatures =
-                    Optional.ofNullable(layer.getPublishedInfo())
-                            .filter(l -> l instanceof LayerInfo)
-                            .map(l -> ((LayerInfo) l).getResource())
-                            .map(r -> r.getMetadata().get(MAPML_USE_FEATURES, Boolean.class))
-                            .orElse(false);
-            boolean isVector = (PublishedType.VECTOR == layer.getPublishedInfo().getType());
-            if (!useFeatures || !isVector) {
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
@@ -565,7 +547,7 @@ public class MapMLDocumentBuilder {
                                         .getGridSubset(projType.value())
                                 != null;
         boolean useTiles = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_TILES, Boolean.class));
-        boolean useFeatures = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_FEATURES, Boolean.class));
+        boolean useFeatures = useFeatures(layer, layerMeta);
 
         return new MapMLLayerMetadata(
                 layerInfo,
@@ -583,6 +565,11 @@ public class MapMLDocumentBuilder {
                 tileLayerExists,
                 useTiles,
                 useFeatures);
+    }
+
+    private static boolean useFeatures(RawLayer layer, MetadataMap layerMeta) {
+        return (Boolean.TRUE.equals(layerMeta.get(MAPML_USE_FEATURES, Boolean.class)))
+                && (PublishedType.VECTOR == layer.getPublishedInfo().getType());
     }
 
     /**
@@ -1030,7 +1017,8 @@ public class MapMLDocumentBuilder {
 
         // query inputs
         if (mapMLLayerMetadata.isQueryable()
-                && !useFeaturesAllLayers) { // No query links for feature representations
+                && !mapMLLayerMetadata
+                        .isUseFeatures()) { // No query links for feature representations
             if (mapMLLayerMetadata.isUseTiles() && mapMLLayerMetadata.isTileLayerExists()) {
                 generateWMTSQueryClientLinks(mapMLLayerMetadata);
             } else {
@@ -1353,7 +1341,7 @@ public class MapMLDocumentBuilder {
 
         // image link
         Link imageLink = new Link();
-        if (useFeaturesAllLayers) {
+        if (mapMLLayerMetadata.isUseFeatures()) {
             imageLink.setRel(RelType.FEATURES);
         } else {
             imageLink.setRel(RelType.IMAGE);
@@ -1373,7 +1361,7 @@ public class MapMLDocumentBuilder {
             params.put("elevation", "{elevation}");
         }
         params.put("bbox", "{xmin},{ymin},{xmax},{ymax}");
-        if (useFeaturesAllLayers) {
+        if (mapMLLayerMetadata.isUseFeatures()) {
             params.put("format", MAPML_MIME_TYPE);
             params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
         } else {
@@ -1636,8 +1624,7 @@ public class MapMLDocumentBuilder {
                                 height,
                                 escapeHtml4(proj),
                                 styleName,
-                                format,
-                                useFeaturesAllLayers))
+                                format))
                 .append("\" checked></layer->\n")
                 .append("</mapml-viewer>\n")
                 .append("</body>\n")
@@ -1653,8 +1640,7 @@ public class MapMLDocumentBuilder {
             int width,
             String proj,
             String styleName,
-            Optional<Object> format,
-            Boolean useFeaturesAllLayers) {
+            Optional<Object> format) {
         Map<String, String> kvp = new LinkedHashMap<>();
         kvp.put("LAYERS", escapeHtml4(layer));
         kvp.put("BBOX", toCommaDelimitedBbox(projectedBbox));
@@ -1667,9 +1653,7 @@ public class MapMLDocumentBuilder {
                 MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION
                         + ":"
                         + escapeHtml4((String) format.orElse("image/png"));
-        if (!useFeaturesAllLayers) {
-            kvp.put("format_options", formatOptions);
-        }
+        kvp.put("format_options", formatOptions);
         kvp.put("SERVICE", "WMS");
         kvp.put("REQUEST", "GetMap");
         kvp.put("VERSION", "1.3.0");

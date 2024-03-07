@@ -271,6 +271,10 @@ public class MapMLWMSTest extends MapMLTestSupport {
 
     @Test
     public void testMapMLUseFeaturesLinks() throws Exception {
+        GeoServer geoServer = getGeoServer();
+        WMSInfo wms = geoServer.getService(WMSInfo.class);
+        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
+        geoServer.save(wms);
 
         Catalog cat = getCatalog();
         LayerInfo li = cat.getLayerByName(MockData.POLYGONS.getLocalPart());
