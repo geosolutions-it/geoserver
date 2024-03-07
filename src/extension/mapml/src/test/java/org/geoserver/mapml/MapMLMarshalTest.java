@@ -55,6 +55,6 @@ public class MapMLMarshalTest {
         assertThat(
                 writer.toString(),
                 Matchers.containsString(
-                        "<map-coordinates><map-span class=\"bbox\">5 5 10 5</map-span> 10 5 10 10 5 10<map-span class=\"bbox\">5 10 5 5</map-span></map-coordinates>"));
+                        "<map-coordinates><map-span class=\"bbox\">5 5 10 5</map-span> 10 5 10 10 5 10 <map-span class=\"bbox\">5 10 5 5</map-span></map-coordinates>"));
     }
 }

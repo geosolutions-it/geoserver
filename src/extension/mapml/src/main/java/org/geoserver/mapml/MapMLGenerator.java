@@ -359,7 +359,8 @@ public class MapMLGenerator {
             if (value instanceof String) {
                 if (i > 0) {
                     value = " " + value;
-                } else if (i < last - 1) {
+                }
+                if (i < last - 1) {
                     value = value + " ";
                 }
             }
