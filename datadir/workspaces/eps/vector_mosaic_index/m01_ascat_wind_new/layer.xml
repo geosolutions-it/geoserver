@@ -1,0 +1,16 @@
+<layer>
+  <name>m01_ascat_wind_new</name>
+  <id>LayerInfoImpl-27257b9a:18df984ca2a:-7ff8</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-7464baef:15ea9351664:-7ffe</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-27257b9a:18df984ca2a:-7ff9</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2024-03-01 10:28:00.189 UTC</dateCreated>
+</layer>
