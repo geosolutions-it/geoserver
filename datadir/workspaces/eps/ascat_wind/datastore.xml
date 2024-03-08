@@ -1,0 +1,17 @@
+<dataStore>
+  <id>DataStoreInfoImpl-6b49e442:18de5b6be56:-7ffd</id>
+  <name>ascat_wind</name>
+  <type>Vector Mosaic Data Store</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff5</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="preferredDataStoreSPI">org.geotools.data.flatgeobuf.FlatGeobufDataStoreFactory</entry>
+    <entry key="delegateStoreName">eps:vector_mosaic_index</entry>
+    <entry key="namespace">http://www.eumetsat.int/eps</entry>
+  </connectionParameters>
+  <__default>false</__default>
+  <dateCreated>2024-02-26 14:11:36.228 UTC</dateCreated>
+  <disableOnConnFailure>false</disableOnConnFailure>
+</dataStore>
