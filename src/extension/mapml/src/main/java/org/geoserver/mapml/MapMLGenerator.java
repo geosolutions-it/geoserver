@@ -47,7 +47,7 @@ public class MapMLGenerator {
     /**
      * @param sf a feature
      * @param featureCaptionTemplate - template optionally containing ${placeholders}. Can be null.
-     * @return the feature
+     * @return the feature, or null if clipping removed its geometry
      * @throws IOException - IOException
      */
     public Feature buildFeature(SimpleFeature sf, String featureCaptionTemplate)
@@ -102,6 +102,7 @@ public class MapMLGenerator {
         if (g != null && !g.isEmpty() && clipBounds != null) {
             MapMLGeometryClipper clipper = new MapMLGeometryClipper(g, clipBounds);
             g = clipper.clipAndTag();
+            if (g == null || g.isEmpty()) return null;
         }
         f.setGeometry(buildGeometry(g));
         return f;
