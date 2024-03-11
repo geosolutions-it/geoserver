@@ -16,6 +16,9 @@ import org.junit.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.MultiPoint;
+import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.io.ParseException;
 import org.locationtech.jts.io.WKTReader;
@@ -33,13 +36,15 @@ public class MapMLGeometryClipperTest {
 
     private Polygon world;
 
+    private WKTReader wktReader = new WKTReader();
+
     @Before
     public void setupTestGeometries() throws Exception {
         world = getPolygon("POLYGON((-180 -90, -180 90, 180 90, 180 -90, -180 -90))");
     }
 
-    private static Polygon getPolygon(String wkt) throws ParseException {
-        return (Polygon) new WKTReader().read(wkt);
+    private Polygon getPolygon(String wkt) throws ParseException {
+        return (Polygon) wktReader.read(wkt);
     }
 
     @Test
@@ -119,5 +124,38 @@ public class MapMLGeometryClipperTest {
             LOGGER.info("Tagged polygon: " + tagged);
         }
         return tagged;
+    }
+
+    @Test
+    public void testClipMultiLineString() throws Exception {
+        MultiLineString g =
+                (MultiLineString)
+                        wktReader.read("MULTILINESTRING((0 0, 15 15), (20 20, 30 30), (5 5, 7 5))");
+        MapMLGeometryClipper tagger = new MapMLGeometryClipper(g, new Envelope(5, 15, -5, 15));
+        Geometry geometry = tagger.clipAndTag();
+        assertEquals(wktReader.read("MULTILINESTRING ((5 5, 15 15), (5 5, 7 5))"), geometry);
+    }
+
+    @Test
+    public void testClipMultiPoint() throws Exception {
+        MultiPoint g =
+                (MultiPoint) wktReader.read("MULTIPOINT((0 0), (0 10), (10 10), (10 0), (0 0))");
+        MapMLGeometryClipper tagger = new MapMLGeometryClipper(g, new Envelope(5, 15, -5, 15));
+        Geometry geometry = tagger.clipAndTag();
+        assertEquals(wktReader.read("MULTIPOINT((10 10), (10 0))"), geometry);
+    }
+
+    @Test
+    public void testClipMultiPolygon() throws Exception {
+        MultiPolygon g =
+                (MultiPolygon)
+                        wktReader.read(
+                                "MULTIPOLYGON(((0 0, 0 20, 20 20, 20 0, 0 0)), ((5 5, 5 7, 7 7, 7 5, 5 5)),  ((25 25, 25 27, 27 27, 27 25, 25 25)))");
+        MapMLGeometryClipper tagger = new MapMLGeometryClipper(g, new Envelope(5, 15, -5, 15));
+        Geometry geometry = tagger.clipAndTag();
+        assertEquals(
+                wktReader.read(
+                        "MULTIPOLYGON (((5 0, 5 15, 15 15, 15 0, 5 0)), ((5 5, 5 7, 7 7, 7 5, 5 5)))"),
+                geometry);
     }
 }

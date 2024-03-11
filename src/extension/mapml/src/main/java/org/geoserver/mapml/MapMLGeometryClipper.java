@@ -17,9 +17,13 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryCollection;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.LinearRing;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 
 /**
@@ -71,10 +75,7 @@ class MapMLGeometryClipper {
                 Geometry g = clippedGeom.getGeometryN(i);
                 if (!g.isEmpty()) geometries.add(g);
             }
-            clippedGeom =
-                    clippedGeom
-                            .getFactory()
-                            .createGeometryCollection(geometries.toArray(n -> new Geometry[n]));
+            clippedGeom = collectMultiGeometry(clippedGeom, geometries);
         }
 
         // tag if necessary
@@ -83,6 +84,20 @@ class MapMLGeometryClipper {
                 Geometry g = clippedGeom.getGeometryN(i);
                 if (g instanceof Polygon && !g.isEmpty()) tag((Polygon) g);
             }
+        }
+        return clippedGeom;
+    }
+
+    private static Geometry collectMultiGeometry(Geometry clippedGeom, List<Geometry> geometries) {
+        GeometryFactory fac = clippedGeom.getFactory();
+        if (clippedGeom instanceof MultiPolygon) {
+            clippedGeom = fac.createMultiPolygon(geometries.toArray(n -> new Polygon[n]));
+        } else if (clippedGeom instanceof MultiLineString) {
+            clippedGeom = fac.createMultiLineString(geometries.toArray(n -> new LineString[n]));
+        } else if (clippedGeom instanceof MultiPoint) {
+            clippedGeom = fac.createMultiPoint((Point[]) geometries.toArray(n -> new Point[n]));
+        } else {
+            clippedGeom = fac.createGeometryCollection(geometries.toArray(n -> new Geometry[n]));
         }
         return clippedGeom;
     }
