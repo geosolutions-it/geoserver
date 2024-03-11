@@ -12,7 +12,7 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -Dproject.build.sourceEncoding=UTF-8 -Dproject.reporting.outputEncoding=UTF-8 -Djava.awt.headless=true -Dtest.maxHeapSize=512M -B -U -T2 -DskipTests=true"
-  MAVEN_ACTIVE_PROFILES: "-Pauthkey -Pcontrol-flow -Pcss -Pfeature-pregeneralized -Pimporter -Plibjpeg-turbo -Pmonitor -Pnetcdf -Pnetcdf-out -Pwps -Pimporter-jdbc -Pncwms -Pghrsst -Pwmts-multi-dimensional -Pwps-download -Pwps-jdbc -Pgrib -Pvector-mosaic -Pflatgeobuf"
+  MAVEN_ACTIVE_PROFILES: "-Pauthkey -Pcontrol-flow -Pcss -Pfeature-pregeneralized -Pimporter -Plibjpeg-turbo -Pmonitor -Pnetcdf -Pnetcdf-out -Pwps -Pimporter-jdbc -Pncwms -Pghrsst -Pwmts-multi-dimensional -Pwps-download -Pwps-jdbc -Pgrib -Pgraticule"
   CI_ENVIRONMENT_NAME: "geosolutions"
   TAG_NAME: "2.16.x-eows_${CI_PIPELINE_ID}"
   TAG_LATEST: "gs-latest"
