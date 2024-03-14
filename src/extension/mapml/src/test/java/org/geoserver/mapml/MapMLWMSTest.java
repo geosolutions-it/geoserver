@@ -1231,9 +1231,14 @@ public class MapMLWMSTest extends MapMLTestSupport {
         Map<String, Feature> featureMap =
                 features.stream().collect(Collectors.toMap(Feature::getId, Function.identity()));
 
+        // check the features are there, but the attributes have been skipped
         assertThat(
                 featureMap.keySet(),
                 Matchers.hasItems("RoadSegments.1107532045088", "RoadSegments.1107532045091"));
+        Feature f1 = featureMap.get("RoadSegments.1107532045088");
+        assertNull(f1.getProperties());
+        Feature f2 = featureMap.get("RoadSegments.1107532045088");
+        assertNull(f2.getProperties());
     }
 
     private void enableTileCaching(QName layerName, Catalog catalog) {

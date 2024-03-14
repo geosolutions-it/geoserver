@@ -4,15 +4,16 @@
  */
 package org.geoserver.mapml;
 
-import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FORMAT_OPTIONS;
+import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FO;
+import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
 import org.geoserver.config.GeoServer;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.mapml.xml.Mapml;
@@ -82,9 +83,9 @@ public class MapMLMapOutputFormat implements GetMapOutputFormat {
                 }
                 query = queries.get(0);
             }
-            MapMLFeaturesBuilder mapMLFeaturesBuilder =
-                    new MapMLFeaturesBuilder(mapContent, geoServer, query);
-            mapMLDocument = mapMLFeaturesBuilder.getMapMLDocument();
+            MapMLFeaturesBuilder builder = new MapMLFeaturesBuilder(mapContent, geoServer, query);
+            builder.setSkipAttributes(isSkipAttributes(request));
+            mapMLDocument = builder.getMapMLDocument();
         } else {
             MapMLDocumentBuilder mapMLDocumentBuilder =
                     new MapMLDocumentBuilder(mapContent, wms, geoServer, request.getHttpRequest());
@@ -97,15 +98,30 @@ public class MapMLMapOutputFormat implements GetMapOutputFormat {
 
     /** Checks if the request should dump features instead of HTML */
     private static boolean isFeaturesRequest(Request request) {
-        HttpServletRequest httpServletRequest = request.getHttpRequest();
-
         // case 1: the format_options parameter is set to include the mapml feature format
-        String formatOptions = httpServletRequest.getParameter("format_options");
-        if (formatOptions != null && formatOptions.contains(MAPML_FEATURE_FORMAT_OPTIONS))
-            return true;
+        if (getBoleanFormatOption(request, MAPML_FEATURE_FO)) return true;
 
         // case 2: it's a GWC tile seeding request, can only be a features request
+        return isGWCTiledRequest(request);
+    }
+
+    private static boolean isSkipAttributes(Request request) {
+        // case 1: the format_options parameter is set to include the mapml feature format
+        if (getBoleanFormatOption(request, MAPML_SKIP_ATTRIBUTES_FO)) return true;
+
+        // case 2: it's a GWC tile seeding request, we want to skip attributes as well
+        return isGWCTiledRequest(request);
+    }
+
+    private static boolean isGWCTiledRequest(Request request) {
         return "true".equals(request.getRawKvp().get(GeoServerTileLayer.GWC_SEED_INTERCEPT_TOKEN));
+    }
+
+    /** Tests if the specified format option is present and evaluates to true */
+    private static boolean getBoleanFormatOption(Request request, String key) {
+        Map formatOptions = (Map) request.getKvp().get("format_options");
+        if (formatOptions != null && Boolean.valueOf((String) formatOptions.get(key))) return true;
+        return false;
     }
 
     @Override

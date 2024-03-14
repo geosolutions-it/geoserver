@@ -44,6 +44,8 @@ public class MapMLGenerator {
     private CoordinateFormatter formatter = new CoordinateFormatter(DEFAULT_NUM_DECIMALS);
     private Envelope clipBounds;
 
+    private boolean skipAttributes;
+
     /**
      * @param sf a feature
      * @param featureCaptionTemplate - template optionally containing ${placeholders}. Can be null.
@@ -56,8 +58,6 @@ public class MapMLGenerator {
         Feature f = new Feature();
         f.setId(sf.getID());
         f.setClazz(sf.getFeatureType().getTypeName());
-        PropertyContent pc = new PropertyContent();
-        f.setProperties(pc);
         if (featureCaptionTemplate != null && !featureCaptionTemplate.isEmpty()) {
             AttributeValueResolver attributeResolver = new AttributeValueResolver(sf);
             String caption =
@@ -68,18 +68,34 @@ public class MapMLGenerator {
             }
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(
-                "<table xmlns=\"http://www.w3.org/1999/xhtml\"><thead><tr>"
-                        + "<th role=\"columnheader\" scope=\"col\">Property name</th>"
-                        + "<th role=\"columnheader\" scope=\"col\">Property value</th>"
-                        + "</tr></thead><tbody>");
+        if (!skipAttributes) {
+            PropertyContent pc = new PropertyContent();
+            f.setProperties(pc);
+            pc.setAnyElement(collectAttributes(sf));
+        }
 
-        Geometry g = null;
+        // if clipping is enabled, clip the geometry and return null if the clip removed it entirely
+        Geometry g = (Geometry) sf.getDefaultGeometry();
+        if (g != null && !g.isEmpty() && clipBounds != null) {
+            MapMLGeometryClipper clipper = new MapMLGeometryClipper(g, clipBounds);
+            g = clipper.clipAndTag();
+            if (g == null || g.isEmpty()) return null;
+        }
+        f.setGeometry(buildGeometry(g));
+        return f;
+    }
+
+    /** Collects the attributes representation as a HTML table */
+    private String collectAttributes(SimpleFeature sf) {
+        StringBuilder sb =
+                new StringBuilder(
+                        "<table xmlns=\"http://www.w3.org/1999/xhtml\"><thead><tr>"
+                                + "<th role=\"columnheader\" scope=\"col\">Property name</th>"
+                                + "<th role=\"columnheader\" scope=\"col\">Property value</th>"
+                                + "</tr></thead><tbody>");
+
         for (AttributeDescriptor attr : sf.getFeatureType().getAttributeDescriptors()) {
-            if (attr.getType() instanceof GeometryType) {
-                g = (Geometry) (sf.getAttribute(attr.getName()));
-            } else {
+            if (!(attr.getType() instanceof GeometryType)) {
                 String escapedName = StringEscapeUtils.escapeXml10(attr.getLocalName());
                 String value =
                         sf.getAttribute(attr.getName()) != null
@@ -96,20 +112,17 @@ public class MapMLGenerator {
             }
         }
         sb.append("</tbody></table>");
-        pc.setAnyElement(sb.toString());
-
-        // if clipping is enabled, clip the geometry and return null if the clip removed it entirely
-        if (g != null && !g.isEmpty() && clipBounds != null) {
-            MapMLGeometryClipper clipper = new MapMLGeometryClipper(g, clipBounds);
-            g = clipper.clipAndTag();
-            if (g == null || g.isEmpty()) return null;
-        }
-        f.setGeometry(buildGeometry(g));
-        return f;
+        return sb.toString();
     }
 
+    /** Sets the clip bounds, for tiled MapML output */
     public void setClipBounds(Envelope clipBounds) {
         this.clipBounds = clipBounds;
+    }
+
+    /** Enables disables alphanumeric attribute skipping */
+    public void setSkipAttributes(boolean skipAttributes) {
+        this.skipAttributes = skipAttributes;
     }
 
     private static class AttributeValueResolver {

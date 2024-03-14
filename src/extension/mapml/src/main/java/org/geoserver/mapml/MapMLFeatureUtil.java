@@ -51,6 +51,7 @@ public class MapMLFeatureUtil {
      * @param numDecimals number of decimal places to use for coordinates
      * @param forcedDecimal whether to force decimal notation
      * @param padWithZeros whether to pad with zeros
+     * @param skipAttributes whether to skip attributes HTML representation in the output
      * @return a MapML document
      * @throws IOException if an error occurs while producing the MapML document
      */
@@ -62,7 +63,8 @@ public class MapMLFeatureUtil {
             List<Link> alternateProjections,
             int numDecimals,
             boolean forcedDecimal,
-            boolean padWithZeros)
+            boolean padWithZeros,
+            boolean skipAttributes)
             throws IOException {
         if (!(featureCollection instanceof SimpleFeatureCollection)) {
             throw new ServiceException("MapML OutputFormat does not support Complex Features.");
@@ -123,6 +125,7 @@ public class MapMLFeatureUtil {
         featureBuilder.setForcedDecimal(forcedDecimal);
         featureBuilder.setPadWithZeros(padWithZeros);
         featureBuilder.setClipBounds(clipBounds);
+        featureBuilder.setSkipAttributes(skipAttributes);
         try (SimpleFeatureIterator iterator = fc.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();

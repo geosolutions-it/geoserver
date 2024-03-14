@@ -173,7 +173,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         kvp.put("CQL_FILTER", "ADDRESS = '123 Main Street'");
         kvp.put("srs", "EPSG:4326");
         kvp.put("styles", "polygonElseFilter");
-        kvp.put("format_options", MapMLConstants.MAPML_FEATURE_FORMAT_OPTIONS);
+        kvp.put("format_options", MapMLConstants.MAPML_FEATURE_FO + ":true");
         kvp.put("layers", MockData.BUILDINGS.getLocalPart());
         kvp.put("request", "GetMap");
         kvp.put("format", MapMLConstants.MAPML_MIME_TYPE);

@@ -6,8 +6,9 @@ package org.geoserver.mapml;
 
 import static org.apache.commons.text.StringEscapeUtils.escapeHtml4;
 import static org.geoserver.mapml.MapMLConstants.DATE_FORMAT;
-import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FORMAT_OPTIONS;
+import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_MIME_TYPE;
+import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
 
@@ -1129,7 +1130,9 @@ public class MapMLDocumentBuilder {
         params.put("TileRow", "{y}");
         if (mapMLLayerMetadata.isUseFeatures()) {
             params.put("format", MAPML_MIME_TYPE);
-            params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
+            params.put(
+                    "format_options",
+                    MAPML_FEATURE_FO + ":true;" + MAPML_SKIP_ATTRIBUTES_FO + ":true");
             tileLink.setType(MimeType.TEXT_MAPML);
         } else {
             params.put("format", imageFormat);
@@ -1259,7 +1262,9 @@ public class MapMLDocumentBuilder {
         params.put("bbox", "{txmin},{tymin},{txmax},{tymax}");
         if (mapMLLayerMetadata.isUseFeatures()) {
             params.put("format", MAPML_MIME_TYPE);
-            params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
+            params.put(
+                    "format_options",
+                    MAPML_FEATURE_FO + ":true;" + MAPML_SKIP_ATTRIBUTES_FO + ":true");
             tileLink.setType(MimeType.TEXT_MAPML);
         } else {
             params.put("format", imageFormat);
@@ -1414,7 +1419,7 @@ public class MapMLDocumentBuilder {
         params.put("bbox", "{xmin},{ymin},{xmax},{ymax}");
         if (mapMLLayerMetadata.isUseFeatures()) {
             params.put("format", MAPML_MIME_TYPE);
-            params.put("format_options", MAPML_FEATURE_FORMAT_OPTIONS);
+            params.put("format_options", MAPML_FEATURE_FO + ":true");
         } else {
             params.put("format", imageFormat);
         }

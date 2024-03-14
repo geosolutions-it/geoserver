@@ -36,6 +36,8 @@ public class MapMLFeaturesBuilder {
     private final GetMapRequest getMapRequest;
     private final Query query;
 
+    private boolean skipAttributes = false;
+
     /**
      * Constructor
      *
@@ -46,11 +48,16 @@ public class MapMLFeaturesBuilder {
         this.geoServer = geoServer;
         this.mapContent = mapContent;
         this.getMapRequest = mapContent.getRequest();
-        featureSources =
+        this.featureSources =
                 mapContent.layers().stream()
                         .map(Layer::getFeatureSource)
                         .collect(Collectors.toList());
         this.query = query;
+    }
+
+    /** Enables/disables attribute representation skipping (false by default) */
+    public void setSkipAttributes(boolean skipAttributes) {
+        this.skipAttributes = skipAttributes;
     }
 
     /**
@@ -117,7 +124,8 @@ public class MapMLFeaturesBuilder {
                 null, // for WMS GetMap we don't include alternate projections
                 getNumberOfDecimals(meta),
                 getForcedDecimal(meta),
-                getPadWithZeros(meta));
+                getPadWithZeros(meta),
+                skipAttributes);
     }
 
     /**
