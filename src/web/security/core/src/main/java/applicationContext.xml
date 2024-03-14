@@ -7,7 +7,7 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
-  <bean class="org.geoserver.platform.ModuleStatusImpl">
+  <bean id="coreSecurityWebExtension" class="org.geoserver.platform.ModuleStatusImpl">
     <constructor-arg index="0" value="gs-web-sec-core"/>
     <constructor-arg index="1" value="GeoServer Web UI Security Core"/>
   </bean>
@@ -93,6 +93,17 @@
 		<property name="category" ref="securityCategory" />
 		<property name="order" value="300" />
 	</bean>
+
+    <!-- Control HTTP page -->
+    <bean id="urlChecksPage" class="org.geoserver.web.MenuPageInfo">
+        <property name="id" value="security.urlcheck" />
+        <property name="titleKey" value="security.urlcheck.title" />
+        <property name="descriptionKey" value="security.urlcheck.description" />
+        <property name="componentClass" value="org.geoserver.security.web.url.URLChecksPage" />
+        <property name="icon" value="../img/icons/silk/shield.png" />
+        <property name="category" ref="securityCategory" />
+        <property name="order" value="210" />
+    </bean>
 
     <!-- password policy panel infos -->
     <bean id="passwordPolicyPanelInfo" class="org.geoserver.security.web.passwd.PasswordPolicyPanelInfo">

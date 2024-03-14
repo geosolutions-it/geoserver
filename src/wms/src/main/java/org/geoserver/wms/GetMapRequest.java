@@ -5,6 +5,8 @@
  */
 package org.geoserver.wms;
 
+import static org.geoserver.catalog.DimensionInfo.CUSTOM_DIM_PREFIX;
+
 import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.awt.image.IndexColorModel;
@@ -22,16 +24,16 @@ import java.util.stream.Collectors;
 import javax.media.jai.Interpolation;
 import org.geoserver.catalog.SLDHandler;
 import org.geoserver.ows.util.CaseInsensitiveMap;
-import org.geotools.styling.Style;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.identity.FeatureId;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.Style;
 import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
 import org.geotools.util.Version;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.filter.Filter;
-import org.opengis.filter.identity.FeatureId;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * Represents a WMS GetMap request. as a extension to the WMS spec 1.1.
@@ -812,7 +814,7 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
 
     public List<String> getCustomDimension(String dimensionName) {
         if (getRawKvp() != null) {
-            String key = "DIM_" + dimensionName;
+            String key = CUSTOM_DIM_PREFIX + dimensionName;
             Object value = getRawKvp().get(key);
             if (value instanceof String) {
                 String s = (String) value;

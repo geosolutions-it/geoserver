@@ -5,6 +5,7 @@
  */
 package org.geoserver.wfs.v2_0;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
 
 import au.com.bytecode.opencsv.CSVReader;
@@ -25,11 +26,12 @@ import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
-import org.geotools.data.DataStore;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
@@ -38,11 +40,11 @@ import org.geotools.wfs.v2_0.WFS;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.locationtech.jts.io.WKTReader;
-import org.opengis.feature.simple.SimpleFeatureType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
 public class GetFeatureJoinTest extends WFS20TestSupport {
+    private static final String CSV = "text/csv";
 
     @Override
     protected void setUpInternal(SystemTestData data) throws Exception {
@@ -986,13 +988,13 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
         assertEquals(
@@ -1039,13 +1041,13 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
         assertEquals(
@@ -1092,13 +1094,13 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
         assertEquals(
@@ -1143,13 +1145,13 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
         assertEquals(
@@ -1188,13 +1190,13 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
         assertEquals(
@@ -1256,13 +1258,13 @@ public class GetFeatureJoinTest extends WFS20TestSupport {
                         + "</wfs:GetFeature>";
 
         MockHttpServletResponse resp =
-                postAsServletResponse("wfs", xml, "application/xml", "UTF-8");
+                postAsServletResponse("wfs", xml, "application/xml", UTF_8.name());
 
         // check the mime type
-        assertEquals("text/csv", resp.getContentType());
+        assertEquals(CSV, getBaseMimeType(resp.getContentType()));
 
         // check the charset encoding
-        assertEquals("UTF-8", resp.getCharacterEncoding());
+        assertEquals(UTF_8.name(), resp.getCharacterEncoding());
 
         // check the content disposition
         assertEquals("attachment; filename=t1_t2_t3.csv", resp.getHeader("Content-Disposition"));

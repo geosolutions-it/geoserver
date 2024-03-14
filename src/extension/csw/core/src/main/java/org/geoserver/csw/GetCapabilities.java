@@ -44,6 +44,19 @@ import org.geoserver.csw.store.CatalogStore;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.util.InternationalStringUtils;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.capability.ArithmeticOperators;
+import org.geotools.api.filter.capability.ComparisonOperators;
+import org.geotools.api.filter.capability.FilterCapabilities;
+import org.geotools.api.filter.capability.GeometryOperand;
+import org.geotools.api.filter.capability.IdCapabilities;
+import org.geotools.api.filter.capability.Operator;
+import org.geotools.api.filter.capability.ScalarCapabilities;
+import org.geotools.api.filter.capability.SpatialCapabilities;
+import org.geotools.api.filter.capability.SpatialOperator;
+import org.geotools.api.filter.capability.SpatialOperators;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.filter.capability.FilterCapabilitiesImpl;
 import org.geotools.filter.capability.ScalarCapabilitiesImpl;
@@ -52,18 +65,6 @@ import org.geotools.filter.capability.SpatialOperatorsImpl;
 import org.geotools.util.factory.GeoTools;
 import org.geotools.util.logging.Logging;
 import org.geotools.xsd.EMFUtils;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.capability.ArithmeticOperators;
-import org.opengis.filter.capability.ComparisonOperators;
-import org.opengis.filter.capability.FilterCapabilities;
-import org.opengis.filter.capability.GeometryOperand;
-import org.opengis.filter.capability.IdCapabilities;
-import org.opengis.filter.capability.Operator;
-import org.opengis.filter.capability.ScalarCapabilities;
-import org.opengis.filter.capability.SpatialCapabilities;
-import org.opengis.filter.capability.SpatialOperator;
-import org.opengis.filter.capability.SpatialOperators;
 import org.springframework.context.ApplicationContext;
 import org.xml.sax.helpers.NamespaceSupport;
 
@@ -163,7 +164,13 @@ public class GetCapabilities {
 
             OnlineResourceType providerSite = owsf.createOnlineResourceType();
             sp.setProviderSite(providerSite);
-            providerSite.setHref((csw.getOnlineResource() != null ? csw.getOnlineResource() : ""));
+            providerSite.setHref(
+                    InternationalStringUtils.firstNonBlank(
+                            csw.getOnlineResource(),
+                            contact.getOnlineResource(),
+                            csw.getGeoServer().getSettings().getOnlineResource(),
+                            ResponseUtils.buildURL(
+                                    request.getBaseUrl(), null, null, URLType.SERVICE)));
 
             ResponsiblePartySubsetType serviceContact = owsf.createResponsiblePartySubsetType();
             sp.setServiceContact(serviceContact);
@@ -186,7 +193,10 @@ public class GetCapabilities {
 
             OnlineResourceType onlineResource = owsf.createOnlineResourceType();
             contactInfo.setOnlineResource(onlineResource);
-            onlineResource.setHref(contact.getOnlineResource());
+            onlineResource.setHref(
+                    InternationalStringUtils.firstNonBlank(
+                            contact.getOnlineResource(),
+                            csw.getGeoServer().getSettings().getOnlineResource()));
 
             TelephoneType telephone = owsf.createTelephoneType();
             contactInfo.setPhone(telephone);
@@ -233,8 +243,8 @@ public class GetCapabilities {
 
         // Filter Capabilities
         // this part is not optional, the schema has min = 0, so we don't check for the sections
-        final FilterFactory2 ffFactory =
-                CommonFactoryFinder.getFilterFactory2(GeoTools.getDefaultHints());
+        final FilterFactory ffFactory =
+                CommonFactoryFinder.getFilterFactory(GeoTools.getDefaultHints());
         // - Spatial Capabilities
         // SpatialCapabilities spatialCapabilities = ffFactory.spatialCapabilities(geometryOperands,
         // spatialOperands);

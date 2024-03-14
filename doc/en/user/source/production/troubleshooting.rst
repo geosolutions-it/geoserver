@@ -6,7 +6,7 @@ Troubleshooting
 Checking WFS requests
 ----------------------------
 
-It often happens that users report issues with hand made WFS requests not working as expected. In the majority of the cases the request is malformed, but GeoServer does not complain and just ignores the malformed part (this behaviour is the default to make older WFS clients work fine with GeoServer). 
+It often happens that users report issues with hand-crafted WFS requests not working as expected. In the majority of the cases the request is malformed, but GeoServer does not complain and just ignores the malformed part (this behaviour is the default to make older WFS clients work fine with GeoServer). 
 
 If you want GeoServer to validate most WFS XML request you can post it to the following URL::
   
@@ -89,7 +89,7 @@ The output shows the ``pid``, the main class name if available, and the paramete
 jstack
 ````````
 
-`jstack <http://java.sun.com/javase/6/docs/technotes/tools/share/jstack.html>`__ is a tool extracting a the current stack trace for each thread running in the virtual machine. It can be used to identify scalability issues and to gather what the program is actually doing. 
+`jstack <http://java.sun.com/javase/6/docs/technotes/tools/share/jstack.html>`__ is a tool for extracting the current stack trace for each thread running in the virtual machine. It can be used to identify scalability issues and to gather what the program is actually doing. 
 
 It usually requires detailed understanding of the inner workings of GeoServer to properly interpret the jstack output.
   
@@ -144,7 +144,7 @@ And the file contents might look like::
 jmap
 ````
 
-`jmap <http://java.sun.com/javase/6/docs/technotes/tools/share/jmap.html>`__ is a tool to gather information about the a Java virtual machine. 
+`jmap <http://java.sun.com/javase/6/docs/technotes/tools/share/jmap.html>`__ is a tool to gather information about the Java virtual machine. 
 It can be used in a few interesting ways.
 
 By running it without arguments (other than the process id of the JVM) it will print out a **dump of the native libraries used by the JVM**. This can come in handy when one wants to double check GeoServer is actually using a certain version of a native library (e.g., GDAL)::
@@ -285,8 +285,8 @@ The dump files are generally as big as the memory used so it's advisable to comp
 XStream
 -------
 
-GeoServer and GeoWebCache use XStream to read and write XML for configuration and for their REST APIs.  In order to do this securely, it needs a list of Java classes that are safe to convert between objects and XML.  If a class not on that list is given to XStream, it will generate the error ``com.thoughtworks.xstream.security.ForbiddenClassException``.  The specific class that was a problem should aslo be included.  This may be a result of the lists of allowed classes missing a class, which should be reported as a bug, or it may be caused by an extension/plugin not adding its classes to the list (finally, it could be someone trying to perform a "Remote Execution" attack, which is what the allow-list is designed to prevent).
+GeoServer and GeoWebCache use XStream to read and write XML for configuration and for their REST APIs.  In order to do this securely, it needs a list of Java classes that are safe to convert between objects and XML.  If a class not on that list is given to XStream, it will generate the error ``com.thoughtworks.xstream.security.ForbiddenClassException``.  The specific class that was a problem should also be included.  This may be a result of the lists of allowed classes missing a class, which should be reported as a bug, or it may be caused by an extension/plugin not adding its classes to the list (finally, it could be someone trying to perform a "Remote Execution" attack, which is what the allow-list is designed to prevent).
 
-This can be worked around by setting the system properties ``GEOSERVER_XSTREAM_WHITELIST`` for GeoServer or ``GEOWEBCACHE_XSTREAM_WHITELIST`` for GeoWebCache to a semicolon separated list of qualified class names.  The class names may include wildcards ``?`` for a single character, ``*`` for any number of characters not including the separater ``.``, and ``**`` for any number of characters including separators.  For instance, ``org.example.blah.SomeClass; com.demonstration.*; ca.test.**`` will allow, the specific class ``org.example.blah.SomeClass``, any class immediately within the package ``com.demonstration``, and any class within the package ``ca.test`` or any of its descendant packages.
+This can be worked around by setting the system properties ``GEOSERVER_XSTREAM_WHITELIST`` for GeoServer or ``GEOWEBCACHE_XSTREAM_WHITELIST`` for GeoWebCache to a semicolon separated list of qualified class names.  The class names may include wildcards ``?`` for a single character, ``*`` for any number of characters not including the separator ``.``, and ``**`` for any number of characters including separators.  For instance, ``org.example.blah.SomeClass; com.demonstration.*; ca.test.**`` will allow, the specific class ``org.example.blah.SomeClass``, any class immediately within the package ``com.demonstration``, and any class within the package ``ca.test`` or any of its descendant packages.
 
-``GEOSERVER_XSTREAM_WHITELIST`` and ``GEOWEBCACHE_XSTREAM_WHITELIST`` should only be used as a workarround until GeoServer, GWC, or the extension causing the problem has been updated, so please report to the users list the missing classes as soon as possible.
+``GEOSERVER_XSTREAM_WHITELIST`` and ``GEOWEBCACHE_XSTREAM_WHITELIST`` should only be used as a workaround until GeoServer, GWC, or the extension causing the problem has been updated, so please report to the users list the missing classes as soon as possible.

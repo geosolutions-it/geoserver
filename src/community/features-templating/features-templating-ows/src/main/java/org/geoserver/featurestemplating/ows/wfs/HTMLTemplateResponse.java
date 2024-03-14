@@ -32,12 +32,14 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
+import org.geotools.api.feature.Feature;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.opengis.feature.Feature;
 
 /** A template response able to write an HTML output format. */
 public class HTMLTemplateResponse extends BaseTemplateGetFeatureResponse {
+
+    private static final String ELEMENT_NAME = "HTML";
 
     public HTMLTemplateResponse(GeoServer gs, TemplateLoader configuration) {
         super(gs, configuration, TemplateIdentifier.HTML);
@@ -173,5 +175,10 @@ public class HTMLTemplateResponse extends BaseTemplateGetFeatureResponse {
                 && ftName != null
                 && "FEATURES".equalsIgnoreCase(request.getService())
                 && outputFormat != null;
+    }
+
+    @Override
+    public String getCapabilitiesElementName() {
+        return ELEMENT_NAME;
     }
 }

@@ -6,6 +6,7 @@
 
 package org.geoserver.wfs.json;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
@@ -34,12 +35,12 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.util.IOUtils;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wfs.WFSTestSupport;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.referencing.CRS;
 import org.hamcrest.Description;
 import org.hamcrest.Matchers;
 import org.junit.Test;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 /** @author carlo cancellieri - GeoSolutions */
@@ -161,7 +162,7 @@ public class GeoJSONTest extends WFSTestSupport {
                 getAsServletResponse(
                         "wfs?request=GetFeature&version=1.0.0&typename=sf:PrimitiveGeoFeature&maxfeatures=1&outputformat="
                                 + JSONType.json);
-        assertEquals("application/json", response.getContentType());
+        assertEquals(JSONType.json, getBaseMimeType(response.getContentType()));
         String out = response.getContentAsString();
 
         JSONObject rootObject = JSONObject.fromObject(out);
@@ -194,7 +195,7 @@ public class GeoJSONTest extends WFSTestSupport {
                     getAsServletResponse(
                             "wfs?request=GetFeature&version=2.0.0&typename=sf:PrimitiveGeoFeature&outputformat="
                                     + JSONType.json);
-            assertEquals("application/json", response.getContentType());
+            assertEquals(JSONType.json, getBaseMimeType(response.getContentType()));
             String out = response.getContentAsString();
 
             JSONObject rootObject = JSONObject.fromObject(out);
@@ -216,9 +217,9 @@ public class GeoJSONTest extends WFSTestSupport {
                 getAsServletResponse(
                         "wfs?request=GetFeature&version=1.0.0&typename=sf:PrimitiveGeoFeature&maxfeatures=1&outputformat="
                                 + JSONType.simple_json,
-                        "");
-        assertEquals("application/json", response.getContentType());
-        assertEquals("UTF-8", response.getCharacterEncoding());
+                        UTF_8.name());
+        assertEquals(JSONType.json, getBaseMimeType(response.getContentType()));
+        assertEquals(UTF_8.name(), response.getCharacterEncoding());
         String out = response.getContentAsString();
 
         JSONObject rootObject = JSONObject.fromObject(out);
@@ -237,7 +238,7 @@ public class GeoJSONTest extends WFSTestSupport {
                                 + "&format_options="
                                 + JSONType.ID_POLICY
                                 + ":true");
-        assertEquals("application/json", response.getContentType());
+        assertEquals(JSONType.json, getBaseMimeType(response.getContentType()));
         String out = response.getContentAsString();
 
         JSONObject rootObject = JSONObject.fromObject(out);
@@ -260,7 +261,7 @@ public class GeoJSONTest extends WFSTestSupport {
                                 + "&format_options="
                                 + JSONType.ID_POLICY
                                 + ":false");
-        assertEquals("application/json", response.getContentType());
+        assertEquals(JSONType.json, getBaseMimeType(response.getContentType()));
         String out = response.getContentAsString();
 
         JSONObject rootObject = JSONObject.fromObject(out);
@@ -280,7 +281,7 @@ public class GeoJSONTest extends WFSTestSupport {
                                 + "&format_options="
                                 + JSONType.ID_POLICY
                                 + ":name");
-        assertEquals("application/json", response.getContentType());
+        assertEquals(JSONType.json, getBaseMimeType(response.getContentType()));
         String out = response.getContentAsString();
 
         JSONObject rootObject = JSONObject.fromObject(out);
@@ -406,7 +407,7 @@ public class GeoJSONTest extends WFSTestSupport {
         JSONType.setJsonpEnabled(false);
         String out = resp.getContentAsString();
 
-        assertEquals(JSONType.jsonp, resp.getContentType());
+        assertEquals(JSONType.jsonp, getBaseMimeType(resp.getContentType()));
         assertTrue(out.startsWith("myFunc("));
         assertTrue(out.endsWith(")"));
 
@@ -965,5 +966,17 @@ public class GeoJSONTest extends WFSTestSupport {
 
     private Object getProperty(JSONObject feature, String propertyName) {
         return feature.getJSONObject("properties").get(propertyName);
+    }
+
+    @Test
+    public void testIAULayer() throws Exception {
+        JSONObject json =
+                (JSONObject)
+                        getAsJSON(
+                                "wfs?request=GetFeature&version=2.0.0&typename=iau:MarsPoi&outputformat="
+                                        + JSONType.json);
+        // print(json);
+        String crs = json.getJSONObject("crs").getJSONObject("properties").getString("name");
+        assertEquals("urn:ogc:def:crs:IAU::49900", crs);
     }
 }

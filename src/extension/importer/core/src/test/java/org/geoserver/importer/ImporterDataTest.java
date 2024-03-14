@@ -59,14 +59,20 @@ import org.geoserver.importer.transform.AbstractInlineVectorTransform;
 import org.geoserver.importer.transform.AttributesToPointGeometryTransform;
 import org.geoserver.importer.transform.PostScriptTransform;
 import org.geoserver.platform.resource.Resources;
-import org.geotools.data.DataStore;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.Transaction;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.style.Style;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
-import org.geotools.data.Transaction;
 import org.geotools.data.h2.H2DataStoreFactory;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.filter.text.cql2.CQL;
@@ -76,7 +82,6 @@ import org.geotools.jdbc.Index;
 import org.geotools.jdbc.JDBCDataStore;
 import org.geotools.referencing.CRS;
 import org.geotools.renderer.style.StyleAttributeExtractor;
-import org.geotools.styling.Style;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assume;
 import org.junit.Test;
@@ -85,11 +90,6 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
 
 public class ImporterDataTest extends ImporterTestSupport {
 
@@ -797,6 +797,34 @@ public class ImporterDataTest extends ImporterTestSupport {
     }
 
     @Test
+    public void testImportMars() throws Exception {
+        File dir = unpack("csv/locations.zip");
+        ImportContext context =
+                importer.createContext(new SpatialFile(new File(dir, "locations.csv")));
+        assertEquals(1, context.getTasks().size());
+
+        ImportTask task = context.getTasks().get(0);
+        assertEquals(ImportTask.State.NO_CRS, task.getState());
+
+        LayerInfo layer = task.getLayer();
+        ResourceInfo resource = layer.getResource();
+        resource.setSRS("EPSG:4326");
+
+        assertTrue("Item not ready", importer.prep(task));
+        assertEquals(ImportTask.State.READY, task.getState());
+
+        context.updated();
+        assertEquals(ImportContext.State.PENDING, context.getState());
+        importer.run(context);
+        assertEquals(ImportContext.State.COMPLETE, context.getState());
+        FeatureTypeInfo fti = (FeatureTypeInfo) resource;
+        SimpleFeatureType featureType = (SimpleFeatureType) fti.getFeatureType();
+        GeometryDescriptor geometryDescriptor = featureType.getGeometryDescriptor();
+        assertNull("Expecting no geometry", geometryDescriptor);
+        assertEquals(4, featureType.getAttributeCount());
+    }
+
+    @Test
     public void testImportGML2Poi() throws Exception {
         File gmlFile = file("gml/poi.gml2.gml");
         String wsName = getCatalog().getDefaultWorkspace().getName();
@@ -1458,6 +1486,29 @@ public class ImporterDataTest extends ImporterTestSupport {
                     e.getMessage(),
                     allOf(containsString("/bin/sh"), containsString("not " + "found")));
         }
+    }
+
+    @Test
+    public void testImportMarsPoi() throws Exception {
+        File dir = unpack("shape/mars_poi.zip");
+
+        ImportContext context =
+                importer.createContext(new SpatialFile(new File(dir, "mars_poi.shp")));
+        assertEquals(1, context.getTasks().size());
+
+        ImportTask task = context.getTasks().get(0);
+        assertEquals(ImportTask.State.READY, task.getState());
+        assertEquals("mars_poi", task.getLayer().getResource().getName());
+
+        importer.run(context);
+        assertEquals(ImportTask.State.COMPLETE, task.getState());
+
+        Catalog cat = getCatalog();
+        assertNotNull(cat.getLayerByName("mars_poi"));
+        FeatureTypeInfo ft = cat.getFeatureTypeByName("mars_poi");
+        assertEquals("IAU:49900", ft.getSRS());
+
+        runChecks("mars_poi");
     }
 
     public static boolean checkShellAvailable() {

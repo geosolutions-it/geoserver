@@ -6,9 +6,14 @@ package org.geoserver.opensearch.eo.store;
 
 import java.io.IOException;
 import java.util.logging.Logger;
-import org.geotools.data.simple.SimpleFeatureSource;
+import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.LocalWorkspace;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.type.FeatureType;
 
 /**
  * Maps joined simple features up to a complex Collection feature
@@ -18,6 +23,7 @@ import org.opengis.feature.type.FeatureType;
 public class JDBCCollectionFeatureStore extends AbstractMappingStore {
 
     static final Logger LOGGER = Logging.getLogger(JDBCCollectionFeatureStore.class);
+    static final FilterFactory FF = CommonFactoryFinder.getFilterFactory();
 
     public JDBCCollectionFeatureStore(
             JDBCOpenSearchAccess openSearchAccess, FeatureType collectionFeatureType)
@@ -26,10 +32,19 @@ public class JDBCCollectionFeatureStore extends AbstractMappingStore {
     }
 
     @Override
-    protected SimpleFeatureSource getDelegateCollectionSource() throws IOException {
-        return openSearchAccess
-                .getDelegateStore()
-                .getFeatureSource(JDBCOpenSearchAccess.COLLECTION);
+    public SimpleFeatureSource getDelegateSource() throws IOException {
+        SimpleFeatureSource delegate =
+                openSearchAccess
+                        .getDelegateStore()
+                        .getFeatureSource(JDBCOpenSearchAccess.COLLECTION);
+        // if we're in a OWS Dispatcher handled request, check for workspace
+        if (Dispatcher.REQUEST.get() != null) {
+            WorkspaceInfo workspaceInfo = LocalWorkspace.get();
+            return new WorkspaceFeatureSource(delegate, workspaceInfo, openSearchAccess);
+        } else {
+            // otherwise just return the delegate because its coming from the REST API
+            return delegate;
+        }
     }
 
     @Override

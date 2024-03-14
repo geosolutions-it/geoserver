@@ -64,11 +64,13 @@ import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.config.ContactInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ResourceErrorHandling;
+import org.geoserver.crs.CapabilitiesCRSProvider;
 import org.geoserver.data.InternationalContentHelper;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.sld.GetStylesResponse;
+import org.geoserver.util.InternationalStringUtils;
 import org.geoserver.wfs.json.JSONType;
 import org.geoserver.wms.ExtendedCapabilitiesProvider;
 import org.geoserver.wms.GetCapabilities;
@@ -78,21 +80,21 @@ import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.capabilities.DimensionHelper.Mode;
 import org.geoserver.wms.describelayer.XMLDescribeLayerResponse;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.TransformException;
+import org.geotools.api.style.Description;
+import org.geotools.api.style.Style;
+import org.geotools.api.util.InternationalString;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.geotools.styling.Description;
-import org.geotools.styling.Style;
 import org.geotools.util.NumberRange;
 import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.filter.Filter;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.TransformException;
-import org.opengis.util.InternationalString;
 import org.springframework.util.Assert;
 import org.vfny.geoserver.util.ResponseUtils;
 import org.xml.sax.Attributes;
@@ -371,11 +373,16 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             orAtts.addAttribute("", "xmlns:xlink", "xmlns:xlink", "", XLINK_NS);
             orAtts.addAttribute(XLINK_NS, "xlink:type", "xlink:type", "", "simple");
 
-            String onlineResource = serviceInfo.getOnlineResource();
-            if (onlineResource == null || onlineResource.trim().length() == 0) {
-                String requestBaseUrl = request.getBaseUrl();
-                onlineResource = buildURL(requestBaseUrl, null, null, URLType.SERVICE);
-            } else {
+            GeoServer geoServer = wmsConfig.getGeoServer();
+            ContactInfo contact = geoServer.getSettings().getContact();
+
+            String onlineResource =
+                    InternationalStringUtils.firstNonBlank(
+                            serviceInfo.getOnlineResource(),
+                            contact.getOnlineResource(),
+                            serviceInfo.getGeoServer().getSettings().getOnlineResource(),
+                            buildURL(request.getBaseUrl(), null, null, URLType.SERVICE));
+            if (onlineResource != null) {
                 try {
                     new URL(onlineResource);
                 } catch (MalformedURLException e) {
@@ -389,8 +396,6 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             orAtts.addAttribute("", "xlink:href", "xlink:href", "", onlineResource);
             element("OnlineResource", null, orAtts);
 
-            GeoServer geoServer = wmsConfig.getGeoServer();
-            ContactInfo contact = geoServer.getSettings().getContact();
             encodeContactInfo(contact);
 
             String fees = serviceInfo.getFees();
@@ -940,11 +945,10 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             if (epsgCodes.isEmpty()) {
                 comment("All supported EPSG projections:");
                 capabilitiesCrsIdentifiers = new LinkedHashSet<>();
-                for (String code : CRS.getSupportedCodes("AUTO")) {
-                    if ("WGS84(DD)".equals(code)) continue;
-                    capabilitiesCrsIdentifiers.add("AUTO:" + code);
-                }
-                capabilitiesCrsIdentifiers.addAll(CRS.getSupportedCodes("EPSG"));
+                CapabilitiesCRSProvider crsProvider = new CapabilitiesCRSProvider();
+                crsProvider.getAuthorityExclusions().remove("AUTO");
+                crsProvider.getAuthorityExclusions().add("CRS");
+                capabilitiesCrsIdentifiers.addAll(crsProvider.getCodes());
             } else {
                 comment("Limited list of EPSG projections:");
                 capabilitiesCrsIdentifiers = new LinkedHashSet<>(epsgCodes);
@@ -956,10 +960,8 @@ public class GetCapabilitiesTransformer extends TransformerBase {
 
                 while (it.hasNext()) {
                     String code = it.next();
-                    if (!"WGS84(DD)".equals(code)) {
-                        currentSRS = qualifySRS(code);
-                        element("SRS", currentSRS);
-                    }
+                    currentSRS = qualifySRS(code);
+                    element("SRS", currentSRS);
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
@@ -1137,7 +1139,7 @@ public class GetCapabilitiesTransformer extends TransformerBase {
             // cascaded named styles
             // in the future (when we add support for that)
             if (!(layer.getResource() instanceof WMTSLayerInfo)) {
-                handleStyles(layerName, layer.getDefaultStyle(), layer.getStyles());
+                handleStyles(layerName, layer.getDefaultStyle(), layer.styles());
             }
 
             handleScaleHint(layer);

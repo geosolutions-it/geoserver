@@ -7,10 +7,14 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
-  <bean class="org.geoserver.platform.ModuleStatusImpl">
+  <bean id="wmsWebExtension" class="org.geoserver.platform.ModuleStatusImpl">
     <constructor-arg index="0" value="gs-web-wms"/>
     <constructor-arg index="1" value="GeoServer Web UI Web Map Service"/>
   </bean>
+
+  <bean id="wmsServiceDescriptor" class="org.geoserver.wms.web.WMSServiceDescriptionProvider">
+  </bean>
+
   <bean id="wmsServicePage" class="org.geoserver.web.services.ServiceMenuPageInfo">
     <property name="id" value="wms"/>
     <property name="titleKey" value="wms.title"/>

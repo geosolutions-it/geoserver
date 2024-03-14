@@ -34,7 +34,6 @@ import org.geoserver.catalog.CoverageView.CoverageBand;
 import org.geoserver.catalog.CoverageView.InputCoverageBand;
 import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.MockData;
@@ -49,6 +48,8 @@ import org.geoserver.web.netcdf.NetCDFSettingsContainer.ExtraVariable;
 import org.geoserver.web.netcdf.NetCDFSettingsContainer.GlobalAttribute;
 import org.geoserver.web.netcdf.NetCDFSettingsContainer.VariableAttribute;
 import org.geoserver.web.netcdf.layer.NetCDFLayerSettingsContainer;
+import org.geotools.api.referencing.datum.PixelInCell;
+import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.io.netcdf.NetCDFReader;
 import org.geotools.coverage.io.netcdf.crs.NetCDFCRSAuthorityFactory;
@@ -59,8 +60,6 @@ import org.geotools.util.DateRange;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.referencing.datum.PixelInCell;
-import org.opengis.referencing.operation.MathTransform;
 import org.springframework.mock.web.MockHttpServletResponse;
 import ucar.ma2.Array;
 import ucar.ma2.DataType;
@@ -204,10 +203,6 @@ public class WCSNetCDFMosaicTest extends WCSNetCDFBaseTest {
 
     private void setupNetCDFoutSettings(QName name, boolean setNoData) {
         CoverageInfo info = getCatalog().getCoverageByName(getLayerId(name));
-
-        // Set the Declared SRS
-        info.setSRS("EPSG:4326");
-        info.setProjectionPolicy(ProjectionPolicy.REPROJECT_TO_DECLARED);
 
         String layerName = name.getLocalPart().toUpperCase();
         boolean isPackedLayer = layerName.contains("PACKED");

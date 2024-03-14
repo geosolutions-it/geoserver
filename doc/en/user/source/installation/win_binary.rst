@@ -10,13 +10,23 @@ The other way of installing GeoServer on Windows is to use the platform-independ
 Installation
 ------------
 
-#. Make sure you have a Java Runtime Environment (JRE) installed on your system. GeoServer requires a **Java 8** or **Java 11** environment, as provided by `Adoptium <https://adoptium.net>`__ Windows installers.
+#. Make sure you have a Java Runtime Environment (JRE) installed on your system. GeoServer requires a **Java 11** or **Java 17** environment, as provided by `Adoptium <https://adoptium.net>`__ Windows installers.
 
    .. note:: For more information about Java and GeoServer, please see the section on :ref:`production_java`.
 
 #. Navigate to the :website:`GeoServer Download page <download>`.
 
 #. Select the version of GeoServer that you wish to download.  If you're not sure, select :website:`Stable <release/stable>` release.
+
+   .. only:: snapshot
+      
+      These instructions are for GeoServer |version|-SNAPSHOT which is provided as a :website:`Nightly <release/main>` release.
+      Testing a Nightly release is a great way to try out new features, and test community modules. Nightly releases
+      change on an ongoing basis and are not suitable for a production environment.
+      
+   .. only:: not snapshot
+
+      These instructions are for GeoServer |release|.
 
 #. Select :guilabel:`Platform Independent Binary` on the download page: :download_release:`bin`
 
@@ -31,7 +41,7 @@ You will need to set the ``JAVA_HOME`` environment variable if it is not already
 
 #. Navigate to :menuselection:`Control Panel --> System --> Advanced --> Environment Variables`.
 
-#. Under :guilabel:`System variables` click :guilabel:`New`. 
+#. Under :guilabel:`System variables` click :guilabel:`New`.
 
 #. For :guilabel:`Variable name` enter ``JAVA_HOME``.  For :guilabel:`Variable value` enter the path to your JDK/JRE.
 
@@ -50,11 +60,11 @@ Running
 
 #. Navigate to ``http://localhost:8080/geoserver`` (or wherever you installed GeoServer) to access the GeoServer :ref:`web_admin`.
 
-If you see the GeoServer logo, then GeoServer is successfully installed.
+   If you see the GeoServer Welcome page, then GeoServer is successfully installed.
 
    .. figure:: images/success.png
-
-      GeoServer installed and running successfully
+      
+      GeoServer Welcome Page
 
 Stopping
 --------

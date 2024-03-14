@@ -28,6 +28,22 @@ import org.geoserver.catalog.impl.WMTSStoreInfoImpl;
 import org.geoserver.data.util.CoverageStoreUtils;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.ows.util.OwsUtils;
+import org.geotools.api.coverage.ColorInterpretation;
+import org.geotools.api.coverage.grid.Format;
+import org.geotools.api.coverage.grid.GridEnvelope;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.feature.type.PropertyDescriptor;
+import org.geotools.api.geometry.Bounds;
+import org.geotools.api.parameter.ParameterValueGroup;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.crs.GeographicCRS;
+import org.geotools.api.referencing.datum.PixelInCell;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.coverage.Category;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.TypeMap;
@@ -36,10 +52,9 @@ import org.geotools.coverage.grid.GridEnvelope2D;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.data.FeatureSource;
 import org.geotools.feature.FeatureTypes;
 import org.geotools.gce.imagemosaic.ImageMosaicFormat;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.image.util.ImageUtilities;
 import org.geotools.measure.UnitFormat;
@@ -57,21 +72,6 @@ import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.coverage.ColorInterpretation;
-import org.opengis.coverage.grid.Format;
-import org.opengis.coverage.grid.GridEnvelope;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.Name;
-import org.opengis.feature.type.PropertyDescriptor;
-import org.opengis.geometry.Envelope;
-import org.opengis.parameter.ParameterValueGroup;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.crs.GeographicCRS;
-import org.opengis.referencing.datum.PixelInCell;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
 
 /**
  * Builder class which provides convenience methods for interacting with the catalog.
@@ -483,7 +483,7 @@ public class CatalogBuilder {
     public void setupMetadata(FeatureTypeInfo ftinfo, FeatureSource featureSource)
             throws IOException {
 
-        org.geotools.data.ResourceInfo rinfo = null;
+        org.geotools.api.data.ResourceInfo rinfo = null;
         try {
             rinfo = featureSource.getInfo();
         } catch (Exception ignore) {
@@ -691,8 +691,8 @@ public class CatalogBuilder {
         }
         if (crs != null) {
             try {
-                Integer code = CRS.lookupEpsgCode(crs, extensive);
-                if (code != null) ftinfo.setSRS("EPSG:" + code);
+                String code = ResourcePool.lookupIdentifier(crs, extensive);
+                if (code != null) ftinfo.setSRS(code);
             } catch (FactoryException e) {
                 throw (IOException) new IOException().initCause(e);
             }
@@ -875,9 +875,9 @@ public class CatalogBuilder {
 
         if (nativeCRS != null && cinfo.getSRS() == null) {
             try {
-                Integer code = CRS.lookupEpsgCode(nativeCRS, false);
+                String code = ResourcePool.lookupIdentifier(nativeCRS, true);
                 if (code != null) {
-                    cinfo.setSRS("EPSG:" + code);
+                    cinfo.setSRS(code);
                     cinfo.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
                 }
             } catch (FactoryException e) {
@@ -895,7 +895,7 @@ public class CatalogBuilder {
         }
 
         if (cinfo.getLatLonBoundingBox() == null && cinfo.getNativeBoundingBox() == null) {
-            GeneralEnvelope envelope = reader.getOriginalEnvelope();
+            GeneralBounds envelope = reader.getOriginalEnvelope();
 
             cinfo.setNativeBoundingBox(new ReferencedEnvelope(envelope));
             cinfo.setLatLonBoundingBox(
@@ -1016,7 +1016,7 @@ public class CatalogBuilder {
         }
         cinfo.setNamespace(namespace);
 
-        GeneralEnvelope envelope = reader.getOriginalEnvelope();
+        GeneralBounds envelope = reader.getOriginalEnvelope();
         CoordinateReferenceSystem nativeCRS = envelope.getCoordinateReferenceSystem();
         cinfo.setNativeCRS(nativeCRS);
 
@@ -1025,9 +1025,9 @@ public class CatalogBuilder {
         // force if missing
         if (nativeCRS != null) {
             try {
-                Integer code = CRS.lookupEpsgCode(nativeCRS, false);
+                String code = ResourcePool.lookupIdentifier(nativeCRS, true);
                 if (code != null) {
-                    cinfo.setSRS("EPSG:" + code);
+                    cinfo.setSRS(code);
                     cinfo.setProjectionPolicy(ProjectionPolicy.REPROJECT_TO_DECLARED);
                 }
             } catch (FactoryException e) {
@@ -1098,11 +1098,9 @@ public class CatalogBuilder {
                                 .toString());
 
         // request and response SRS's
-        if (nativeCRS != null
-                && (nativeCRS.getIdentifiers() != null)
-                && !nativeCRS.getIdentifiers().isEmpty()) {
-            cinfo.getRequestSRS().add(nativeCRS.getIdentifiers().toArray()[0].toString());
-            cinfo.getResponseSRS().add(nativeCRS.getIdentifiers().toArray()[0].toString());
+        if (cinfo.getSRS() != null) {
+            cinfo.getRequestSRS().add(cinfo.getSRS());
+            cinfo.getResponseSRS().add(cinfo.getSRS());
         }
 
         // supported formats
@@ -1188,8 +1186,8 @@ public class CatalogBuilder {
         final MathTransform gridToWorldCorner =
                 reader.getOriginalGridToWorld(PixelInCell.CELL_CORNER);
 
-        final GeneralEnvelope testEnvelope =
-                CRS.transform(gridToWorldCorner, new GeneralEnvelope(testRange.getBounds()));
+        final GeneralBounds testEnvelope =
+                CRS.transform(gridToWorldCorner, new GeneralBounds(testRange.getBounds()));
         testEnvelope.setCoordinateReferenceSystem(reader.getCoordinateReferenceSystem());
 
         if (customParameters != null) {
@@ -1394,7 +1392,7 @@ public class CatalogBuilder {
         wli.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
 
         // try to grab the envelope
-        GeneralEnvelope envelope = layer.getEnvelope(wli.getNativeCRS());
+        GeneralBounds envelope = layer.getEnvelope(wli.getNativeCRS());
         if (envelope != null) {
             ReferencedEnvelope re =
                     new ReferencedEnvelope(
@@ -1523,7 +1521,7 @@ public class CatalogBuilder {
         wli.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
 
         // try to grab the envelope
-        GeneralEnvelope envelope = layer.getEnvelope(wli.getNativeCRS());
+        GeneralBounds envelope = layer.getEnvelope(wli.getNativeCRS());
         if (envelope != null) {
             ReferencedEnvelope re =
                     new ReferencedEnvelope(
@@ -1873,7 +1871,7 @@ public class CatalogBuilder {
         }
 
         if (crs != null) {
-            Envelope crsEnvelope = CRS.getEnvelope(crs);
+            Bounds crsEnvelope = CRS.getEnvelope(crs);
             if (crsEnvelope != null) {
                 crsReferencedEnvelope = new ReferencedEnvelope(crsEnvelope);
             }

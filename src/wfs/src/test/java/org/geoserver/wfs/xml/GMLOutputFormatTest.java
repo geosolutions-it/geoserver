@@ -13,8 +13,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayOutputStream;
 import java.util.Collections;
+import javax.xml.namespace.QName;
 import javax.xml.namespace.QName;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.data.test.MockData;
@@ -306,20 +306,6 @@ public class GMLOutputFormatTest extends WFSTestSupport {
     }
 
     @Test
-    public void testGML32Formatting() throws Exception {
-        enableFormatting();
-        Document dom =
-                getAsDOM(
-                        "wfs?request=getfeature&version=1.0.0&outputFormat=gml32&typename="
-                                + MockData.BASIC_POLYGONS.getPrefix()
-                                + ":"
-                                + MockData.BASIC_POLYGONS.getLocalPart());
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        print(dom, bos);
-        assertTrue(bos.toString().contains("\n        <gml"));
-    }
-
-    @Test
     public void testGML2InvalidElementName() throws Exception {
         testInvalidResponse(INVALID_CHARACTER, 2, "INVALID_CHARACTER_ERR");
     }
@@ -362,6 +348,20 @@ public class GMLOutputFormatTest extends WFSTestSupport {
     @Test
     public void testGML32InvalidNamespacePrefix() throws Exception {
         testInvalidResponse(INVALID_PREFIX, 32, "INVALID_CHARACTER_ERR");
+    }
+
+    private void testInvalidResponse(QName layer, int version, String message) throws Exception {
+        Document dom =
+                getAsDOM(
+                        "wfs?request=getfeature&version=1.0.0&outputFormat=gml"
+                                + version
+                                + "&typename="
+                                + layer.getPrefix()
+                                + ":"
+                                + layer.getLocalPart());
+        assertXpathValuesEqual("1", "count(/ogc:ServiceExceptionReport/ogc:ServiceException)", dom);
+        String text = dom.getElementsByTagName("ServiceException").item(0).getTextContent();
+        assertThat(text, containsString(message));
     }
 
     private void testInvalidResponse(QName layer, int version, String message) throws Exception {

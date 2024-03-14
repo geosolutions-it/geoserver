@@ -106,7 +106,7 @@ appropriate to its format:
 and :ref:`sld_reference_textsymbolizer` for vector data, 
 and :ref:`sld_reference_rastersymbolizer` for raster coverage data.
 
-If it is desired to display the input dataset in its orginal form, 
+If it is desired to display the input dataset in its original form, 
 or transformed in another way, there are two options:
 
 * Another ``<FeatureTypeStyle>`` can be used in the same SLD
@@ -116,7 +116,7 @@ Notes
 ^^^^^
 
 * Rendering transformations may not work correctly in tiled mode, 
-  unless they have been specifically written to accomodate it.
+  unless they have been specifically written to accommodate it.
   
 Examples
 --------
@@ -470,4 +470,13 @@ This vector process accepts four parameters:
 
 * ``operationAttribute``: the xpath to the attribute whose value will be used to perform the MIN or MAX operation.
 
-* ``groupingAttributes``: a lists of xpath pointing to the attirbutes defining the features' groups for which perform the filtering process.
+* ``groupingAttributes``: a lists of xpath pointing to the attributes defining the features' groups for which perform the filtering process.
+
+Disabling GetFeatureInfo requests results transformation
+--------------------------------------------------------
+
+By default GetFeatureInfo results are determined from the output after evaluating rendering transformation on the layer data. This behavior can be changed only for **raster** sources (i.e., raster-to-raster and raster-to-vector transformations). See section :ref:`services_webadmin_wms_featureinfo_transformation` to disable this behavior on a global or per virtual service basis. The WMS setting can be overridden for individual FeatureTypeStyle elements using the ``transformFeatureInfo`` SLD vendor option (either ``true`` or ``false``).
+
+.. code-block:: xml
+
+  <VendorOption name="transformFeatureInfo">true</VendorOption>

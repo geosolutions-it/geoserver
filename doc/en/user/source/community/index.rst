@@ -18,7 +18,7 @@ officially part of the GeoServer releases. They are however built along with the
 
    If you need a community module for an official release, the only way is to build it with the sources of the GitHub tag matching the release.
 
-.. please keep the following list sorted alphabetically 
+.. please keep the following list sorted alphabetically
 
 .. toctree::
    :maxdepth: 1
@@ -27,7 +27,6 @@ officially part of the GeoServer releases. They are however built along with the
    cog/index
    colormap/index
    cov-json/index
-   csw-iso/index
    dds/index
    elasticsearch/index
    features-templating/index
@@ -42,14 +41,14 @@ officially part of the GeoServer releases. They are however built along with the
    gwc-mbtiles/index
    gwc-sqlite/index
    hana/index
+   imagemap
    importer-jdbc/index
    jdbcconfig/index
    jdbcstore/index
    jms-cluster/index
    keycloak/index
-   keycloak/keycloak_role_service
+   libdeflate/index
    mbtiles/index
-   metadata/index
    monitor-hibernate/index
    ncwms/index
    netcdf-ghrsst/index
@@ -59,15 +58,18 @@ officially part of the GeoServer releases. They are however built along with the
    ogr-store/index
    opensearch-eo/index
    pgraster/pgraster
+   proxy-base-ext/index
    remote-wps/index
    s3-geotiff/index
-   saml/index
    schemaless-features/index
    smart-data-loader/index
    spatialjson/index
+   stac-datastore/index
    solr/index
    taskmanager/index
-   teradata/index
+   vector-mosaic/index
    vsi/index
+   xslt/index
    web-service-auth/index
-   libdeflate/index
+   webp/index
+   wps-longitudinal-profile/index

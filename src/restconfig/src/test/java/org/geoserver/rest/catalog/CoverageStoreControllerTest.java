@@ -43,6 +43,8 @@ import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Files;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.rest.RestBaseController;
+import org.geotools.api.coverage.grid.GridCoverageReader;
+import org.geotools.api.geometry.Bounds;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.gce.geotiff.GeoTiffReader;
 import org.junit.Before;
@@ -703,7 +705,7 @@ public class CoverageStoreControllerTest extends CatalogRESTTestSupport {
         CoverageInfo ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
         assertNotNull(ci);
         GridCoverage2D gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
-        Envelope envelope = gridCoverage.getEnvelope();
+        Bounds envelope = gridCoverage.getEnvelope();
         dispose(gridCoverage);
 
         // now go and clear
@@ -728,7 +730,7 @@ public class CoverageStoreControllerTest extends CatalogRESTTestSupport {
         // checking the envelope changed. Cannot check the bands, unlike features, their definition
         // is part of the configuration, in case of modification it requires an explicit PUT
         gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
-        Envelope envelopeNew = gridCoverage.getEnvelope();
+        Bounds envelopeNew = gridCoverage.getEnvelope();
         assertNotEquals(envelopeNew, envelope);
         dispose(gridCoverage);
     }

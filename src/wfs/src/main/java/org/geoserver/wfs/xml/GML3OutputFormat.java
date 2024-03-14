@@ -57,14 +57,14 @@ import org.geoserver.wfs.request.Query;
 import org.geoserver.wfs.response.ComplexFeatureAwareFormat;
 import org.geoserver.wfs.xml.v1_1_0.WFS;
 import org.geoserver.wfs.xml.v1_1_0.WFSConfiguration;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.Name;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.simple.SimpleFeatureTypeImpl;
 import org.geotools.gml3.GMLConfiguration;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Encoder;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.Name;
 import org.w3c.dom.Document;
 
 public class GML3OutputFormat extends WFSGetFeatureOutputFormat
@@ -244,10 +244,10 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat
 
         encoder.setEncoding(Charset.forName(geoServer.getSettings().getCharset()));
         if (wfs.isVerbose() || geoServer.getSettings().isVerbose()) {
-
             encoder.setIndenting(true);
         } else {
             encoder.setIndenting(false);
+        }
         }
         Request dispatcherRequest = Dispatcher.REQUEST.get();
         if (dispatcherRequest != null) {

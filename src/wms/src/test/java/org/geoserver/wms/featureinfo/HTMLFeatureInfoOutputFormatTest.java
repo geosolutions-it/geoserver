@@ -6,6 +6,7 @@
 
 package org.geoserver.wms.featureinfo;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -47,6 +48,8 @@ import org.geoserver.wms.GetFeatureInfoRequest;
 import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSTestSupport;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.DataUtilities;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
@@ -55,8 +58,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletContext;
 
@@ -262,10 +263,10 @@ public class HTMLFeatureInfoOutputFormatTest extends WMSTestSupport {
         MockHttpServletResponse response = getAsServletResponse(request, "");
 
         // MimeType
-        assertEquals("text/html", response.getContentType());
+        assertEquals("text/html", getBaseMimeType(response.getContentType()));
 
         // Check if the character encoding is the one expected
-        assertEquals("UTF-8", response.getCharacterEncoding());
+        assertEquals(UTF_8.name(), response.getCharacterEncoding());
     }
 
     @SuppressWarnings("unchecked")

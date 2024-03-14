@@ -25,7 +25,6 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.OWS20Exception.OWSExceptionCode;
 import org.geoserver.wcs.WCSInfo;
-import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.eo.EOCoverageResourceCodec;
 import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
@@ -33,19 +32,28 @@ import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer.WCS20DescribeCoverageTranslator;
 import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
+import org.geotools.api.data.Query;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.Literal;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.store.MaxFeaturesFeatureCollection;
 import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.gml2.SrsSyntax;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
@@ -58,14 +66,6 @@ import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.expression.Literal;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
@@ -265,21 +265,21 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                 throws IOException {
             // get the crs and look for an EPSG code
             final CoordinateReferenceSystem crs = ci.getCRS();
-            GeneralEnvelope envelope = reader.getOriginalEnvelope();
+            GeneralBounds envelope = reader.getOriginalEnvelope();
             List<String> axesNames = envelopeAxisMapper.getAxesNames(envelope, true);
 
             // lookup EPSG code
-            Integer EPSGCode = null;
+            String crsId = null;
             try {
-                EPSGCode = CRS.lookupEpsgCode(crs, false);
+                crsId = CRS.lookupIdentifier(crs, true);
             } catch (FactoryException e) {
                 throw new IllegalStateException(
                         "Unable to lookup epsg code for this CRS:" + crs, e);
             }
-            if (EPSGCode == null) {
+            if (crsId == null) {
                 throw new IllegalStateException("Unable to lookup epsg code for this CRS:" + crs);
             }
-            final String srsName = GetCoverage.SRS_STARTER + EPSGCode;
+            final String srsName = SrsSyntax.AUTH_CODE.getSRS(crsId);
             // handle axes swap for geographic crs
             final boolean axisSwap = CRS.getAxisOrder(crs).equals(AxisOrder.EAST_NORTH);
 
@@ -472,7 +472,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             }
 
             // spatial subset
-            FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
+            FilterFactory ff = CommonFactoryFinder.getFilterFactory();
             Filter filter = null;
             if (lonRange != null || latRange != null) {
                 try {

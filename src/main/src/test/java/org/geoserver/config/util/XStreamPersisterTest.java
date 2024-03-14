@@ -5,6 +5,7 @@
  */
 package org.geoserver.config.util;
 
+import static java.util.Map.entry;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.assertEquals;
@@ -27,7 +28,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -77,9 +77,11 @@ import org.geoserver.config.LoggingInfo;
 import org.geoserver.config.SettingsInfo;
 import org.geoserver.config.impl.GeoServerImpl;
 import org.geoserver.config.impl.ServiceInfoImpl;
+import org.geoserver.config.impl.SettingsInfoImpl;
 import org.geoserver.config.util.XStreamPersister.CRSConverter;
 import org.geoserver.config.util.XStreamPersister.SRSConverter;
 import org.geoserver.platform.GeoServerExtensionsHelper;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.jdbc.RegexpValidator;
 import org.geotools.jdbc.VirtualTable;
 import org.geotools.jdbc.VirtualTableParameter;
@@ -97,7 +99,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Text;
@@ -126,6 +127,7 @@ public class XStreamPersisterTest {
         ContactInfo contact = factory.createContact();
         g1.getSettings().setContact(contact);
         contact.setAddress("123");
+        contact.setAddressDeliveryPoint("123"); // synomym with above
         contact.setAddressCity("Victoria");
         contact.setAddressCountry("Canada");
         contact.setAddressPostalCode("V1T3T8");
@@ -137,6 +139,8 @@ public class XStreamPersisterTest {
         contact.setContactPerson("Bob");
         contact.setContactPosition("hacker");
         contact.setContactVoice("+1 250 765 4321");
+        contact.setOnlineResource("https://acme.org/");
+        contact.setWelcome("Welcome to ACME mapping services");
 
         g1.getSettings().setNumDecimals(2);
         g1.getSettings().setOnlineResource("http://acme.org");
@@ -203,6 +207,11 @@ public class XStreamPersisterTest {
     static class MyServiceInfo extends ServiceInfoImpl {
 
         String foo;
+
+        @Override
+        public String getType() {
+            return "My";
+        }
 
         String getFoo() {
             return foo;
@@ -1132,6 +1141,14 @@ public class XStreamPersisterTest {
     }
 
     @Test
+    public void testPlanetarySRS() throws Exception {
+        CoordinateReferenceSystem crs = CRS.decode("IAU:1000");
+        SRSConverter c = new SRSConverter();
+
+        assertEquals("IAU:1000", c.toString(crs));
+    }
+
+    @Test
     public void testCRSConverterInvalidWKT() throws Exception {
         CoordinateReferenceSystem crs = CRS.decode("EPSG:3575");
         try {
@@ -1268,36 +1285,29 @@ public class XStreamPersisterTest {
         assertEquals(vtc.getName(), "sqlview");
     }
 
-    @SuppressWarnings("serial")
     @Test
     public void testVirtualTableMultipleGeoms() throws IOException {
         Map<String, String> types =
-                new HashMap<String, String>() {
-                    {
-                        put("southernmost_point", "org.locationtech.jts.geom.Geometry");
-                        put("location_polygon", "org.locationtech.jts.geom.Geometry");
-                        put("centroid", "org.locationtech.jts.geom.Geometry");
-                        put("northernmost_point", "org.locationtech.jts.geom.Geometry");
-                        put("easternmost_point", "org.locationtech.jts.geom.Geometry");
-                        put("location", "org.locationtech.jts.geom.Geometry");
-                        put("location_original", "org.locationtech.jts.geom.Geometry");
-                        put("westernmost_point", "org.locationtech.jts.geom.Geometry");
-                    }
-                };
+                Map.ofEntries(
+                        entry("southernmost_point", "org.locationtech.jts.geom.Geometry"),
+                        entry("location_polygon", "org.locationtech.jts.geom.Geometry"),
+                        entry("centroid", "org.locationtech.jts.geom.Geometry"),
+                        entry("northernmost_point", "org.locationtech.jts.geom.Geometry"),
+                        entry("easternmost_point", "org.locationtech.jts.geom.Geometry"),
+                        entry("location", "org.locationtech.jts.geom.Geometry"),
+                        entry("location_original", "org.locationtech.jts.geom.Geometry"),
+                        entry("westernmost_point", "org.locationtech.jts.geom.Geometry"));
 
         Map<String, Integer> srids =
-                new HashMap<String, Integer>() {
-                    {
-                        put("southernmost_point", 4326);
-                        put("location_polygon", 3003);
-                        put("centroid", 3004);
-                        put("northernmost_point", 3857);
-                        put("easternmost_point", 4326);
-                        put("location", 3003);
-                        put("location_original", 3004);
-                        put("westernmost_point", 3857);
-                    }
-                };
+                Map.ofEntries(
+                        entry("southernmost_point", 4326),
+                        entry("location_polygon", 3003),
+                        entry("centroid", 3004),
+                        entry("northernmost_point", 3857),
+                        entry("easternmost_point", 4326),
+                        entry("location", 3003),
+                        entry("location_original", 3004),
+                        entry("westernmost_point", 3857));
 
         FeatureTypeInfo ft =
                 persister.load(
@@ -1469,6 +1479,15 @@ public class XStreamPersisterTest {
         XMLAssert.assertXpathEvaluatesTo("key2", "//settings/metadata/map/entry[2]/string[1]", doc);
         XMLAssert.assertXpathEvaluatesTo(
                 "value2", "//settings/metadata/map/entry[2]/string[2]", doc);
+    }
+
+    @Test
+    public void readSettingsMetadataMissingElement() throws Exception {
+        String xml = "<global/>";
+        GeoServerInfo gs =
+                persister.load(new ByteArrayInputStream(xml.getBytes()), GeoServerInfo.class);
+
+        XMLAssert.assertEquals(gs.getSettings(), new SettingsInfoImpl());
     }
 
     @Test

@@ -73,26 +73,36 @@ import org.geoserver.wps.ppio.ZipArchivePPIO;
 import org.geoserver.wps.process.RawData;
 import org.geoserver.wps.process.ResourceRawData;
 import org.geoserver.wps.resource.WPSResourceManager;
+import org.geotools.api.data.DataSourceException;
+import org.geotools.api.data.SimpleFeatureReader;
+import org.geotools.api.data.Transaction;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.datum.PixelInCell;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.referencing.operation.MathTransform2D;
+import org.geotools.api.util.InternationalString;
+import org.geotools.api.util.ProgressListener;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridEnvelope2D;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.imageio.geotiff.GeoTiffIIOMetadataDecoder;
 import org.geotools.coverage.util.CoverageUtilities;
 import org.geotools.coverage.util.FeatureUtilities;
-import org.geotools.data.DataSourceException;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.Transaction;
 import org.geotools.data.geojson.GeoJSONReader;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureReader;
 import org.geotools.data.util.DefaultProgressListener;
 import org.geotools.data.util.NullProgressListener;
 import org.geotools.feature.NameImpl;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.gce.geotiff.GeoTiffReader;
-import org.geotools.geometry.DirectPosition2D;
-import org.geotools.geometry.Envelope2D;
+import org.geotools.geometry.Position2D;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.geometry.jts.WKTReader2;
@@ -119,17 +129,6 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.io.ParseException;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.datum.PixelInCell;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.MathTransform2D;
-import org.opengis.util.InternationalString;
-import org.opengis.util.ProgressListener;
 import org.springframework.util.MimeType;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -146,7 +145,7 @@ public class DownloadProcessTest extends WPSTestSupport {
         SimpleFeatureCollection parse(FileInputStream t) throws Exception;
     }
 
-    private static final FilterFactory2 FF = FeatureUtilities.DEFAULT_FILTER_FACTORY;
+    private static final FilterFactory FF = FeatureUtilities.DEFAULT_FILTER_FACTORY;
     private static final double EPS = 1e-6;
 
     private static QName MIXED_RES = new QName(WCS_URI, "mixedres", WCS_PREFIX);
@@ -404,6 +403,37 @@ public class DownloadProcessTest extends WPSTestSupport {
     }
 
     @Test
+    public void testGetFeaturesWithNoROIAsShapefile() throws Exception {
+        // Creates the new process for the download
+        DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
+
+        FeatureTypeInfo ti = getCatalog().getFeatureTypeByName(getLayerId(MockData.POLYGONS));
+        SimpleFeatureCollection rawSource =
+                (SimpleFeatureCollection) ti.getFeatureSource(null, null).getFeatures();
+        // Download
+        RawData shpeZip =
+                executeVectorDownload(
+                        downloadProcess,
+                        MockData.POLYGONS,
+                        "application/zip",
+                        "application/zip",
+                        null,
+                        null,
+                        false,
+                        "EPSG:4326");
+
+        try (AutoCloseableResource resource =
+                        new AutoCloseableResource(getResourceManager(), shpeZip);
+                InputStream is = new FileInputStream(resource.getFile())) {
+            ShapefileDataStore store = decodeShape(is);
+            SimpleFeatureCollection rawTarget = store.getFeatureSource().getFeatures();
+            Assert.assertNotNull(rawTarget);
+            Assert.assertEquals(rawSource.size(), rawTarget.size());
+            store.dispose();
+        }
+    }
+
+    @Test
     public void testGetFeaturesAsGeoPackageZipped() throws Exception {
         // Creates the new process for the download
         DownloadProcess downloadProcess = createDefaultTestingDownloadProcess();
@@ -648,13 +678,34 @@ public class DownloadProcessTest extends WPSTestSupport {
             Polygon roi,
             boolean cropToGeometry)
             throws FactoryException {
+        return executeVectorDownload(
+                downloadProcess,
+                polygons,
+                mimeType,
+                outputFormat,
+                roiCRS,
+                roi,
+                cropToGeometry,
+                null);
+    }
+
+    private RawData executeVectorDownload(
+            DownloadProcess downloadProcess,
+            QName polygons,
+            String mimeType,
+            String outputFormat,
+            String roiCRS,
+            Polygon roi,
+            boolean cropToGeometry,
+            String targetCRS)
+            throws FactoryException {
         return downloadProcess.execute(
                 getLayerId(polygons), // layerName
                 null, // filter
                 mimeType,
                 outputFormat,
-                null, // targetCRS
-                CRS.decode(roiCRS), // roiCRS
+                targetCRS == null ? null : CRS.decode(targetCRS), // targetCRS
+                roiCRS == null ? null : CRS.decode(roiCRS), // roiCRS
                 roi, // roi
                 cropToGeometry, // cropToGeometry
                 null, // interpolation
@@ -784,7 +835,7 @@ public class DownloadProcessTest extends WPSTestSupport {
             byte[] result =
                     (byte[])
                             gc.evaluate(
-                                    new DirectPosition2D(
+                                    new Position2D(
                                             new Point2D.Double(firstXRoi, firstYRoi - 1E-4)));
             assertNotEquals(0, result[0]);
             assertNotEquals(0, result[1]);
@@ -794,7 +845,7 @@ public class DownloadProcessTest extends WPSTestSupport {
             result =
                     (byte[])
                             gc.evaluate(
-                                    new DirectPosition2D(
+                                    new Position2D(
                                             new Point2D.Double(firstXRoi - 2, firstYRoi - 0.5)));
             Assert.assertEquals(0, result[0]);
             Assert.assertEquals(0, result[1]);
@@ -842,7 +893,7 @@ public class DownloadProcessTest extends WPSTestSupport {
             byte[] result =
                     (byte[])
                             gc.evaluate(
-                                    new DirectPosition2D(
+                                    new Position2D(
                                             new Point2D.Double(firstXRoi, firstYRoi - 1E-4)));
             assertNotEquals(0, result[0]);
             assertNotEquals(0, result[1]);
@@ -853,7 +904,7 @@ public class DownloadProcessTest extends WPSTestSupport {
             result =
                     (byte[])
                             gc.evaluate(
-                                    new DirectPosition2D(
+                                    new Position2D(
                                             new Point2D.Double(firstXRoi - 2, firstYRoi - 0.5)));
             assertNotEquals(0, result[0]);
             assertNotEquals(0, result[1]);
@@ -949,14 +1000,15 @@ public class DownloadProcessTest extends WPSTestSupport {
             CoverageInfo ci = getCatalog().getCoverageByName(getLayerId(MockData.USA_WORLDIMG));
 
             // raster is not rescaled, should be the same
-            org.opengis.geometry.Envelope envelope = ci.getGridCoverage(null, null).getEnvelope();
+            org.geotools.api.geometry.Bounds envelope =
+                    ci.getGridCoverage(null, null).getEnvelope();
             assertEquals(envelope.getMinimum(0), bounds.getMinimum(0), 0d);
             assertEquals(envelope.getMaximum(0), bounds.getMaximum(0), 0d);
             assertEquals(envelope.getMinimum(1), bounds.getMinimum(1), 0d);
             assertEquals(envelope.getMaximum(1), bounds.getMaximum(1), 0d);
 
             // the tile bounds are larger than the bounds (tile is bigger)
-            assertTrue(entry.getTileMatrixSetBounds().contains(new Envelope2D(bounds)));
+            assertTrue(entry.getTileMatrixSetBounds().contains(new ReferencedEnvelope(bounds)));
 
             List<TileMatrix> matrices = entry.getTileMatricies();
             assertEquals(1, matrices.size());
@@ -1358,7 +1410,7 @@ public class DownloadProcessTest extends WPSTestSupport {
             ReferencedEnvelope bounds = entry.getBounds();
 
             // the tile bounds are larger than the bounds (tile is bigger)
-            assertTrue(entry.getTileMatrixSetBounds().contains(new Envelope2D(bounds)));
+            assertTrue(entry.getTileMatrixSetBounds().contains(new ReferencedEnvelope(bounds)));
 
             List<TileMatrix> matrices = entry.getTileMatricies();
             assertEquals(1, matrices.size());
@@ -1866,7 +1918,7 @@ public class DownloadProcessTest extends WPSTestSupport {
                 // the red one defines left-most location, but the green one lower corner
                 // reprojected is just a smidge below 600000, bringing the alignment of
                 // output down to 599000
-                Envelope2D gcEnvelope = gc.getEnvelope2D();
+                ReferencedEnvelope gcEnvelope = gc.getEnvelope2D();
                 assertEquals(160000, gcEnvelope.getMinimum(0), 0);
                 assertEquals(599000, gcEnvelope.getMinimum(1), 0);
             }
@@ -2596,74 +2648,6 @@ public class DownloadProcessTest extends WPSTestSupport {
                             + "Unable to proceed!: Download Limits Exceeded. Unable to proceed!",
                     e.getMessage()
                             + (e.getCause() != null ? ": " + e.getCause().getMessage() : ""));
-        }
-    }
-
-    /**
-     * Test download estimator for raster data. The result should exceed the integer limits
-     *
-     * @throws Exception the exception
-     */
-    @Test
-    public void testDownloadEstimatorIntegerMaxValueLimitRaster() throws Exception {
-        // Estimator process for checking limits
-        DownloadEstimatorProcess limits =
-                new DownloadEstimatorProcess(
-                        new StaticDownloadServiceConfiguration(
-                                new DownloadServiceConfiguration(
-                                        DownloadServiceConfiguration.NO_LIMIT,
-                                        (long) 1E12, // huge number, way above integer limits
-                                        DownloadServiceConfiguration.NO_LIMIT,
-                                        DownloadServiceConfiguration.NO_LIMIT,
-                                        DownloadServiceConfiguration.DEFAULT_COMPRESSION_LEVEL,
-                                        DownloadServiceConfiguration.NO_LIMIT)),
-                        getGeoServer());
-
-        final WPSResourceManager resourceManager = getResourceManager();
-        // Creates the new process for the download
-        DownloadProcess downloadProcess =
-                new DownloadProcess(getGeoServer(), limits, resourceManager);
-        // ROI as polygon
-        Polygon roi =
-                (Polygon)
-                        new WKTReader2()
-                                .read(
-                                        "POLYGON (( -127.57473954542964 54.06575021619523, "
-                                                + "-130.8545966116691 52.00807146727025, -129.50812897394974 49.85372324691927, "
-                                                + "-130.5300633861675 49.20465679591609, -129.25955033314003 48.60392508062591, "
-                                                + "-128.00975216684665 50.986137055052474, -125.8623089087404 48.63154492960477, "
-                                                + "-123.984159178178 50.68231871628503, -126.91186316993704 52.15307567440926, "
-                                                + "-125.3444367403868 53.54787804784162, -127.57473954542964 54.06575021619523 ))");
-        roi.setSRID(4326);
-
-        try {
-            // Download the data with ROI. It should throw an exception
-            downloadProcess.execute(
-                    getLayerId(MockData.USA_WORLDIMG), // layerName
-                    null, // filter
-                    "image/tiff", // outputFormat
-                    "image/tiff",
-                    null, // targetCRS
-                    WGS84, // roiCRS
-                    roi, // roi
-                    false, // cropToGeometry
-                    null, // interpolation
-                    100000, // targetSizeX
-                    60000, // targetSizeY
-                    null, // bandSelectIndices
-                    null, // Writing params
-                    false,
-                    false,
-                    0d,
-                    null,
-                    new NullProgressListener() // progressListener
-                    );
-
-            Assert.fail();
-        } catch (ProcessException e) {
-            Assert.assertEquals(
-                    "java.lang.IllegalArgumentException: Download Limits Exceeded. Unable to proceed!",
-                    e.getMessage());
         }
     }
 

@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -31,7 +32,9 @@ import org.geoserver.security.filter.GeoServerPreAuthenticatedUserNameFilter;
 import org.geoserver.security.impl.GeoServerRole;
 import org.geoserver.security.impl.GeoServerUser;
 import org.geoserver.security.impl.RoleCalculator;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2RestOperations;
@@ -42,12 +45,14 @@ import org.springframework.security.oauth2.client.token.AccessTokenRequest;
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.security.oauth2.provider.authentication.BearerTokenExtractor;
 import org.springframework.security.oauth2.provider.token.RemoteTokenServices;
 import org.springframework.security.oauth2.provider.token.ResourceServerTokenServices;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 
 /**
@@ -60,6 +65,14 @@ public abstract class GeoServerOAuthAuthenticationFilter
         implements GeoServerAuthenticationFilter, LogoutHandler {
 
     public static final String SESSION_COOKIE_NAME = "sessionid";
+    public static final String OAUTH2_AUTHENTICATION_KEY = "oauth2.authentication";
+    public static final String OAUTH2_AUTHENTICATION_TYPE_KEY = "oauth2.authenticationType";
+    public static final String OAUTH2_ACCESS_TOKEN_CHECK_KEY = "oauth2.AccessTokenCheckResponse";
+
+    public enum OAuth2AuthenticationType {
+        BEARER, // this is a bearer token (meaning existing access token is in the request headers)
+        USER // this is a "normal" oauth2 login (i.e. interactive user login)
+    }
 
     OAuth2FilterConfig filterConfig;
 
@@ -102,8 +115,13 @@ public abstract class GeoServerOAuthAuthenticationFilter
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // Search for an access_token on the request (simulating SSO)
         String accessToken = getAccessTokenFromRequest(request);
-        if (authentication == null || accessToken != null) {
+        if (authentication == null
+                || authentication instanceof AnonymousAuthenticationToken
+                || accessToken != null) {
 
+            if (authentication instanceof AnonymousAuthenticationToken) {
+                SecurityContextHolder.getContext().setAuthentication(null);
+            }
             OAuth2AccessToken token = restTemplate.getOAuth2ClientContext().getAccessToken();
 
             if (accessToken != null && token != null && !token.getValue().equals(accessToken)) {
@@ -119,22 +137,21 @@ public abstract class GeoServerOAuthAuthenticationFilter
              */
             final String customSessionCookie = getCustomSessionCookieValue(httpRequest);
 
-            if (accessToken == null && customSessionCookie == null && authentication == null) {
+            if (accessToken == null
+                    && customSessionCookie == null
+                    && (authentication == null
+                            || authentication instanceof AnonymousAuthenticationToken)) {
                 final AccessTokenRequest accessTokenRequest =
                         restTemplate.getOAuth2ClientContext().getAccessTokenRequest();
                 if (accessTokenRequest != null) {
-                    if (accessTokenRequest.getStateKey() != null)
-                        restTemplate
-                                .getOAuth2ClientContext()
-                                .removePreservedState(accessTokenRequest.getStateKey());
-                    if (accessTokenRequest.containsKey("access_token"))
-                        clearAccessTokenRequest(httpRequest, accessTokenRequest);
+                    enhanceAccessTokenRequest(httpRequest, accessTokenRequest);
                 }
             }
 
             if ((authentication != null && accessToken != null)
                     || (accessToken != null && token == null)
-                    || authentication == null) {
+                    || authentication == null
+                    || authentication instanceof AnonymousAuthenticationToken) {
 
                 doAuthenticate((HttpServletRequest) request, (HttpServletResponse) response);
 
@@ -153,6 +170,29 @@ public abstract class GeoServerOAuthAuthenticationFilter
             }
         }
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Enhance accessTokenRequest after creation by the restTemplate.
+     *
+     * <p>The default implementation handles {@code access_token} and state key.
+     *
+     * @param httpRequest
+     * @param accessTokenRequest Access token request, non {@code null}
+     */
+    protected void enhanceAccessTokenRequest(
+            HttpServletRequest httpRequest, AccessTokenRequest accessTokenRequest) {
+        var session = httpRequest.getSession();
+        var validator = (String) session.getAttribute("OIDC_CODE_VERIFIER");
+        accessTokenRequest.put("code_verifier", Collections.singletonList(validator));
+
+        if (accessTokenRequest.getStateKey() != null)
+            restTemplate
+                    .getOAuth2ClientContext()
+                    .removePreservedState(accessTokenRequest.getStateKey());
+
+        if (accessTokenRequest.containsKey("access_token"))
+            clearAccessTokenRequest(httpRequest, accessTokenRequest);
     }
 
     private void clearAccessTokenRequest(
@@ -240,14 +280,13 @@ public abstract class GeoServerOAuthAuthenticationFilter
 
             final AccessTokenRequest accessTokenRequest =
                     restTemplate.getOAuth2ClientContext().getAccessTokenRequest();
-            if (accessTokenRequest != null && accessTokenRequest.getStateKey() != null) {
-                restTemplate
-                        .getOAuth2ClientContext()
-                        .removePreservedState(accessTokenRequest.getStateKey());
-            }
-
             try {
-                accessTokenRequest.remove("access_token");
+                if (accessTokenRequest != null && accessTokenRequest.getStateKey() != null) {
+                    restTemplate
+                            .getOAuth2ClientContext()
+                            .removePreservedState(accessTokenRequest.getStateKey());
+                    accessTokenRequest.remove("access_token");
+                }
             } finally {
                 SecurityContextHolder.clearContext();
                 request.getSession(false).invalidate();
@@ -262,10 +301,10 @@ public abstract class GeoServerOAuthAuthenticationFilter
             response.setStatus(HttpServletResponse.SC_NO_CONTENT);
             Cookie[] allCookies = request.getCookies();
 
-            for (int i = 0; i < allCookies.length; i++) {
-                String name = allCookies[i].getName();
+            for (Cookie cookie : allCookies) {
+                String name = cookie.getName();
                 if (name.equalsIgnoreCase("JSESSIONID")) {
-                    Cookie cookieToDelete = allCookies[i];
+                    Cookie cookieToDelete = cookie;
                     cookieToDelete.setMaxAge(-1);
                     cookieToDelete.setPath("/");
                     cookieToDelete.setComment("EXPIRING COOKIE at " + System.currentTimeMillis());
@@ -285,10 +324,7 @@ public abstract class GeoServerOAuthAuthenticationFilter
         PreAuthenticatedAuthenticationToken result = null;
         try {
             principal = getPreAuthenticatedPrincipal(request, response);
-        } catch (IOException e1) {
-            LOGGER.log(Level.FINE, e1.getMessage(), e1);
-            principal = null;
-        } catch (ServletException e1) {
+        } catch (IOException | ServletException e1) {
             LOGGER.log(Level.FINE, e1.getMessage(), e1);
             principal = null;
         }
@@ -341,9 +377,7 @@ public abstract class GeoServerOAuthAuthenticationFilter
     protected String getPreAuthenticatedPrincipal(HttpServletRequest request) {
         try {
             return getPreAuthenticatedPrincipal(request, null);
-        } catch (IOException e) {
-            return null;
-        } catch (ServletException e) {
+        } catch (IOException | ServletException e) {
             return null;
         }
     }
@@ -361,6 +395,11 @@ public abstract class GeoServerOAuthAuthenticationFilter
 
         // Search for an access_token on the request (simulating SSO)
         String accessToken = getAccessTokenFromRequest(req);
+        if (accessToken != null) {
+            req.setAttribute(OAUTH2_AUTHENTICATION_TYPE_KEY, OAuth2AuthenticationType.BEARER);
+        } else {
+            req.setAttribute(OAUTH2_AUTHENTICATION_TYPE_KEY, OAuth2AuthenticationType.USER);
+        }
 
         if (accessToken != null) {
             restTemplate
@@ -376,16 +415,55 @@ public abstract class GeoServerOAuthAuthenticationFilter
         Authentication authentication = null;
         try {
             authentication = filter.attemptAuthentication(req, null);
+            req.setAttribute(OAUTH2_AUTHENTICATION_KEY, authentication);
+
+            // the authentication (in the extensions) should contain a Map which is the result of
+            // the
+            // Access Token Check Request (which will be the json result from the oidc "userinfo"
+            // endpoint).
+            // We move it from inside the authentication to directly to a request attributes.
+            // This will make it a "peer" with the Access Token (which spring puts on the request as
+            // an attribute).
+            if (authentication instanceof OAuth2Authentication) {
+                OAuth2Authentication oAuth2Authentication = (OAuth2Authentication) authentication;
+                Object map =
+                        oAuth2Authentication
+                                .getOAuth2Request()
+                                .getExtensions()
+                                .get(OAUTH2_ACCESS_TOKEN_CHECK_KEY);
+                if (map instanceof Map) {
+                    req.setAttribute(OAUTH2_ACCESS_TOKEN_CHECK_KEY, map);
+                }
+            }
+
             LOGGER.log(
                     Level.FINE,
                     "Authenticated OAuth request for principal {0}",
                     authentication.getPrincipal());
+        } catch (HttpClientErrorException.Unauthorized unauthorized) {
+            // this exception typically happens when the token has expired (also, if it was
+            // invalid/modified)
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Oauth2 OIDC - an error occurred during token validation.  Most likely the token has expired or is invalid/modified.  "
+                            + unauthorized.getMessage());
         } catch (Exception e) {
-            if (e instanceof UserRedirectRequiredException) {
+            if (e instanceof UserRedirectRequiredException
+                    || e instanceof InsufficientAuthenticationException) {
                 if (filterConfig.getEnableRedirectAuthenticationEntryPoint()
                         || req.getRequestURI().endsWith(filterConfig.getLoginEndpoint())) {
                     // Intercepting a "UserRedirectRequiredException" and redirect to the OAuth2
                     // Provider login URI
+                    if (filterConfig.isAllowUnSecureLogging()) {
+                        LOGGER.log(
+                                Level.FINE,
+                                "OIDC: redirecting to identity provider for user login: "
+                                        + this.filterConfig.buildAuthorizationUrl());
+                        LOGGER.log(
+                                Level.FINE,
+                                "OIDC: When complete, identity provider will redirect to: "
+                                        + this.filterConfig.getRedirectUri());
+                    }
                     this.aep.commence(req, resp, null);
                 } else {
                     if (resp.getStatus() != 302) {
@@ -394,7 +472,6 @@ public abstract class GeoServerOAuthAuthenticationFilter
                                 restTemplate.getOAuth2ClientContext().getAccessTokenRequest();
                         if (accessTokenRequest.getPreservedState() != null
                                 && accessTokenRequest.getStateKey() != null) {
-                            // restTemplate.getOAuth2ClientContext().removePreservedState(accessTokenRequest.getStateKey());
                             accessTokenRequest.remove("state");
                             accessTokenRequest.remove(accessTokenRequest.getStateKey());
                             accessTokenRequest.setPreservedState(null);

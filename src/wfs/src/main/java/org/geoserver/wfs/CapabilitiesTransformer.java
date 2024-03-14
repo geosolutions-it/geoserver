@@ -43,8 +43,14 @@ import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.xml.v1_0.OWS;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
+import org.geoserver.util.InternationalStringUtils;
 import org.geoserver.wfs.CapabilitiesTransformer.WFS1_1.CapabilitiesTranslator1_1;
 import org.geoserver.wfs.request.GetCapabilitiesRequest;
+import org.geotools.api.feature.type.AttributeType;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.feature.type.Schema;
+import org.geotools.api.filter.capability.FunctionName;
+import org.geotools.api.parameter.Parameter;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.NameImpl;
 import org.geotools.filter.FunctionFactory;
@@ -57,11 +63,6 @@ import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
 import org.geotools.xs.XS;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.feature.type.AttributeType;
-import org.opengis.feature.type.Name;
-import org.opengis.feature.type.Schema;
-import org.opengis.filter.capability.FunctionName;
-import org.opengis.parameter.Parameter;
 import org.vfny.geoserver.global.FeatureTypeInfoTitleComparator;
 import org.vfny.geoserver.util.ResponseUtils;
 import org.xml.sax.Attributes;
@@ -446,9 +447,27 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
 
                 handleKeywords(wfs.getKeywords());
 
-                element(
-                        "OnlineResource",
-                        buildURL(request.getBaseUrl(), "wfs", null, URLType.SERVICE));
+                GeoServer geoServer = wfs.getGeoServer();
+                ContactInfo contact = geoServer.getSettings().getContact();
+
+                String onlineResource =
+                        InternationalStringUtils.firstNonBlank(
+                                wfs.getOnlineResource(),
+                                contact.getOnlineResource(),
+                                wfs.getGeoServer().getSettings().getOnlineResource(),
+                                buildURL(request.getBaseUrl(), null, null, URLType.SERVICE));
+                if (onlineResource != null) {
+                    try {
+                        new URL(onlineResource);
+                    } catch (MalformedURLException e) {
+                        LOGGER.log(
+                                Level.WARNING,
+                                "WFS online resource seems to be an invalid URL: '"
+                                        + onlineResource
+                                        + "'");
+                    }
+                }
+                element("OnlineResource", onlineResource);
                 element("Fees", wfs.getFees());
                 element("AccessConstraints", wfs.getAccessConstraints());
                 end("Service");
@@ -881,7 +900,9 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
              * </pre>
              */
             protected void handleFilterCapabilities() {
-                String ogc = "ogc:";
+                nsSupport.declarePrefix(OGC_PREFIX, OGC_URI);
+
+                String ogc = OGC_PREFIX + ':';
 
                 // REVISIT: for now I"m just prepending ogc onto the name element.
                 // Is the proper way to only do that for the qname?  I guess it
@@ -1876,15 +1897,8 @@ public abstract class CapabilitiesTransformer extends TransformerBase {
             }
 
             private String applySRSNameStyle(GMLInfo gml, String srs) {
-                if (srs != null) {
-                    String prefix = gml.getSrsNameStyle().getPrefix();
-                    if (srs.matches("(?ui)EPSG:[0-9]+")) {
-                        srs = prefix + srs.substring(5);
-                    } else {
-                        srs = prefix + srs;
-                    }
-                }
-                return srs;
+                if (srs != null) return gml.getSrsNameStyle().toSrsSyntax().getSRS(srs);
+                return null;
             }
 
             protected List<String> getOtherSRS(FeatureTypeInfo featureType) {

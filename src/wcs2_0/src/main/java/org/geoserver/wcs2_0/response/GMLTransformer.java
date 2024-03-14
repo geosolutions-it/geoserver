@@ -27,16 +27,26 @@ import org.geoserver.catalog.CoverageDimensionInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
+import org.geotools.api.coverage.SampleDimension;
+import org.geotools.api.coverage.SampleDimensionType;
+import org.geotools.api.coverage.grid.GridEnvelope;
+import org.geotools.api.geometry.Bounds;
+import org.geotools.api.metadata.spatial.PixelOrientation;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.crs.GeographicCRS;
+import org.geotools.api.referencing.cs.CoordinateSystem;
+import org.geotools.api.referencing.operation.MathTransform2D;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.TypeMap;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.util.CoverageUtilities;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
+import org.geotools.gml2.SrsSyntax;
 import org.geotools.measure.UnitFormat;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
@@ -47,15 +57,6 @@ import org.geotools.util.Utilities;
 import org.geotools.util.logging.Logging;
 import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
-import org.opengis.coverage.SampleDimension;
-import org.opengis.coverage.SampleDimensionType;
-import org.opengis.coverage.grid.GridEnvelope;
-import org.opengis.metadata.spatial.PixelOrientation;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.crs.GeographicCRS;
-import org.opengis.referencing.cs.CoordinateSystem;
-import org.opengis.referencing.operation.MathTransform2D;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
@@ -170,17 +171,17 @@ class GMLTransformer extends TransformerBase {
                             gc2d.getEnvelope2D(), true);
 
             // lookup EPSG code
-            Integer EPSGCode = null;
+            String crsId = null;
             try {
-                EPSGCode = CRS.lookupEpsgCode(crs, false);
+                crsId = CRS.lookupIdentifier(crs, true);
             } catch (FactoryException e) {
                 throw new IllegalStateException(
                         "Unable to lookup epsg code for this CRS:" + crs, e);
             }
-            if (EPSGCode == null) {
+            if (crsId == null) {
                 throw new IllegalStateException("Unable to lookup epsg code for this CRS:" + crs);
             }
-            final String srsName = GetCoverage.SRS_STARTER + EPSGCode;
+            final String srsName = SrsSyntax.OGC_HTTP_URI.getSRS(crsId);
             // handle axes swap for geographic crs
             final boolean axisSwap = !CRS.getAxisOrder(crs).equals(AxisOrder.EAST_NORTH);
 
@@ -199,7 +200,7 @@ class GMLTransformer extends TransformerBase {
             }
             String axesLabel = builder.substring(0, builder.length() - 1);
             try {
-                GeneralEnvelope envelope = new GeneralEnvelope(gc2d.getEnvelope());
+                GeneralBounds envelope = new GeneralBounds(gc2d.getEnvelope());
                 handleBoundedBy(envelope, axisSwap, srsName, axesLabel, null);
             } catch (IOException ex) {
                 throw new WCS20Exception(ex);
@@ -599,7 +600,7 @@ class GMLTransformer extends TransformerBase {
          * }</pre>
          */
         public void handleBoundedBy(
-                final GeneralEnvelope envelope,
+                final Bounds envelope,
                 boolean axisSwap,
                 String srsName,
                 String axisLabels,

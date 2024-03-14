@@ -30,11 +30,11 @@ import org.geoserver.wps.ppio.BoundingBoxPPIO;
 import org.geoserver.wps.ppio.LiteralPPIO;
 import org.geoserver.wps.ppio.ProcessParameterIO;
 import org.geoserver.wps.process.GeoServerProcessors;
-import org.geotools.data.Parameter;
+import org.geotools.api.data.Parameter;
+import org.geotools.api.feature.type.Name;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.gml2.bindings.GML2EncodingUtils;
 import org.geotools.process.ProcessFactory;
-import org.opengis.feature.type.Name;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -250,8 +250,7 @@ public class ExecuteKvpRequestReader extends EMFKvpRequestReader
             if (envelope != null) {
                 BoundingBoxType bbox = Ows11Factory.eINSTANCE.createBoundingBoxType();
                 if (envelope.getCoordinateReferenceSystem() != null) {
-                    bbox.setCrs(
-                            GML2EncodingUtils.epsgCode(envelope.getCoordinateReferenceSystem()));
+                    bbox.setCrs(GML2EncodingUtils.toURI(envelope.getCoordinateReferenceSystem()));
                 }
                 List<Double> min = new ArrayList<>(envelope.getDimension());
                 List<Double> max = new ArrayList<>(envelope.getDimension());

@@ -22,7 +22,7 @@ Set the following performance settings in the Java virtual machine (JVM) for you
    * - ``-XX:SoftRefLRUPolicyMSPerMB=36000``
      - Increases the lifetime of "soft references" in GeoServer.  GeoServer uses soft references to cache datastore, spatial reference systems, and other data structures. By increasing this value to ``36000`` (which is 36 seconds) these values will stay in memory longer increasing the effectiveness of the cache.
    * - ``-XX:+UseParallelGC``
-     - The default garbage collector up to Java 8, **pauses the application while using several threads to recover memory**. Recommended if your GeoServer will be under light load and can tolerate pauses to clean up memory.
+     - This garbage collector **pauses the application while using several threads to recover memory**. Recommended if your GeoServer will be under light load and can tolerate pauses to clean up memory.
    * - ``-XX:+UseParNewGC``
      - Enables use of the concurrent mark sweep (CMS) garbage collector **uses multiple threads to recover memory while the application is running**. Recommended for GeoServer under continuous use, with heap sizes of less than 6GB.
    * - ``–XX:+UseG1GC``
@@ -32,7 +32,7 @@ For more information about JVM configuration, see the article `Performance tunin
 
 .. note::
 
-   You can only use one garbage collector at a time. Please refrain from combining garbage collectors at runtime. 
+   You can only use one garbage collector at a time. Please refrain from combining garbage collectors at runtime.
 
 .. note:: 
    
@@ -58,13 +58,13 @@ For more information about JVM configuration, see the article `Performance tunin
 
 .. _production_container.marlin:
 
-Enable the Marlin rasterizer
+Use newer Marlin rasterizer
 ----------------------------
 
-In order to enable Marlin on Java 8, or to use a newer version than that provided by your JVM, add the following to the JVM startup options::
+To use a newer version of Marlin than that provided by your JVM, add the following to the JVM startup options::
 
-     -Xbootclasspath/a:$MARLIN_JAR 
-     -Dsun.java2d.renderer=org.marlin.pisces.MarlinRenderingEngine 
+     -Xbootclasspath/a:$MARLIN_JAR
+     -Dsun.java2d.renderer=org.marlin.pisces.MarlinRenderingEngine
 
 where ``$MARLIN_JAR`` is the location of the ``marlin*.jar`` file located in the geoserver/WEB-INF/lib directory or downloaded from the `Marlin project <https://github.com/bourgesl/marlin-renderer/>`_.
 
@@ -75,55 +75,43 @@ The server status page shows which renderer is being used.
 Enable CORS
 -----------
 
-The standalone distributions of GeoServer include the Jetty application server. `Enable Cross-Origin Resource Sharing (CORS) <https://enable-cors.org/>`_ to allow JavaScript applications outside of your own domain, or web browsers, to use GeoServer.
+`Enable Cross-Origin Resource Sharing (CORS) <https://enable-cors.org/>`_ to allow JavaScript applications outside of your own domain, or web browsers, to use GeoServer.
 
-For more information on what this does and other options see the `Jetty documentation <http://www.eclipse.org/jetty/documentation>`_ or the `Tomcat documentation <https://tomcat.apache.org/tomcat-9.0-doc/config/filter.html#CORS_Filter>`_.
+Enable CORS for Tomcat
+''''''''''''''''''''''
 
-Uncomment the following <filter> and <filter-mapping> from :file:`webapps/geoserver/WEB-INF/web.xml` if using Jetty::
+The web archive distribution of GeoServer is tested with Tomcat.  Use the following steps to enable CORS for Tomcat,  more information on what this does and other options see the `Tomcat CORS Filter documentation <https://tomcat.apache.org/tomcat-9.0-doc/config/filter.html#CORS_Filter>`_.
 
-  <filter>
-    <filter-name>cross-origin</filter-name>
-    <filter-class>org.eclipse.jetty.servlets.CrossOriginFilter</filter-class>
-    <init-param>
-      <param-name>chainPreflight</param-name>
-      <param-value>false</param-value>
-    </init-param>
-    <init-param>
-      <param-name>allowedOrigins</param-name>
-      <param-value>*</param-value>
-    </init-param>
-    <init-param>
-      <param-name>allowedMethods</param-name>
-      <param-value>GET,POST,PUT,DELETE,HEAD,OPTIONS</param-value>
-    </init-param>
-    <init-param>
-      <param-name>allowedHeaders</param-name>
-      <param-value>*</param-value>
-    </init-param>
-  </filter>
 
-or Tomcat::
+1. Uncomment the following ``<filter>`` in :file:`webapps/geoserver/WEB-INF/web.xml`:
+   
+   .. literalinclude:: /../../../../src/web/app/src/main/webapp/WEB-INF/web.xml
+      :start-at: <!-- Uncomment following filter to enable CORS in Tomcat.
+      :end-at: -->
 
-  <filter>
-    <filter-name>cross-origin</filter-name>
-    <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
-    <init-param>
-      <param-name>cors.allowed.origins</param-name>
-      <param-value>*</param-value>
-    </init-param>
-    <init-param>
-      <param-name>cors.allowed.methods</param-name>
-      <param-value>GET,POST,PUT,DELETE,HEAD,OPTIONS</param-value>
-    </init-param>
-    <init-param>
-      <param-name>cors.allowed.headers</param-name>
-      <param-value>*</param-value>
-    </init-param>
-  </filter>
+2. Uncomment the following ``<filter-mapping>``:
 
-and regardless of application server choice uncomment::
+   .. literalinclude:: /../../../../src/web/app/src/main/webapp/WEB-INF/web.xml
+      :start-after: <!-- Uncomment following filter-mapping to enable CORS
+      :end-before: -->
 
-  <filter-mapping>
-    <filter-name>cross-origin</filter-name>
-    <url-pattern>/*</url-pattern>
-  </filter-mapping>
+3. Restart
+
+Enable CORS for Jetty / binary installer
+''''''''''''''''''''''''''''''''''''''''
+
+The standalone distributions of GeoServer include the Jetty application server.  Use the following steps to enable CORS for Jetty, for more information on what this does and other options see the `Jetty Cross Origin Filter documentation <https://eclipse.dev/jetty/documentation/jetty-9/index.html#cross-origin-filter>`_ 
+
+1. Uncomment the following ``<filter>`` in :file:`webapps/geoserver/WEB-INF/web.xml`:
+
+   .. literalinclude:: /../../../../src/web/app/src/main/webapp/WEB-INF/web.xml
+      :start-at:    <!-- Uncomment following filter to enable CORS in Jetty. 
+      :end-at: -->
+
+2. Uncomment the following ``<filter-mapping>``:
+
+   .. literalinclude:: /../../../../src/web/app/src/main/webapp/WEB-INF/web.xml
+      :start-at: <!-- Uncomment following filter-mapping to enable CORS
+      :end-at: -->
+
+3. Restart

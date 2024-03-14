@@ -12,10 +12,11 @@ import net.opengis.wfs.WfsFactory;
 import net.opengis.wfs.impl.DeleteElementTypeImpl;
 import net.opengis.wfs20.impl.DeleteTypeImpl;
 import org.eclipse.emf.ecore.EObject;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.Or;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.xsd.EMFUtils;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
 
 /**
  * Delete element in a Transaction request.
@@ -76,16 +77,13 @@ public abstract class Delete extends TransactionElement {
     }
 
     protected void eAddForDelete(EObject obj, String property, Filter newFilter) {
-        FilterFactory ff = CommonFactoryFinder.getFilterFactory2();
+        FilterFactory ff = CommonFactoryFinder.getFilterFactory();
         Filter currentFilter = (Filter) EMFUtils.get(obj, property);
 
         List<Filter> filters = new ArrayList<>();
-        if (newFilter != null) {
-            filters.add(newFilter);
-        }
-        if (currentFilter != null) {
-            filters.add(currentFilter);
-        }
+
+        flattenFilter(newFilter, filters);
+        flattenFilter(currentFilter, filters);
 
         Filter result;
         if (filters.isEmpty()) {
@@ -100,6 +98,16 @@ public abstract class Delete extends TransactionElement {
             ((DeleteElementTypeImpl) obj).setFilter(result);
         } else if (obj instanceof DeleteTypeImpl) {
             ((DeleteTypeImpl) obj).setFilter(result);
+        }
+    }
+
+    private void flattenFilter(Filter filter, List<Filter> filters) {
+        if (filter != null) {
+            if (filter instanceof Or) {
+                filters.addAll(((Or) filter).getChildren());
+            } else {
+                filters.add(filter);
+            }
         }
     }
 }

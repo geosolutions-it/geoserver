@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.awt.image.RenderedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -72,20 +73,37 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.test.RunTestSetup;
 import org.geoserver.test.SystemTest;
+import org.geotools.api.coverage.grid.GridCoverageReader;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.SimpleFeatureLocking;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.geometry.Bounds;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.ExternalGraphic;
+import org.geotools.api.style.Mark;
+import org.geotools.api.style.PolygonSymbolizer;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.StyleFactory;
+import org.geotools.api.style.StyledLayerDescriptor;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.coverage.util.CoverageUtilities;
-import org.geotools.data.DataAccess;
-import org.geotools.data.DataStore;
 import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureLocking;
-import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.data.wfs.WFSDataStoreFactory;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureIterator;
@@ -99,12 +117,8 @@ import org.geotools.jdbc.JDBCDataStore;
 import org.geotools.jdbc.VirtualTable;
 import org.geotools.jdbc.VirtualTableParameter;
 import org.geotools.ows.ServiceException;
+import org.geotools.referencing.CRS;
 import org.geotools.styling.AbstractStyleVisitor;
-import org.geotools.styling.Mark;
-import org.geotools.styling.PolygonSymbolizer;
-import org.geotools.styling.Style;
-import org.geotools.styling.StyleFactory;
-import org.geotools.styling.StyledLayerDescriptor;
 import org.geotools.util.SoftValueHashMap;
 import org.geotools.util.URLs;
 import org.geotools.util.Version;
@@ -115,16 +129,6 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.locationtech.jts.geom.Point;
-import org.opengis.coverage.grid.GridCoverageReader;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.geometry.Envelope;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.style.ExternalGraphic;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
@@ -141,6 +145,8 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
     private static final String VT_NAME = "pgeo_view";
 
     private static final String HUMANS = "humans";
+
+    private static final String BAD_CONN_DATASTORE = "bad_conn_data_store";
 
     static {
         System.setProperty("ALLOW_ENV_PARAMETRIZATION", "true");
@@ -401,7 +407,7 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
         GridCoverage2DReader reader =
                 (GridCoverage2DReader) ci.getGridCoverageReader(null, GeoTools.getDefaultHints());
 
-        Envelope envelop = reader.getOriginalEnvelope();
+        Bounds envelop = reader.getOriginalEnvelope();
 
         assertNotNull(ci);
         assertTrue(reader.getFormat() instanceof GeoTiffFormat);
@@ -711,6 +717,25 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
         Assert.assertFalse("foo.sld should not exist on disk after a failure.", sldFile.exists());
     }
 
+    /**
+     * Since GEOS-10743 readStyle() must throw a FileNotFoundException if the style file does not
+     * exist. (Before an empty file was returned.)
+     *
+     * @throws IOException
+     */
+    @Test(expected = FileNotFoundException.class)
+    public void testMissingStyleThrowsException() throws IOException {
+        Catalog catalog = getCatalog();
+        StyleInfo missing = catalog.getFactory().createStyle();
+        missing.setName("missing");
+        missing.setFilename("missing.sld");
+
+        ResourcePool pool = new ResourcePool(catalog);
+        try (BufferedReader reader = pool.readStyle(missing)) {
+            fail("FileNotFoundException expected for missing style files");
+        }
+    }
+
     @Test
     public void testParseExternalMark() throws Exception {
         StyleInfo si = getCatalog().getStyleByName(HUMANS);
@@ -728,6 +753,22 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
                                         .toASCIIString());
                     }
                 });
+    }
+
+    /**
+     * This checks that the resource pool does NOT wrap the FeatureSource so that it prevents
+     * locking
+     */
+    @Test
+    public void testSourceIsNotIncorrectlyWrappedAndCanLock() throws IOException {
+        Catalog cat = getCatalog();
+        ResourcePool resourcePool = cat.getResourcePool();
+
+        FeatureTypeInfo featureTypeInfo = cat.getFeatureTypeByName("Lines");
+        featureTypeInfo.getAttributes().addAll(featureTypeInfo.attributes());
+        FeatureSource source = resourcePool.getFeatureSource(featureTypeInfo, null);
+
+        assertTrue(source instanceof SimpleFeatureLocking);
     }
 
     /**
@@ -889,6 +930,19 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
         String absolutePath = dataDir.get("data/test.gpkg").dir().getAbsolutePath();
         assertNotEquals(newParams.get("database"), "file:data/test.gpkg");
         assertTrue(((String) newParams.get("database")).contains(absolutePath));
+    }
+
+    @Test
+    public void testGetParamsFixesCSVFilePath() {
+        Catalog catalog = getCatalog();
+        ResourcePool pool = new ResourcePool(catalog);
+        DataStoreInfo ds = getCatalog().getFactory().createDataStore();
+        ds.getConnectionParameters().put("file", "file:data/locations.csv");
+        Map newParams = pool.getParams(ds.getConnectionParameters(), getResourceLoader());
+        GeoServerDataDirectory dataDir = new GeoServerDataDirectory(getResourceLoader());
+        String absolutePath = dataDir.get("data/locations.csv").file().getAbsolutePath();
+        assertNotEquals(newParams.get("file"), "file:locations.csv");
+        assertTrue(((String) newParams.get("file")).contains(absolutePath));
     }
 
     @Test
@@ -1307,5 +1361,158 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
         if (thread != null && thread.isAlive()) {
             thread.interrupt();
         }
+    }
+
+    @Test
+    public void testAutodisableOnConnfailure() {
+
+        Catalog cat = getCatalog();
+        DataStoreInfo ds = cat.getFactory().createDataStore();
+        ds.setName(BAD_CONN_DATASTORE);
+        WorkspaceInfo ws = cat.getDefaultWorkspace();
+        ds.setWorkspace(ws);
+        ds.setEnabled(true);
+        ds.setDisableOnConnFailure(true);
+        Map<String, Serializable> params = ds.getConnectionParameters();
+        params.put("dbtype", "h2");
+        params.put("database", "");
+        cat.add(ds);
+
+        DataStoreInfo dsi = cat.getDataStoreByName(ds.getName());
+        assertTrue(dsi.isEnabled());
+
+        ResourcePool resourcePool = ResourcePool.create(cat);
+        DataAccess<?, ?> access = null;
+        try {
+            access = resourcePool.getDataStore(dsi);
+        } catch (IOException e) {
+
+        }
+        assertNull(access);
+        DataStoreInfo storeInfo = cat.getDataStoreByName(dsi.getName());
+        assertFalse(storeInfo.isEnabled());
+    }
+
+    @Test
+    public void testWmsCascadeAutoDisable() throws Exception {
+        GeoServerExtensions.extensions(ResourcePoolInitializer.class)
+                .get(0)
+                .initialize(getGeoServer());
+
+        ResourcePool rp = getCatalog().getResourcePool();
+
+        WMSStoreInfo info = getCatalog().getFactory().createWebMapServer();
+        info.setName("TestAutoDisableWMSStore");
+        URL url = getClass().getResource("1.3.0Capabilities-xxe.xml");
+        info.setCapabilitiesURL(url.toExternalForm());
+        info.setEnabled(true);
+        info.setDisableOnConnFailure(true);
+        info.setUseConnectionPooling(false);
+        getCatalog().add(info);
+        WMSStoreInfo wmsStore = getCatalog().getWMSStoreByName(info.getName());
+        assertTrue(wmsStore.isEnabled());
+        try {
+            rp.getWebMapServer(wmsStore);
+        } catch (IOException e) {
+            wmsStore = getCatalog().getWMSStoreByName(info.getName());
+        }
+        assertFalse(wmsStore.isEnabled());
+    }
+
+    @Test
+    public void testWmtsCascadeAutoDisable() throws Exception {
+        GeoServerExtensions.extensions(ResourcePoolInitializer.class)
+                .get(0)
+                .initialize(getGeoServer());
+
+        ResourcePool rp = getCatalog().getResourcePool();
+
+        WMTSStoreInfo info = getCatalog().getFactory().createWebMapTileServer();
+        info.setName("TestAutoDisableWMTSStore");
+        URL url = getClass().getResource("1.3.0Capabilities-xxe.xml");
+        info.setCapabilitiesURL(url.toExternalForm());
+        info.setEnabled(true);
+        info.setDisableOnConnFailure(true);
+        info.setUseConnectionPooling(false);
+        getCatalog().add(info);
+        WMTSStoreInfo wmtsStore = getCatalog().getWMTSStoreByName(info.getName());
+        assertTrue(wmtsStore.isEnabled());
+        try {
+            rp.getWebMapTileServer(wmtsStore);
+        } catch (IOException e) {
+            wmtsStore = getCatalog().getWMTSStoreByName(info.getName());
+        }
+        assertFalse(wmtsStore.isEnabled());
+    }
+
+    @Test
+    public void testCovergaeStoreInfoAutodisable() throws Exception {
+        GeoServerExtensions.extensions(ResourcePoolInitializer.class)
+                .get(0)
+                .initialize(getGeoServer());
+
+        ResourcePool rp = getCatalog().getResourcePool();
+
+        CoverageStoreInfo info = getCatalog().getFactory().createCoverageStore();
+        info.setName("TestCoverageAutoDisable");
+        info.setType("ImagePyramid");
+        info.setEnabled(true);
+        info.setDisableOnConnFailure(true);
+        info.setURL("file://./src/test/resources/not-existing.tif");
+        getCatalog().add(info);
+        CoverageStoreInfo storeInfo = getCatalog().getCoverageStoreByName(info.getName());
+        assertTrue(storeInfo.isEnabled());
+        try {
+            rp.getGridCoverageReader(storeInfo, null);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "", e);
+            storeInfo = getCatalog().getCoverageStoreByName(info.getName());
+        }
+        assertFalse(storeInfo.isEnabled());
+        rp.dispose();
+    }
+
+    @Test
+    public void testEPSGLookup() throws Exception {
+        // UTM 32 North, without EPSG codes
+        String wkt =
+                "PROJCS[\"WGS 84 / UTM zone 32N\",\n"
+                        + "    GEOGCS[\"WGS 84\",\n"
+                        + "        DATUM[\"WGS_1984\",\n"
+                        + "            SPHEROID[\"WGS 84\",6378137,298.257223563,\n"
+                        + "                AUTHORITY[\"EPSG\",\"7030\"]]],\n"
+                        + "        PRIMEM[\"Greenwich\",0,\n"
+                        + "            AUTHORITY[\"EPSG\",\"8901\"]],\n"
+                        + "        UNIT[\"degree\",0.0174532925199433,\n"
+                        + "            AUTHORITY[\"EPSG\",\"9122\"]]],\n"
+                        + "    PROJECTION[\"Transverse_Mercator\"],\n"
+                        + "    PARAMETER[\"latitude_of_origin\",0],\n"
+                        + "    PARAMETER[\"central_meridian\",9],\n"
+                        + "    PARAMETER[\"scale_factor\",0.9996],\n"
+                        + "    PARAMETER[\"false_easting\",500000],\n"
+                        + "    PARAMETER[\"false_northing\",0],\n"
+                        + "    UNIT[\"metre\",1,\n"
+                        + "        AUTHORITY[\"EPSG\",\"9001\"]],\n"
+                        + "    AXIS[\"Easting\",EAST],\n"
+                        + "    AXIS[\"Northing\",NORTH]]";
+        CoordinateReferenceSystem crs = CRS.parseWKT(wkt);
+        assertEquals("EPSG:32632", ResourcePool.lookupIdentifier(crs, true));
+    }
+
+    @Test
+    public void testIAULookup() throws Exception {
+        // Sun CRS, without authority and code
+        String wkt =
+                "GEOGCS[\"Sun (2015) - Sphere / Ocentric\",\n"
+                        + "    DATUM[\"Sun (2015) - Sphere\",\n"
+                        + "        SPHEROID[\"Sun (2015) - Sphere\",695700000,0,\n"
+                        + "            AUTHORITY[\"IAU\",\"1000\"]],\n"
+                        + "        AUTHORITY[\"IAU\",\"1000\"]],\n"
+                        + "    PRIMEM[\"Reference Meridian\",0,\n"
+                        + "        AUTHORITY[\"IAU\",\"1000\"]],\n"
+                        + "    UNIT[\"degree\",0.0174532925199433,\n"
+                        + "        AUTHORITY[\"EPSG\",\"9122\"]]]";
+        CoordinateReferenceSystem crs = CRS.parseWKT(wkt);
+        assertEquals("IAU:1000", ResourcePool.lookupIdentifier(crs, true));
     }
 }

@@ -14,31 +14,32 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.Predicates;
+import org.geotools.api.data.Query;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.geometry.BoundingBox;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.coverage.util.FeatureUtilities;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.gce.imagemosaic.Utils;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.gml2.SrsSyntax;
 import org.geotools.referencing.CRS;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.geometry.BoundingBox;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
 
 /**
  * Class to handle requested CRSs and ROI in order to determine if the request is involving any
@@ -48,7 +49,7 @@ import org.opengis.referencing.operation.TransformException;
 class CRSRequestHandler {
     private static final Logger LOGGER = Logging.getLogger(CRSRequestHandler.class);
 
-    private static final FilterFactory2 FF = FeatureUtilities.DEFAULT_FILTER_FACTORY;
+    private static final FilterFactory FF = FeatureUtilities.DEFAULT_FILTER_FACTORY;
 
     // ----------------
     // Input Parameters
@@ -279,8 +280,8 @@ class CRSRequestHandler {
             // since they can expose a crs attribute
             return null;
         }
-        Integer crsCode = CRS.lookupEpsgCode(targetCRS, false);
-        if (crsCode == null) {
+        String crsId = CRS.lookupIdentifier(targetCRS, false);
+        if (crsId == null) {
             return null;
         }
         String coverageName = reader.getGridCoverageNames()[0];
@@ -299,7 +300,7 @@ class CRSRequestHandler {
         filters.add(
                 FF.equals(
                         FF.property(crsDescriptor.getStartAttribute()),
-                        FF.literal("EPSG:" + crsCode)));
+                        FF.literal(SrsSyntax.AUTH_CODE.getSRS(crsId))));
         // Add the filter if specified
         if (filter != null) {
             filters.add(filter);

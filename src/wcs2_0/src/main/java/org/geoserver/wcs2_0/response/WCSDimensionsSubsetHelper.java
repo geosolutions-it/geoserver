@@ -5,7 +5,6 @@
  */
 package org.geoserver.wcs2_0.response;
 
-import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -38,19 +37,31 @@ import org.geoserver.wcs2_0.WCSEnvelope;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.response.DimensionBean.DimensionType;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
-import org.geoserver.wcs2_0.util.RequestUtils;
+import org.geotools.api.data.Query;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.Literal;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.geometry.MismatchedDimensionException;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.datum.PixelInCell;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.renderer.crs.ProjectionHandler;
 import org.geotools.renderer.crs.ProjectionHandlerFinder;
 import org.geotools.util.DateRange;
@@ -60,18 +71,7 @@ import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.expression.Literal;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.geometry.MismatchedDimensionException;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.datum.PixelInCell;
-import org.opengis.referencing.operation.TransformException;
+import org.vfny.geoserver.util.WCSUtils;
 
 /**
  * Provides support to deal with dimensions slicing, trimming, values conversions and default values
@@ -111,7 +111,7 @@ public class WCSDimensionsSubsetHelper {
 
     private GridCoverageRequest gridCoverageRequest;
 
-    private FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
+    private FilterFactory ff = CommonFactoryFinder.getFilterFactory();
 
     private static final WCSDimensionsValueParser PARSER = new WCSDimensionsValueParser();
 
@@ -193,13 +193,15 @@ public class WCSDimensionsSubsetHelper {
     private WCSEnvelope extractSubsettingEnvelope() {
 
         // default envelope in subsettingCRS
-        final CoordinateReferenceSystem sourceCRS = reader.getCoordinateReferenceSystem();
-        WCSEnvelope sourceEnvelopeInSubsettingCRS = new WCSEnvelope(reader.getOriginalEnvelope());
+        final CoordinateReferenceSystem sourceCRS = coverageInfo.getCRS();
+        ReferencedEnvelope envelope = WCSUtils.fitEnvelope(coverageInfo, reader);
+        WCSEnvelope sourceEnvelopeInSubsettingCRS = new WCSEnvelope(envelope);
         if (!(subsettingCRS == null || CRS.equalsIgnoreMetadata(subsettingCRS, sourceCRS))) {
             // reproject source envelope to subsetting crs for initialization
             try {
                 sourceEnvelopeInSubsettingCRS =
-                        new WCSEnvelope(CRS.transform(reader.getOriginalEnvelope(), subsettingCRS));
+                        new WCSEnvelope(
+                                CRS.transform(coverageInfo.getNativeBoundingBox(), subsettingCRS));
             } catch (Exception e) {
                 try {
                     // see if we can get a valid restricted area using the projection handlers
@@ -210,9 +212,7 @@ public class WCSDimensionsSubsetHelper {
                                     true);
                     if (handler != null) {
                         ReferencedEnvelope validArea = handler.getValidAreaBounds();
-                        Envelope intersection =
-                                validArea.intersection(
-                                        ReferencedEnvelope.reference(reader.getOriginalEnvelope()));
+                        Envelope intersection = validArea.intersection(envelope);
                         ReferencedEnvelope re = new ReferencedEnvelope(intersection, sourceCRS);
                         sourceEnvelopeInSubsettingCRS =
                                 new WCSEnvelope(re.transform(subsettingCRS, true));
@@ -356,9 +356,10 @@ public class WCSDimensionsSubsetHelper {
                             dimension);
                 }
                 // notice how we choose the order of the axes
-                AffineTransform affineTransform =
-                        RequestUtils.getAffineTransform(
-                                reader.getOriginalGridToWorld(PixelInCell.CELL_CENTER));
+                AffineTransform2D affineTransform =
+                        (AffineTransform2D)
+                                WCSUtils.fitGridGeometry(coverageInfo, reader)
+                                        .getGridToCRS(PixelInCell.CELL_CENTER);
                 final double scale =
                         axisIndex == 0 ? affineTransform.getScaleX() : -affineTransform.getScaleY();
 
@@ -385,7 +386,7 @@ public class WCSDimensionsSubsetHelper {
 
         // make sure we have not been requested to subset outside of the source CRS
         requestedEnvelope = new WCSEnvelope(subsettingEnvelope);
-        subsettingEnvelope.intersect(new GeneralEnvelope(sourceEnvelopeInSubsettingCRS));
+        subsettingEnvelope.intersect(new GeneralBounds(sourceEnvelopeInSubsettingCRS));
 
         if (subsettingEnvelope.isEmpty()) {
             throw new WCS20Exception(
@@ -1062,7 +1063,7 @@ public class WCSDimensionsSubsetHelper {
                     TransformException, FactoryException {
 
         // spatial subset
-        Filter filter = filterSpatial(gcr, reader, source);
+        Filter filter = filterSpatial(gcr, source);
 
         List<SortBy> sortByList = new ArrayList<>();
         // temporal subset
@@ -1081,8 +1082,7 @@ public class WCSDimensionsSubsetHelper {
         return query;
     }
 
-    private Filter filterSpatial(
-            GridCoverageRequest gcr, StructuredGridCoverage2DReader reader, GranuleSource source)
+    private Filter filterSpatial(GridCoverageRequest gcr, GranuleSource source)
             throws IOException, MismatchedDimensionException, TransformException, FactoryException {
         WCSEnvelope envelope = gcr.getSpatialSubset();
         Polygon llPolygon = JTS.toGeometry(new ReferencedEnvelope(envelope));
@@ -1092,8 +1092,7 @@ public class WCSDimensionsSubsetHelper {
                 JTS.transform(
                         llPolygon,
                         CRS.findMathTransform(
-                                envelope.getCoordinateReferenceSystem(),
-                                reader.getCoordinateReferenceSystem()));
+                                envelope.getCoordinateReferenceSystem(), coverageInfo.getCRS()));
         Literal polygonLiteral = ff.literal(nativeCRSPolygon);
         //                    if(overlaps) {
         return ff.intersects(geometryProperty, polygonLiteral);

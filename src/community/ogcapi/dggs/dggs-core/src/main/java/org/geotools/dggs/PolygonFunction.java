@@ -5,10 +5,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.geotools.api.filter.capability.FunctionName;
+import org.geotools.api.filter.expression.Expression;
+import org.geotools.api.filter.expression.Literal;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.filter.capability.FunctionName;
-import org.opengis.filter.expression.Expression;
-import org.opengis.filter.expression.Literal;
 
 /**
  * Checks if the given zoneId is inside the target polygon and at the target resolution. This
@@ -50,7 +50,7 @@ public class PolygonFunction extends DGGSSetFunctionBase {
                     Polygon polygon = (Polygon) getParameterValue(object, 1);
                     Integer resolution = (Integer) getParameterValue(object, 2);
                     Boolean compact =
-                            Optional.of((Boolean) getParameterValue(null, 3)).orElse(false);
+                            Optional.ofNullable((Boolean) getParameterValue(null, 3)).orElse(false);
                     DGGSInstance dggs = (DGGSInstance) getParameterValue(object, 4);
                     if (polygon == null || resolution == null || dggs == null)
                         return Collections.emptyIterator();
@@ -80,7 +80,7 @@ public class PolygonFunction extends DGGSSetFunctionBase {
         if (!isStable()) throw new IllegalStateException("Source parameters are not stable");
         Polygon polygon = (Polygon) getParameterValue(null, 1);
         Integer resolution = (Integer) getParameterValue(null, 2);
-        Boolean compact = Optional.of((Boolean) getParameterValue(null, 3)).orElse(false);
+        Boolean compact = Optional.ofNullable((Boolean) getParameterValue(null, 3)).orElse(false);
         DGGSInstance dggs = (DGGSInstance) getParameterValue(null, 4);
 
         return dggs.polygon(polygon, resolution, compact);

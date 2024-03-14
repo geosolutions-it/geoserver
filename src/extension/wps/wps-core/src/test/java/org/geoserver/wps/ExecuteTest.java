@@ -18,6 +18,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.awt.geom.Point2D;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,6 +39,7 @@ import javax.servlet.Filter;
 import javax.xml.namespace.QName;
 import net.opengis.ows11.BoundingBoxType;
 import org.apache.commons.codec.binary.Base64;
+import org.awaitility.Awaitility;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.custommonkey.xmlunit.exceptions.XpathException;
@@ -59,6 +61,8 @@ import org.geoserver.wps.executor.ProcessState;
 import org.geoserver.wps.executor.ProcessStatusTracker;
 import org.geoserver.wps.resource.ProcessArtifactsStore;
 import org.geoserver.wps.resource.WPSResourceManager;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.geojson.GeoJSONReader;
 import org.geotools.data.simple.SimpleFeatureIterator;
@@ -80,8 +84,6 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.io.WKTReader;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -705,7 +707,7 @@ public class ExecuteTest extends WPSTestSupport {
 
         assertXpathExists("/ows:ExceptionReport/ows:Exception/ows:ExceptionText", d);
         assertXpathEvaluatesTo(
-                "Failed to parse process inputs\nRemote complex input references are disabled",
+                "Failed to parse process input: features\nRemote complex input references are disabled",
                 "/ows:ExceptionReport/ows:Exception/ows:ExceptionText",
                 d);
     }
@@ -805,7 +807,7 @@ public class ExecuteTest extends WPSTestSupport {
 
         assertXpathExists("/ows:ExceptionReport/ows:Exception/ows:ExceptionText", d);
         assertXpathEvaluatesTo(
-                "Failed to parse process inputs\nRemote complex input references are disabled",
+                "Failed to parse process input: features\nRemote complex input references are disabled",
                 "/ows:ExceptionReport/ows:Exception/ows:ExceptionText",
                 d);
     }
@@ -1018,6 +1020,47 @@ public class ExecuteTest extends WPSTestSupport {
         // print(dom);
 
         checkStreamsProcessBounds(dom);
+    }
+
+    /**
+     * Tests a process execution with a BoudingBox as the output and check internal layer request
+     * handling as well
+     */
+    @Test
+    public void testBoundsIAUGet() throws Exception {
+        String request =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        + "<wps:Execute version=\"1.0.0\" service=\"WPS\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns=\"http://www.opengis.net/wps/1.0.0\" xmlns:wfs=\"http://www.opengis.net/wfs\" xmlns:wps=\"http://www.opengis.net/wps/1.0.0\" xmlns:ows=\"http://www.opengis.net/ows/1.1\" xmlns:gml=\"http://www.opengis.net/gml\" xmlns:ogc=\"http://www.opengis.net/ogc\" xmlns:wcs=\"http://www.opengis.net/wcs/1.1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xsi:schemaLocation=\"http://www.opengis.net/wps/1.0.0 http://schemas.opengis.net/wps/1.0.0/wpsAll.xsd\">\n"
+                        + "  <ows:Identifier>gs:Bounds</ows:Identifier>\n"
+                        + "  <wps:DataInputs>\n"
+                        + "    <wps:Input>\n"
+                        + "      <ows:Identifier>features</ows:Identifier>\n"
+                        + "      <wps:Reference mimeType=\"text/xml; subtype=wfs-collection/1.0\" xlink:href=\"http://geoserver/wfs?service=WFS&amp;request=GetFeature&amp;typename=iau:MarsPoi\" method=\"GET\"/>\n"
+                        + "    </wps:Input>\n"
+                        + "  </wps:DataInputs>\n"
+                        + "  <wps:ResponseForm>\n"
+                        + "    <wps:RawDataOutput>\n"
+                        + "      <ows:Identifier>bounds</ows:Identifier>\n"
+                        + "    </wps:RawDataOutput>\n"
+                        + "  </wps:ResponseForm>\n"
+                        + "</wps:Execute>";
+
+        Document dom = postAsDOM(root(), request);
+        // print(dom);
+
+        assertXpathEvaluatesTo("IAU:49900", "/ows:BoundingBox/@crs", dom);
+        Point2D lowerCorner = parseEnvelopeCorner(dom, "ows:LowerCorner");
+        assertEquals(-65.0, lowerCorner.getX(), 1e-6);
+        assertEquals(-86.876, lowerCorner.getY(), 1e-6);
+        Point2D upperCorner = parseEnvelopeCorner(dom, "ows:UpperCorner");
+        assertEquals(-2.76, upperCorner.getX(), 1e-6);
+        assertEquals(-9.885, upperCorner.getY(), 1e-6);
+    }
+
+    private static Point2D parseEnvelopeCorner(Document dom, String corner) throws XpathException {
+        String[] ordinates = xp.evaluate("/ows:BoundingBox/" + corner, dom).split(" ");
+        return new Point2D.Double(
+                Double.parseDouble(ordinates[0]), Double.parseDouble(ordinates[1]));
     }
 
     /** Tests a process grabbing a remote layer */
@@ -2106,11 +2149,20 @@ public class ExecuteTest extends WPSTestSupport {
                 + "</wps:Execute>";
     }
 
+    /**
+     * Checks the progress is the one reported, waiting at most 5 seconds for the progress to match
+     * the expected value
+     */
     private void assertProgress(String statusLocation, String progress) throws Exception {
-        Document dom = getAsDOM(statusLocation);
-        // print(dom);
-        assertXpathExists("//wps:ProcessStarted", dom);
-        assertXpathEvaluatesTo(progress, "//wps:ProcessStarted/@percentCompleted", dom);
+        XpathEngine xp = XMLUnit.newXpathEngine();
+        Awaitility.await()
+                .atMost(5, SECONDS)
+                .until(
+                        () -> {
+                            Document dom = getAsDOM(statusLocation);
+                            String path = "//wps:ProcessStarted/@percentCompleted";
+                            return progress.equals(xp.evaluate(path, dom));
+                        });
     }
 
     private String submitMonkey(String id) throws Exception, XpathException {

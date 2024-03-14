@@ -65,9 +65,9 @@ import org.geoserver.importer.transform.VectorTransformChain;
 import org.geoserver.rest.RequestInfo;
 import org.geoserver.rest.RestException;
 import org.geoserver.rest.converters.BaseMessageConverter;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -467,6 +467,8 @@ public class ImportJSONWriter {
                         (AttributesToPointGeometryTransform) transform;
                 json.key("latField").value(atpgt.getLatField());
                 json.key("lngField").value(atpgt.getLngField());
+                json.key("pointFieldName").value(atpgt.getPointFieldName());
+                json.key("preserveGeometry").value(atpgt.isPreserveGeometry());
             } else if (transform.getClass() == ReprojectTransform.class) {
                 ReprojectTransform rt = (ReprojectTransform) transform;
                 json.key("source").value(srs(rt.getSource()));

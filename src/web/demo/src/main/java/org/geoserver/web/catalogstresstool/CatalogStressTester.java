@@ -61,8 +61,8 @@ import org.geoserver.security.SecureCatalogImpl;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.GeoServerSecuredPage;
 import org.geoserver.web.ToolPage;
+import org.geotools.api.filter.Filter;
 import org.geotools.util.logging.Logging;
-import org.opengis.filter.Filter;
 
 @SuppressWarnings("unchecked")
 public class CatalogStressTester extends GeoServerSecuredPage {
@@ -414,7 +414,10 @@ public class CatalogStressTester extends GeoServerSecuredPage {
                 ((ResourceInfo) prototype).setNativeName(((ResourceInfo) original).getNativeName());
                 ((ResourceInfo) prototype).setName(newName);
                 if (parent != null) {
-                    ((ResourceInfo) prototype).setStore((StoreInfo) parent);
+                    ResourceInfo ri = (ResourceInfo) prototype;
+                    StoreInfo store = (StoreInfo) parent;
+                    ri.setStore(store);
+                    ri.setNamespace(catalog.getNamespaceByPrefix((store).getWorkspace().getName()));
                 }
                 sw.start();
                 catalog.add((ResourceInfo) prototype);

@@ -37,6 +37,46 @@
                 <input id="sendClientSecret" wicket:id="sendClientSecret" type="checkbox"/>
                 <a href="#" wicket:id="sendClientSecretHelp" class="help-link"></a>
             </li>
+
+            <li>
+                <label for="allowUnSecureLogging"><span><wicket:message
+                        key="allowUnSecureLogging"></wicket:message></span></label>
+            </li>
+            <li>
+                <input id="allowUnSecureLogging" wicket:id="allowUnSecureLogging" type="checkbox"/>
+                <a href="#" wicket:id="allowUnSecureLoggingHelp" class="help-link"></a>
+            </li>
+
+            <br>
+            <fieldset>
+                <legend>
+                    <span> <wicket:message key="bearerTokens">Bearer Tokens</wicket:message> </span>
+                    <a href="#" wicket:id="allowBearerTokensHelp" class="help-link"></a>
+                </legend>
+                <li>
+                    <label for="allowBearerTokens"><span><wicket:message
+                            key="allowBearerTokens"></wicket:message></span></label>
+                </li>
+                <li>
+                    <input id="allowBearerTokens" wicket:id="allowBearerTokens" type="checkbox"/>
+                </li>
+            </fieldset>
+
+            <br>
+            <fieldset>
+                <legend>
+                    <span> <wicket:message key="PKCE">Proof Key of Code Exchange</wicket:message> </span>
+                    <a href="#" wicket:id="PKCEHelp" class="help-link"></a>
+                </legend>
+                <li>
+                    <label for="usePKCE"><span><wicket:message
+                            key="usePKCE"></wicket:message></span></label>
+                </li>
+                <li>
+                    <input id="usePKCE" wicket:id="usePKCE" type="checkbox"/>
+                </li>
+            </fieldset>
+
         </wicket:extend>
     </body>
 </html>

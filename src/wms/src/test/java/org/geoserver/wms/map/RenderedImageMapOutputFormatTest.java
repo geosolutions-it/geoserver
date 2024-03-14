@@ -74,18 +74,32 @@ import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.WMSPartialMapException;
 import org.geoserver.wms.WMSTestSupport;
+import org.geotools.api.coverage.grid.GridEnvelope;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.IllegalAttributeException;
+import org.geotools.api.parameter.GeneralParameterValue;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.referencing.operation.TransformException;
+import org.geotools.api.style.ChannelSelection;
+import org.geotools.api.style.RasterSymbolizer;
+import org.geotools.api.style.SelectedChannelType;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.StyleFactory;
+import org.geotools.api.style.TextSymbolizer;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.util.FeatureUtilities;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.SchemaException;
 import org.geotools.filter.IllegalFilterException;
 import org.geotools.gce.imagemosaic.ImageMosaicReader;
-import org.geotools.geometry.Envelope2D;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.LiteShape2;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.image.test.ImageAssert;
@@ -97,14 +111,7 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.renderer.lite.LabelCache;
 import org.geotools.renderer.lite.StreamingRenderer;
-import org.geotools.styling.ChannelSelection;
-import org.geotools.styling.ChannelSelectionImpl;
-import org.geotools.styling.RasterSymbolizer;
-import org.geotools.styling.SelectedChannelType;
-import org.geotools.styling.SelectedChannelTypeImpl;
-import org.geotools.styling.Style;
 import org.geotools.styling.StyleBuilder;
-import org.geotools.styling.TextSymbolizer;
 import org.geotools.util.NumberRange;
 import org.geotools.util.URLs;
 import org.geotools.util.factory.FactoryRegistryException;
@@ -116,17 +123,11 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.LineString;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.opengis.coverage.grid.GridEnvelope;
-import org.opengis.feature.Feature;
-import org.opengis.feature.IllegalAttributeException;
-import org.opengis.parameter.GeneralParameterValue;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
+
+    StyleFactory SF = CommonFactoryFinder.getStyleFactory();
 
     public static QName TAZ_BYTE = new QName(MockData.WCS_URI, "tazbyte", MockData.WCS_PREFIX);
 
@@ -148,6 +149,9 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
     static final String CROSS_DATELINE_STYLE = "crossline";
 
     static final QName TIFF_3035 = new QName(MockData.SF_URI, "3035", MockData.SF_PREFIX);
+
+    public static final QName MULTIBAND_WORLD =
+            new QName(MockData.WCS_URI, "multiband_world", MockData.WCS_PREFIX);
 
     private static final Logger LOGGER =
             org.geotools.util.logging.Logging.getLogger(
@@ -214,6 +218,12 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         this.rasterMapProducer = getProducerInstance();
 
         getTestData().addDefaultRasterLayer(SystemTestData.MULTIBAND, getCatalog());
+
+        // add a world image format, the reader cannot do native band selection
+        getTestData().addRasterLayer(MULTIBAND_WORLD, "multiband_world.zip", "tif", getCatalog());
+        CoverageStoreInfo csi = getCatalog().getCoverageStoreByName(MULTIBAND_WORLD.getLocalPart());
+        csi.setType("WorldImage");
+        getCatalog().save(csi);
     }
 
     protected RenderedImageMapOutputFormat getProducerInstance() {
@@ -545,8 +555,8 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         GetMapRequest request = new GetMapRequest();
         CoordinateReferenceSystem crs = CRS.decode("EPSG:3857");
         CoordinateReferenceSystem wgs84 = DefaultGeographicCRS.WGS84;
-        GeneralEnvelope env =
-                GeneralEnvelope.toGeneralEnvelope(new Envelope2D(wgs84, -40, 0, 40, 80));
+        GeneralBounds env =
+                GeneralBounds.toGeneralEnvelope(ReferencedEnvelope.rect(-40, 0, 40, 80, wgs84));
         MathTransform transform = CRS.findMathTransform(wgs84, crs);
         env = CRS.transform(transform, env);
         ReferencedEnvelope bbox =
@@ -1382,21 +1392,15 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
 
         LOGGER.info("about to create map ctx for BasicPolygons with bounds " + env);
 
-        RasterSymbolizer symbolizer = styleBuilder.createRasterSymbolizer();
-        ChannelSelection cs = new ChannelSelectionImpl();
-        SelectedChannelType red = new SelectedChannelTypeImpl();
-        SelectedChannelType green = new SelectedChannelTypeImpl();
-        SelectedChannelType blue = new SelectedChannelTypeImpl();
-
         // We want to create an image where the RGB channels are in reverse order
         // regarding the band order of the input coverage view
         // Note that channel names start with index "1"
-        red.setChannelName("3");
-        green.setChannelName("2");
-        blue.setChannelName("1");
-
-        cs.setRGBChannels(red, green, blue);
-        symbolizer.setChannelSelection(cs);
+        SelectedChannelType red = SF.createSelectedChannelType("3", null);
+        SelectedChannelType green = SF.createSelectedChannelType("2", null);
+        SelectedChannelType blue = SF.createSelectedChannelType("1", null);
+        ChannelSelection cs = SF.createChannelSelection(red, green, blue);
+        RasterSymbolizer symbolizer =
+                SF.createRasterSymbolizer(null, null, cs, null, null, null, null, null);
 
         reader = (GridCoverage2DReader) coverageInfo.getGridCoverageReader(null, null);
         reader.getCoordinateReferenceSystem();
@@ -1445,7 +1449,6 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
      */
     @Test
     public void testBandSelectionToNormalCoverage() throws Exception {
-
         GetMapRequest request = new GetMapRequest();
         CoordinateReferenceSystem crs = DefaultGeographicCRS.WGS84;
         ReferencedEnvelope bbox =
@@ -1470,10 +1473,7 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         StyleBuilder styleBuilder = new StyleBuilder();
         Catalog catalog = getCatalog();
 
-        CoverageInfo ci =
-                catalog.getCoverageByName(
-                        SystemTestData.MULTIBAND.getPrefix(),
-                        SystemTestData.MULTIBAND.getLocalPart());
+        CoverageInfo ci = catalog.getCoverageByName(getLayerId(MULTIBAND_WORLD));
 
         GridCoverage2DReader reader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
         reader.getCoordinateReferenceSystem();

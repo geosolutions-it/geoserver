@@ -49,14 +49,19 @@ import org.geoserver.importer.transform.TransformChain;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.security.impl.GeoServerUser;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
-import org.geotools.data.DataStore;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.NameImpl;
@@ -67,11 +72,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -259,7 +259,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         // print(json);
         int importId = json.getJSONObject("import").getInt("id");
 
-        checkLatLonTransformedImport(importId);
+        checkLatLonTransformedImport(importId, "location");
     }
 
     @Test
@@ -300,6 +300,65 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
                 (JSONObject)
                         json(
                                 postAsServletResponse(
+                                        "/rest/imports?expand=1",
+                                        contextDefinition,
+                                        "application/json"));
+        // print(json);
+        int importId = json.getJSONObject("import").getInt("id");
+
+        // upload the data
+        String body =
+                "--AaB03x\r\nContent-Disposition: form-data; name=filedata; filename=data.csv\r\n"
+                        + "Content-Type: text/plain\n"
+                        + "\r\n\r\n"
+                        + FileUtils.readFileToString(locations, "UTF-8")
+                        + "\r\n--AaB03x--";
+
+        post("/rest/imports/" + importId + "/tasks", body, "multipart/form-data; boundary=AaB03x");
+
+        checkLatLonTransformedImport(importId, "location");
+    }
+
+    @Test
+    public void testTransformationsUploadWithOptionalFields() throws Exception {
+        File dir = unpack("csv/locations.zip");
+        String wsName = getCatalog().getDefaultWorkspace().getName();
+
+        File locations = new File(dir, "locations.csv");
+
+        // @formatter:off
+        String contextDefinition =
+                "{\n"
+                        + "   \"import\": {\n"
+                        + "      \"targetWorkspace\": {\n"
+                        + "         \"workspace\": {\n"
+                        + "            \"name\": \""
+                        + wsName
+                        + "\"\n"
+                        + "         }\n"
+                        + "      },\n"
+                        + "      targetStore: {\n"
+                        + "        dataStore: {\n"
+                        + "        name: \"h2\",\n"
+                        + "        }\n"
+                        + "      },\n"
+                        + "      \"transforms\": [\n"
+                        + "        {\n"
+                        + "          \"type\": \"AttributesToPointGeometryTransform\",\n"
+                        + "          \"latField\": \"LAT\","
+                        + "          \"lngField\": \"LON\","
+                        + "          \"pointFieldName\": \"point\","
+                        + "          \"preserveGeometry\": \"true\""
+                        + "        }\n"
+                        + "      ]"
+                        + "   }\n"
+                        + "}";
+        // @formatter:on
+
+        JSONObject json =
+                (JSONObject)
+                        json(
+                                postAsServletResponse(
                                         "/rest/imports", contextDefinition, "application/json"));
         // print(json);
         int importId = json.getJSONObject("import").getInt("id");
@@ -314,10 +373,11 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
 
         post("/rest/imports/" + importId + "/tasks", body, "multipart/form-data; boundary=AaB03x");
 
-        checkLatLonTransformedImport(importId);
+        checkLatLonTransformedImport(importId, "point");
     }
 
-    private void checkLatLonTransformedImport(int importId) throws IOException {
+    private void checkLatLonTransformedImport(int importId, String expectedPoint)
+            throws IOException {
         ImportContext context = importer.getContext(importId);
         assertEquals(1, context.getTasks().size());
         ImportTask task = context.getTasks().get(0);
@@ -344,7 +404,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
         SimpleFeatureType featureType = (SimpleFeatureType) fti.getFeatureType();
         GeometryDescriptor geometryDescriptor = featureType.getGeometryDescriptor();
         assertNotNull("Expecting geometry", geometryDescriptor);
-        assertEquals("Invalid geometry name", "location", geometryDescriptor.getLocalName());
+        assertEquals("Invalid geometry name", expectedPoint, geometryDescriptor.getLocalName());
         assertEquals(3, featureType.getAttributeCount());
         FeatureSource<? extends FeatureType, ? extends Feature> featureSource =
                 fti.getFeatureSource(null, null);
@@ -359,7 +419,7 @@ public class ImporterIntegrationTest extends ImporterTestSupport {
             assertNotNull(feature);
             assertEquals("Invalid city attribute", "Trento", feature.getAttribute("CITY"));
             assertEquals("Invalid number attribute", 140, feature.getAttribute("NUMBER"));
-            Object geomAttribute = feature.getAttribute("location");
+            Object geomAttribute = feature.getAttribute(expectedPoint);
             assertNotNull("Expected geometry", geomAttribute);
             Point point = (Point) geomAttribute;
             Coordinate coordinate = point.getCoordinate();

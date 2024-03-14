@@ -14,6 +14,9 @@ import org.geoserver.catalog.CoverageDimensionInfo;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageView;
 import org.geoserver.catalog.MetadataMap;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.util.ProgressListener;
 import org.geotools.coverage.TypeMap;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
@@ -25,9 +28,6 @@ import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
-import org.opengis.filter.Filter;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.util.ProgressListener;
 
 /**
  * This class check whether or not the provided download request goes beyond the provided limits for
@@ -161,16 +161,11 @@ class RasterEstimator {
         }
 
         final long areaRead = (long) gg.getGridRange2D().width * gg.getGridRange2D().height;
-
         // checks on the area we want to download
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("Area to read in pixels: " + areaRead);
         }
 
-        // If the area to read or the target image size are above Integer.MAX_VALUE, false is
-        // returned,
-        // as raster processing operations (e.g. Crop, Scale) may fail if image size exceeds integer
-        // limits
         long targetArea;
         Integer[] targetSize = scaling.getTargetSize();
         if (targetSize[0] != null && targetSize[1] != null) {
@@ -178,15 +173,15 @@ class RasterEstimator {
         } else {
             targetArea = areaRead;
         }
-        if (areaRead >= Integer.MAX_VALUE || targetArea >= Integer.MAX_VALUE) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(
-                        Level.FINE,
-                        "Area to read or target image size exceeds maximum integer value: "
-                                + Integer.MAX_VALUE);
-            }
-            return false;
+        if (LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.fine("Area to write in pixels: " + targetArea);
         }
+
+        // Here we used to have a check to refuse processing if the read area or
+        // the target area exceeded the Integer.MAX_INT limits. However, this is
+        // often not a problem, because we are processing based on tiles.
+        // Let the download eventually fail on cases where things are not properly
+        // handled, rather than failing all requests because a subset migth.
 
         // If the area exceeds the limits, false is returned
         if (rasterSizeLimits > DownloadServiceConfiguration.NO_LIMIT

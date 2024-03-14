@@ -56,10 +56,10 @@ import org.geoserver.importer.transform.ReprojectTransform;
 import org.geoserver.importer.transform.TransformChain;
 import org.geoserver.importer.transform.VectorTransformChain;
 import org.geoserver.rest.converters.BaseMessageConverter;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -346,7 +346,15 @@ public class ImportJSONReader {
         } else if ("AttributesToPointGeometryTransform".equalsIgnoreCase(type)) {
             String latField = json.getString("latField");
             String lngField = json.getString("lngField");
-            transform = new AttributesToPointGeometryTransform(latField, lngField);
+            String pointFieldName = (String) json.get("pointFieldName");
+            String preserveGeometry = (String) json.get("preserveGeometry");
+
+            transform =
+                    new AttributesToPointGeometryTransform(
+                            latField,
+                            lngField,
+                            pointFieldName,
+                            Boolean.parseBoolean(preserveGeometry));
         } else if ("ReprojectTransform".equalsIgnoreCase(type)) {
             CoordinateReferenceSystem source =
                     json.has("source") ? crs(json.getString("source")) : null;

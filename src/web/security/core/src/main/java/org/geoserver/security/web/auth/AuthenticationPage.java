@@ -29,6 +29,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.form.OnChangeAjaxBehavior;
@@ -103,7 +104,7 @@ public class AuthenticationPage extends AbstractSecurityPage {
                     (LogoutFilterConfig)
                             getSecurityManager()
                                     .loadFilterConfig(
-                                            GeoServerSecurityFilterChain.FORM_LOGOUT_FILTER);
+                                            GeoServerSecurityFilterChain.FORM_LOGOUT_FILTER, true);
         } catch (IOException e1) {
             throw new RuntimeException(e1);
         }
@@ -116,7 +117,8 @@ public class AuthenticationPage extends AbstractSecurityPage {
             sslFilterConfig =
                     (SSLFilterConfig)
                             getSecurityManager()
-                                    .loadFilterConfig(GeoServerSecurityFilterChain.SSL_FILTER);
+                                    .loadFilterConfig(
+                                            GeoServerSecurityFilterChain.SSL_FILTER, true);
         } catch (IOException e1) {
             throw new RuntimeException(e1);
         }
@@ -489,6 +491,11 @@ public class AuthenticationPage extends AbstractSecurityPage {
                                 }
 
                                 @Override
+                                public long getContentLengthLong() {
+                                    return 0;
+                                }
+
+                                @Override
                                 public String getCharacterEncoding() {
                                     return null;
                                 }
@@ -544,6 +551,12 @@ public class AuthenticationPage extends AbstractSecurityPage {
                                 }
 
                                 @Override
+                                public <T extends HttpUpgradeHandler> T upgrade(Class<T> aClass)
+                                        throws IOException, ServletException {
+                                    return null;
+                                }
+
+                                @Override
                                 public boolean isRequestedSessionIdFromURL() {
                                     return false;
                                 }
@@ -565,6 +578,11 @@ public class AuthenticationPage extends AbstractSecurityPage {
 
                                 @Override
                                 public HttpSession getSession() {
+                                    return null;
+                                }
+
+                                @Override
+                                public String changeSessionId() {
                                     return null;
                                 }
 

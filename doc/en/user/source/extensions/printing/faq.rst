@@ -1,6 +1,16 @@
 FAQ
 ***
 
+.. note::  Warranty disclaimer and license
+
+   The authors provide these documents "AS-IS", without warranty of any kind
+   either expressed or implied.
+
+   Document under `Creative Common License Attribution-Share Alike 2.5 Generic
+   <http://creativecommons.org/licenses/by-sa/2.5/>`_.
+
+   Authors: MapFish developers.
+
 **All I get in my PDF is: "ERROR: infinite table loop". What's wrong?**
   Something in your page is too big. For example, the width or the height of your !map block.
 
@@ -23,7 +33,7 @@ FAQ
   * Your printer firmware is buggy: upgrade it
   * Your printer driver is buggy: upgrade it
 
-**The module needs to go through a proxy to acces the map services.**
+**The module needs to go through a proxy to access the map services.**
   It's so 90s... you should hire some fresh guys for your IT team. ;-)
 
   You need to set some system properties (http.proxy*) when you start your java programs.
@@ -48,13 +58,3 @@ FAQ
 
   If it still doesn't work, use firefox, install firebug and check in the console panel that the AJAX request made by the print widget works fine.
   
-Warranty disclaimer and license
--------------------------------
-
-The authors provide these documents "AS-IS", without warranty of any kind
-either expressed or implied.
-
-Document under `Creative Common License Attribution-Share Alike 2.5 Generic
-<http://creativecommons.org/licenses/by-sa/2.5/>`_.
-
-Authors: MapFish developers.

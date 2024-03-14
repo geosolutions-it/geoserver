@@ -16,7 +16,7 @@ The importer REST api is built around a tree of objects representing a single im
           * layer
           * transformation (one or more)
 
-An **import** refers to the top level object and is a "session" like entity the state of the entire import. It maintains information relevant to the import as a whole such as user infromation, timestamps 
+An **import** refers to the top level object and is a "session" like entity the state of the entire import. It maintains information relevant to the import as a whole such as user information, timestamps 
 along with optional information that is uniform along all tasks, such as a target workspace, the shared input data (e.g., a directory, a database).
 An import is made of any number of task objects. 
 
@@ -783,7 +783,7 @@ Task transformations
      - n/a
      - A list of transfromations in JSON format
    * - POST
-     - Create a new transormation and append it inside a task with id <taskId> within import with id <importId>
+     - Create a new transformation and append it inside a task with id <taskId> within import with id <importId>
      - 201
      - A JSON transformation representation
      - The transform location 
@@ -948,7 +948,7 @@ Computes a new field based on an expression that can use the other field values
 AttributesToPointGeometryTransform
 """"""""""""""""""""""""""""""""""
 
-Transforms two numeric fields ``latField`` and ``lngField`` into a point geometry representation ``POINT(lngField,latField)``, the source fields will be removed.
+Transforms two numeric fields ``latField`` and ``lngField`` into a point geometry representation with ``pointFieldName`` setting name of the point ``POINT(lngField,latField)``, the source fields will be removed if ``preserveGeometry`` is false.
 
 .. list-table::
    :header-rows: 1
@@ -962,6 +962,12 @@ Transforms two numeric fields ``latField`` and ``lngField`` into a point geometr
    * - lngField
      - N
      - The "longitude" field
+   * - pointFieldName
+     - Y
+     - The name of the point
+   * - preserveGeometry
+     - Y
+     - Setting this flag will prevent source fields from removal (false by default)
 
 CreateIndexTransform
 """"""""""""""""""""

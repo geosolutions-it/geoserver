@@ -20,7 +20,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.xml.resolver.apps.resolver;
 import org.geoserver.catalog.CascadeDeleteVisitor;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -41,9 +40,9 @@ import org.geoserver.rest.RestException;
 import org.geoserver.rest.util.IOUtils;
 import org.geoserver.rest.util.MediaTypeExtensions;
 import org.geoserver.rest.wrapper.RestWrapper;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.StyledLayerDescriptor;
 import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.styling.Style;
-import org.geotools.styling.StyledLayerDescriptor;
 import org.geotools.util.Version;
 import org.geotools.util.logging.Logging;
 import org.geotools.xml.styling.SLDParser;
@@ -165,36 +164,43 @@ public class StyleController extends AbstractCatalogController {
             UriComponentsBuilder builder)
             throws IOException {
 
-        checkWorkspaceName(workspaceName);
-        checkFullAdminRequired(workspaceName);
+        File directory = null;
+        try {
+            checkWorkspaceName(workspaceName);
+            checkFullAdminRequired(workspaceName);
 
-        File directory = unzipSldPackage(stream);
-        File uploadedFile = getSldFileFromDirectory(directory);
+            directory = unzipSldPackage(stream);
+            stream.close();
 
-        Style styleSld = parseSld(uploadedFile);
+            File uploadedFile = getSldFileFromDirectory(directory);
 
-        if (name == null) {
-            name = getNameFromStyle(styleSld);
+            Style styleSld = parseSld(uploadedFile);
+
+            if (name == null) {
+                name = getNameFromStyle(styleSld);
+            }
+            checkStyleNotExists(workspaceName, name);
+
+            saveImageResources(directory, workspaceName);
+
+            StyleHandler handler = Styles.handler("sld");
+            Version version = handler.version(uploadedFile);
+            StyleInfo styleInfo =
+                    createStyleInfo(workspaceName, name, handler, handler.mimeType(version));
+
+            checkStyleResourceNotExists(styleInfo);
+            writeStyleRaw(styleInfo, uploadedFile);
+
+            catalog.add(styleInfo);
+
+            LOGGER.info("POST Style Package: " + name + ", workspace: " + workspaceName);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setLocation(getUri(name, workspaceName, builder));
+            headers.setContentType(MediaType.TEXT_PLAIN);
+            return new ResponseEntity<>(name, headers, HttpStatus.CREATED);
+        } finally {
+            FileUtils.deleteQuietly(directory);
         }
-        checkStyleNotExists(workspaceName, name);
-
-        saveImageResources(directory, workspaceName);
-
-        StyleHandler handler = Styles.handler("sld");
-        Version version = handler.version(uploadedFile);
-        StyleInfo styleInfo =
-                createStyleInfo(workspaceName, name, handler, handler.mimeType(version));
-
-        checkStyleResourceNotExists(styleInfo);
-        writeStyleRaw(styleInfo, uploadedFile);
-
-        catalog.add(styleInfo);
-
-        LOGGER.info("POST Style Package: " + name + ", workspace: " + workspaceName);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(getUri(name, workspaceName, builder));
-        headers.setContentType(MediaType.TEXT_PLAIN);
-        return new ResponseEntity<>(name, headers, HttpStatus.CREATED);
     }
 
     @PostMapping(

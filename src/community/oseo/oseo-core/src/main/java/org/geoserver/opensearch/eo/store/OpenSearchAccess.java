@@ -6,14 +6,14 @@ package org.geoserver.opensearch.eo.store;
 
 import java.io.IOException;
 import java.util.List;
-import org.geotools.data.DataAccess;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.Name;
 import org.geotools.feature.NameImpl;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.Name;
 
 /**
  * Provides access to OpenSearch for EO collections and products as an extension of {@link
@@ -88,15 +88,14 @@ public interface OpenSearchAccess extends DataAccess<FeatureType, Feature> {
      */
     FeatureSource<FeatureType, Feature> getCollectionSource() throws IOException;
 
-    void updateIndexes(String indexable, List<Indexable> indexables) throws IOException;
-
     /**
-     * Get List of Index Names for a Table
-     *
-     * @param tableName Table Name
-     * @return
+     * Updates indexes on the given collection, based on a set of indexables. Compares with existing
+     * indexes and creates/removes them as needed.
      */
-    List<String> getIndexNamesByLayer(String tableName) throws IOException;
+    void updateIndexes(String collection, List<Indexable> indexables) throws IOException;
+
+    /** Get List of Index Names for a Table */
+    List<String> getIndexNames(String tableName) throws IOException;
 
     /**
      * Returns the feature source backing products (dynamic, as the store has to respect the

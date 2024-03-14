@@ -47,6 +47,7 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.test.http.MockHttpClient;
 import org.geoserver.test.http.MockHttpResponse;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.feature.NameImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
@@ -56,7 +57,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -242,7 +242,7 @@ public class WMSLayerTest extends CatalogRESTTestSupport {
                         + "</wmsLayer>";
         MockHttpServletResponse response =
                 postAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmsstores/demo/wmslayers/",
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmsstores/demo/wmslayers",
                         xml,
                         "text/xml");
 
@@ -273,9 +273,7 @@ public class WMSLayerTest extends CatalogRESTTestSupport {
                         + "</wmsLayer>";
         MockHttpServletResponse response =
                 postAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmslayers/",
-                        xml,
-                        "text/xml");
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmslayers", xml, "text/xml");
 
         assertThat(response, hasStatus(HttpStatus.CREATED));
 
@@ -304,7 +302,7 @@ public class WMSLayerTest extends CatalogRESTTestSupport {
                         + "}";
         MockHttpServletResponse response =
                 postAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmsstores/demo/wmslayers/",
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmsstores/demo/wmslayers",
                         json,
                         "text/json");
 

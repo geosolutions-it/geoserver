@@ -18,15 +18,15 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.featureinfo.FeatureCollectionDecorator;
 import org.geoserver.wms.featureinfo.LayerIdentifier;
+import org.geotools.api.data.Query;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.Name;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.Name;
 
 /**
  * WMS GetFeatureInfo operation
@@ -35,6 +35,12 @@ import org.opengis.feature.type.Name;
  */
 public class GetFeatureInfo {
     static final Logger LOGGER = Logging.getLogger(GetFeatureInfo.class);
+
+    private final WMS wms;
+
+    public GetFeatureInfo(WMS wms) {
+        this.wms = wms;
+    }
 
     public FeatureCollectionType run(final GetFeatureInfoRequest request) throws ServiceException {
         List<FeatureCollection> results;
@@ -71,6 +77,15 @@ public class GetFeatureInfo {
         for (final MapLayerInfo layer : requestedLayers) {
             try {
                 LayerIdentifier<?> identifier = getLayerIdentifier(layer, identifiers);
+                if (request.getGetMapRequest() != null) {
+                    List<Object> times = request.getGetMapRequest().getTime();
+                    List<Object> elevations = request.getGetMapRequest().getElevation();
+                    if (layer.getType() == MapLayerInfo.TYPE_VECTOR) {
+                        wms.checkMaxDimensions(layer, times, elevations, false);
+                    } else if (layer.getType() == MapLayerInfo.TYPE_RASTER) {
+                        wms.checkMaxDimensions(layer, times, elevations, true);
+                    }
+                }
                 List<FeatureCollection> identifiedCollections =
                         identifier.identify(requestParams, maxFeatures);
                 if (identifiedCollections != null) {
@@ -86,6 +101,7 @@ public class GetFeatureInfo {
                     }
                 }
             } catch (Exception e) {
+                if (e instanceof ServiceException) throw e;
                 throw new ServiceException(
                         "Failed to run GetFeatureInfo on layer " + layer.getName(), e);
             }

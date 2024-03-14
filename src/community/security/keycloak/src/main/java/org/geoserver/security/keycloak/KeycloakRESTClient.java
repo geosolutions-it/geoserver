@@ -1,3 +1,8 @@
+/* (c) 2022 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
+
 package org.geoserver.security.keycloak;
 
 import com.google.gson.Gson;
@@ -57,6 +62,7 @@ class KeycloakRESTClient {
      * @return a SortedSet of {@link GeoServerRole}.
      * @throws IOException
      */
+    @SuppressWarnings("unchecked")
     SortedSet<GeoServerRole> getRoles() throws IOException {
         SortedSet<GeoServerRole> sortedSet = new TreeSet<>();
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
@@ -82,6 +88,7 @@ class KeycloakRESTClient {
      * @return a SortedSet of {@link GeoServerRole}.
      * @throws IOException
      */
+    @SuppressWarnings("unchecked")
     SortedSet<GeoServerRole> getUserRoles(String username) throws IOException {
         SortedSet<GeoServerRole> sortedSet = new TreeSet<>();
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
@@ -159,6 +166,7 @@ class KeycloakRESTClient {
      * @return a SortedSet of username strings.
      * @throws IOException
      */
+    @SuppressWarnings("unchecked")
     SortedSet<String> getUserInRole(String roleName) throws IOException {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             LOGGER.config("Obtaining access token for Keycloak");
@@ -177,6 +185,7 @@ class KeycloakRESTClient {
         return new TreeSet<>();
     }
 
+    @SuppressWarnings("unchecked")
     private List<Object> rolesFromClients(CloseableHttpClient httpClient, String accessToken) {
         List<Object> results = new ArrayList<>();
         if (listOfClientIds != null && !listOfClientIds.isEmpty()) {
@@ -189,6 +198,7 @@ class KeycloakRESTClient {
         return results;
     }
 
+    @SuppressWarnings("unchecked")
     private List<Object> userRolesFromClients(
             CloseableHttpClient httpClient, String accessToken, String userId) {
         List<Object> results = new ArrayList<>();
@@ -298,6 +308,7 @@ class KeycloakRESTClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private SortedSet<GeoServerRole> toGeoServerRoles(List<Object> list) {
         SortedSet<GeoServerRole> roles = new TreeSet<>();
         for (Object role : list) {
@@ -326,6 +337,7 @@ class KeycloakRESTClient {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     private SortedSet<String> toUserNames(List<Object> users) {
         SortedSet<String> userNames = new TreeSet<>();
         for (Object o : users) {

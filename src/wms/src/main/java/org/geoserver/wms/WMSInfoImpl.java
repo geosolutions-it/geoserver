@@ -14,8 +14,8 @@ import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.config.impl.ServiceInfoImpl;
 import org.geoserver.util.InternationalStringUtils;
+import org.geotools.api.util.InternationalString;
 import org.geotools.util.GrowableInternationalString;
-import org.opengis.util.InternationalString;
 
 public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
 
@@ -84,11 +84,20 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
 
     private Boolean defaultGroupStyleEnabled;
 
+    private boolean transformFeatureInfoDisabled;
+
     private boolean autoEscapeTemplateValues;
+
+    private Boolean exceptionOnInvalidDimension;
 
     public WMSInfoImpl() {
         authorityURLs = new ArrayList<>(2);
         identifiers = new ArrayList<>(2);
+    }
+
+    @Override
+    public String getType() {
+        return "WMS";
     }
 
     @Override
@@ -367,6 +376,16 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
     }
 
     @Override
+    public boolean isTransformFeatureInfoDisabled() {
+        return transformFeatureInfoDisabled;
+    }
+
+    @Override
+    public void setTransformFeatureInfoDisabled(boolean transformFeatureInfoDisabled) {
+        this.transformFeatureInfoDisabled = transformFeatureInfoDisabled;
+    }
+
+    @Override
     public boolean isAutoEscapeTemplateValues() {
         return autoEscapeTemplateValues;
     }
@@ -374,5 +393,15 @@ public class WMSInfoImpl extends ServiceInfoImpl implements WMSInfo {
     @Override
     public void setAutoEscapeTemplateValues(boolean autoEscapeTemplateValues) {
         this.autoEscapeTemplateValues = autoEscapeTemplateValues;
+    }
+
+    @Override
+    public Boolean isExceptionOnInvalidDimension() {
+        return exceptionOnInvalidDimension;
+    }
+
+    @Override
+    public void setExceptionOnInvalidDimension(Boolean exceptionOnInvalidDimension) {
+        this.exceptionOnInvalidDimension = exceptionOnInvalidDimension;
     }
 }

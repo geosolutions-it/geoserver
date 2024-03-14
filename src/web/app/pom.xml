@@ -240,7 +240,6 @@
       <!-- Builds a valid data directory into the web app -->
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.7</version>
         <executions>
           <execution>
             <id>configPackage</id>
@@ -249,7 +248,7 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <!-- check if config is available, if not fail -->
                 <available file="${configDirectory}/${configId}" property="configIsAvailable"></available>
                 <fail message="Unable to locate configuration: ${configDirectory}/${configId}" unless="configIsAvailable"></fail>
@@ -259,7 +258,7 @@
                 <copy todir="${webappSourceDirectory}/data">
                   <fileset dir="${configDirectory}/${configId}" includes="**/**"></fileset>
                 </copy>
-              </tasks>
+              </target>
             </configuration>
           </execution>
           <execution>
@@ -269,9 +268,9 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <tasks>
+              <target>
                 <delete dir="${webappSourceDirectory}/data"></delete>
-              </tasks>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -346,7 +345,7 @@
         <configuration>
           <warName>geoserver</warName>
           <webappDirectory>${project.build.directory}/geoserver</webappDirectory>
-          <packagingExcludes>WEB-INF/lib/javax.servlet-api*.jar</packagingExcludes>
+          <packagingExcludes>WEB-INF/lib/javax.servlet-api*.jar,WEB-INF/lib/javax.activation-api*.jar</packagingExcludes>
           <archive>
             <manifest>
               <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
@@ -727,16 +726,6 @@
       </dependencies>
     </profile>
     <profile>
-      <id>teradata</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.community</groupId>
-          <artifactId>gs-teradata</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
       <id>cas</id>
       <dependencies>
         <dependency>
@@ -852,21 +841,6 @@
         <dependency>
           <groupId>org.geoserver</groupId>
           <artifactId>gs-xslt</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>wms-eo</id>
-      <activation>
-        <property>
-          <name>wms-eo</name>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.community</groupId>
-          <artifactId>gs-wms-eo</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1088,6 +1062,26 @@
       </dependencies>
     </profile>
     <profile>
+      <id>geofence-server</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.extension</groupId>
+          <artifactId>gs-geofence-server</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>geofence-wps</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.extension</groupId>
+          <artifactId>gs-geofence-wps</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
       <id>sldService</id>
       <dependencies>
         <dependency>
@@ -1123,16 +1117,6 @@
         <dependency>
           <groupId>org.geoserver.community</groupId>
           <artifactId>gs-web-geomesa</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>geofence-server</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.extension</groupId>
-          <artifactId>gs-geofence-server</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1378,19 +1362,14 @@
       <dependencies>
         <dependency>
           <groupId>org.geoserver.community.security</groupId>
-          <artifactId>gs-sec-oauth2-core</artifactId>
+          <artifactId>gs-sec-oauth2-openid-connect-web</artifactId>
           <version>${project.version}</version>
         </dependency>
-        <dependency>
-          <groupId>org.geoserver.community.security</groupId>
-          <artifactId>gs-sec-oauth2-web</artifactId>
           <version>${project.version}</version>
         </dependency>
         <dependency>
           <groupId>org.geoserver.community.security</groupId>
           <artifactId>gs-sec-oauth2-openid-connect-web</artifactId>
-          <version>${project.version}</version>
-        </dependency>
       </dependencies>
     </profile>
     <profile>
@@ -1399,16 +1378,6 @@
         <dependency>
           <groupId>org.geoserver.extension</groupId>
           <artifactId>gs-wmts-multi-dimensional</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>saml</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.community</groupId>
-          <artifactId>gs-saml</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1479,16 +1448,6 @@
         <dependency>
           <groupId>org.geoserver.community</groupId>
           <artifactId>gs-s3-geotiff</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>nsg-wmts-profile</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.community</groupId>
-          <artifactId>gs-nsg-wmts-profile</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1584,18 +1543,8 @@
       <id>metadata</id>
       <dependencies>
         <dependency>
-          <groupId>org.geoserver.community</groupId>
+          <groupId>org.geoserver.extension</groupId>
           <artifactId>gs-metadata</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>geostyler</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.community</groupId>
-          <artifactId>gs-geostyler</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1656,6 +1605,11 @@
         <dependency>
           <groupId>org.geoserver.community</groupId>
           <artifactId>gs-ogcapi-coverages</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-web-ogcapi</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1726,6 +1680,36 @@
         <dependency>
           <groupId>org.geoserver.community</groupId>
           <artifactId>gs-spatialjson</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>proxy-base-ext</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-proxy-base-ext</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>spatialjson</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-spatialjson</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>webp</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-webp</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>
@@ -1821,6 +1805,56 @@
         <dependency>
           <groupId>org.geoserver.community</groupId>
           <artifactId>gs-libdeflate</artifactId>
+          <version>${gs.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>stac-store</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geotools</groupId>
+          <artifactId>gt-stac-store</artifactId>
+          <version>${gt.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>vector-mosaic</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geotools</groupId>
+          <artifactId>gt-vector-mosaic</artifactId>
+          <version>${gt.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>iau</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geotools</groupId>
+          <artifactId>gt-iau-wkt</artifactId>
+          <version>${gt.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>datadir-catalog-loader</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-datadir-catalog-loader</artifactId>
+          <version>${gs.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>wps-longitudinal-profile</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.community</groupId>
+          <artifactId>gs-wps-longitudinal-profile</artifactId>
           <version>${gs.version}</version>
         </dependency>
       </dependencies>

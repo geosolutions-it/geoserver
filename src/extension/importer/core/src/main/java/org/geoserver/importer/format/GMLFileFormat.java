@@ -4,6 +4,7 @@
  */
 package org.geoserver.importer.format;
 
+import static java.util.Map.entry;
 import static javax.xml.stream.XMLStreamConstants.START_ELEMENT;
 
 import java.io.File;
@@ -40,7 +41,12 @@ import org.geoserver.importer.transform.ReprojectTransform;
 import org.geoserver.importer.transform.TransformChain;
 import org.geoserver.importer.transform.VectorTransform;
 import org.geoserver.importer.transform.VectorTransformChain;
-import org.geotools.data.FeatureReader;
+import org.geotools.api.data.FeatureReader;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.feature.AttributeTypeBuilder;
 import org.geotools.feature.FeatureTypes;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
@@ -54,11 +60,6 @@ import org.geotools.wfs.v1_0.WFSConfiguration_1_0;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.PullParser;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * Supports reading GML simple features from a file with ".gml" extension
@@ -84,12 +85,9 @@ public class GMLFileFormat extends VectorFormat {
             Arrays.asList("name", "description", "boundedBy", "location");
 
     private static final Map<Class<?>, Class<?>> TYPE_PROMOTIONS =
-            new HashMap<Class<?>, Class<?>>() {
-                {
-                    put(Integer.class, Long.class);
-                    put(Long.class, Double.class);
-                }
-            };
+            Map.ofEntries(
+                    entry(Integer.class, Long.class), //
+                    entry(Long.class, Double.class));
 
     private static final String GML_VERSION_KEY = "version";
 

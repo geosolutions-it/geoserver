@@ -47,7 +47,7 @@ import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.rest.RestBaseController;
-import org.geotools.styling.Style;
+import org.geotools.api.style.Style;
 import org.geotools.util.URLs;
 import org.geotools.util.Version;
 import org.hamcrest.CoreMatchers;
@@ -1257,6 +1257,9 @@ public class StyleControllerTest extends CatalogRESTTestSupport {
 
     @Test
     public void testPostToWorkspaceSLDPackage() throws Exception {
+        File tempDir = new File(System.getProperty("java.io.tmpdir"));
+        int initialSize = tempDir.listFiles().length;
+
         Catalog cat = getCatalog();
         assertNull(cat.getStyleByName("gs", "foo"));
 
@@ -1286,6 +1289,7 @@ public class StyleControllerTest extends CatalogRESTTestSupport {
         assertEquals("gear.png", onlineResource.getAttribute("xlink:href"));
         assertNotNull(getCatalog().getResourceLoader().find("workspaces/gs/styles/gear.png"));
         assertNotNull(getCatalog().getResourceLoader().find("workspaces/gs/styles/foo.sld"));
+        assertEquals(initialSize, tempDir.listFiles().length);
     }
 
     @Test
@@ -1303,6 +1307,23 @@ public class StyleControllerTest extends CatalogRESTTestSupport {
         final String content = response.getContentAsString();
         assertThat(content, containsString("Entity resolution disallowed"));
         assertThat(content, containsString("/this/file/does/not/exist"));
+    }
+
+    @Test
+    public void testPostSLDPackageWithBMPIcon() throws Exception {
+        URL zip = getClass().getResource("parking_bmp.zip");
+        byte[] bytes = FileUtils.readFileToByteArray(URLs.urlToFile(zip));
+
+        MockHttpServletResponse response =
+                postAsServletResponse(
+                        RestBaseController.ROOT_PATH + "/styles?name=parking",
+                        bytes,
+                        "application/zip");
+
+        assertEquals(201, response.getStatus());
+        GeoServerResourceLoader loader = getCatalog().getResourceLoader();
+        assertNotNull("parking.sld not found", loader.find("styles/parking.sld"));
+        assertNotNull("parking.bmp not found", loader.find("styles/parking.bmp"));
     }
 
     @Test

@@ -2,13 +2,32 @@
 <body>
 <wicket:panel>
   <fieldset>
+    <legend><span><wicket:message key="contactOrganization">Organization</wicket:message></span></legend>
+    <li>
+      <div wicket:id="contactOrganization"/>
+    </li>
+    <li>
+      <div wicket:id="onlineResource"/>
+    </li>
+    <li>
+            <span wicket:id="welcomeLabel">
+               <label class="leftwise" for="welcome" wicket:id="welcomeLabel" />
+               <input class="leftwise" type="checkbox" wicket:id="welcomeLabel_i18nCheckbox" />
+               <wicket:message key="i18nCheckBox">i18n</wicket:message>
+            </span>
+    </li>
+    <li>
+      <textarea wicket:id="welcome" class="field textarea" rows="10" cols="30" />
+    </li>
+    <li>
+      <div wicket:id="internationalWelcome" />
+    </li>
+  </fieldset>
+  <fieldset>
     <legend><span><wicket:message key="contact">Contact</wicket:message></span></legend>
     <ul>
       <li>
         <div wicket:id="contactPerson"/>
-      </li>
-      <li>
-        <div wicket:id="contactOrganization"/>
       </li>
       <li>
         <div wicket:id="contactPosition"/>

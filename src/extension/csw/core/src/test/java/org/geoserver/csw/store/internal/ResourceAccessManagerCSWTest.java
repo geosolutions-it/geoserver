@@ -27,10 +27,10 @@ import org.geoserver.security.ResourceAccessManager;
 import org.geoserver.security.TestResourceAccessManager;
 import org.geoserver.security.impl.AbstractUserGroupService;
 import org.geoserver.security.impl.GeoServerRole;
+import org.geotools.api.filter.Filter;
 import org.geotools.util.logging.Logging;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.filter.Filter;
 import org.w3c.dom.Document;
 
 /**
@@ -143,7 +143,7 @@ public class ResourceAccessManagerCSWTest extends CSWTestSupport {
         String request =
                 "csw?service=CSW&version=2.0.2&request=GetRecords&typeNames=csw:Record&resultType=results&maxRecords=100";
         Document d = getAsDOM(request);
-        // print(d);
+        print(d);
         // expected number
         assertEquals(
                 citeResources.size(), xpath.getMatchingNodes("//csw:SummaryRecord", d).getLength());

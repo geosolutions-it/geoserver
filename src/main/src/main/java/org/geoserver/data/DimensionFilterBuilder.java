@@ -7,12 +7,12 @@ package org.geoserver.data;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.Literal;
+import org.geotools.api.filter.expression.PropertyName;
 import org.geotools.filter.visitor.SimplifyingFilterVisitor;
 import org.geotools.util.Range;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.expression.Literal;
-import org.opengis.filter.expression.PropertyName;
 
 /**
  * Helper class that builds dimension related filters against reference objects that can be point
@@ -30,8 +30,7 @@ public class DimensionFilterBuilder {
         this.ff = ff;
     }
 
-    public void appendFilters(
-            String startAttributeName, String endAttributeName, List<Object> ranges) {
+    public void appendFilters(String startAttributeName, String endAttributeName, List<?> ranges) {
         if (ranges == null || ranges.isEmpty()) {
             return;
         }
@@ -41,8 +40,8 @@ public class DimensionFilterBuilder {
         final PropertyName endAttribute =
                 endAttributeName == null ? null : ff.property(endAttributeName);
 
-        for (Object datetime : ranges) {
-            timeFilters.add(buildDimensionFilter(datetime, attribute, endAttribute));
+        for (Object range : ranges) {
+            timeFilters.add(buildDimensionFilter(range, attribute, endAttribute));
         }
         final int size = timeFilters.size();
         Filter result;

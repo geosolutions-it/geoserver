@@ -22,24 +22,23 @@ import org.geoserver.catalog.KeywordInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
 import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.WCS20Const;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
 import org.geoserver.wcs2_0.util.NCNameResourceCodec;
 import org.geoserver.wcs2_0.util.WCS20DescribeCoverageExtension;
+import org.geotools.api.geometry.Bounds;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.gml2.SrsSyntax;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
 import org.geotools.util.logging.Logging;
 import org.geotools.wcs.v2_0.WCS;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.datum.PixelInCell;
 import org.vfny.geoserver.util.ResponseUtils;
+import org.vfny.geoserver.util.WCSUtils;
 import org.vfny.geoserver.wcs.WcsException;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
@@ -208,23 +207,14 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 }
 
                 // get the crs and look for an EPSG code
-                final CoordinateReferenceSystem crs = reader.getCoordinateReferenceSystem();
+                final CoordinateReferenceSystem crs = ci.getCRS();
                 List<String> axesNames =
-                        envelopeDimensionsMapper.getAxesNames(reader.getOriginalEnvelope(), true);
+                        envelopeDimensionsMapper.getAxesNames(ci.boundingBox(), true);
 
-                // lookup EPSG code
-                Integer EPSGCode = null;
-                try {
-                    EPSGCode = CRS.lookupEpsgCode(crs, false);
-                } catch (FactoryException e) {
-                    throw new IllegalStateException(
-                            "Unable to lookup epsg code for this CRS:" + crs, e);
-                }
-                if (EPSGCode == null) {
-                    throw new IllegalStateException(
-                            "Unable to lookup epsg code for this CRS:" + crs);
-                }
-                final String srsName = GetCoverage.SRS_STARTER + EPSGCode;
+                // lookup CRS identifier and encode as HTTP URI
+                String identifier = CRS.lookupIdentifier(crs, false);
+                String srsName = SrsSyntax.OGC_HTTP_URI.getSRS(identifier);
+
                 // handle axes swap for geographic crs
                 final boolean axisSwap =
                         !CRS.getAxisOrder(CRS.decode(srsName)).equals(AxisOrder.EAST_NORTH);
@@ -251,7 +241,8 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                     builder.append("time ");
                 }
                 String axesLabel = builder.substring(0, builder.length() - 1);
-                GeneralEnvelope envelope = reader.getOriginalEnvelope();
+                // fit the native envelope to the native grid geometry
+                Bounds envelope = WCSUtils.fitEnvelope(ci, reader);
                 handleBoundedBy(envelope, axisSwap, srsName, axesLabel, dimensionsHelper);
 
                 // coverage id
@@ -265,17 +256,12 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
 
                 // handle domain
                 builder.setLength(0);
-                axesNames =
-                        envelopeDimensionsMapper.getAxesNames(reader.getOriginalEnvelope(), false);
+
+                axesNames = envelopeDimensionsMapper.getAxesNames(ci.boundingBox(), false);
                 for (String axisName : axesNames) {
                     builder.append(axisName).append(" ");
                 }
-                axesLabel = builder.substring(0, builder.length() - 1);
-                GridGeometry2D gg =
-                        new GridGeometry2D(
-                                reader.getOriginalGridRange(),
-                                reader.getOriginalGridToWorld(PixelInCell.CELL_CENTER),
-                                reader.getCoordinateReferenceSystem());
+                GridGeometry2D gg = WCSUtils.fitGridGeometry(ci, reader);
                 handleDomainSet(gg, 2, encodedId, srsName, axisSwap);
 
                 // handle rangetype

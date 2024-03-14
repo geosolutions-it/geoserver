@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -27,9 +28,13 @@ import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.impl.DimensionInfoImpl;
+import org.geoserver.data.DimensionFilterBuilder;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
-import org.geotools.data.FeatureSource;
+import org.geoserver.platform.ServiceException;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.filter.Filter;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.renderer.style.DynamicSymbolFactoryFinder;
@@ -39,7 +44,6 @@ import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.filter.Filter;
 
 /** @author Ian Schneider <ischneider@opengeo.org> */
 public class WMSTest extends WMSTestSupport {
@@ -161,7 +165,11 @@ public class WMSTest extends WMSTestSupport {
         List<Object> times = time == null ? null : Arrays.asList(time);
         List<Object> elevations = elevation == null ? null : Arrays.asList(elevation);
 
-        Filter filter = wms.getTimeElevationToFilter(times, elevations, timeWithStartEnd);
+        DimensionFilterBuilder builder =
+                new DimensionFilterBuilder(CommonFactoryFinder.getFilterFactory());
+        wms.getTimeFilter(times, timeWithStartEnd, builder);
+        wms.getElevationFilter(elevations, timeWithStartEnd, builder);
+        Filter filter = builder.getFilter();
         FeatureCollection features = fs.getFeatures(filter);
 
         Set<Integer> results = new HashSet<>();
@@ -210,6 +218,37 @@ public class WMSTest extends WMSTestSupport {
         info.setCacheConfiguration(new CacheConfiguration(true));
         getGeoServer().save(info);
         assertTrue(wms.isRemoteStylesCacheEnabled());
+    }
+
+    @Test(expected = ServiceException.class)
+    public void testCheckMaxDimensionsTime() throws Exception {
+        WMSInfo info = wms.getServiceInfo();
+        info.setMaxRequestedDimensionValues(1);
+        getGeoServer().save(info);
+        setupStartEndTimeDimension(
+                TIME_WITH_START_END.getLocalPart(), "time", "startTime", "endTime");
+        String name = TIME_WITH_START_END.getLocalPart();
+        MapLayerInfo mapLayerInfo = new MapLayerInfo(getCatalog().getLayerByName(name));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH);
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        DateRange dateRange =
+                new DateRange(formatter.parse("2012-02-09"), formatter.parse("2012-02-20"));
+        List<Object> times = Arrays.asList(dateRange);
+        wms.checkMaxDimensions(mapLayerInfo, times, null, false);
+    }
+
+    @Test(expected = ServiceException.class)
+    public void testCheckMaxDimensionsElevation() throws Exception {
+        WMSInfo info = wms.getServiceInfo();
+        info.setMaxRequestedDimensionValues(1);
+        getGeoServer().save(info);
+        setupStartEndTimeDimension(
+                TIME_WITH_START_END.getLocalPart(), "elevation", "startElevation", "endElevation");
+        String name = TIME_WITH_START_END.getLocalPart();
+        MapLayerInfo mapLayerInfo = new MapLayerInfo(getCatalog().getLayerByName(name));
+        NumberRange elevationRange = NumberRange.create(0, 99);
+        List<Object> elevations = Arrays.asList(elevationRange);
+        wms.checkMaxDimensions(mapLayerInfo, null, elevations, false);
     }
 
     @Test

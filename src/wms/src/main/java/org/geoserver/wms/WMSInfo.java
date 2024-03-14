@@ -7,13 +7,14 @@ package org.geoserver.wms;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.geoserver.catalog.AuthorityURLInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.LayerIdentifierInfo;
 import org.geoserver.config.ServiceInfo;
+import org.geotools.api.util.InternationalString;
 import org.geotools.util.GrowableInternationalString;
-import org.opengis.util.InternationalString;
 
 /**
  * Configuration object for Web Map Service.
@@ -21,6 +22,13 @@ import org.opengis.util.InternationalString;
  * @author Justin Deoliveira, The Open Planning Project
  */
 public interface WMSInfo extends ServiceInfo {
+
+    public static final String EXCEPTION_ON_INVALID_DIMENSION_KEY =
+            "org.geoserver.wms.exceptionOnInvalidDimension";
+
+    /** Default value for the exceptionOnInvalidDimension */
+    public static final boolean EXCEPTION_ON_INVALID_DIMENSION_DEFAULT =
+            Boolean.valueOf(System.getProperty(EXCEPTION_ON_INVALID_DIMENSION_KEY, "false"));
 
     enum WMSInterpolation {
         Nearest,
@@ -229,9 +237,44 @@ public interface WMSInfo extends ServiceInfo {
     /** Sets the international title of the root layer */
     void setInternationalRootLayerAbstract(InternationalString rootLayerAbstract);
 
+    /** @return whether to apply rendering transformations for WMS GetFeatureInfo requests */
+    boolean isTransformFeatureInfoDisabled();
+
+    /** Sets whether to apply rendering transformations for WMS GetFeatureInfo requests */
+    void setTransformFeatureInfoDisabled(boolean transformFeatureInfoDisabled);
+
     /** @return whether to enable auto-escaping HTML FreeMarker template values */
     boolean isAutoEscapeTemplateValues();
 
     /** Sets whether to enable auto-escaping HTML FreeMarker template values */
     void setAutoEscapeTemplateValues(boolean autoEscapeTemplateValues);
+
+    /**
+     * Same as {@link #isExceptionOnInvalidDimension()}, but in case of null, uses the default value
+     * for the field which can be overrideen using EXCEPTION_ON_INVALID_DIMENSION_DEFAULT
+     *
+     * @return
+     */
+    public default boolean exceptionOnInvalidDimension() {
+        return Optional.ofNullable(isExceptionOnInvalidDimension())
+                .orElse(EXCEPTION_ON_INVALID_DIMENSION_DEFAULT);
+    }
+
+    /**
+     * This property controls the behavior when an invalid dimension is encountered. If set to
+     * <code>true</code>, an <code>InvalidDimensionException</code> will be thrown. If set to <code>
+     * false</code>, an empty response will be used. The standard compliant behavior is obtained
+     * with <code>true</code>.
+     *
+     * @return true if an exception should be thrown on invalid dimension, false otherwise
+     */
+    Boolean isExceptionOnInvalidDimension();
+
+    /**
+     * Sets the behavior when an invalid dimension is encountered.
+     *
+     * @param exceptionOnInvalidDimension true if an exception should be thrown on invalid dimension
+     *     value, false otherwise
+     */
+    void setExceptionOnInvalidDimension(Boolean exceptionOnInvalidDimension);
 }

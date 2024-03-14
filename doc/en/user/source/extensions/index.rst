@@ -16,7 +16,6 @@ This section describes most of the extensions available for GeoServer. Other dat
    excel
    geopkg-output/index
    grib/grib
-   imagemap
    importer/index
    inspire/index
    jp2k/index
@@ -28,12 +27,12 @@ This section describes most of the extensions available for GeoServer. Other dat
    printing/index
    querylayer/index
    vectortiles/index
-   xslt/index
    wcs20eo/index
    mongodb/index
    sldservice/index
    geofence/index
    geofence-server/index
+   geofence-wps/index
    cas/index
    params-extractor/index
    gwc-s3/index
@@ -41,4 +40,6 @@ This section describes most of the extensions available for GeoServer. Other dat
    wps-download/index
    wps-jdbc/index
    mapml/index
-
+   csw-iso/index
+   metadata/index
+   iau/index

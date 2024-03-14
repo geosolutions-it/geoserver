@@ -5,6 +5,8 @@
  */
 package org.geoserver.wcs.responses;
 
+import static java.util.Map.entry;
+
 import com.sun.media.imageio.plugins.tiff.BaselineTIFFTagSet;
 import it.geosolutions.imageioimpl.plugins.tiff.TIFFLZWCompressor;
 import java.awt.Dimension;
@@ -12,21 +14,20 @@ import java.awt.image.RenderedImage;
 import java.awt.image.SampleModel;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.geoserver.config.GeoServer;
 import org.geoserver.platform.OWS20Exception;
 import org.geoserver.wcs.WCSInfo;
+import org.geotools.api.coverage.grid.GridEnvelope;
+import org.geotools.api.parameter.ParameterValueGroup;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.imageio.GeoToolsWriteParams;
 import org.geotools.gce.geotiff.GeoTiffFormat;
 import org.geotools.gce.geotiff.GeoTiffWriteParams;
 import org.geotools.util.Utilities;
 import org.geotools.util.logging.Logging;
-import org.opengis.coverage.grid.GridEnvelope;
-import org.opengis.parameter.ParameterValueGroup;
 import org.vfny.geoserver.wcs.WcsException;
 import org.vfny.geoserver.wcs.WcsException.WcsExceptionCode;
 
@@ -55,11 +56,10 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
     /** Parameter controlling the compression type */
     public static final String COMPRESSION = "compression";
 
-    @SuppressWarnings("serial")
     public GeoTIFFCoverageResponseDelegate(GeoServer geoserver) {
         super(
                 geoserver,
-                Arrays.asList(
+                List.of(
                         "tif",
                         "tiff",
                         "geotiff",
@@ -68,31 +68,25 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
                         "GeoTIFF",
                         "image/geotiff",
                         "image/tiff;application=geotiff"), // output formats
-                new HashMap<String, String>() { // file extensions
-                    {
-                        put("tiff", "tif");
-                        put("tiff", "tif");
-                        put("geotiff", "tif");
-                        put("TIFF", "tif");
-                        put("GEOTIFF", "tif");
-                        put("GeoTIFF", "tif");
-                        put("image/geotiff", "tif");
-                        put("image/tiff", "tif");
-                        put("image/tiff;application=geotiff", "tif");
-                    }
-                },
-                new HashMap<String, String>() { // mime types
-                    {
-                        put("tiff", "image/tiff");
-                        put("tif", "image/tiff");
-                        put("geotiff", "image/tiff");
-                        put("TIFF", "image/tiff");
-                        put("GEOTIFF", "image/tiff");
-                        put("GeoTIFF", "image/tiff");
-                        put("image/geotiff", "image/tiff");
-                        put("image/tiff;application=geotiff", "image/tiff;application=geotiff");
-                    }
-                });
+                Map.ofEntries( // file extensions
+                        entry("tif", "tif"),
+                        entry("tiff", "tif"),
+                        entry("geotiff", "tif"),
+                        entry("TIFF", "tif"),
+                        entry("GEOTIFF", "tif"),
+                        entry("GeoTIFF", "tif"),
+                        entry("image/geotiff", "tif"),
+                        entry("image/tiff", "tif"),
+                        entry("image/tiff;application=geotiff", "tif")),
+                Map.ofEntries( // mime types
+                        entry("tiff", "image/tiff"),
+                        entry("tif", "image/tiff"),
+                        entry("geotiff", "image/tiff"),
+                        entry("TIFF", "image/tiff"),
+                        entry("GEOTIFF", "image/tiff"),
+                        entry("GeoTIFF", "image/tiff"),
+                        entry("image/geotiff", "image/tiff"),
+                        entry("image/tiff;application=geotiff", "image/tiff;application=geotiff")));
     }
 
     @Override

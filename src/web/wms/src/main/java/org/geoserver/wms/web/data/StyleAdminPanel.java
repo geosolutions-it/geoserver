@@ -67,7 +67,7 @@ import org.geoserver.wms.web.publish.StyleChoiceRenderer;
 import org.geoserver.wms.web.publish.StyleTypeChoiceRenderer;
 import org.geoserver.wms.web.publish.StyleTypeModel;
 import org.geoserver.wms.web.publish.StylesModel;
-import org.geotools.styling.Style;
+import org.geotools.api.style.Style;
 import org.geotools.util.Version;
 import org.geotools.util.logging.Logging;
 
@@ -232,7 +232,8 @@ public class StyleAdminPanel extends StyleEditTabPanel {
                 // ouch, the style file is gone! Register a generic error message
                 Session.get()
                         .error(
-                                new ParamResourceModel("styleNotFound", this, style.getFilename())
+                                new ParamResourceModel(
+                                                "styleNotFound", stylePage, style.getFilename())
                                         .getString());
             }
         }

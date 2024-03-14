@@ -25,6 +25,8 @@ import org.geoserver.catalog.impl.DataStoreInfoImpl;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wfs.WFSTestSupport;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.FeatureType;
 import org.geotools.feature.AttributeTypeBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.gml2.GML;
@@ -132,6 +134,8 @@ public class FeatureTypeInfoSchemaBuilderTest extends WFSTestSupport {
 
         FeatureTypeSchemaBuilder builder = new FeatureTypeSchemaBuilder.GML2(getGeoServer());
         XSDSchema xsdSchema = builder.build(ftInfo, null);
+
+        print(xsdSchema.getDocument());
 
         assertEquals("comments", xpath.evaluate("//xsd:documentation", xsdSchema.getDocument()));
     }

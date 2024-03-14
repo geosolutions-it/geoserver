@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.WMSLayerInfo;
 import org.geoserver.catalog.WMTSLayerInfo;
@@ -25,11 +26,22 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.map.MetatileMapOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.QueryCapabilities;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.parameter.GeneralParameterValue;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.FeatureTypeConstraint;
+import org.geotools.api.style.FeatureTypeStyle;
+import org.geotools.api.style.Rule;
+import org.geotools.api.style.Style;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
-import org.geotools.data.QueryCapabilities;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.filter.Filters;
 import org.geotools.filter.visitor.SimplifyingFilterVisitor;
@@ -42,21 +54,10 @@ import org.geotools.ows.wmts.WebMapTileServer;
 import org.geotools.ows.wmts.map.WMTSMapLayer;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.renderer.lite.MetaBufferEstimator;
-import org.geotools.styling.FeatureTypeConstraint;
-import org.geotools.styling.FeatureTypeStyle;
-import org.geotools.styling.Rule;
-import org.geotools.styling.Style;
 import org.geotools.util.factory.GeoTools;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.feature.Feature;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.parameter.GeneralParameterValue;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * WMS GetMap operation default implementation.
@@ -295,6 +296,7 @@ public class GetMap {
                         layerFilter,
                         layerSort);
             } else if (layerType == MapLayerInfo.TYPE_VECTOR) {
+                wms.checkMaxDimensions(mapLayerInfo, times, elevations, false);
                 addLocalVectorLayer(
                         mapContent,
                         request,
@@ -308,6 +310,7 @@ public class GetMap {
                         layerFilter,
                         layerSort);
             } else if (layerType == MapLayerInfo.TYPE_RASTER) {
+                wms.checkMaxDimensions(mapLayerInfo, times, elevations, true);
                 addRasterLayer(
                         mapContent,
                         request,
@@ -447,6 +450,8 @@ public class GetMap {
         final GridCoverage2DReader reader = (GridCoverage2DReader) mapLayerInfo.getCoverageReader();
         if (reader != null) {
 
+            wms.validateRasterDimensions(times, elevations, mapLayerInfo, request);
+
             // get the group of parameters tha this reader supports
             GeneralParameterValue[] readParameters =
                     wms.getWMSReadParameters(
@@ -546,11 +551,13 @@ public class GetMap {
             throw new ServiceException("Internal error", exp);
         }
         FeatureLayer featureLayer = new FeatureLayer(source, layerStyle);
-        featureLayer.setTitle(mapLayerInfo.getFeature().prefixedName());
+        FeatureTypeInfo featureInfo = mapLayerInfo.getFeature();
+        featureLayer.setTitle(featureInfo.prefixedName());
         featureLayer.getUserData().put("abstract", mapLayerInfo.getDescription());
 
         // mix the dimension related filter with the layer filter
-        Filter dimensionFilter = buildDimensionFilter(times, elevations, mapLayerInfo, request);
+        wms.validateVectorDimensions(times, elevations, featureInfo, request);
+        Filter dimensionFilter = wms.getDimensionFilter(times, elevations, featureInfo, request);
         Filter filter =
                 SimplifyingFilterVisitor.simplify(Filters.and(ff, layerFilter, dimensionFilter));
 
@@ -608,20 +615,6 @@ public class GetMap {
         featureLayer.setQuery(definitionQuery);
 
         mapContent.addLayer(featureLayer);
-    }
-
-    protected Filter buildDimensionFilter(
-            List<Object> times,
-            List<Object> elevations,
-            final MapLayerInfo mapLayerInfo,
-            final GetMapRequest request)
-            throws IOException {
-        final Filter dimensionFilter =
-                wms.getTimeElevationToFilter(times, elevations, mapLayerInfo.getFeature());
-        final Filter customDimensionsfilter =
-                wms.getDimensionsToFilter(request.getRawKvp(), mapLayerInfo.getFeature());
-        return SimplifyingFilterVisitor.simplify(
-                Filters.and(ff, dimensionFilter, customDimensionsfilter));
     }
 
     private void validateSort(

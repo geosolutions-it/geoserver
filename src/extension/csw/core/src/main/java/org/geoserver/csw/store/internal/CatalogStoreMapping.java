@@ -17,14 +17,14 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.csw.records.RecordDescriptor;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.Expression;
+import org.geotools.api.filter.expression.PropertyName;
 import org.geotools.data.complex.util.XPathUtil;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.util.logging.Logging;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.expression.Expression;
-import org.opengis.filter.expression.PropertyName;
 
 /**
  * Catalog Store Mapping An instance from this class provides a mapping from the data in the
@@ -93,6 +93,8 @@ public class CatalogStoreMapping {
             return splitIndex;
         }
     }
+
+    protected String mappingName;
 
     protected static final Logger LOGGER = Logging.getLogger(CatalogStoreMapping.class);
 
@@ -184,7 +186,7 @@ public class CatalogStoreMapping {
      * if the key starts with @ it also defines the ID element and if the key starts with $ it is a
      * required property.
      */
-    public static CatalogStoreMapping parse(Map<String, String> mappingSource) {
+    public static CatalogStoreMapping parse(Map<String, String> mappingSource, String mappingName) {
 
         CatalogStoreMapping mapping = new CatalogStoreMapping();
         for (Map.Entry<String, String> mappingEntry : mappingSource.entrySet()) {
@@ -227,6 +229,13 @@ public class CatalogStoreMapping {
             if (id) {
                 mapping.identifier = element;
             }
+        }
+
+        int index = mappingName.indexOf('-');
+        if (index >= 0) {
+            mapping.setMappingName(mappingName.substring(index + 1));
+        } else {
+            mapping.setMappingName("");
         }
 
         return mapping;
@@ -276,5 +285,13 @@ public class CatalogStoreMapping {
         }
         sb.deleteCharAt(sb.length() - 1);
         return sb.toString();
+    }
+
+    public String getMappingName() {
+        return mappingName;
+    }
+
+    public void setMappingName(String mappingName) {
+        this.mappingName = mappingName;
     }
 }

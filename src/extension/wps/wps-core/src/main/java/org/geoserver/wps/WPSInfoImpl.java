@@ -100,8 +100,9 @@ public class WPSInfoImpl extends ServiceInfoImpl implements WPSInfo {
     /** The flag indicating whether remote inputs are enabled. */
     boolean remoteInputDisabled;
 
-    public WPSInfoImpl() {
-        title = "Prototype GeoServer WPS";
+    @Override
+    public String getType() {
+        return "WPS";
     }
 
     /**

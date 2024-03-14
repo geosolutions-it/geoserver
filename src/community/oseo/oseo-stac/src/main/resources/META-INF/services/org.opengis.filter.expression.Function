@@ -1,4 +1,0 @@
-org.geoserver.ogcapi.stac.functions.MinXFunction
-org.geoserver.ogcapi.stac.functions.MinYFunction
-org.geoserver.ogcapi.stac.functions.MaxXFunction
-org.geoserver.ogcapi.stac.functions.MaxYFunction

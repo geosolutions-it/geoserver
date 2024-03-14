@@ -8,23 +8,20 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.security.decorators.DecoratingGridCoverage2DReader;
+import org.geotools.api.data.ResourceInfo;
+import org.geotools.api.data.ServiceInfo;
+import org.geotools.api.parameter.GeneralParameterValue;
+import org.geotools.api.parameter.ParameterValueGroup;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.processing.CoverageProcessor;
 import org.geotools.coverage.processing.operation.Crop;
-import org.geotools.data.ResourceInfo;
-import org.geotools.data.ServiceInfo;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.image.ImageWorker;
-import org.geotools.referencing.CRS;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.parameter.GeneralParameterValue;
-import org.opengis.parameter.ParameterValueGroup;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.MathTransform;
 
 /** @author ImranR */
 public class CroppedGridCoverage2DReader extends DecoratingGridCoverage2DReader {
@@ -47,24 +44,8 @@ public class CroppedGridCoverage2DReader extends DecoratingGridCoverage2DReader 
 
     public CroppedGridCoverage2DReader(GridCoverage2DReader delegate, Geometry roiGeom) {
         super(delegate);
-        this.roiGeom = reproject(delegate.getCoordinateReferenceSystem(), roiGeom);
-    }
-
-    private Geometry reproject(CoordinateReferenceSystem gridCRS, Geometry clipGeom) {
-        // re-project if required
-        try {
-            CoordinateReferenceSystem geomCRS = CRS.decode("EPSG:" + clipGeom.getSRID());
-            if (CRS.isTransformationRequired(geomCRS, gridCRS)) {
-                MathTransform mt = CRS.findMathTransform(geomCRS, gridCRS);
-                clipGeom = JTS.transform(clipGeom, mt);
-                clipGeom.setSRID(CRS.lookupEpsgCode(gridCRS, false));
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "failed to reproject " + clipGeom.toText());
-            LOGGER.log(Level.SEVERE, e.getMessage(), e);
-        }
-
-        return clipGeom;
+        this.roiGeom =
+                ClippedFeatureSource.reproject(delegate.getCoordinateReferenceSystem(), roiGeom);
     }
 
     @Override
@@ -91,15 +72,14 @@ public class CroppedGridCoverage2DReader extends DecoratingGridCoverage2DReader 
     }
 
     @Override
-    public GeneralEnvelope getOriginalEnvelope() {
-        GeneralEnvelope originalEnvelope = super.getOriginalEnvelope();
+    public GeneralBounds getOriginalEnvelope() {
+        GeneralBounds originalEnvelope = super.getOriginalEnvelope();
         try {
             // clip original envelope with ROI
             Geometry envIntersection =
                     roiGeom.intersection(JTS.toGeometry(originalEnvelope.toRectangle2D()));
-            envIntersection.setSRID(
-                    CRS.lookupEpsgCode(originalEnvelope.getCoordinateReferenceSystem(), false));
-            return GeneralEnvelope.toGeneralEnvelope(JTS.toEnvelope(envIntersection));
+            envIntersection.setUserData(originalEnvelope.getCoordinateReferenceSystem());
+            return GeneralBounds.toGeneralEnvelope(JTS.toEnvelope(envIntersection));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, e.getMessage(), e);
         }

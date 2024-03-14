@@ -32,9 +32,10 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.geoserver.wps.WPSException;
 import org.geoserver.wps.ppio.ComplexPPIO;
+import org.geotools.api.util.ProgressListener;
+import org.geotools.data.ows.URLCheckers;
 import org.geotools.util.URLs;
 import org.geotools.util.logging.Logging;
-import org.opengis.util.ProgressListener;
 
 /**
  * Handles an internal reference to a remote location
@@ -60,6 +61,15 @@ public class RemoteRequestInputProvider extends AbstractInputProvider {
         this.timeout = timeout;
         this.complexPPIO = ppio;
         this.maxSize = maxSize;
+
+        // check we are allowed to access a remote resource
+        String location = input.getReference().getHref();
+        URLCheckers.confirm(location);
+    }
+
+    @VisibleForTesting
+    protected static void setSocketFactory(LayeredConnectionSocketFactory newSocketFactory) {
+        socketFactory = newSocketFactory;
     }
 
     @VisibleForTesting
@@ -72,9 +82,10 @@ public class RemoteRequestInputProvider extends AbstractInputProvider {
         InputReferenceType ref = input.getReference();
         // execute the request
         listener.started();
-        try (CloseableHttpClient client = buildHttpClient(ref.getHref());
+        String location = ref.getHref();
+        try (CloseableHttpClient client = buildHttpClient(location);
                 CloseableHttpResponse response = mainHttpRequest(client, ref, listener);
-                InputStream is = getInputStream(response, ref.getHref(), listener)) {
+                InputStream is = getInputStream(response, location, listener)) {
             // actually parse the data
             Object result = complexPPIO.decode(is);
             if (result != null && !complexPPIO.getType().isInstance(result)) {
@@ -180,7 +191,9 @@ public class RemoteRequestInputProvider extends AbstractInputProvider {
                     "NoApplicableCode",
                     getInputId());
         }
-        return ref.getBodyReference().getHref();
+        String bodyReferenceHref = ref.getBodyReference().getHref();
+        URLCheckers.confirm(bodyReferenceHref);
+        return bodyReferenceHref;
     }
 
     private static CloseableHttpResponse bodyHttpRequest(CloseableHttpClient client, String href)

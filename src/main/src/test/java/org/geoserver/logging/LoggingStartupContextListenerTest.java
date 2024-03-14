@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -236,6 +237,33 @@ public class LoggingStartupContextListenerTest {
                         expectedLogfile,
                         fileAppender.getFileName());
             }
+        }
+    }
+
+    @Test
+    public void testLogLocationFromEmptyContext() throws Exception {
+        File tmp = File.createTempFile("log", "tmp", new File("target"));
+        tmp.delete();
+        tmp.mkdirs();
+
+        File logs = new File(tmp, "logs");
+        assertTrue(logs.mkdirs());
+
+        MockServletContext context = new MockServletContext();
+        context.setInitParameter("GEOSERVER_DATA_DIR", tmp.getPath());
+        context.setInitParameter(
+                "GEOSERVER_LOG_LOCATION", new File(tmp, "foo.log").getAbsolutePath());
+
+        try (TestAppender appender = TestAppender.createAppender("quite", null)) {
+            appender.startRecording("org.geoserver.logging");
+
+            appender.trigger("Could not reconfigure LOG4J loggers");
+
+            ServletContextListener listener = new LoggingStartupContextListener();
+            listener.contextInitialized(new ServletContextEvent(context));
+            listener.contextDestroyed(new ServletContextEvent(context));
+
+            appender.stopRecording("org.geoserver.logging");
         }
     }
 

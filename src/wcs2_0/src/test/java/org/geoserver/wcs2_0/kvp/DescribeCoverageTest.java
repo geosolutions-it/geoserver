@@ -25,6 +25,7 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wcs2_0.WCSTestSupport;
 import org.junit.Before;
 import org.junit.Test;
+import org.locationtech.jts.geom.CoordinateXY;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 
@@ -127,7 +128,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
                 "//wcs:CoverageDescription/gmlcov:rangeType/swe:DataRecord/swe:field/swe:Quantity/swe:uom/@code",
                 dom);
         assertXpathEvaluatesTo(
-                "text/plain",
+                "image/tiff",
                 "//wcs:CoverageDescriptions//wcs:CoverageDescription[1]//wcs:ServiceParameters//wcs:nativeFormat",
                 dom);
     }
@@ -385,24 +386,6 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo(
                 "-43.0020833333312 146.5020833333281",
                 "//wcs:CoverageDescriptions//wcs:CoverageDescription[1]//gml:domainSet//gml:RectifiedGrid//gml:origin//gml:Point//gml:pos",
-                dom);
-    }
-
-    @Test
-    public void testNativeFormatArcGrid() throws Exception {
-        Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__rain");
-        // print(dom);
-
-        assertXpathEvaluatesTo("1", "count(//wcs:CoverageDescription)", dom);
-        assertXpathEvaluatesTo(
-                "sf__rain", "//wcs:CoverageDescriptions/wcs:CoverageDescription[1]/@gml:id", dom);
-        assertXpathEvaluatesTo(
-                "1",
-                "count(//wcs:CoverageDescription[1]//gmlcov:rangeType//swe:DataRecord//swe:field)",
-                dom);
-        assertXpathEvaluatesTo(
-                "text/plain",
-                "//wcs:CoverageDescriptions/wcs:CoverageDescription[1]//wcs:ServiceParameters//wcs:nativeFormat",
                 dom);
     }
 
@@ -916,6 +899,110 @@ public class DescribeCoverageTest extends WCSTestSupport {
                 "80.0",
                 "//gmlcov:metadata/gmlcov:Extension/wcsgs:DimensionDomain[2]/wcsgs:Range[2]/wcsgs:end",
                 dom);
+    }
+
+    @Test
+    public void testImposedBBoxUTM11() throws Exception {
+        Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=wcs__utm11");
+        assertNotNull(dom);
+
+        checkValidationErrors(dom, getWcs20Schema());
+        // declared bounds have been fit to the native grid
+        assertXpathEvaluatesTo(
+                "440562.0 3720758.0", "//gml:boundedBy/gml:Envelope/gml:lowerCorner", dom);
+        assertXpathEvaluatesTo(
+                "471794.0 3750966.0", "//gml:boundedBy/gml:Envelope/gml:upperCorner", dom);
+        // origin of grid to world is top/left, affine points downwards, screen like
+        assertXpathEvaluatesTo(
+                "440562.0 3750966.0", "//gml:RectifiedGrid/gml:origin/gml:Point/gml:pos", dom);
+        assertXpathEvaluatesTo(
+                "0 0", "//gml:RectifiedGrid/gml:limits/gml:GridEnvelope/gml:low", dom);
+        // raster space adapted, 2 more pixels west to east, 2 less north to south
+        assertXpathEvaluatesTo(
+                "121 117", "//gml:RectifiedGrid/gml:limits/gml:GridEnvelope/gml:high", dom);
+        // native resolution preserved
+        assertXpathEvaluatesTo("256.0 0.0", "//gml:RectifiedGrid/gml:offsetVector[1]", dom);
+        assertXpathEvaluatesTo("0.0 -256.0", "//gml:RectifiedGrid/gml:offsetVector[2]", dom);
+    }
+
+    @Test
+    public void testImposedBBoxRotated() throws Exception {
+        Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=wcs__RotatedCad");
+        assertNotNull(dom);
+
+        checkValidationErrors(dom, getWcs20Schema());
+        // matching exactly the declared envelope due to rotation
+        assertXpathEvaluatesTo(
+                "1402800.0 5000000.0", "//gml:boundedBy/gml:Envelope/gml:lowerCorner", dom);
+        assertXpathEvaluatesTo(
+                "1402900.0 5000100.0", "//gml:boundedBy/gml:Envelope/gml:upperCorner", dom);
+        // origin of grid to world is top/left, affine points downwards, screen like
+        assertXpathEvaluatesTo(
+                "1402800.0 5000100.0", "//gml:RectifiedGrid/gml:origin/gml:Point/gml:pos", dom);
+        // scale factors preserved
+        assertXpathEvaluatesTo(
+                "0.11285131376709559 0.0", "//gml:RectifiedGrid/gml:offsetVector[1]", dom);
+        assertXpathEvaluatesTo(
+                "0.0 -0.11285131376709559", "//gml:RectifiedGrid/gml:offsetVector[2]", dom);
+        // raster space now square
+        assertXpathEvaluatesTo(
+                "0 0", "//gml:RectifiedGrid/gml:limits/gml:GridEnvelope/gml:low", dom);
+        assertXpathEvaluatesTo(
+                "885 885", "//gml:RectifiedGrid/gml:limits/gml:GridEnvelope/gml:high", dom);
+    }
+
+    @Test
+    public void testReprojectFromNative() throws Exception {
+        Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=cdf__usa");
+        assertNotNull(dom);
+
+        checkValidationErrors(dom, getWcs20Schema());
+        // bounds have been reprojected
+        assertXpathEvaluatesTo(
+                "http://www.opengis.net/def/crs/EPSG/0/3857",
+                "//gml:boundedBy/gml:Envelope/@srsName",
+                dom);
+        WCSTestSupport.assertXpathCoordinate(
+                new CoordinateXY(-1.457024062347863E7, 6199732.713729635),
+                "//gml:boundedBy/gml:Envelope/gml:lowerCorner",
+                dom);
+        WCSTestSupport.assertXpathCoordinate(
+                new CoordinateXY(-1.3790593336628266E7, 7197101.83024677),
+                "//gml:boundedBy/gml:Envelope/gml:upperCorner",
+                dom);
+        // origin of grid to world is top/left, affine points downwards, screen like
+        WCSTestSupport.assertXpathCoordinate(
+                new CoordinateXY(-1.457024062347863E7, 7197101.83024677),
+                "//gml:RectifiedGrid/gml:origin/gml:Point/gml:pos",
+                dom);
+        assertXpathEvaluatesTo(
+                "-1.457024062347863E7 7197101.83024677",
+                "//gml:RectifiedGrid/gml:origin/gml:Point/gml:pos",
+                dom);
+        assertXpathEvaluatesTo(
+                "0 0", "//gml:RectifiedGrid/gml:limits/gml:GridEnvelope/gml:low", dom);
+        // raster space guessed from reprojection
+        assertXpathEvaluatesTo(
+                "110 88", "//gml:RectifiedGrid/gml:limits/gml:GridEnvelope/gml:high", dom);
+        // native resolution also guessed from reprojection
+        assertXpathEvaluatesTo(
+                "7007.8198281689365 0.0", "//gml:RectifiedGrid/gml:offsetVector[1]", dom);
+        assertXpathEvaluatesTo(
+                "0.0 -11164.572122037076", "//gml:RectifiedGrid/gml:offsetVector[2]", dom);
+    }
+
+    @Test
+    public void testIAUCoverage() throws Exception {
+        Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=iau__Viking");
+        assertNotNull(dom);
+        print(dom);
+
+        checkValidationErrors(dom, getWcs20Schema());
+        assertXpathEvaluatesTo("Lat Long", "//gml:boundedBy/gml:Envelope/@axisLabels", dom);
+        String marsSRS = "http://www.opengis.net/def/crs/IAU/0/49900";
+        assertXpathEvaluatesTo(marsSRS, "//gml:Point/@srsName", dom);
+        assertXpathEvaluatesTo(marsSRS, "//gml:offsetVector[1]/@srsName", dom);
+        assertXpathEvaluatesTo(marsSRS, "//gml:offsetVector[2]/@srsName", dom);
     }
 
     private void checkWaterTempTimeEnvelope(Document dom) throws XpathException {

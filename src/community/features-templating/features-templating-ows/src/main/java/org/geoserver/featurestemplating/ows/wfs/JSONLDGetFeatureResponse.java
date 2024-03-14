@@ -25,14 +25,16 @@ import org.geoserver.ows.Request;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
+import org.geotools.api.feature.Feature;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.opengis.feature.Feature;
 
 /**
  * Encodes features in json-ld output format by means of a ${@link TemplateBuilder} tree obtained by
  * a JSON-LD template
  */
 public class JSONLDGetFeatureResponse extends BaseTemplateGetFeatureResponse {
+
+    private static final String ELEMENT_NAME = "JSON-LD";
 
     public JSONLDGetFeatureResponse(GeoServer gs, TemplateLoader configuration) {
         super(gs, configuration, TemplateIdentifier.JSONLD);
@@ -137,5 +139,10 @@ public class JSONLDGetFeatureResponse extends BaseTemplateGetFeatureResponse {
             result = Boolean.valueOf(value.toString());
         }
         return result;
+    }
+
+    @Override
+    public String getCapabilitiesElementName() {
+        return ELEMENT_NAME;
     }
 }

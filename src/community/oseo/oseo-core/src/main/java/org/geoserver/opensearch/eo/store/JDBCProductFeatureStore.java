@@ -6,28 +6,34 @@ package org.geoserver.opensearch.eo.store;
 
 import static org.geoserver.opensearch.eo.store.JDBCOpenSearchAccess.FF;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import org.geotools.data.Join;
-import org.geotools.data.Query;
+import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.featurestemplating.builders.JSONFieldSupport;
+import org.geoserver.ows.LocalWorkspace;
+import org.geotools.api.data.Join;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.feature.Attribute;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.Filter;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.AttributeBuilder;
 import org.geotools.feature.ComplexFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.Attribute;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.Filter;
 
 /**
  * Maps joined simple features up to a complex Collection feature
@@ -40,10 +46,17 @@ public class JDBCProductFeatureStore extends AbstractMappingStore {
 
     String granuleForeignKey;
 
+    /** The list of properties that come from JSONB fields and will need to be sorted by key */
+    Set<Name> jsonBProperties;
+
     public JDBCProductFeatureStore(JDBCOpenSearchAccess openSearchAccess, FeatureType schema)
             throws IOException {
         super(openSearchAccess, schema);
-
+        jsonBProperties =
+                schema.getDescriptors().stream()
+                        .filter(JSONFieldSupport::isJSONBField)
+                        .map(ad -> ad.getName())
+                        .collect(Collectors.toSet());
         for (AttributeDescriptor ad :
                 getFeatureStoreForTable("granule").getSchema().getAttributeDescriptors()) {
             if (ad.getLocalName().equalsIgnoreCase("product_id")) {
@@ -57,8 +70,11 @@ public class JDBCProductFeatureStore extends AbstractMappingStore {
     }
 
     @Override
-    protected SimpleFeatureSource getDelegateCollectionSource() throws IOException {
-        return openSearchAccess.getDelegateStore().getFeatureSource(JDBCOpenSearchAccess.PRODUCT);
+    public SimpleFeatureSource getDelegateSource() throws IOException {
+        WorkspaceInfo workspaceInfo = LocalWorkspace.get();
+        SimpleFeatureSource delegate =
+                openSearchAccess.getDelegateStore().getFeatureSource(JDBCOpenSearchAccess.PRODUCT);
+        return new WorkspaceFeatureSource(delegate, workspaceInfo, openSearchAccess);
     }
 
     @Override
@@ -101,6 +117,10 @@ public class JDBCProductFeatureStore extends AbstractMappingStore {
 
     @Override
     protected void mapPropertiesToComplex(ComplexFeatureBuilder builder, SimpleFeature fi) {
+        // JSONB Keys are Unsorted, so we sort them here
+        jsonBProperties.stream()
+                .filter(n -> fi.getAttribute(n) != null && fi.getAttribute(n) instanceof String)
+                .forEach(n -> sortJSONBKeys(fi, n));
         // basic mappings
         super.mapPropertiesToComplex(builder, fi);
 
@@ -138,6 +158,21 @@ public class JDBCProductFeatureStore extends AbstractMappingStore {
             } catch (IOException e) {
                 throw new RuntimeException("Failed to access collection schema", e);
             }
+        }
+    }
+
+    private static void sortJSONBKeys(SimpleFeature fi, Name n) {
+        try {
+            // convert from string to JSON
+            JsonNode sortedJsonNode =
+                    JSONFieldSupport.SORT_BY_KEY_MAPPER.readTree((String) fi.getAttribute(n));
+            // convert back to string and set the attribute
+            fi.setAttribute(n, sortedJsonNode.toString());
+        } catch (JsonProcessingException e) {
+            LOGGER.log(
+                    java.util.logging.Level.WARNING,
+                    "Error sorting JSONB field, could not parse JSON from field: " + n,
+                    e);
         }
     }
 

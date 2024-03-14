@@ -29,6 +29,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import javax.media.jai.ImageLayout;
 import javax.media.jai.JAI;
 import javax.media.jai.operator.ConstantDescriptor;
@@ -36,10 +38,13 @@ import org.apache.commons.io.IOUtils;
 import org.geoserver.wps.WPSException;
 import org.geoserver.wps.resource.WPSFileResource;
 import org.geoserver.wps.resource.WPSResourceManager;
+import org.geotools.api.coverage.grid.GridGeometry;
+import org.geotools.api.data.Query;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.data.Query;
 import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.image.ImageWorker;
 import org.geotools.process.factory.DescribeParameter;
@@ -50,9 +55,6 @@ import org.geotools.referencing.CRS;
 import org.geotools.util.Utilities;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.coverage.grid.GridGeometry;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * Georectifies a GridCoverage based on GCPs using gdal_warp under covers
@@ -416,28 +418,28 @@ public class GeorectifyCoverage implements GeoServerProcess {
             final String inputFilePath,
             final String outputFilePath,
             final List<String> warpingParameters) {
-        return new ArrayList<String>() {
-            {
-                if (targetEnvelope != null && !targetEnvelope.isEmpty()) {
-                    add("-te");
-                    addAll(targetEnvelope);
-                }
-                if (width != null && height != null) {
-                    add("-ts");
-                    add(Integer.toString(width));
-                    add(Integer.toString(height));
-                }
-                add("-t_srs");
-                add(targetCrs);
-                if (order != null) {
-                    add("-order");
-                    add(Integer.toString(order));
-                }
-                addAll(warpingParameters);
-                add(inputFilePath);
-                add(outputFilePath);
-            }
-        };
+        List<String> result = new ArrayList<>();
+
+        if (targetEnvelope != null && !targetEnvelope.isEmpty()) {
+            result.add("-te");
+            result.addAll(targetEnvelope);
+        }
+        if (width != null && height != null) {
+            result.add("-ts");
+            result.add(Integer.toString(width));
+            result.add(Integer.toString(height));
+        }
+        result.add("-t_srs");
+        result.add(targetCrs);
+        if (order != null) {
+            result.add("-order");
+            result.add(Integer.toString(order));
+        }
+        result.addAll(warpingParameters);
+        result.add(inputFilePath);
+        result.add(outputFilePath);
+
+        return result;
     }
 
     private static String getError(File logFile) throws IOException {
@@ -462,21 +464,16 @@ public class GeorectifyCoverage implements GeoServerProcess {
         if (re == null) {
             return Collections.emptyList();
         } else {
-            return new ArrayList<String>() {
-                {
-                    add(Double.toString(re.getMinX()));
-                    add(Double.toString(re.getMinY()));
-                    add(Double.toString(re.getMaxX()));
-                    add(Double.toString(re.getMaxY()));
-                }
-            };
+            return DoubleStream.of(re.getMinX(), re.getMinY(), re.getMaxX(), re.getMaxY())
+                    .mapToObj(Double::toString)
+                    .collect(Collectors.toList());
         }
     }
 
     private static String parseCrs(CoordinateReferenceSystem crs) {
         Utilities.ensureNonNull("coordinateReferenceSystem", crs);
         try {
-            return "EPSG:" + CRS.lookupEpsgCode(crs, true);
+            return CRS.lookupIdentifier(crs, true);
         } catch (FactoryException e) {
             throw new WPSException("Error occurred looking up target SRS");
         }
@@ -495,17 +492,14 @@ public class GeorectifyCoverage implements GeoServerProcess {
             throws IOException {
         final File vrtFile = File.createTempFile("vrt_", ".vrt", config.getTempFolder());
         @SuppressWarnings("serial")
-        final List<String> arguments =
-                new ArrayList<String>() {
-                    {
-                        add("-of");
-                        add("VRT");
-                        addAll(parameters);
-                        addAll(gcp);
-                        add(originalFilePath);
-                        add(vrtFile.getAbsolutePath());
-                    }
-                };
+        final List<String> arguments = new ArrayList<>();
+        arguments.add("-of");
+        arguments.add("VRT");
+        arguments.addAll(parameters);
+        arguments.addAll(gcp);
+        arguments.add(originalFilePath);
+        arguments.add(vrtFile.getAbsolutePath());
+
         final String gdalCommand = config.getTranslateCommand();
         executeCommand(gdalCommand, arguments, config.getLoggingFolder(), config.getEnvVariables());
         if (vrtFile != null && vrtFile.exists() && vrtFile.canRead()) {
@@ -516,15 +510,11 @@ public class GeorectifyCoverage implements GeoServerProcess {
 
     private File expandRgba(final String originalFilePath) throws IOException {
         final File expandedFile = File.createTempFile("rgba", ".tif", config.getTempFolder());
-        @SuppressWarnings("serial")
-        final List<String> arguments =
-                new ArrayList<String>() {
-                    {
-                        addAll(splitToList("-expand RGBA -co TILED=yes -co COMPRESS=LZW"));
-                        add(originalFilePath);
-                        add(expandedFile.getAbsolutePath());
-                    }
-                };
+        final List<String> arguments = new ArrayList<>();
+        arguments.addAll(splitToList("-expand RGBA -co TILED=yes -co COMPRESS=LZW"));
+        arguments.add(originalFilePath);
+        arguments.add(expandedFile.getAbsolutePath());
+
         final String gdalCommand = config.getTranslateCommand();
         executeCommand(gdalCommand, arguments, config.getLoggingFolder(), config.getEnvVariables());
         return expandedFile;
@@ -544,15 +534,9 @@ public class GeorectifyCoverage implements GeoServerProcess {
         final File logFile = File.createTempFile("LOG", ".log", loggingFolder);
 
         // run the process and grab the output for error reporting purposes
-        @SuppressWarnings("serial")
-        ProcessBuilder builder =
-                new ProcessBuilder(
-                        new ArrayList<String>() {
-                            {
-                                add(gdalCommand);
-                                addAll(arguments);
-                            }
-                        });
+        List<String> commands = new ArrayList<>(arguments);
+        commands.add(0, gdalCommand);
+        ProcessBuilder builder = new ProcessBuilder(commands);
         if (envVars != null) {
             builder.environment().putAll(envVars);
         } else {
@@ -632,12 +616,9 @@ public class GeorectifyCoverage implements GeoServerProcess {
         // Setting up gcp command arguments
         while (gcpMatcher.find()) {
             @SuppressWarnings("serial")
-            List<String> gcp =
-                    new ArrayList<String>() {
-                        {
-                            add("-gcp");
-                        }
-                    };
+            List<String> gcp = new ArrayList<>();
+            gcp.add("-gcp");
+
             String pixels = gcpMatcher.group(0);
             gcpMatcher.find();
             String lines = gcpMatcher.group(0);

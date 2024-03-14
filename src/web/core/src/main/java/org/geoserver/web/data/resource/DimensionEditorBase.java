@@ -4,9 +4,13 @@
  */
 package org.geoserver.web.data.resource;
 
+import static org.geoserver.catalog.DimensionInfo.NearestFailBehavior.EXCEPTION;
+import static org.geoserver.catalog.DimensionInfo.NearestFailBehavior.IGNORE;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -14,6 +18,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.form.AjaxFormComponentUpdatingBehavior;
@@ -34,6 +39,7 @@ import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionDefaultValueSetting;
 import org.geoserver.catalog.DimensionDefaultValueSetting.Strategy;
 import org.geoserver.catalog.DimensionInfo;
+import org.geoserver.catalog.DimensionInfo.NearestFailBehavior;
 import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.ResourceInfo;
@@ -41,12 +47,14 @@ import org.geoserver.catalog.impl.ModificationProxy;
 import org.geoserver.ows.kvp.ElevationKvpParser;
 import org.geoserver.ows.kvp.TimeParser;
 import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.web.wicket.EnumChoiceRenderer;
 import org.geoserver.web.wicket.ParamResourceModel;
+import org.geotools.api.coverage.grid.GridCoverageReader;
+import org.geotools.api.feature.type.PropertyDescriptor;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.util.DateTimeParser;
 import org.geotools.util.Range;
 import org.geotools.util.logging.Logging;
-import org.opengis.coverage.grid.GridCoverageReader;
-import org.opengis.feature.type.PropertyDescriptor;
 
 /**
  * Edits a {@link DimensionInfo} object for the specified resource
@@ -88,12 +96,18 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
 
     private final TextField<String> acceptableInterval;
 
+    private final DropDownChoice<NearestFailBehavior> nearestFailBehavior;
+
     boolean time;
 
     private Class<?> originalType;
     private ResourceInfo resource;
     private final WebMarkupContainer resolutions;
     private final WebMarkupContainer unitsContainer;
+
+    private TextField<String> startField;
+
+    private TextField<String> endField;
 
     public DimensionEditorBase(String id, IModel<T> model, ResourceInfo resource, Class<?> type) {
         this(id, model, resource, type, false, false);
@@ -248,6 +262,24 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
                                         == DimensionPresentation.DISCRETE_INTERVAL;
                         resolutions.setVisible(visible);
                         target.add(resContainer);
+
+                        boolean listSelected =
+                                presentation.getModelObject() == DimensionPresentation.LIST;
+                        String containerVisible = listSelected ? "none" : "initial";
+                        startField
+                                .getParent()
+                                .add(
+                                        new AttributeModifier(
+                                                "style", "display:" + containerVisible + ";"));
+                        if (listSelected) {
+                            startField.setModelValue(new String[0]);
+                            startField.setRequired(false);
+                            endField.setModelValue(new String[0]);
+                            endField.setRequired(false);
+                        }
+                        startField.setVisible(!listSelected);
+                        endField.setVisible(!listSelected);
+                        target.add(startField.getParent());
                     }
                 });
 
@@ -364,6 +396,10 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
         WebMarkupContainer acceptableIntervalEditor =
                 new WebMarkupContainer("acceptableIntervalEditor");
         acceptableIntervalEditor.setVisible(isNearestMatchEnabled);
+        WebMarkupContainer failedMatchBehaviorContainer =
+                new WebMarkupContainer("failedMatchBehaviorContainer");
+        failedMatchBehaviorContainer.setVisible(isNearestMatchEnabled);
+        nearestMatchContainer.add(failedMatchBehaviorContainer);
 
         // At the moment, Nearest Match on raw is only supported for WCS (Coverages).
         // Let's do a check on the resource type and show/hide the raw nearest accordingly
@@ -383,6 +419,7 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
                         updateAccetptedInterval(
                                 target,
                                 acceptableIntervalEditor,
+                                failedMatchBehaviorContainer,
                                 configsContainer,
                                 rawNearestIsSupported);
                     }
@@ -395,6 +432,7 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
                         updateAccetptedInterval(
                                 target,
                                 acceptableIntervalEditor,
+                                failedMatchBehaviorContainer,
                                 configsContainer,
                                 rawNearestIsSupported);
                     }
@@ -417,19 +455,127 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
                                                 .setVariable("actual", validatable.getValue()));
                             }
                         });
+
+        List<NearestFailBehavior> nearestFailBehaviorList = Arrays.asList(IGNORE, EXCEPTION);
+        nearestFailBehavior =
+                new DropDownChoice<>(
+                        "nearestFailBehavior",
+                        new PropertyModel<>(model, "nearestFailBehavior"),
+                        nearestFailBehaviorList);
+        nearestFailBehavior.setChoiceRenderer(new EnumChoiceRenderer(nearestFailBehavior));
+        nearestFailBehavior.setNullValid(true);
+        failedMatchBehaviorContainer.add(nearestFailBehavior);
+
+        // add container for defining start and end data range values
+        final WebMarkupContainer startEndContainer = new WebMarkupContainer("startEndContainer");
+        startEndContainer.setOutputMarkupId(true);
+        String containerVisibility =
+                presentation.getModelObject() == DimensionPresentation.LIST ? "none" : "initial";
+        startEndContainer.add(
+                new AttributeModifier("style", "display:" + containerVisibility + ";"));
+        configs.add(startEndContainer);
+
+        IModel<String> sfModel = new PropertyModel<>(model, "startValue");
+        IModel<String> efModel = new PropertyModel<>(model, "endValue");
+        startField = new TextField<>("startValue", sfModel);
+        endField = new TextField<>("endValue", efModel);
+        startField.setRequired(!endField.getValue().isEmpty());
+        endField.setRequired(!startField.getValue().isEmpty());
+
+        final Label startValueValidationMessage = new Label("startValueValidationMsg", "");
+        startValueValidationMessage.setVisible(false);
+        final Label endValueValidationMessage = new Label("endValueValidationMsg", "");
+        endValueValidationMessage.setVisible(false);
+
+        startField.add(
+                new AjaxFormComponentUpdatingBehavior("change") {
+
+                    @Override
+                    protected void onUpdate(AjaxRequestTarget target) {
+                        boolean isEmpty = startField.getValue().isEmpty();
+                        endField.setRequired(!isEmpty);
+                        startValueValidationMessage.setDefaultModelObject(null);
+                        startValueValidationMessage.setVisible(false);
+                        if (isEmpty) {
+                            endField.getFeedbackMessages().clear();
+                            endValueValidationMessage.setDefaultModelObject(null);
+                            endValueValidationMessage.setVisible(false);
+                        }
+
+                        target.add(startEndContainer);
+                    }
+
+                    @Override
+                    protected void onError(AjaxRequestTarget target, RuntimeException e) {
+                        if (startField.getValue().isEmpty() && endField.getValue().isEmpty()) {
+                            startField.setRequired(false);
+                            endField.setRequired(false);
+                            startField.getFeedbackMessages().clear();
+                            endField.getFeedbackMessages().clear();
+                        } else {
+                            super.onError(target, e);
+                            if (startField.hasErrorMessage()) {
+                                startValueValidationMessage.setDefaultModelObject(
+                                        startField.getFeedbackMessages().first());
+                                startValueValidationMessage.setVisible(true);
+                            }
+                        }
+                        target.add(startEndContainer);
+                    }
+                });
+        startField.add(new StartEndValueValidator(id));
+        startEndContainer.add(startField);
+        startEndContainer.add(startValueValidationMessage);
+
+        endField.add(
+                new AjaxFormComponentUpdatingBehavior("change") {
+
+                    @Override
+                    protected void onUpdate(AjaxRequestTarget target) {
+                        startField.setRequired(!endField.getValue().isEmpty());
+                        endValueValidationMessage.setDefaultModelObject(null);
+                        endValueValidationMessage.setVisible(false);
+                        target.add(startEndContainer);
+                    }
+
+                    @Override
+                    protected void onError(AjaxRequestTarget target, RuntimeException e) {
+                        if (startField.getValue().isEmpty() && endField.getValue().isEmpty()) {
+                            startField.setRequired(false);
+                            endField.setRequired(false);
+                            startField.getFeedbackMessages().clear();
+                            endField.getFeedbackMessages().clear();
+                        } else {
+                            super.onError(target, e);
+                            if (endField.hasErrorMessage()) {
+                                endValueValidationMessage.setDefaultModelObject(
+                                        endField.getFeedbackMessages().first());
+                                endValueValidationMessage.setVisible(true);
+                            }
+                        }
+                        target.add(startEndContainer);
+                    }
+                });
+
+        endField.add(new StartEndValueValidator(id));
+        startEndContainer.add(endField);
+        startEndContainer.add(endValueValidationMessage);
+
         initComponents();
     }
 
     protected void updateAccetptedInterval(
             AjaxRequestTarget target,
             WebMarkupContainer acceptableIntervalEditor,
+            WebMarkupContainer failedMatchBehaviorContainer,
             WebMarkupContainer configsContainer,
             boolean rawNearestIsSupported) {
         // Keep the acceptedInterval text box if one of the 2 nearest match flags is checked
         Boolean nearestEnabled = nearestMatch.getModelObject();
         Boolean rawNearestEnabled = rawNearestIsSupported && rawNearestMatch.getModelObject();
-        acceptableIntervalEditor.setVisible(
-                Boolean.TRUE.equals(nearestEnabled || rawNearestEnabled));
+        boolean visible = Boolean.TRUE.equals(nearestEnabled || rawNearestEnabled);
+        acceptableIntervalEditor.setVisible(visible);
+        failedMatchBehaviorContainer.setVisible(visible);
         target.add(configsContainer);
     }
 
@@ -559,9 +705,11 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
         nearestMatch.processInput();
         rawNearestMatch.processInput();
         acceptableInterval.processInput();
+        nearestFailBehavior.processInput();
         if (nearestMatch.isVisible() && nearestMatch.getModelObject()) {
             info.setNearestMatchEnabled(true);
             info.setAcceptableInterval(acceptableInterval.getModelObject());
+            info.setNearestFailBehavior(nearestFailBehavior.getModelObject());
         } else {
             info.setNearestMatchEnabled(false);
             info.setAcceptableInterval(null);
@@ -571,11 +719,15 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
         } else {
             info.setRawNearestMatchEnabled(false);
         }
+        info.setStartValue(startField.getValue());
+        info.setEndValue(endField.getValue());
+        startField.processInput();
+        endField.processInput();
 
         convertInputExtensions(info);
 
         setConvertedInput(info);
-    };
+    }
 
     protected void convertInputExtensions(T info) {}
 
@@ -779,6 +931,81 @@ public abstract class DimensionEditorBase<T extends DimensionInfo> extends FormC
                     LOGGER.log(Level.FINER, "Invalid time value " + stringValue, e);
                 }
                 return false;
+            }
+        }
+    }
+
+    /** Validator for start and end data range values. */
+    public class StartEndValueValidator implements IValidator<String> {
+        String dimension;
+
+        public StartEndValueValidator(String dimensionId) {
+            this.dimension = dimensionId;
+        }
+
+        @Override
+        public void validate(IValidatable<String> value) {
+            boolean valid = false;
+            String errorKey = "invalidStartOrEndDate";
+            DateTimeParser dateTimeParser = new DateTimeParser();
+            Date date = null;
+            if (dimension.equals("time")) {
+                String timeValue = value.getValue();
+                try {
+                    date = (Date) ((List) dateTimeParser.parse(timeValue)).get(0);
+                } catch (ParseException e) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Failed to parse the datetime string. The value is possibly invalid",
+                            e);
+                }
+
+                if (date != null || timeValue.equalsIgnoreCase("present")) {
+                    valid = true;
+                }
+            } else if (dimension.equals("elevation")) {
+                String elevationValue = value.getValue();
+                errorKey = "invalidStartOrEndElevation";
+                try {
+                    Double.parseDouble(elevationValue);
+                    valid = true;
+                } catch (NumberFormatException e) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Failed to parse the elevation start or end value. The value is not numeric",
+                            e);
+                }
+            } else if (dimension.equals("customVectorEditor")) {
+                String customValue = value.getValue();
+                errorKey = "invalidStartOrEndCustom";
+                try {
+                    date = (Date) ((List) dateTimeParser.parse(customValue)).get(0);
+                } catch (ParseException e) {
+                    LOGGER.log(Level.WARNING, "Failed to parse the custom value as a date", e);
+                    try {
+                        Double.parseDouble(customValue);
+                        valid = true;
+                    } catch (NumberFormatException e2) {
+                        LOGGER.log(
+                                Level.WARNING,
+                                "Failed to parse the custom start or end value. The value is not numeric",
+                                e2);
+                    }
+                }
+
+                if (date != null || customValue.equalsIgnoreCase("present")) {
+                    valid = true;
+                }
+            }
+
+            if (!valid) {
+                PropertyModel pModel = ((PropertyModel<String>) value.getModel());
+                String propertyExpression = pModel.getPropertyExpression();
+                String valuePrefix = propertyExpression.split("Value")[0];
+                value.error(
+                        new ValidationError(errorKey)
+                                .addKey(errorKey)
+                                .setVariable("valuePrefix", StringUtils.capitalize(valuePrefix)));
             }
         }
     }

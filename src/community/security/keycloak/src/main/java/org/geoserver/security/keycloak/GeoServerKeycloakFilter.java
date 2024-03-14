@@ -21,6 +21,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import org.geoserver.security.GeoServerRoleService;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.security.config.PreAuthenticatedUserNameFilterConfig;
 import org.geoserver.security.config.RoleSource;
@@ -49,6 +50,7 @@ import org.keycloak.adapters.springsecurity.facade.SimpleHttpFacade;
 import org.keycloak.adapters.springsecurity.token.SpringSecurityAdapterTokenStoreFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -62,6 +64,8 @@ import org.springframework.security.web.authentication.preauth.PreAuthenticatedA
  */
 public class GeoServerKeycloakFilter extends GeoServerPreAuthenticatedUserNameFilter
         implements AuthenticationCachingFilter, GeoServerAuthenticationFilter, LogoutHandler {
+
+    private static final String ID_TOKEN_HINT = "id_token_hint";
 
     private static final Logger LOG = Logging.getLogger(GeoServerKeycloakFilter.class);
 
@@ -92,6 +96,7 @@ public class GeoServerKeycloakFilter extends GeoServerPreAuthenticatedUserNameFi
         GeoServerKeycloakFilterConfig keycloakConfig = (GeoServerKeycloakFilterConfig) config;
         KeycloakDeployment deployment =
                 KeycloakDeploymentBuilder.build(keycloakConfig.readAdapterConfig());
+        deployment.setScope("openid");
         this.keycloakContext = new AdapterDeploymentContext(deployment);
         this.enableRedirectEntryPoint = keycloakConfig.isEnableRedirectEntryPoint();
     }
@@ -111,14 +116,25 @@ public class GeoServerKeycloakFilter extends GeoServerPreAuthenticatedUserNameFi
         String referer = request.getHeader(HttpHeaders.REFERER);
         String refererNoParams = referer.split("\\?")[0];
 
-        // let geoserver know what to do with this
-        request.setAttribute(
-                GeoServerLogoutFilter.LOGOUT_REDIRECT_ATTR,
-                deployment
-                        .getLogoutUrl()
-                        .queryParam(OAuth2Constants.REDIRECT_URI, refererNoParams)
-                        .build()
-                        .toString());
+        if (authentication
+                .getDetails()
+                .getClass()
+                .isAssignableFrom(org.keycloak.adapters.OidcKeycloakAccount.class)) {
+            // let geoserver know what to do with this
+            request.setAttribute(
+                    GeoServerLogoutFilter.LOGOUT_REDIRECT_ATTR,
+                    deployment
+                            .getLogoutUrl()
+                            .queryParam(OAuth2Constants.REDIRECT_URI, refererNoParams)
+                            .queryParam(
+                                    ID_TOKEN_HINT,
+                                    ((org.keycloak.adapters.OidcKeycloakAccount)
+                                                    authentication.getDetails())
+                                            .getKeycloakSecurityContext()
+                                            .getIdTokenString())
+                            .build()
+                            .toString());
+        }
     }
 
     /** Cache based on the "Authorization" HTTP header. */
@@ -221,16 +237,40 @@ public class GeoServerKeycloakFilter extends GeoServerPreAuthenticatedUserNameFi
             enrichWithKeycloakRoles(keycloakAuth, roles);
             result = new PreAuthenticatedAuthenticationToken(principal, null, roles);
         }
+        result.setDetails(keycloakAuth.getDetails());
         return result;
     }
 
     private void enrichWithKeycloakRoles(
             Authentication keycloakAuth, Collection<GeoServerRole> roles) {
-        List<GeoServerRole> roleList =
-                keycloakAuth.getAuthorities().stream()
-                        .map(r -> new GeoServerRole(r.getAuthority()))
-                        .collect(Collectors.toList());
-        roles.addAll(roleList);
+        GeoServerRoleService roleService = getSecurityManager().getActiveRoleService();
+
+        for (GrantedAuthority authoritity : keycloakAuth.getAuthorities()) {
+            GeoServerRole role = null;
+            try {
+                role = roleService.getRoleByName(authoritity.getAuthority());
+            } catch (IOException e) {
+                LOG.log(
+                        Level.WARNING,
+                        "Error while trying to get geoserver roles with following Exception cause:",
+                        e.getCause());
+            }
+            if (role != null) {
+                roles.add(role);
+            } else {
+                roles.add(new GeoServerRole(authoritity.getAuthority()));
+            }
+        }
+        RoleCalculator calc = new RoleCalculator(roleService);
+        try {
+            calc.addInheritedRoles(roles);
+        } catch (IOException e) {
+            LOG.log(
+                    Level.WARNING,
+                    "Error while trying to get geoserver roles with following Exception cause:",
+                    e.getCause());
+        }
+        calc.addMappedSystemRoles(roles);
     }
 
     @Override

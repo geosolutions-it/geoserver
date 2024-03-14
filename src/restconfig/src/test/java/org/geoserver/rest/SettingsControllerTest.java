@@ -197,10 +197,11 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
         JSONObject contact = settings.getJSONObject("contact");
         assertNotNull(contact);
         assertEquals("Andrea Aime", contact.get("contactPerson"));
+        assertEquals("https://www.osgeo.org", contact.get("onlineResource"));
 
         assertEquals("UTF-8", settings.get("charset"));
         assertEquals("8", settings.get("numDecimals").toString().trim());
-        assertEquals("http://geoserver.org", settings.get("onlineResource"));
+        assertEquals("https://geoserver.org", settings.get("onlineResource"));
 
         JSONObject jaiInfo = global.getJSONObject("jai");
         assertNotNull(jaiInfo);
@@ -218,8 +219,10 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
         assertEquals("global", dom.getDocumentElement().getLocalName());
         assertXpathEvaluatesTo("UTF-8", "/global/settings/charset", dom);
         assertXpathEvaluatesTo("8", "/global/settings/numDecimals", dom);
-        assertXpathEvaluatesTo("http://geoserver.org", "/global/settings/onlineResource", dom);
+        assertXpathEvaluatesTo("https://geoserver.org", "/global/settings/onlineResource", dom);
         assertXpathEvaluatesTo("Andrea Aime", "/global/settings/contact/contactPerson", dom);
+        assertXpathEvaluatesTo(
+                "https://www.osgeo.org", "/global/settings/contact/onlineResource", dom);
         assertXpathEvaluatesTo("false", "/global/jai/allowInterpolation", dom);
         assertXpathEvaluatesTo("0.75", "/global/jai/memoryThreshold", dom);
         assertXpathEvaluatesTo("UNBOUNDED", "/global/coverageAccess/queueType", dom);
@@ -265,7 +268,7 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
                         + "}}";
         MockHttpServletResponse response =
                 putAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/settings/", inputJson, "text/json");
+                        RestBaseController.ROOT_PATH + "/settings", inputJson, "text/json");
         assertEquals(200, response.getStatus());
         JSON json = getAsJSON(RestBaseController.ROOT_PATH + "/settings.json");
         JSONObject jsonObject = (JSONObject) json;
@@ -335,7 +338,7 @@ public class SettingsControllerTest extends CatalogRESTTestSupport {
                         + "</global>";
 
         MockHttpServletResponse response =
-                putAsServletResponse(RestBaseController.ROOT_PATH + "/settings/", xml, "text/xml");
+                putAsServletResponse(RestBaseController.ROOT_PATH + "/settings", xml, "text/xml");
         assertEquals(200, response.getStatus());
         Document dom = getAsDOM(RestBaseController.ROOT_PATH + "/settings.xml");
         assertEquals("global", dom.getDocumentElement().getLocalName());

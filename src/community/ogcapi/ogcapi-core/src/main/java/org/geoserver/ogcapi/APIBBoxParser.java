@@ -12,6 +12,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.ServiceException;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.NoSuchAuthorityCodeException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -20,17 +25,12 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.NoSuchAuthorityCodeException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.http.HttpStatus;
 
 /** A BBOX parser specialized for API bounding boxes (up to 6 coordinates, default CRS is CRS84) */
 public class APIBBoxParser {
 
-    private static final FilterFactory2 FF = CommonFactoryFinder.getFilterFactory2();
+    private static final FilterFactory FF = CommonFactoryFinder.getFilterFactory();
 
     /**
      * Turns a bbox specification into a OGC filter, assuming it's expressed in {@link
@@ -38,7 +38,7 @@ public class APIBBoxParser {
      * null or empty.
      */
     public static Filter toFilter(String bbox) throws FactoryException {
-        return toFilter(bbox, null);
+        return toFilter(bbox, (CoordinateReferenceSystem) null);
     }
 
     /**
@@ -66,6 +66,21 @@ public class APIBBoxParser {
                     "Bounding box array must have either 4 or 6 ordinates",
                     HttpStatus.BAD_REQUEST);
         }
+        return toFilter(parsed);
+    }
+
+    /**
+     * Turns a bbox specification into a OGC filter, using the given CRS, or {@link
+     * DefaultGeographicCRS#WGS84} if null is passed. Will return {@link Filter#INCLUDE} if the bbox
+     * spec itself is null or empty.
+     */
+    public static Filter toFilter(String bbox, String crs) throws FactoryException {
+        if (bbox == null || bbox.trim().isEmpty()) {
+            return Filter.INCLUDE;
+        }
+
+        // to envelopes first, build filter around them then
+        ReferencedEnvelope[] parsed = parse(bbox, crs);
         return toFilter(parsed);
     }
 
@@ -107,7 +122,16 @@ public class APIBBoxParser {
 
     /** Parses a BBOX with the given CRS, if null {@link DefaultGeographicCRS#WGS84} will be used */
     public static ReferencedEnvelope[] parse(String value, String crs) throws FactoryException {
-        return parse(value, crs != null ? CRS.decode(crs, true) : null);
+        return parse(value, parseCRS(crs));
+    }
+
+    private static CoordinateReferenceSystem parseCRS(String crs) throws FactoryException {
+        try {
+            return crs != null ? CRS.decode(crs, true) : null;
+        } catch (NoSuchAuthorityCodeException e) {
+            throw new APIException(
+                    INVALID_PARAMETER_VALUE, "Invalid CRS: " + crs, HttpStatus.BAD_REQUEST);
+        }
     }
 
     /** Parses a BBOX with the given CRS, if null {@link DefaultGeographicCRS#WGS84} will be used */

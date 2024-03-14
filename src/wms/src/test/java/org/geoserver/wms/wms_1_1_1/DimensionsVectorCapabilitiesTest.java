@@ -32,9 +32,9 @@ import org.geoserver.security.TestResourceAccessManager;
 import org.geoserver.security.VectorAccessLimits;
 import org.geoserver.security.impl.AbstractUserGroupService;
 import org.geoserver.wms.WMSDimensionsTestSupport;
+import org.geotools.api.filter.Filter;
 import org.junit.After;
 import org.junit.Test;
-import org.opengis.filter.Filter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -641,6 +641,64 @@ public class DimensionsVectorCapabilitiesTest extends WMSDimensionsTestSupport {
     }
 
     @Test
+    public void testCustomContinuousWithEnd() throws Exception {
+        setupVectorDimensionWithEnd(
+                "dim_custom",
+                "startElevation",
+                "endElevation",
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                UNITS,
+                UNIT_SYMBOL);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+        // print(dom);
+        assertXpathEvaluatesTo(
+                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                UNIT_SYMBOL,
+                "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@unitSymbol",
+                dom);
+        assertXpathEvaluatesTo(
+                UNITS, "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@units", dom);
+        assertXpathEvaluatesTo(
+                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@name", dom);
+        assertXpathEvaluatesTo(
+                "1.0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@default", dom);
+        assertXpathEvaluatesTo(
+                "1.0/3.0/0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/text()", dom);
+    }
+
+    @Test
+    public void testCustomDiscreteIntervalWithEnd() throws Exception {
+        setupVectorDimensionWithEnd(
+                "dim_custom",
+                "startElevation",
+                "endElevation",
+                DimensionPresentation.DISCRETE_INTERVAL,
+                1.0,
+                UNITS,
+                UNIT_SYMBOL);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+        // print(dom);
+        assertXpathEvaluatesTo(
+                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                UNIT_SYMBOL,
+                "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@unitSymbol",
+                dom);
+        assertXpathEvaluatesTo(
+                UNITS, "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@units", dom);
+        assertXpathEvaluatesTo(
+                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@name", dom);
+        assertXpathEvaluatesTo(
+                "1.0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@default", dom);
+        assertXpathEvaluatesTo(
+                "1.0/3.0/1.0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/text()", dom);
+    }
+
+    @Test
     public void testCustomContinuousDate() throws Exception {
         setupVectorDimension(
                 "dim_custom",
@@ -688,6 +746,161 @@ public class DimensionsVectorCapabilitiesTest extends WMSDimensionsTestSupport {
         assertXpathEvaluatesTo("elevation", "//Layer/Extent/@name", dom);
         assertXpathEvaluatesTo("0.0", "//Layer/Extent/@default", dom);
         assertXpathEvaluatesTo("0.0/3.0/0", "//Layer/Extent", dom);
+    }
+
+    @Test
+    public void testStaticTimeRange() throws Exception {
+        String startValue = "2014-01-24T13:25:00.000Z";
+        String endValue = "2021";
+
+        setupVectorDimension(
+                ResourceInfo.TIME,
+                "time",
+                DimensionPresentation.DISCRETE_INTERVAL,
+                Double.valueOf(1000 * 60 * 60 * 12),
+                null,
+                null);
+
+        setupVectorStartAndEndValues(V_TIME_ELEVATION, ResourceInfo.TIME, startValue, endValue);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        assertXpathEvaluatesTo("1", "count(//Layer/Dimension)", dom);
+        assertXpathEvaluatesTo("time", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                "2014-01-24T13:25:00.000Z/2021-01-01T00:00:00.000Z/PT12H",
+                "//Layer[Name='sf:TimeElevation']/Extent",
+                dom);
+    }
+
+    @Test
+    public void testStaticTimeRangeContinuous() throws Exception {
+        String startValue = "2014-01-24T13:25:00.000Z";
+        String endValue = "2021";
+
+        setupVectorDimension(
+                ResourceInfo.TIME,
+                "time",
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                null,
+                null);
+
+        setupVectorStartAndEndValues(V_TIME_ELEVATION, ResourceInfo.TIME, startValue, endValue);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        assertXpathEvaluatesTo("1", "count(//Layer/Dimension)", dom);
+        assertXpathEvaluatesTo("time", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                "2014-01-24T13:25:00.000Z/2021-01-01T00:00:00.000Z/PT1S",
+                "//Layer[Name='sf:TimeElevation']/Extent",
+                dom);
+    }
+
+    @Test
+    public void testStaticElevationRange() throws Exception {
+        String startValue = "-11034.0";
+        String endValue = "8848.86";
+
+        setupVectorDimension(
+                ResourceInfo.ELEVATION,
+                "time",
+                DimensionPresentation.DISCRETE_INTERVAL,
+                1.0,
+                null,
+                null);
+
+        setupVectorStartAndEndValues(
+                V_TIME_ELEVATION, ResourceInfo.ELEVATION, startValue, endValue);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        assertXpathEvaluatesTo("1", "count(//Layer/Dimension)", dom);
+        assertXpathEvaluatesTo("elevation", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                "-11034.0/8848.86/1.0", "//Layer[Name='sf:TimeElevation']/Extent", dom);
+    }
+
+    @Test
+    public void testStaticElevationRangeContinuous() throws Exception {
+        String startValue = "-11034.0";
+        String endValue = "8848.86";
+
+        setupVectorDimension(
+                ResourceInfo.ELEVATION,
+                "time",
+                DimensionPresentation.CONTINUOUS_INTERVAL,
+                null,
+                null,
+                null);
+
+        setupVectorStartAndEndValues(
+                V_TIME_ELEVATION, ResourceInfo.ELEVATION, startValue, endValue);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        assertXpathEvaluatesTo("1", "count(//Layer/Dimension)", dom);
+        assertXpathEvaluatesTo("elevation", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo(
+                "-11034.0/8848.86/0", "//Layer[Name='sf:TimeElevation']/Extent", dom);
+    }
+
+    @Test
+    public void testStaticCustomRange() throws Exception {
+        String startValue = "-3";
+        String endValue = "8848.86";
+
+        setupVectorDimension(
+                "dim_custom",
+                "custom",
+                DimensionPresentation.DISCRETE_INTERVAL,
+                1.0,
+                UNITS,
+                UNIT_SYMBOL);
+
+        FeatureTypeInfo info = getCatalog().getFeatureTypeByName("TimeElevation");
+        info.getMetadata().get("dim_custom", DimensionInfo.class).setStartValue(startValue);
+        info.getMetadata().get("dim_custom", DimensionInfo.class).setEndValue(endValue);
+        getCatalog().save(info);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        assertXpathEvaluatesTo("1", "count(//Layer/Dimension)", dom);
+        assertXpathEvaluatesTo("custom", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo(UNITS, "//Layer/Dimension/@units", dom);
+        assertXpathEvaluatesTo(UNIT_SYMBOL, "//Layer/Dimension/@unitSymbol", dom);
+        assertXpathEvaluatesTo("-3.0/8848.86/1.0", "//Layer[Name='sf:TimeElevation']/Extent", dom);
+    }
+
+    @Test
+    public void testStaticCustomDateRange() throws Exception {
+        String startValue = "2021-01";
+        String endValue = "2022-04-05T01:20:00Z";
+
+        setupVectorDimension(
+                "dim_custom",
+                "custom",
+                DimensionPresentation.DISCRETE_INTERVAL,
+                Double.valueOf(1000 * 60 * 60 * 24),
+                UNITS,
+                UNIT_SYMBOL);
+
+        FeatureTypeInfo info = getCatalog().getFeatureTypeByName("TimeElevation");
+        info.getMetadata().get("dim_custom", DimensionInfo.class).setStartValue(startValue);
+        info.getMetadata().get("dim_custom", DimensionInfo.class).setEndValue(endValue);
+        getCatalog().save(info);
+
+        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
+
+        assertXpathEvaluatesTo("1", "count(//Layer/Dimension)", dom);
+        assertXpathEvaluatesTo("custom", "//Layer/Dimension/@name", dom);
+        assertXpathEvaluatesTo(UNITS, "//Layer/Dimension/@units", dom);
+        assertXpathEvaluatesTo(UNIT_SYMBOL, "//Layer/Dimension/@unitSymbol", dom);
+        assertXpathEvaluatesTo(
+                "2021-01-01T00:00:00.000Z/2022-04-05T01:20:00.000Z/P1D",
+                "//Layer[Name='sf:TimeElevation']/Extent",
+                dom);
     }
 
     protected TestResourceAccessManager getResourceAccessManager() {

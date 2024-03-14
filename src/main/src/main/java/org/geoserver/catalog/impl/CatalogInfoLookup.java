@@ -19,8 +19,8 @@ import java.util.logging.Logger;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogInfo;
 import org.geoserver.ows.util.OwsUtils;
+import org.geotools.api.feature.type.Name;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.type.Name;
 
 /**
  * A support index for {@link DefaultCatalogFacade}, can perform fast lookups of {@link CatalogInfo}
@@ -138,15 +138,17 @@ class CatalogInfoLookup<T extends CatalogInfo> {
      * things going on)
      */
     <U extends CatalogInfo> List<U> list(Class<U> clazz, Predicate<U> predicate) {
-        ArrayList<U> result = new ArrayList<>();
+        List<U> result = List.of(); // replaced by ArrayList if there are matches
         for (Class<T> key : nameMultiMap.keySet()) {
             if (clazz.isAssignableFrom(key)) {
                 Map<Name, T> valueMap = nameMultiMap.get(key);
                 if (valueMap != null) {
                     for (T v : valueMap.values()) {
-                        @SuppressWarnings("unchecked")
-                        final U u = (U) v;
+                        final U u = clazz.cast(v);
                         if (predicate == TRUE || predicate.test(u)) {
+                            if (result.isEmpty()) {
+                                result = new ArrayList<>();
+                            }
                             result.add(u);
                         }
                     }

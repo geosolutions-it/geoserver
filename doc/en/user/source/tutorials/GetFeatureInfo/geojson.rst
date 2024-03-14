@@ -4,14 +4,14 @@ GeoJSON output format
 ======================
 
 The default GeoJSON output uses the WFS GeoJSON  encoding mechanism, producing a fixed output, it is however possible to customize the output using FreeMarker templates.
-GeoServer will lookup for json templates following the same rules defined for the hmtl output, but the template files have to be named appending ``_json`` to the usual name, as below:
+GeoServer will lookup for json templates following the same rules defined for the html output, but the template files have to be named appending ``_json`` to the usual name, as below:
 
 * ``header_json.ftl``
 * ``content_json.ftl``
 * ``footer_json.ftl``
 
 Moreover, unlike the html case, all three template files must be provided.
-In case of a multi-layer request GeoServer will act in the following way:
+In case of a multi-layer request, GeoServer will act in the following way:
 
 * content template will be searched following the usual rules;
 * since there are no default templates for GeoJSON, header and footer will be looked up in the ``templates`` directory;
@@ -242,4 +242,4 @@ will return the following result:
  }
 
 
-As it is possible to see the json output comprise a mix of the output mediated by a content_json.ftl for the tiger_roads feature, and the normal output for the other features, while header and footer have been kept respectively at the top and at the bottom.
+As it is possible to see, the json output comprises a mix of the output mediated by a content_json.ftl for the tiger_roads feature, and the normal output for the other features, while header and footer have been kept respectively at the top and at the bottom.

@@ -27,9 +27,9 @@ import org.geoserver.taskmanager.external.impl.DbTableImpl;
 import org.geoserver.taskmanager.schedule.ParameterType;
 import org.geoserver.taskmanager.util.LookupService;
 import org.geoserver.taskmanager.util.TaskManagerSecurityUtil;
+import org.geotools.api.feature.type.Name;
 import org.geotools.feature.NameImpl;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.type.Name;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -210,9 +210,19 @@ public class ExtTypes {
                         if (ns == null) {
                             return null;
                         }
-                        return geoServer
-                                .getCatalog()
-                                .getLayerByName(new NameImpl(ns.getURI(), value));
+                        ResourceInfo resource =
+                                geoServer
+                                        .getCatalog()
+                                        .getResourceByName(ns, value, ResourceInfo.class);
+                        if (resource == null) {
+                            return null;
+                        }
+                        List<LayerInfo> layers = geoServer.getCatalog().getLayers(resource);
+                        if (layers.size() == 1) {
+                            return layers.get(0);
+                        } else {
+                            return null;
+                        }
                     } else {
                         return geoServer.getCatalog().getLayerByName(value);
                     }

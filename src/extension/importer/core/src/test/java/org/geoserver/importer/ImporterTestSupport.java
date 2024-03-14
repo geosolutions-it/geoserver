@@ -15,7 +15,6 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -41,8 +40,8 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.GeoServerExtensionsHelper;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.util.IOUtils;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
 import org.geotools.util.logging.Logging;
 import org.junit.After;
 import org.junit.Before;
@@ -54,15 +53,12 @@ public abstract class ImporterTestSupport extends GeoServerSystemTestSupport {
     static Logger LOGGER = Logging.getLogger(ImporterTestSupport.class);
 
     static final Set<String> DEFAULT_STYLEs =
-            new HashSet<String>() {
-                {
-                    add(StyleInfo.DEFAULT_POINT);
-                    add(StyleInfo.DEFAULT_LINE);
-                    add(StyleInfo.DEFAULT_GENERIC);
-                    add(StyleInfo.DEFAULT_POLYGON);
-                    add(StyleInfo.DEFAULT_RASTER);
-                }
-            };
+            Set.of(
+                    StyleInfo.DEFAULT_POINT,
+                    StyleInfo.DEFAULT_LINE,
+                    StyleInfo.DEFAULT_GENERIC,
+                    StyleInfo.DEFAULT_POLYGON,
+                    StyleInfo.DEFAULT_RASTER);
 
     protected Importer importer;
 

@@ -6,6 +6,7 @@
 package org.geoserver.wms.wms_1_3;
 
 import static org.geoserver.data.test.MockData.WORLD;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -16,11 +17,15 @@ import java.io.File;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.logging.Level;
 import javax.imageio.ImageIO;
 import javax.xml.namespace.QName;
+import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleGenerator;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.Styles;
@@ -35,7 +40,12 @@ import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSTestSupport;
 import org.geoserver.wms.map.OpenLayersMapOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.image.test.ImageAssert;
+import org.geotools.referencing.CRS;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -49,6 +59,11 @@ public class GetMapIntegrationTest extends WMSTestSupport {
 
     private static final QName RAIN = new QName(MockData.SF_URI, "rain", MockData.SF_PREFIX);
     private static final String RAIN_RT_STYLE = "filteredRain";
+
+    private static final QName TIMESERIES =
+            new QName(MockData.SF_URI, "timeseries", MockData.SF_PREFIX);
+    private static final QName V_TIME_ELEVATION =
+            new QName(MockData.SF_URI, "TimeElevation", MockData.SF_PREFIX);
 
     public static final String STATES_SLD10 =
             "<StyledLayerDescriptor xmlns=\"http://www.opengis.net/sld\" version=\"1.0.0\">"
@@ -193,6 +208,20 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         // add global rain and style
         testData.addRasterLayer(RAIN, "rain.zip", "asc", getCatalog());
         testData.addStyle(RAIN_RT_STYLE, "filteredRain.sld", GetMapIntegrationTest.class, catalog);
+
+        testData.addRasterLayer(TIMESERIES, "timeseries.zip", null, getCatalog());
+        setupRasterDimension(
+                TIMESERIES, ResourceInfo.TIME, DimensionPresentation.LIST, null, null, null);
+
+        testData.addVectorLayer(V_TIME_ELEVATION, getCatalog());
+        setupVectorDimension(
+                V_TIME_ELEVATION.getLocalPart(),
+                ResourceInfo.TIME,
+                "time",
+                DimensionPresentation.LIST,
+                null,
+                null,
+                null);
     }
 
     @Test
@@ -511,7 +540,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                             + "&STYLES=&FORMAT=image%2Fpng&REQUEST=GetMap&SRS=EPSG%3A4326&WIDTH=256&HEIGHT=256&BBOX=0.0000,-0.0020,0.0035,0.0010";
             // this group is not meant to be called directly so we should get an exception
             MockHttpServletResponse resp = getAsServletResponse(url);
-            assertEquals("text/xml", resp.getContentType());
+            assertEquals("text/xml", getBaseMimeType(resp.getContentType()));
 
             Document dom = getAsDOM(url);
             assertEquals("ServiceExceptionReport", dom.getDocumentElement().getNodeName());
@@ -604,7 +633,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
             // if the file is found, its content will be used to replace the entity
             // if the file is not found the parser will throw a FileNotFoundException
             String response = getAsString(url);
-            assertTrue(response.indexOf("Error while getting SLD.") > -1);
+            assertThat(response, Matchers.containsString("Error while getting SLD."));
 
             // disable entities
             geoserverInfo.setXmlExternalEntitiesEnabled(false);
@@ -629,6 +658,52 @@ public class GetMapIntegrationTest extends WMSTestSupport {
             geoserverInfo.setXmlExternalEntitiesEnabled(null);
             getGeoServer().save(geoserverInfo);
         }
+    }
+
+    private void testMaxDimensions(String timelayer, int maxDimensions, boolean expectException)
+            throws Exception {
+        WMSInfo wms = getWMS().getServiceInfo();
+        wms.setMaxRequestedDimensionValues(maxDimensions);
+        getGeoServer().save(wms);
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bbox="
+                                + bbox
+                                + "&styles=&layers="
+                                + timelayer
+                                + "&TIME=1972-09-01T00:00:00.0Z/2023-10-31T23:59:59.999Z"
+                                + "&Format=image/png"
+                                + "&request=GetMap"
+                                + "&width=550"
+                                + "&height=250"
+                                + "&srs=EPSG:4326&version=1.3.0");
+
+        if (expectException) {
+            Document dom = dom(new ByteArrayInputStream(response.getContentAsString().getBytes()));
+            Element root = dom.getDocumentElement();
+            assertEquals("ServiceExceptionReport", root.getNodeName());
+            assertEquals(
+                    "time",
+                    root.getChildNodes()
+                            .item(1)
+                            .getAttributes()
+                            .getNamedItem("locator")
+                            .getNodeValue());
+        } else {
+            assertEquals("image/png", response.getContentType());
+        }
+    }
+
+    @Test
+    public void testMaxDimensionsVector() throws Exception {
+        testMaxDimensions("sf:TimeElevation", 1, true);
+        testMaxDimensions("sf:TimeElevation", 100, false);
+    }
+
+    @Test
+    public void testMaxDimensionsRaster() throws Exception {
+        testMaxDimensions("sf:timeseries", 1, true);
+        testMaxDimensions("sf:timeseries", 100, false);
     }
 
     @Test
@@ -806,5 +881,45 @@ public class GetMapIntegrationTest extends WMSTestSupport {
         File expectedImage =
                 new File("./src/test/resources/org/geoserver/wms/wms_1_3/filteredRainPolar.png");
         ImageAssert.assertEquals(expectedImage, response, 100);
+    }
+
+    @Test
+    public void testIAUGeotiff() throws Exception {
+        String layerId = getLayerId(SystemTestData.MARS_VIKING);
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bbox=-180,-90,180,90"
+                                + "&styles=&layers="
+                                + layerId
+                                + "&Format=image/geotiff"
+                                + "&request=GetMap"
+                                + "&version=1.3.0"
+                                + "&width=400"
+                                + "&height=200"
+                                + "&crs=IAU:49900");
+        assertEquals("image/geotiff", response.getContentType());
+        assertEquals("inline; filename=iau-Viking.tif", response.getHeader("Content-Disposition"));
+
+        // extract geotiff
+        byte[] tiffContents = getBinary(response);
+        File file = File.createTempFile("viking", "viking.tiff", new File("./target"));
+        FileUtils.writeByteArrayToFile(file, tiffContents);
+
+        // check the tiff has the expected CRS
+        final GeoTiffReader reader = new GeoTiffReader(file);
+        GridCoverage2D coverage = null;
+        try {
+            CoordinateReferenceSystem crs = CRS.decode("IAU:49900");
+            assertTrue(CRS.equalsIgnoreMetadata(reader.getCoordinateReferenceSystem(), crs));
+        } finally {
+            if (reader != null) {
+                try {
+                    if (reader != null) reader.dispose();
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
+                }
+                if (coverage != null) coverage.dispose(true);
+            }
+        }
     }
 }

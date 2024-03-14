@@ -21,25 +21,41 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import org.geotools.data.DataAccess;
-import org.geotools.data.DataSourceException;
-import org.geotools.data.DataStore;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.DataSourceException;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureListener;
+import org.geotools.api.data.FeatureReader;
+import org.geotools.api.data.FeatureStore;
+import org.geotools.api.data.Join;
+import org.geotools.api.data.Join.Type;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.QueryCapabilities;
+import org.geotools.api.data.ResourceInfo;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.data.Transaction;
+import org.geotools.api.feature.Attribute;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.FeatureFactory;
+import org.geotools.api.feature.Property;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.feature.type.PropertyDescriptor;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.filter.identity.FeatureId;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.filter.sort.SortOrder;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultResourceInfo;
-import org.geotools.data.FeatureListener;
-import org.geotools.data.FeatureReader;
-import org.geotools.data.FeatureStore;
-import org.geotools.data.Join;
-import org.geotools.data.Join.Type;
-import org.geotools.data.Query;
-import org.geotools.data.QueryCapabilities;
-import org.geotools.data.ResourceInfo;
-import org.geotools.data.Transaction;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
-import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.data.store.EmptyFeatureCollection;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.AttributeBuilder;
@@ -51,22 +67,6 @@ import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.Attribute;
-import org.opengis.feature.Feature;
-import org.opengis.feature.FeatureFactory;
-import org.opengis.feature.Property;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.Name;
-import org.opengis.feature.type.PropertyDescriptor;
-import org.opengis.filter.Filter;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.identity.FeatureId;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.filter.sort.SortOrder;
 
 /**
  * Base class for the collection and product specific feature source wrappers
@@ -163,7 +163,7 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
     @Override
     public ResourceInfo getInfo() {
         try {
-            SimpleFeatureSource featureSource = getDelegateCollectionSource();
+            SimpleFeatureSource featureSource = getDelegateSource();
             ResourceInfo delegateInfo = featureSource.getInfo();
             DefaultResourceInfo result = new DefaultResourceInfo(delegateInfo);
             result.setSchema(new URI(schema.getName().getNamespaceURI()));
@@ -178,10 +178,14 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
     /*
      * Returns the underlying delegate source
      */
-    protected abstract SimpleFeatureSource getDelegateCollectionSource() throws IOException;
+    public abstract SimpleFeatureSource getDelegateSource() throws IOException;
 
     protected SimpleFeatureStore getDelegateCollectionStore() throws IOException {
-        SimpleFeatureStore fs = (SimpleFeatureStore) getDelegateCollectionSource();
+        SimpleFeatureSource simpleFeatureSource = getDelegateSource();
+        if (simpleFeatureSource instanceof WorkspaceFeatureSource) {
+            simpleFeatureSource = ((WorkspaceFeatureSource) simpleFeatureSource).getDelegate();
+        }
+        SimpleFeatureStore fs = (SimpleFeatureStore) simpleFeatureSource;
         if (transaction != null) {
             fs.setTransaction(transaction);
         }
@@ -238,19 +242,19 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
 
     @Override
     public ReferencedEnvelope getBounds() throws IOException {
-        return getDelegateCollectionSource().getBounds();
+        return getDelegateSource().getBounds();
     }
 
     @Override
     public ReferencedEnvelope getBounds(Query query) throws IOException {
         Query mapped = mapToSimpleCollectionQuery(query, false);
-        return getDelegateCollectionSource().getBounds(mapped);
+        return getDelegateSource().getBounds(mapped);
     }
 
     @Override
     public Set<Key> getSupportedHints() {
         try {
-            return getDelegateCollectionSource().getSupportedHints();
+            return getDelegateSource().getSupportedHints();
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -261,12 +265,12 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
     @Override
     public int getCount(Query query) throws IOException {
         final Query mappedQuery = mapToSimpleCollectionQuery(query, false);
-        return getDelegateCollectionSource().getCount(mappedQuery);
+        return getDelegateSource().getCount(mappedQuery);
     }
 
     /** Maps query back the main underlying feature source */
     protected Query mapToSimpleCollectionQuery(Query query, boolean addJoins) throws IOException {
-        Query result = new Query(getDelegateCollectionSource().getSchema().getTypeName());
+        Query result = new Query(getDelegateSource().getSchema().getTypeName());
         final Filter originalFilter = query.getFilter();
         if (originalFilter != null) {
             Filter mappedFilter = mapFilterToDelegateSchema(originalFilter);
@@ -397,8 +401,7 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
         Query idsQuery = mapToSimpleCollectionQuery(query, false);
         // uncommenting causes a ClassCastException, need to figure out why
         // idsQuery.setPropertyNames("eoIdentifier"); //  (no can do, there are mandatory fields)
-        SimpleFeatureCollection idFeatureCollection =
-                getDelegateCollectionSource().getFeatures(idsQuery);
+        SimpleFeatureCollection idFeatureCollection = getDelegateSource().getFeatures(idsQuery);
 
         Set<FeatureId> ids = new LinkedHashSet<>();
         idFeatureCollection.accepts(f -> ids.add(f.getIdentifier()), null);
@@ -406,12 +409,12 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
         // if no features, return immediately
         SimpleFeatureCollection fc;
         if (ids.isEmpty()) {
-            fc = new EmptyFeatureCollection(getDelegateCollectionSource().getSchema());
+            fc = new EmptyFeatureCollection(getDelegateSource().getSchema());
         } else {
             // the run a joined query with the specified ids
             Query dataQuery = mapToSimpleCollectionQuery(query, true);
             dataQuery.setFilter(FF.id(ids));
-            fc = getDelegateCollectionSource().getFeatures(dataQuery);
+            fc = getDelegateSource().getFeatures(dataQuery);
         }
 
         return new MappingFeatureCollection(schema, fc, this::mapToComplexFeature);
@@ -515,7 +518,7 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
     /** Maps a complex feature back to one or more simple features */
     protected SimpleFeature mapToMainSimpleFeature(Feature feature) throws IOException {
         // map the primary simple feature
-        final SimpleFeatureType simpleSchema = getDelegateCollectionSource().getSchema();
+        final SimpleFeatureType simpleSchema = getDelegateSource().getSchema();
         SimpleFeatureBuilder fb = new SimpleFeatureBuilder(simpleSchema);
         for (PropertyDescriptor pd : schema.getDescriptors()) {
             if (!(pd instanceof AttributeDescriptor)) {
@@ -812,9 +815,12 @@ public abstract class AbstractMappingStore implements FeatureStore<FeatureType, 
     }
 
     public List<String> getMainTypeDatabaseIdentifiers(Filter filter) throws IOException {
-        SimpleFeatureSource fs = getDelegateCollectionSource();
+        SimpleFeatureSource fs = getDelegateSource();
         Transaction t = getTransaction();
         if (t != Transaction.AUTO_COMMIT && t != null) {
+            if (fs instanceof WorkspaceFeatureSource) {
+                fs = ((WorkspaceFeatureSource) fs).getDelegate();
+            }
             ((SimpleFeatureStore) fs).setTransaction(transaction);
         }
         SimpleFeatureCollection idFeatureCollection = fs.getFeatures(filter);

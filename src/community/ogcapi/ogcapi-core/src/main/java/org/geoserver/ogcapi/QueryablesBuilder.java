@@ -4,6 +4,8 @@
  */
 package org.geoserver.ogcapi;
 
+import static org.geotools.data.complex.util.ComplexFeatureConstants.FEATURE_CHAINING_LINK_NAME;
+
 import io.swagger.v3.oas.models.media.Schema;
 import java.io.IOException;
 import java.util.LinkedHashMap;
@@ -11,6 +13,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.PropertyType;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.MultiLineString;
@@ -18,8 +22,6 @@ import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeType;
 
 public class QueryablesBuilder {
 
@@ -53,17 +55,19 @@ public class QueryablesBuilder {
 
     public QueryablesBuilder forType(FeatureTypeInfo ft) throws IOException {
         this.queryables.setCollectionId(ft.prefixedName());
-        this.queryables.setTitle(Optional.of(ft.getTitle()).orElse(ft.prefixedName()));
+        this.queryables.setTitle(Optional.ofNullable(ft.getTitle()).orElse(ft.prefixedName()));
         this.queryables.setDescription(ft.getDescription());
-        return forType((SimpleFeatureType) ft.getFeatureType());
+        return forType(ft.getFeatureType());
     }
 
-    public QueryablesBuilder forType(SimpleFeatureType ft) {
+    public QueryablesBuilder forType(FeatureType ft) {
         Map<String, Schema> properties =
-                ft.getAttributeDescriptors().stream()
+                ft.getDescriptors().stream()
+                        .filter( // ignore feature chaining links, they might be duplicated
+                                ad -> !ad.getName().equals(FEATURE_CHAINING_LINK_NAME))
                         .collect(
                                 Collectors.toMap(
-                                        ad -> ad.getLocalName(),
+                                        ad -> ad.getName().getLocalPart(),
                                         ad -> getSchema(ad.getType()),
                                         (u, v) -> {
                                             throw new IllegalStateException(
@@ -74,7 +78,7 @@ public class QueryablesBuilder {
         return this;
     }
 
-    private Schema<?> getSchema(AttributeType type) {
+    private Schema<?> getSchema(PropertyType type) {
         Class<?> binding = type.getBinding();
         return getSchema(binding);
     }
@@ -117,7 +121,13 @@ public class QueryablesBuilder {
         return schema;
     }
 
-    private static Schema<?> getAlphanumericSchema(Class<?> binding) {
+    /**
+     * Returns a schema for a given data type, assuming it is alphanumeric
+     *
+     * @param binding the data type
+     * @return the schema
+     */
+    public static Schema<?> getAlphanumericSchema(Class<?> binding) {
         Schema<?> schema = new Schema<>();
 
         schema.setType(org.geoserver.ogcapi.AttributeType.fromClass(binding).getType());

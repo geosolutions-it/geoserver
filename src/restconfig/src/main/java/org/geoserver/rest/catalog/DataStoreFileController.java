@@ -40,22 +40,23 @@ import org.geoserver.rest.RestBaseController;
 import org.geoserver.rest.RestException;
 import org.geoserver.rest.util.IOUtils;
 import org.geoserver.rest.util.RESTUploadPathMapper;
-import org.geotools.data.DataAccess;
-import org.geotools.data.DataAccessFactory;
-import org.geotools.data.DataStore;
+import org.geoserver.rest.util.RESTUtils;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.DataAccessFactory;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.FeatureStore;
+import org.geotools.api.data.FileDataStoreFactorySpi;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.data.Transaction;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.Filter;
 import org.geotools.data.DefaultTransaction;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.FeatureStore;
-import org.geotools.data.FileDataStoreFactorySpi;
-import org.geotools.data.Transaction;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.jdbc.JDBCDataStoreFactory;
 import org.geotools.util.URLs;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.Filter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
@@ -567,15 +568,14 @@ public class DataStoreFileController extends AbstractStoreUploadController {
         boolean postRequest =
                 request != null && HttpMethod.POST.name().equalsIgnoreCase(request.getMethod());
 
-        // Prepare the directory only in case this is not an external upload
-        if (method.isInline()) {
-            // Mapping of the input directory
-            if (method == UploadMethod.url) {
-                // For URL upload method, workspace and StoreName are not considered
-                directory = createFinalRoot(null, null, postRequest);
-            } else {
-                directory = createFinalRoot(workspaceName, storeName, postRequest);
-            }
+        // Mapping of the input directory
+        if (method == UploadMethod.url) {
+            // For URL upload method, workspace and StoreName are not considered
+            directory = createFinalRoot(null, null, postRequest);
+        } else if (method == UploadMethod.file
+                || (method == UploadMethod.external && RESTUtils.isZipMediaType(request))) {
+            // Prepare the directory for file upload or external upload of a zip file
+            directory = createFinalRoot(workspaceName, storeName, postRequest);
         }
         return handleFileUpload(
                 storeName, workspaceName, filename, method, format, directory, request);

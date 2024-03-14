@@ -18,6 +18,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.wps.web.InputParameterValues.ParameterType;
 import org.geoserver.wps.web.InputParameterValues.ParameterValue;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.filter.v1_0.OGC;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.gml2.bindings.GML2EncodingUtils;
@@ -30,7 +31,6 @@ import org.geotools.wps.WPS;
 import org.geotools.xlink.XLINK;
 import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.w3c.dom.Document;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.EntityResolver;
@@ -171,21 +171,21 @@ class WPSExecuteTransformer extends TransformerBase {
                     if (pv.isBoundingBox()) {
                         ReferencedEnvelope env = (ReferencedEnvelope) value.value;
                         start("wps:Data");
-                        String crs = null;
-                        if (env.getCoordinateReferenceSystem() != null) {
+                        String crsId = null;
+                        CoordinateReferenceSystem crs = env.getCoordinateReferenceSystem();
+                        if (crs != null) {
                             try {
-                                crs =
-                                        "EPSG:"
-                                                + CRS.lookupEpsgCode(
-                                                        env.getCoordinateReferenceSystem(), false);
+                                crsId = CRS.lookupIdentifier(crs, false);
                             } catch (Exception e) {
-                                LOGGER.log(Level.WARNING, "Could not get EPSG code for " + crs);
+                                LOGGER.log(Level.WARNING, "Could not get EPSG code for " + crsId);
                             }
                         }
-                        if (crs == null) {
+                        if (crsId == null) {
                             start("wps:BoundingBoxData", attributes("dimensions", "2"));
                         } else {
-                            start("wps:BoundingBoxData", attributes("crs", crs, "dimensions", "2"));
+                            start(
+                                    "wps:BoundingBoxData",
+                                    attributes("crs", crsId, "dimensions", "2"));
                         }
                         element("ows:LowerCorner", env.getMinX() + " " + env.getMinY());
                         element("ows:UpperCorner", env.getMaxX() + " " + env.getMaxY());

@@ -26,11 +26,11 @@ import org.geoserver.web.publish.PublishedConfigurationPage;
 import org.geoserver.web.publish.PublishedConfigurationPanel;
 import org.geoserver.web.publish.PublishedEditTabPanel;
 import org.geoserver.web.wicket.ParamResourceModel;
+import org.geotools.api.coverage.grid.GridGeometry;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.factory.GeoTools;
-import org.opengis.coverage.grid.GridGeometry;
 
 /**
  * Page allowing to configure a layer and its resource.
@@ -208,6 +208,13 @@ public class ResourceConfigurationPage extends PublishedConfigurationPage<LayerI
                     if (component instanceof ResourceConfigurationPanel) {
                         ResourceConfigurationPanel rcp = (ResourceConfigurationPanel) component;
                         rcp.onSave();
+                    }
+                });
+        visitChildren(
+                (component, visit) -> {
+                    if (component instanceof PublishedConfigurationPanel) {
+                        PublishedConfigurationPanel rcp = (PublishedConfigurationPanel) component;
+                        rcp.save();
                     }
                 });
         if (isNew) {

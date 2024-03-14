@@ -33,11 +33,11 @@ import org.geoserver.data.test.SystemTestData.LayerProperty;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wps.xml.WPSConfiguration;
+import org.geotools.api.coverage.grid.GridCoverage;
 import org.geotools.process.Processors;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Parser;
 import org.junit.After;
-import org.opengis.coverage.grid.GridCoverage;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXParseException;
@@ -66,6 +66,12 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         Processors.addProcessFactory(MonkeyProcess.getFactory());
         Processors.addProcessFactory(MultiRawProcess.getFactory());
         Processors.addProcessFactory(MultiOutputEchoProcess.getFactory());
+    }
+
+    @Override
+    protected void setUpTestData(SystemTestData testData) throws Exception {
+        super.setUpTestData(testData);
+        testData.setupIAULayers(true, true);
     }
 
     protected void scheduleForDisposal(GridCoverage coverage) {
@@ -97,12 +103,17 @@ public abstract class WPSTestSupport extends GeoServerSystemTestSupport {
         namespaces.put("wfs", "http://www.opengis.net/wfs");
         namespaces.put("xlink", "http://www.w3.org/1999/xlink");
         namespaces.put("xsi", "http://www.w3.org/2001/XMLSchema-instance");
-        namespaces.put("feature", "http://geoserver.sf.net");
+        namespaces.put("feature", getFeatureNamespace());
 
         testData.registerNamespaces(namespaces);
         registerNamespaces(namespaces);
         XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
         xp = XMLUnit.newXpathEngine();
+    }
+
+    /** Namespace used by the "feature" prefix in GML outputs */
+    protected String getFeatureNamespace() {
+        return "http://geoserver.sf.net";
     }
 
     /** Subclasses can override to register custom namespace mappings for xml unit */

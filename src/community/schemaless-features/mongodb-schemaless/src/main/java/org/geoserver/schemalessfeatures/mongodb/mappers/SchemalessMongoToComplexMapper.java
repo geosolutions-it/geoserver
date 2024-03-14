@@ -16,22 +16,29 @@ import org.geoserver.schemalessfeatures.builders.DynamicComplexTypeFactory;
 import org.geoserver.schemalessfeatures.mongodb.MongoSchemalessUtils;
 import org.geoserver.schemalessfeatures.type.DynamicComplexType;
 import org.geoserver.schemalessfeatures.type.DynamicFeatureType;
+import org.geotools.api.feature.Attribute;
+import org.geotools.api.feature.ComplexAttribute;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.GeometryAttribute;
+import org.geotools.api.feature.Property;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.ComplexType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.GeometryType;
+import org.geotools.api.feature.type.PropertyDescriptor;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.data.mongodb.MongoGeometryBuilder;
 import org.geotools.feature.AttributeBuilder;
 import org.geotools.feature.ComplexFeatureBuilder;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.ValidatingFeatureFactoryImpl;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.Attribute;
-import org.opengis.feature.ComplexAttribute;
-import org.opengis.feature.Feature;
-import org.opengis.feature.GeometryAttribute;
-import org.opengis.feature.Property;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.ComplexType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.GeometryType;
-import org.opengis.feature.type.PropertyDescriptor;
 
 /**
  * A MongoDB implementation of SchemalessMapper. This class is responsible to build a Feature from a
@@ -42,13 +49,25 @@ public class SchemalessMongoToComplexMapper extends SchemalessFeatureMapper<DBOb
     private MongoGeometryBuilder geomBuilder;
 
     private DynamicFeatureType type;
+    private final CoordinateReferenceSystem crs;
+    private final boolean reproject;
+    private MathTransform transform = null;
 
-    public SchemalessMongoToComplexMapper(DynamicFeatureType type) {
+    public SchemalessMongoToComplexMapper(DynamicFeatureType type, CoordinateReferenceSystem crs) {
         super(
                 new AttributeBuilder(new ValidatingFeatureFactoryImpl()),
                 new DynamicComplexTypeBuilder(new DynamicComplexTypeFactory()));
         this.geomBuilder = new MongoGeometryBuilder();
         this.type = type;
+        this.crs = crs;
+        this.reproject = crs != null && !CRS.equalsIgnoreMetadata(crs, DefaultGeographicCRS.WGS84);
+        if (reproject) {
+            try {
+                this.transform = CRS.findMathTransform(DefaultGeographicCRS.WGS84, crs);
+            } catch (FactoryException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override
@@ -60,6 +79,7 @@ public class SchemalessMongoToComplexMapper extends SchemalessFeatureMapper<DBOb
         for (Property p : attributes) {
             if (p instanceof GeometryAttribute) {
                 GeometryAttribute geom = (GeometryAttribute) p;
+                handleGeometryReprojection(geom);
                 if (p.getName().equals(type.getGeometryDescriptor().getName())) {
                     geometryAttribute = geom;
                     featureBuilder.append(p.getName(), geometryAttribute);
@@ -71,6 +91,21 @@ public class SchemalessMongoToComplexMapper extends SchemalessFeatureMapper<DBOb
         Feature f = featureBuilder.buildFeature(rootDBO.get("_id").toString());
         f.setDefaultGeometryProperty(geometryAttribute);
         return f;
+    }
+
+    private void handleGeometryReprojection(GeometryAttribute geom) {
+        if (crs == null) return;
+        Geometry geomValue = (Geometry) geom.getValue();
+        // if crs is not wgs84, we need to reproject the geometry
+        if (reproject) {
+            try {
+                geomValue = JTS.transform(geomValue, transform);
+                JTS.setCRS(geomValue, crs);
+                geom.setValue(geomValue);
+            } catch (TransformException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private List<Property> getNestedAttributes(DBObject rootDBO, DynamicComplexType parentType) {

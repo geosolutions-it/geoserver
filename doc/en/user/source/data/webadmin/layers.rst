@@ -131,7 +131,7 @@ A coordinate reference system (CRS) defines how georeferenced spatial data relat
     a EPSG code for the layers, with this setting the declared one will be advertised, and reprojection from native will happen on the fly as needed (in case a third
     CRS is requested, the reprojection will go directly from native to declared)
   * **Keep native**: this is a setting that should be used in very rare cases. Keeping native means using the declared one in the capabilities documents, but then
-    using the native CRS in all othe requests (with no reprojection in between, unless explicitly requested from client). This is particularly problematic if the source
+    using the native CRS in all otherrequests (with no reprojection in between, unless explicitly requested from client). This is particularly problematic if the source
     is a shapefile, as the PRJ files lack all the extra information provided by the EPSG database (it will for example break WFS 1.1 and 2.0 SRS declarations in GML output).
     The setting meant to be used in cases where WMS is the primary target, and the native and declared CRSs have very small differences, avoiding on the fly reprojection
     and datum change.
@@ -202,6 +202,7 @@ It is possible to:
 * Remove an attribute using the "remove" icon at the end of the attribute row.
 * Add a new attribute, which will be computed based on the :guilabel:`Source` CQL expression.
 * Rename an attribute.
+* Add a description of the attribute, which will be visible wherever the feature type is described.
 * Change the nillability of the attribute, for example, making the attribute mandatory even if it's
   not in the data source, and vice-versa.
 * Change the type of the attribute using the `Type` column. The most common types are available in 
@@ -306,7 +307,7 @@ Sets publishing information about data providers.
 
      WMS Attribution
 
-* **Attribution Text**—Human-readable text describing the data provider. This might be used as the text for a hyperlink to the data provider's web site.
+* **Attribution Text**—Human-readable text describing the data provider. This might be used as the text for a hyperlink to the data provider's website.
 * **Attribution Link**—URL to the data provider's website.
 * **Logo URL**—URL to an image that serves as a logo for the data provider.
 * **Logo Content Type, Width, and Height**—These fields provide information about the logo image that clients may use to assist with layout. GeoServer will auto-detect these values if you click the :guilabel:`Auto-detect image size and type` link at the bottom of the section. The text, link, and URL are each advertised in the WMS Capabilities document if they are provided. Some WMS clients will display this information to advise users which providers provide a particular dataset. If you omit some of the fields, those that are provided will be published and those that are not will be omitted from the Capabilities document.
@@ -389,6 +390,17 @@ For each enabled dimension the following configuration options are available:
   Can be empty (no limit), a single value (symmetric search) or using a ``before/after`` syntax to
   specify an asymmetric search range. Time distances should specified using the ISO period syntax. For example, ``PT1H/PT0H`` allows to search up to one hour before the user specified value,
   but not after.
+* **On nearest match fail**—What to do if the nearest match fails the acceptable interval. The default behavior is to use the original value and thus return an empty result, but can also be configured to throw an ``InvalidDimensionValue`` exception instead. In case the value is not set, it defaults to ignoring the nearest match and using the original value. To switch to the opposite default, set the following variable (system, environment, or web.xml, as usual): ``org.geoserver.wms.nearestFail=EXCEPTION``.
+* **Begin of data range**—A manually declared start value for the data range. When specified, the ``End of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
+* **End of data range**—A manually declared end value for the data range. When specified, the ``Begin of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
 
 For time dimension the value must be in ISO 8601 DateTime format ``yyyy-MM-ddThh:mm:ss.SSSZ`` For elevation dimension, the value must be and integer of floating point number.
 
@@ -424,6 +436,16 @@ For each enabled dimension the following configuration options are available:
 * **Acceptable interval**—A maximum search distance from the specified value (available only when nearest match is enabled).
   Can be empty (no limit), a single value (symmetric search) or using a ``before/after`` syntax to
   specify an asymmetric search range.
+* **Begin of data range**—A manually declared start value for the data range. When specified, the ``End of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
+* **End of data range**—A manually declared end value for the data range. When specified, the ``Begin of data range`` has to be specified also.
+  Has to be either numeric, an ISO 8601 DateTime format or the string ``PRESENT``. If left blank GeoServer will determine the value automatically
+  based on the data. When using 'PRESENT' the current DateTime of the server will be used when the capabilities document is generated.
+  Setting this value manually may be desired when working with layers consisting of huge amounts of data where the automatic determination can get slow.
+  This parameter is only handled for WMS Layers in their capabilities document.
 
 Edit Layer: Security
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -434,5 +456,5 @@ Sets data access rules at layer level.
 
 .. figure:: img/data_layers_security_editor.png
 
-To create/edit layer's data access rules simply check/uncheck checkboxes according to desidered access mode and role. 
-The Grant access to any role checkboxe grant each role for each access mode.
+To create/edit layer's data access rules simply check/uncheck checkboxes according to desired access mode and role. 
+The Grant access to any role checkbox grant each role for each access mode.

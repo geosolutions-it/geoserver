@@ -91,6 +91,7 @@ import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.ResourcePool;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WMSLayerInfo;
@@ -148,10 +149,15 @@ import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.GeoServerSecurityManager;
 import org.geoserver.security.SecureCatalogImpl;
+import org.geotools.api.coverage.grid.GridGeometry;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.util.InternationalString;
 import org.geotools.coverage.grid.GeneralGridEnvelope;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.data.util.MeasureConverterFactory;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.Geometries;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.jdbc.RegexpValidator;
@@ -169,11 +175,6 @@ import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.coverage.grid.GridGeometry;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.util.InternationalString;
 
 /**
  * Utility class which loads and saves catalog and configuration objects to and from an xstream.
@@ -469,6 +470,8 @@ public class XStreamPersister {
         // AttributeTypeInfo
         xs.omitField(impl(AttributeTypeInfo.class), "featureType");
         xs.omitField(impl(AttributeTypeInfo.class), "attribute");
+        xs.registerLocalConverter(
+                impl(AttributeTypeInfo.class), "description", new InternationalStringConverter());
 
         // LayerInfo
         // xs.omitField( LayerInfo.class), "resource");
@@ -519,7 +522,7 @@ public class XStreamPersister {
 
         // ReferencedEnvelope
         xs.registerLocalConverter(ReferencedEnvelope.class, "crs", new SRSConverter());
-        xs.registerLocalConverter(GeneralEnvelope.class, "crs", new SRSConverter());
+        xs.registerLocalConverter(GeneralBounds.class, "crs", new SRSConverter());
 
         xs.registerLocalConverter(
                 impl(ResourceInfo.class), "internationalTitle", new InternationalStringConverter());
@@ -595,6 +598,8 @@ public class XStreamPersister {
         xs.allowTypeHierarchy(Info.class);
         xs.allowTypeHierarchy(Multimap.class);
         xs.allowTypeHierarchy(JAIInfo.class);
+        xs.allowTypeHierarchy(JAIEXTInfo.class);
+        xs.allowTypeHierarchy(CoverageAccessInfo.class);
         xs.allowTypes(new Class[] {DynamicProxyMapper.DynamicProxy.class});
         xs.allowTypes(new String[] {"java.util.Collections$SingletonList"});
         xs.allowTypesByWildcard(new String[] {"org.geoserver.catalog.**"});
@@ -794,6 +799,9 @@ public class XStreamPersister {
         }
         if (interfce == ResourceInfo.class) {
             return ResourceInfoImpl.class;
+        }
+        if (interfce == AttributeTypeInfo.class) {
+            return AttributeTypeInfoImpl.class;
         }
 
         if (interfce == LayerGroupStyle.class) return LayerGroupStyleImpl.class;
@@ -1410,10 +1418,8 @@ public class XStreamPersister {
         public String toString(Object obj) {
             CoordinateReferenceSystem crs = (CoordinateReferenceSystem) obj;
             try {
-                Integer epsg = CRS.lookupEpsgCode(crs, false);
-                if (epsg != null) {
-                    return "EPSG:" + epsg;
-                }
+                String identifier = ResourcePool.lookupIdentifier(crs, false);
+                if (identifier != null) return identifier;
             } catch (FactoryException e) {
                 XStreamPersister.LOGGER.warning(
                         "Could not determine epsg code of crs, encoding as WKT");
@@ -2567,7 +2573,7 @@ public class XStreamPersister {
                 Object source, HierarchicalStreamWriter writer, MarshallingContext context) {
             GeoServerInfo geoServerInfo = (GeoServerInfo) source;
             SettingsInfo settings = geoServerInfo.getSettings();
-            if (settings.isUseHeadersProxyURL() == null) {
+            if (settings != null && settings.isUseHeadersProxyURL() == null) {
                 settings.setUseHeadersProxyURL(geoServerInfo.isUseHeadersProxyURL());
                 if (geoServerInfo instanceof GeoServerInfoImpl)
                     ((GeoServerInfoImpl) geoServerInfo).setUseHeadersProxyURLRaw(null);
@@ -2581,9 +2587,11 @@ public class XStreamPersister {
                 Object result, HierarchicalStreamReader reader, UnmarshallingContext context) {
             // migrate proxy headers to settings if needed
             GeoServerInfoImpl info = (GeoServerInfoImpl) super.doUnmarshal(result, reader, context);
-            if (info.getSettings().isUseHeadersProxyURL() == null
+            SettingsInfo settings = info.getSettings();
+            if (settings != null
+                    && settings.isUseHeadersProxyURL() == null
                     && info.isUseHeadersProxyURL() != null) {
-                info.getSettings().setUseHeadersProxyURL(info.isUseHeadersProxyURL());
+                settings.setUseHeadersProxyURL(info.isUseHeadersProxyURL());
                 info.setUseHeadersProxyURLRaw(null);
             }
             return info;

@@ -5,8 +5,6 @@
  */
 package org.geoserver.wcs.web.publish;
 
-import static org.geoserver.wcs.responses.AscCoverageResponseDelegate.ARCGRID_COVERAGE_FORMAT;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +25,7 @@ import org.geoserver.catalog.LayerInfo;
 import org.geoserver.web.publish.PublishedConfigurationPanel;
 import org.geoserver.web.wicket.LiveCollectionModel;
 import org.geoserver.web.wicket.SimpleChoiceRenderer;
+import org.geotools.util.SuppressFBWarnings;
 
 /** A configuration panel for CoverageInfo properties that related to WCS publication */
 public class WCSLayerConfig extends PublishedConfigurationPanel<LayerInfo> {
@@ -34,19 +33,16 @@ public class WCSLayerConfig extends PublishedConfigurationPanel<LayerInfo> {
     private static final long serialVersionUID = 6120092654147588736L;
 
     private static final List<String> WCS_FORMATS =
-            Arrays.asList(
-                    "GIF",
-                    "PNG",
-                    "JPEG",
-                    "TIFF",
-                    "GEOTIFF",
-                    "IMAGEMOSAIC",
-                    ARCGRID_COVERAGE_FORMAT);
+            Arrays.asList("GIF", "PNG", "JPEG", "TIFF", "GEOTIFF", "IMAGEMOSAIC");
     private static final List<String> INTERPOLATIONS =
             Arrays.asList("nearest neighbor", "bilinear", "bicubic");
 
+    @SuppressFBWarnings("NP_UNWRITTEN_FIELD") // wicket field reflection
     private List<String> selectedRequestSRSs;
+
+    @SuppressFBWarnings("NP_UNWRITTEN_FIELD") // wicket field reflection
     private List<String> selectedResponseSRSs;
+
     private String newRequestSRS;
     private String newResponseSRS;
 

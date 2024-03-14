@@ -75,7 +75,10 @@ public class APIRequestInfo {
         return ResponseUtils.buildURL(baseURL, path, null, URLMangler.URLType.SERVICE);
     }
 
-    /** Returns the APIRequestInfo from the current {@link RequestContextHolder} */
+    /**
+     * Returns the APIRequestInfo from the current {@link RequestContextHolder}, or {@code null}
+     * indicating there's no OGC API request bound to the calling thread
+     */
     public static APIRequestInfo get() {
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
         if (requestAttributes == null) return null;
@@ -209,15 +212,13 @@ public class APIRequestInfo {
 
     /**
      * Returns the landing page for the current service. Can be called only after the service has
-     * been looked up, will otherwise throw a descriptive exception.
+     * been looked up, may return null if the service has not been resolved yet (e.g., during the
+     * look up of the Spring MVC method handler)
      */
     public Service getService() {
         return Optional.ofNullable(Dispatcher.REQUEST.get())
                 .map(r -> r.getServiceDescriptor())
-                .orElseThrow(
-                        () ->
-                                new RuntimeException(
-                                        "Could not find a service base URL at this stage, maybe the service has not been dispatched yet"));
+                .orElse(null);
     }
 
     /**

@@ -45,16 +45,16 @@ import org.geoserver.test.http.MockHttpResponse;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.WMSTestSupport;
-import org.geotools.data.FeatureSource;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.Style;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.FeatureLayer;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.geotools.styling.Style;
 import org.junit.Rule;
 import org.junit.Test;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -130,22 +130,28 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         StyleInfo styleByName = catalog.getStyleByName("Default");
         Style basicStyle = styleByName.getStyle();
         FeatureLayer layer = new FeatureLayer(fs, basicStyle);
-        layer.setTitle("Title");
+        layer.setTitle("Title</foo");
         map.addLayer(layer);
         request.setFormat("application/openlayers");
-        String htmlDoc = getAsHTML(map);
-        // check that weird param is correctly encoded to avoid js code execution
-        int index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf(
-                                "\"<\\/script><script>alert(\\'x-scripted\\');<\\/script><script>\": 'foo'");
-        assertTrue(index > -1);
-        index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf("\"25064;ALERT(1)//419\": '1'");
-        assertTrue(index > -1);
+
+        StyleInfo otherStyle = new StyleInfoImpl(null);
+        otherStyle.setName("style<>");
+        try {
+            request.getLayers().get(0).getLayerInfo().getStyles().add(otherStyle);
+            String htmlDoc = getAsHTML(map);
+            // check that weird param is correctly encoded to avoid js code execution
+            assertThat(
+                    htmlDoc,
+                    containsString(
+                            "\"<\\/script><script>alert(\\'x-scripted\\');<\\/script><script>\": 'foo'"));
+            assertThat(htmlDoc, containsString("\"25064;ALERT(1)//419\": '1'"));
+            assertThat(htmlDoc, not(containsString(layer.getTitle())));
+            assertThat(htmlDoc, containsString("Title<\\/foo"));
+            assertThat(htmlDoc, not(containsString(otherStyle.getName())));
+            assertThat(htmlDoc, containsString("style&lt;&gt;"));
+        } finally {
+            request.getLayers().get(0).getLayerInfo().getStyles().remove(otherStyle);
+        }
     }
 
     @Test
@@ -347,7 +353,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers",
                         firefoxAgent,
-                        OpenLayers3MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers3MapOutputFormat.MIME_TYPE));
         assertThat(contentFirefox, containsString("openlayers3/ol.js"));
 
         // generic request on browser not supporting OL3
@@ -355,7 +361,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers",
                         ie8Agent,
-                        OpenLayers2MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers2MapOutputFormat.MIME_TYPE));
         assertThat(contentIE8, containsString("OpenLayers.js"));
 
         // ask explicitly for OL2
@@ -363,7 +369,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers2",
                         firefoxAgent,
-                        OpenLayers2MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers2MapOutputFormat.MIME_TYPE));
         assertThat(contentOL2, containsString("OpenLayers.js"));
 
         // ask explicitly for OL3
@@ -371,7 +377,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
                 getResponseContent(
                         path + "application/openlayers3",
                         firefoxAgent,
-                        OpenLayers3MapOutputFormat.MIME_TYPE);
+                        getBaseMimeType(OpenLayers3MapOutputFormat.MIME_TYPE));
         assertThat(contentOL3, containsString("openlayers3/ol.js"));
 
         // ask explicitly for OL3 on a non supporting browser
@@ -390,7 +396,7 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
             request.addHeader("USER-AGENT", userAgent);
         }
         MockHttpServletResponse response = dispatch(request);
-        assertEquals(expectedMimeType, response.getContentType());
+        assertEquals(expectedMimeType, getBaseMimeType(response.getContentType()));
         return response.getContentAsString();
     }
 
@@ -472,19 +478,23 @@ public class OpenLayersMapOutputFormatTest extends WMSTestSupport {
         layer.setTitle("Title");
         map.addLayer(layer);
         request.setFormat("application/openlayers3");
-        String htmlDoc = getAsHTMLOL3(map);
-        // check that weird param is correctly encoded to avoid js code execution
-        int index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf(
-                                "\"<\\/script><script>alert(\\'x-scripted\\');<\\/script><script>\": 'foo'");
-        assertTrue(index > -1);
-        index =
-                htmlDoc.replace("\\n", "")
-                        .replace("\\r", "")
-                        .indexOf("\"25064;ALERT(1)//419\": '1'");
-        assertTrue(index > -1);
+
+        StyleInfo otherStyle = new StyleInfoImpl(null);
+        otherStyle.setName("style<>");
+        try {
+            request.getLayers().get(0).getLayerInfo().getStyles().add(otherStyle);
+            String htmlDoc = getAsHTMLOL3(map);
+            // check that weird param is correctly encoded to avoid js code execution
+            assertThat(
+                    htmlDoc,
+                    containsString(
+                            "\"<\\/script><script>alert(\\'x-scripted\\');<\\/script><script>\": 'foo'"));
+            assertThat(htmlDoc, containsString("\"25064;ALERT(1)//419\": '1'"));
+            assertThat(htmlDoc, not(containsString(otherStyle.getName())));
+            assertThat(htmlDoc, containsString("style&lt;&gt;"));
+        } finally {
+            request.getLayers().get(0).getLayerInfo().getStyles().remove(otherStyle);
+        }
     }
 
     @Test

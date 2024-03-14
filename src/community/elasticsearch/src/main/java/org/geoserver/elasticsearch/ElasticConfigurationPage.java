@@ -43,6 +43,7 @@ import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.wicket.GeoServerDataProvider.Property;
 import org.geoserver.web.wicket.GeoServerTablePanel;
 import org.geoserver.web.wicket.ParamResourceModel;
+import org.geotools.api.feature.type.Name;
 import org.geotools.data.elasticsearch.ElasticAttribute;
 import org.geotools.data.elasticsearch.ElasticDataStore;
 import org.geotools.data.elasticsearch.ElasticLayerConfiguration;
@@ -57,7 +58,6 @@ import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.type.Name;
 
 /**
  * Class to render and manage the Elasticsearch modal dialog This dialog allow the user to choice
@@ -88,7 +88,7 @@ abstract class ElasticConfigurationPage extends Panel {
      * @see ElasticAttributeProvider
      * @see ElasticAttribute
      */
-    public ElasticConfigurationPage(String panelId, final IModel<?> model) {
+    public ElasticConfigurationPage(String panelId, final IModel<?> model, boolean isRefresh) {
         super(panelId, model);
 
         ResourceInfo ri = (ResourceInfo) model.getObject();
@@ -98,7 +98,7 @@ abstract class ElasticConfigurationPage extends Panel {
         add(elastic_form);
 
         List<ElasticAttribute> attributes;
-        attributes = fillElasticAttributes(ri).getAttributes();
+        attributes = fillElasticAttributes(ri, isRefresh).getAttributes();
         final ElasticAttributeProvider attProvider = new ElasticAttributeProvider(attributes);
 
         final GeoServerTablePanel<ElasticAttribute> elasticAttributePanel;
@@ -135,6 +135,14 @@ abstract class ElasticConfigurationPage extends Panel {
                     }
                 });
 
+        elastic_form.add(
+                new AjaxButton("es_refresh") {
+                    @Override
+                    protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
+                        onRefresh(target);
+                    }
+                });
+
         FeedbackPanel feedbackPanel = new FeedbackPanel("es_feedback");
         feedbackPanel.setOutputMarkupId(true);
         elastic_form.add(feedbackPanel);
@@ -144,6 +152,10 @@ abstract class ElasticConfigurationPage extends Panel {
     @SuppressWarnings("unused")
     protected void onCancel(AjaxRequestTarget target) {
         done(target, null, null);
+    }
+
+    protected void onRefresh(AjaxRequestTarget target) {
+        refresh(target);
     }
 
     /**
@@ -158,7 +170,7 @@ abstract class ElasticConfigurationPage extends Panel {
     private void onSave(AjaxRequestTarget target) {
         try {
             ResourceInfo ri = (ResourceInfo) getDefaultModel().getObject();
-            ElasticLayerConfiguration layerConfig = fillElasticAttributes(ri);
+            ElasticLayerConfiguration layerConfig = fillElasticAttributes(ri, false);
             boolean geomSet = false;
             // Validate configuration
             for (ElasticAttribute att : layerConfig.getAttributes()) {
@@ -178,6 +190,7 @@ abstract class ElasticConfigurationPage extends Panel {
             builder.setStore(dsInfo);
             typeInfo = builder.buildFeatureType(ds.getFeatureSource(ri.getQualifiedName()));
             typeInfo.setName(ri.getName());
+            typeInfo.setNativeName(ri.getName());
             typeInfo.getMetadata().put(ElasticLayerConfiguration.KEY, layerConfig);
             LayerInfo layerInfo = builder.buildLayer(typeInfo);
             layerInfo.setName(ri.getName());
@@ -194,7 +207,7 @@ abstract class ElasticConfigurationPage extends Panel {
      * Elasticsearch attributes from datastore and merge it with user attributes
      * configurations
      */
-    private ElasticLayerConfiguration fillElasticAttributes(ResourceInfo ri) {
+    private ElasticLayerConfiguration fillElasticAttributes(ResourceInfo ri, boolean refresh) {
 
         ElasticLayerConfiguration layerConfig =
                 (ElasticLayerConfiguration) ri.getMetadata().get(ElasticLayerConfiguration.KEY);
@@ -220,6 +233,16 @@ abstract class ElasticConfigurationPage extends Panel {
             final String docType = layerConfig.getDocType();
             final Name layerName = new NameImpl(layerConfig.getLayerName());
             dataStore.getDocTypes().put(layerName, docType);
+            if (refresh) {
+                // The datastore caches the layer configuration, so we need to clear it by adding an
+                // empty one if we are refreshing
+                ElasticLayerConfiguration emptyLayerConfiguration =
+                        new ElasticLayerConfiguration(layerConfig.getLayerName());
+                dataStore
+                        .getLayerConfigurations()
+                        .put(layerConfig.getLayerName(), emptyLayerConfiguration);
+            }
+
             for (ElasticAttribute at : dataStore.getElasticAttributes(layerName)) {
                 if (tempMap.containsKey(at.getName())) {
                     at = tempMap.get(at.getName());
@@ -432,4 +455,6 @@ abstract class ElasticConfigurationPage extends Panel {
      */
     abstract void done(
             AjaxRequestTarget target, LayerInfo layerInfo, ElasticLayerConfiguration layerConfig);
+
+    abstract void refresh(AjaxRequestTarget target);
 }

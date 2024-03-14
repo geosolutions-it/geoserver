@@ -5,6 +5,7 @@
  */
 package org.geoserver.wms.wms_1_1_1;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -48,6 +49,7 @@ public class GetLegendGraphicTest extends WMSTestSupport {
 
     public static final QName SF_STATES = new QName(MockData.SF_URI, "states", MockData.SF_PREFIX);
     private static final String SF_STATES_ID = "sf:states";
+    private static final String FOOTPRINTS_STYLE = "footprints";
 
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
@@ -61,6 +63,7 @@ public class GetLegendGraphicTest extends WMSTestSupport {
         testData.addStyle("Population", "Population.sld", getClass(), catalog);
         testData.addStyle("uom", "uomStroke.sld", getClass(), catalog);
         testData.addStyle("scaleDependent", "scaleDependent.sld", getClass(), catalog);
+        testData.addStyle(FOOTPRINTS_STYLE, "footprints.sld", getClass(), catalog);
 
         testData.addVectorLayer(
                 SF_STATES, Collections.emptyMap(), "states.properties", getClass(), catalog);
@@ -150,6 +153,69 @@ public class GetLegendGraphicTest extends WMSTestSupport {
                 assertEquals("image/png", response.getContentType());
             } else {
                 assertEquals("application/vnd.ogc.se_xml", response.getContentType());
+                Document dom = dom(response, true);
+                String message =
+                        checkLegacyException(dom, ServiceException.MAX_MEMORY_EXCEEDED, null);
+                assertEquals(LegendGraphicBuilder.MEMORY_USAGE_EXCEEDED, message.trim());
+            }
+        }
+    }
+
+    /**
+     * Tests that GetLegendGraphic works with a style that has a non-process function
+     *
+     * @throws Exception if something goes wrong
+     */
+    @Test
+    public void testFootprints() throws Exception {
+        BufferedImage image =
+                getAsImage(
+                        "wms?service=WMS&version=1.1.1&request=GetLegendGraphic"
+                                + "&layer="
+                                + getLayerId(MockData.LAKES)
+                                + "&style="
+                                + FOOTPRINTS_STYLE
+                                + "&format=image/png&width=20&height=20",
+                        "image/png");
+        assertPixel(image, 10, 10, Converters.convert("#d4d4d4", Color.class));
+    }
+
+    @Test
+    public void testPlainMemoryLimit() throws Exception {
+        // 1kb, not enough for even the smallest image
+        setMemoryLimit(1);
+        Document dom =
+                getAsDOM(
+                        "wms?service=WMS&version=1.1.1&request=GetLegendGraphic"
+                                + "&layer="
+                                + getLayerId(MockData.LAKES)
+                                + "&style=Lakes"
+                                + "&format=image/png&width=20&height=20");
+        String message = checkLegacyException(dom, ServiceException.MAX_MEMORY_EXCEEDED, null);
+        assertEquals(LegendGraphicBuilder.MEMORY_USAGE_EXCEEDED, message.trim());
+    }
+
+    @Test
+    public void testHighMemoryLimit() throws Exception {
+        // going to increase the size of the image sample until we get OOM
+        String template =
+                "wms?service=WMS&version=1.1.1&request=GetLegendGraphic"
+                        + "&layer="
+                        + getLayerId(MockData.LAKES)
+                        + "&style=Lakes"
+                        + "&format=image/png&width=%d&height=%d";
+
+        // 8 MB limit, a 2000x2000 uses 16MB
+        setMemoryLimit(8196);
+        int[] sizes = {20, 200, 1000, 2000};
+        for (int size : sizes) {
+            MockHttpServletResponse response =
+                    getAsServletResponse(String.format(template, size, size));
+            if (size < 2000) {
+                assertEquals("image/png", getBaseMimeType(response.getContentType()));
+            } else {
+                assertEquals(
+                        "application/vnd.ogc.se_xml", getBaseMimeType(response.getContentType()));
                 Document dom = dom(response, true);
                 String message =
                         checkLegacyException(dom, ServiceException.MAX_MEMORY_EXCEEDED, null);
@@ -433,9 +499,9 @@ public class GetLegendGraphicTest extends WMSTestSupport {
                 IOUtils.toString(
                         TestData.class.getResource("externalEntities.sld"), StandardCharsets.UTF_8);
         MockHttpServletResponse response =
-                getAsServletResponse(base + URLEncoder.encode(sld, "UTF-8"));
+                getAsServletResponse(base + URLEncoder.encode(sld, UTF_8.name()));
         // should fail with an error message poiting at entity resolution
-        assertEquals("application/vnd.ogc.se_xml", response.getContentType());
+        assertEquals("application/vnd.ogc.se_xml", getBaseMimeType(response.getContentType()));
         final String content = response.getContentAsString();
         assertThat(content, containsString("Entity resolution disallowed"));
         assertThat(content, containsString("/this/file/does/not/exist"));
@@ -568,7 +634,7 @@ public class GetLegendGraphicTest extends WMSTestSupport {
         new CatalogBuilder(getCatalog()).calculateLayerGroupBounds(group);
         catalog.save(group);
         MockHttpServletResponse response = getAsServletResponse(request);
-        assertEquals("application/vnd.ogc.se_xml", response.getContentType());
+        assertEquals("application/vnd.ogc.se_xml", getBaseMimeType(response.getContentType()));
         Document dom = dom(response, true);
         String message = checkLegacyException(dom, ServiceException.MAX_MEMORY_EXCEEDED, null);
         assertEquals(LegendGraphicBuilder.MEMORY_USAGE_EXCEEDED, message.trim());

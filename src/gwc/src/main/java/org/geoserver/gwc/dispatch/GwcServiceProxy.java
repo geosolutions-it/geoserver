@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
@@ -37,7 +38,13 @@ public class GwcServiceProxy {
     private final GeoWebCacheDispatcher gwcDispatcher;
 
     public GwcServiceProxy() {
-        serviceInfo = new ServiceInfoImpl();
+        serviceInfo =
+                new ServiceInfoImpl() {
+                    @Override
+                    public String getType() {
+                        return "WMTS";
+                    }
+                };
         serviceInfo.setId("gwc");
         serviceInfo.setName("gwc");
         serviceInfo.setEnabled(true);
@@ -128,5 +135,13 @@ public class GwcServiceProxy {
         public byte[] getBytes() {
             return outputStream.toByteArray();
         }
+
+        @Override
+        public boolean isReady() {
+            return true;
+        }
+
+        @Override
+        public void setWriteListener(WriteListener writeListener) {}
     }
 }

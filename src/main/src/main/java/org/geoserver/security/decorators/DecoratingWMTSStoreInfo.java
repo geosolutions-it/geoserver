@@ -13,9 +13,9 @@ import org.geoserver.catalog.CatalogVisitor;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geotools.api.util.ProgressListener;
 import org.geotools.ows.wmts.WebMapTileServer;
 import org.geotools.util.decorate.AbstractDecorator;
-import org.opengis.util.ProgressListener;
 
 /**
  * Delegates every method to the delegate wmts store info.
@@ -235,5 +235,15 @@ public class DecoratingWMTSStoreInfo extends AbstractDecorator<WMTSStoreInfo>
     @Override
     public void setDateModified(Date dateModified) {
         delegate.setDateModified(dateModified);
+    }
+
+    @Override
+    public boolean isDisableOnConnFailure() {
+        return delegate.isDisableOnConnFailure();
+    }
+
+    @Override
+    public void setDisableOnConnFailure(boolean disableOnConnFailure) {
+        delegate.setDisableOnConnFailure(disableOnConnFailure);
     }
 }

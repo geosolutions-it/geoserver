@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Level;
 import javax.imageio.ImageIO;
 import javax.servlet.ServletResponse;
 import javax.xml.namespace.QName;
@@ -75,12 +76,16 @@ import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSTestSupport;
 import org.geoserver.wms.map.OpenLayersMapOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
-import org.geotools.data.DataAccess;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.WFSDataStoreFactory;
+import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.gce.imagemosaic.ImageMosaicFormat;
 import org.geotools.image.ImageWorker;
 import org.geotools.image.test.ImageAssert;
+import org.geotools.referencing.CRS;
 import org.junit.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -564,7 +569,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                                     + "&height=250"
                                     + "&srs=EPSG:900913"
                                     + "&time=\"2022-6-20T5:30:0:00.000Z\"");
-            assertEquals("text/xml", response.getContentType());
+            assertEquals("text/xml", getBaseMimeType(response.getContentType()));
             appender.stopRecording("org.geoserver.ows");
         }
     }
@@ -1261,7 +1266,7 @@ public class GetMapIntegrationTest extends WMSTestSupport {
                             + "&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG%3A4326&WIDTH=256&HEIGHT=256&BBOX=0.0000,-0.0020,0.0035,0.0010";
             // this group is not meant to be called directly so we should get an exception
             MockHttpServletResponse resp = getAsServletResponse(url);
-            assertEquals("application/vnd.ogc.se_xml", resp.getContentType());
+            assertEquals("application/vnd.ogc.se_xml", getBaseMimeType(resp.getContentType()));
 
             Document dom = getAsDOM(url);
             assertEquals("ServiceExceptionReport", dom.getDocumentElement().getNodeName());
@@ -2651,6 +2656,45 @@ public class GetMapIntegrationTest extends WMSTestSupport {
             ImageAssert.assertEquals(expected, image, 250);
         } finally {
             if (group != null) catalog.remove(group);
+        }
+    }
+
+    @Test
+    public void testIAUGeotiff() throws Exception {
+        String layerId = getLayerId(SystemTestData.MARS_VIKING);
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bbox=-180,-90,180,90"
+                                + "&styles=&layers="
+                                + layerId
+                                + "&Format=image/geotiff"
+                                + "&request=GetMap"
+                                + "&width=400"
+                                + "&height=200"
+                                + "&srs=IAU:49900");
+        assertEquals("image/geotiff", response.getContentType());
+        assertEquals("inline; filename=iau-Viking.tif", response.getHeader("Content-Disposition"));
+
+        // extract geotiff
+        byte[] tiffContents = getBinary(response);
+        File file = File.createTempFile("viking", "viking.tiff", new File("./target"));
+        FileUtils.writeByteArrayToFile(file, tiffContents);
+
+        // check the tiff has the expected CRS
+        final GeoTiffReader reader = new GeoTiffReader(file);
+        GridCoverage2D coverage = null;
+        try {
+            CoordinateReferenceSystem crs = CRS.decode("IAU:49900");
+            assertTrue(CRS.equalsIgnoreMetadata(reader.getCoordinateReferenceSystem(), crs));
+        } finally {
+            if (reader != null) {
+                try {
+                    if (reader != null) reader.dispose();
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
+                }
+                if (coverage != null) coverage.dispose(true);
+            }
         }
     }
 }

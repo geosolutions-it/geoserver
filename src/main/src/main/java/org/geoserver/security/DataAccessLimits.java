@@ -10,11 +10,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.geotools.api.filter.Filter;
 import org.geotools.filter.v1_0.OGC;
 import org.geotools.filter.v1_1.OGCConfiguration;
 import org.geotools.xsd.Encoder;
 import org.geotools.xsd.Parser;
-import org.opengis.filter.Filter;
 
 /**
  * Base class for all AccessLimits declared by a {@link ResourceAccessManager}
@@ -50,6 +50,15 @@ public class DataAccessLimits extends AccessLimits {
      */
     public Filter getReadFilter() {
         return readFilter;
+    }
+
+    /**
+     * Updates the read filter for this access limits object
+     *
+     * @param readFilter the new read filter
+     */
+    public void setReadFilter(Filter readFilter) {
+        this.readFilter = readFilter;
     }
 
     /** The catalog mode for this layer */

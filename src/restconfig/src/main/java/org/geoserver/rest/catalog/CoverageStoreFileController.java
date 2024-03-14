@@ -31,14 +31,14 @@ import org.geoserver.rest.RestException;
 import org.geoserver.rest.util.IOUtils;
 import org.geoserver.rest.util.RESTUtils;
 import org.geoserver.rest.wrapper.RestWrapper;
+import org.geotools.api.coverage.grid.Format;
+import org.geotools.api.coverage.grid.GridCoverageReader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.util.URLs;
 import org.geotools.util.factory.GeoTools;
 import org.geotools.util.factory.Hints;
-import org.opengis.coverage.grid.Format;
-import org.opengis.coverage.grid.GridCoverageReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpMethod;
@@ -443,16 +443,14 @@ public class CoverageStoreFileController extends AbstractStoreUploadController {
         boolean postRequest =
                 request != null && HttpMethod.POST.name().equalsIgnoreCase(request.getMethod());
 
-        // Prepare the directory only in case this is not an external upload
-        if (method.isInline()) {
-            // Mapping of the input directory
-            if (method == UploadMethod.url) {
-                // For URL upload method, workspace and StoreName are not considered
-                directory = RESTUtils.createUploadRoot(catalog, null, null, postRequest);
-            } else {
-                directory =
-                        RESTUtils.createUploadRoot(catalog, workspaceName, storeName, postRequest);
-            }
+        // Mapping of the input directory
+        if (method == UploadMethod.url) {
+            // For URL upload method, workspace and StoreName are not considered
+            directory = RESTUtils.createUploadRoot(catalog, null, null, postRequest);
+        } else if (method == UploadMethod.file
+                || (method == UploadMethod.external && RESTUtils.isZipMediaType(request))) {
+            // Prepare the directory for file upload or external upload of a zip file
+            directory = RESTUtils.createUploadRoot(catalog, workspaceName, storeName, postRequest);
         }
         return handleFileUpload(
                 storeName, workspaceName, filename, method, format, directory, request);

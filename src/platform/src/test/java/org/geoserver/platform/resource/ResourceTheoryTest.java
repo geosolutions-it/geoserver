@@ -19,7 +19,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
@@ -33,7 +32,9 @@ import java.io.OutputStream;
 import java.util.Collection;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.geoserver.platform.resource.Resource.Type;
+import org.junit.Test;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
@@ -127,15 +128,15 @@ public abstract class ResourceTheoryTest {
     }
 
     @Theory
-    public void theoryUndefinedHaveIstreamAndBecomeResource(String path) throws Exception {
+    public void theoryUndefinedHaveNoIstreams(String path) throws Exception {
         Resource res = getResource(path);
 
         assumeThat(res, is(undefined()));
 
-        try (InputStream result = res.in()) {
-            assertThat(result, notNullValue());
-            assertThat(res, is(resource()));
-        }
+        assertThrows(IllegalStateException.class, () -> res.in().close());
+
+        // must not be created unintentionally.
+        assertThat(res, is(undefined()));
     }
 
     @Theory
@@ -484,10 +485,31 @@ public abstract class ResourceTheoryTest {
     }
 
     @Theory
-    public void theoryRootSlashIsIgnored(String path) throws Exception {
-        final Resource res = getResource(path);
-        final Resource res2 = getResource("/" + path);
-        assertEquals(res, res2);
-        assertEquals(res.path(), res2.path());
+    public void theoryRootIsAbsolute(String path) throws Exception {
+        File home = new File(System.getProperty("user.home")).getCanonicalFile();
+        File file = Paths.toFile(home, path);
+
+        final Resource res = getResource(Paths.convert(file.getPath()));
+        assertTrue(Paths.isAbsolute(res.path()));
+    }
+
+    @Test
+    public void testPathTraversal() {
+        assertInvalidPath("..");
+        assertInvalidPath("../foo/bar");
+        assertInvalidPath("foo/../bar");
+        assertInvalidPath("foo/bar/..");
+    }
+
+    @Test
+    public void testPathTraversalWindows() {
+        assumeTrue(SystemUtils.IS_OS_WINDOWS);
+        assertInvalidPath("..\\foo\\bar");
+        assertInvalidPath("foo\\..\\bar");
+        assertInvalidPath("foo\\bar\\..");
+    }
+
+    protected final void assertInvalidPath(String path) {
+        assertThrows(IllegalArgumentException.class, () -> getResource(path));
     }
 }

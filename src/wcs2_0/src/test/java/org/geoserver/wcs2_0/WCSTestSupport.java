@@ -5,7 +5,10 @@
  */
 package org.geoserver.wcs2_0;
 
+import static java.util.Map.entry;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
+import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -18,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.imageio.metadata.IIOMetadataNode;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
@@ -34,9 +39,11 @@ import javax.xml.validation.SchemaFactory;
 import org.custommonkey.xmlunit.SimpleNamespaceContext;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
+import org.custommonkey.xmlunit.exceptions.XpathException;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.DimensionPresentation;
+import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.impl.DimensionInfoImpl;
 import org.geoserver.config.GeoServer;
@@ -45,20 +52,24 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wcs.WCSInfo;
+import org.geotools.api.coverage.Coverage;
+import org.geotools.api.coverage.grid.GridCoverage;
+import org.geotools.api.coverage.grid.GridGeometry;
+import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.imageio.geotiff.GeoTiffConstants;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
+import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.referencing.CRS;
 import org.geotools.referencing.operation.matrix.XAffineTransform;
 import org.geotools.wcs.v2_0.WCSConfiguration;
 import org.geotools.xsd.Parser;
 import org.junit.After;
-import org.opengis.coverage.Coverage;
-import org.opengis.coverage.grid.GridCoverage;
-import org.opengis.coverage.grid.GridGeometry;
-import org.opengis.referencing.operation.MathTransform;
+import org.locationtech.jts.geom.CoordinateXY;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSInput;
 import org.w3c.dom.ls.LSResourceResolver;
@@ -83,6 +94,16 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
 
     protected static final QName UTM11 = new QName(MockData.WCS_URI, "utm11", MockData.WCS_PREFIX);
 
+    protected static final QName NO_NATIVE_SRS =
+            new QName(MockData.WCS_URI, "no_native_srs", MockData.WCS_PREFIX);
+
+    /**
+     * Small dataset that sits slightly across the dateline, enough to trigger the "across the
+     * dateline" machinery
+     */
+    protected static final QName DATELINE_CROSS =
+            new QName(MockData.WCS_URI, "dateline_cross", MockData.WCS_PREFIX);
+
     /**
      * Small value for comparaison of sample values. Since most grid coverage implementations in
      * Geotools 2 store geophysics values as {@code float} numbers, this {@code EPS} value must be
@@ -103,33 +124,30 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
     protected static Schema getWcs20Schema() {
         if (WCS20_SCHEMA == null) {
             final Map<String, String> namespaceMap =
-                    new HashMap<String, String>() {
-                        {
-                            put("http://www.opengis.net/wcs/2.0", "/schemas/wcs/2.0/");
-                            put("http://www.opengis.net/gmlcov/1.0", "/schemas/gmlcov/1.0/");
-                            put("http://www.opengis.net/gml/3.2", "/schemas/gml/3.2.1/");
-                            put("http://www.w3.org/1999/xlink", "/schemas/xlink/");
-                            put("http://www.w3.org/XML/1998/namespace", "/schemas/xml/");
-                            put(
+                    Map.ofEntries(
+                            entry("http://www.opengis.net/wcs/2.0", "/schemas/wcs/2.0/"),
+                            entry("http://www.opengis.net/gmlcov/1.0", "/schemas/gmlcov/1.0/"),
+                            entry("http://www.opengis.net/gml/3.2", "/schemas/gml/3.2.1/"),
+                            entry("http://www.w3.org/1999/xlink", "/schemas/xlink/"),
+                            entry("http://www.w3.org/XML/1998/namespace", "/schemas/xml/"),
+                            entry(
                                     "http://www.isotc211.org/2005/gmd",
-                                    "/schemas/iso/19139/20070417/gmd/");
-                            put(
+                                    "/schemas/iso/19139/20070417/gmd/"),
+                            entry(
                                     "http://www.isotc211.org/2005/gco",
-                                    "/schemas/iso/19139/20070417/gco/");
-                            put(
+                                    "/schemas/iso/19139/20070417/gco/"),
+                            entry(
                                     "http://www.isotc211.org/2005/gss",
-                                    "/schemas/iso/19139/20070417/gss/");
-                            put(
+                                    "/schemas/iso/19139/20070417/gss/"),
+                            entry(
                                     "http://www.isotc211.org/2005/gts",
-                                    "/schemas/iso/19139/20070417/gts/");
-                            put(
+                                    "/schemas/iso/19139/20070417/gts/"),
+                            entry(
                                     "http://www.isotc211.org/2005/gsr",
-                                    "/schemas/iso/19139/20070417/gsr/");
-                            put("http://www.opengis.net/swe/2.0", "/schemas/sweCommon/2.0/");
-                            put("http://www.opengis.net/ows/2.0", "/schemas/ows/2.0/");
-                            put("http://www.geoserver.org/wcsgs/2.0", "/schemas/wcs/2.0/");
-                        }
-                    };
+                                    "/schemas/iso/19139/20070417/gsr/"),
+                            entry("http://www.opengis.net/swe/2.0", "/schemas/sweCommon/2.0/"),
+                            entry("http://www.opengis.net/ows/2.0", "/schemas/ows/2.0/"),
+                            entry("http://www.geoserver.org/wcsgs/2.0", "/schemas/wcs/2.0/"));
 
             try {
                 final SchemaFactory factory =
@@ -232,6 +250,9 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         testData.setUpWcs10RasterLayers();
         testData.setUpWcs11RasterLayers();
         testData.setUpRasterLayer(UTM11, "/utm11-2.tiff", null, null, WCSTestSupport.class);
+        testData.setUpRasterLayer(
+                DATELINE_CROSS, "/datelinecross.tif", null, null, WCSTestSupport.class);
+        testData.setupIAULayers(true, false);
     }
 
     @Override
@@ -252,6 +273,47 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         namespaces.put("wcsgs", "http://www.geoserver.org/wcsgs/2.0");
         XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
         xpath = XMLUnit.newXpathEngine();
+
+        // alter the native BBOX of one raster for at least a pixel to make sure the declared
+        // bounds are used, but also fitted to the grid to avoid resampling.
+        // Compared to the native bbox we are expanding by almost one pixel on both the west and
+        // east sides, and shrinking by one pixel on both the north and south ones:
+        //          1 pixel
+        //             ↓
+        //  1 pixel ←-   -→ 1 pixel
+        //             ↑
+        //          1 pixel
+        CoverageInfo utm11 = getCatalog().getCoverageByName(getLayerId(UTM11));
+        if (utm11 != null) {
+            utm11.setNativeBoundingBox(
+                    new ReferencedEnvelope(
+                            440600.0, 471700.0, 3720700.0, 3751000.0, utm11.getNativeCRS()));
+            getCatalog().save(utm11);
+        }
+
+        // not reprojected, but rotated
+        CoverageInfo cad = getCatalog().getCoverageByName(getLayerId(MockData.ROTATED_CAD));
+        if (cad != null) {
+            cad.setNativeBoundingBox(
+                    new ReferencedEnvelope(1402800, 1402900, 5000000, 5000100, cad.getNativeCRS()));
+            getCatalog().save(cad);
+        }
+
+        // not reprojected, originally crossing the dateline
+        CoverageInfo dateline = getCatalog().getCoverageByName(getLayerId(DATELINE_CROSS));
+        if (dateline != null) {
+            dateline.setNativeBoundingBox(
+                    new ReferencedEnvelope(179.5, 180, -84.272, -82.217, dateline.getNativeCRS()));
+            getCatalog().save(dateline);
+        }
+
+        // forcing envelope + reprojection (changes the envelope, grid to world)
+        CoverageInfo usa = getCatalog().getCoverageByName(getLayerId(MockData.USA_WORLDIMG));
+        if (usa != null) {
+            usa.setSRS("EPSG:3857");
+            usa.setProjectionPolicy(ProjectionPolicy.REPROJECT_TO_DECLARED);
+            getCatalog().save(usa);
+        }
     }
 
     @Override
@@ -323,6 +385,80 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
                 "1",
                 "count(//wcs:ServiceMetadata/wcs:Extension[int:interpolationSupported='http://www.opengis.net/def/interpolation/OGC/1/cubic'])",
                 dom);
+
+        // check that the bbox in the utm11 layer is reported as configured
+        String utm11Bbox =
+                "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='wcs__utm11']/ows:BoundingBox";
+
+        assertXpathCoordinate(
+                new CoordinateXY(440562.0, 3720758.0), utm11Bbox + "/ows:LowerCorner", dom);
+        assertXpathCoordinate(
+                new CoordinateXY(471794.0, 3750966.0), utm11Bbox + "/ows:UpperCorner", dom);
+
+        // check that the bbox in the cad layer is reported as configured
+        String cadPath =
+                "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='wcs__RotatedCad']/ows:BoundingBox";
+        assertXpathCoordinate(
+                new CoordinateXY(1402800.0, 5000000.0), cadPath + "/ows:LowerCorner", dom);
+        assertXpathCoordinate(
+                new CoordinateXY(1402900.0, 5000100.0), cadPath + "/ows:UpperCorner", dom);
+
+        // check that the bbox in the usa layer has been reprojected
+        String usaPath =
+                "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='cdf__usa']/ows:BoundingBox";
+        assertXpathCoordinate(
+                new CoordinateXY(-1.457024062347863E7, 6199732.713729635),
+                usaPath + "/ows:LowerCorner",
+                dom);
+        assertXpathCoordinate(
+                new CoordinateXY(-1.3790593336628266E7, 7197101.83024677),
+                usaPath + "/ows:UpperCorner",
+                dom);
+
+        // check the CRSs
+        assertCRSReference(dom, "EPSG", "4326");
+        assertCRSReference(dom, "EPSG", "32632");
+        // custom GeoServer extensions
+        assertCRSReference(dom, "EPSG", "900913");
+        assertCRSReference(dom, "EPSG", "404000");
+        // IAU codes (added in the classpath for tests only)
+        assertCRSReference(dom, "IAU", "1000");
+
+        // check the size of supported codes
+        final Set<String> supportedCodes = getCodes("EPSG");
+        supportedCodes.addAll(getCodes("IAU"));
+        NodeList allCrsCodes = xpath.getMatchingNodes("//crs:crsSupported", dom);
+
+        assertEquals(supportedCodes.size(), allCrsCodes.getLength());
+
+        // check the viking raster is there with its CRS
+        String vikingPath = "//wcs:Contents/wcs:CoverageSummary[wcs:CoverageId='iau__Viking']";
+        assertXpathEvaluatesTo(
+                "http://www.opengis.net/def/crs/IAU/0/49900",
+                vikingPath + "/ows:BoundingBox/@crs",
+                dom);
+    }
+
+    /**
+     * Need to add prefixes here because some ids are duplicated amongst EPSG and IAU and to filter
+     * out WGS84(DD) because it shows up in all authorities
+     */
+    private static Set<String> getCodes(String authority) {
+        return CRS.getSupportedCodes(authority).stream()
+                .filter(c -> !"WGS84(DD)".equals(c))
+                .map(c -> "http://www.opengis.net/def/crs/" + authority + "/0/" + c)
+                .collect(Collectors.toSet());
+    }
+
+    private static void assertCRSReference(Document dom, String authority, String code)
+            throws XpathException {
+        assertXpathExists(
+                "//crs:crsSupported[text()='http://www.opengis.net/def/crs/"
+                        + authority
+                        + "/0/"
+                        + code
+                        + "']",
+                dom);
     }
 
     /**
@@ -369,17 +505,17 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         final double scaleB = getScale(actual);
 
         assertEnvelopeEquals(
-                (GeneralEnvelope) expected.getEnvelope(),
+                (GeneralBounds) expected.getEnvelope(),
                 scaleA,
-                (GeneralEnvelope) actual.getEnvelope(),
+                (GeneralBounds) actual.getEnvelope(),
                 scaleB);
     }
 
     @SuppressWarnings("PMD.SimplifiableTestAssertion") // equality with tolerance
     protected static void assertEnvelopeEquals(
-            GeneralEnvelope expected,
+            GeneralBounds expected,
             double scaleExpected,
-            GeneralEnvelope actual,
+            GeneralBounds actual,
             double scaleActual) {
         final double tolerance;
         if (scaleExpected <= scaleActual) {
@@ -389,7 +525,9 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
         } else {
             tolerance = EPS;
         }
-        assertTrue("The 2 envelopes aren't equal", expected.equals(actual, tolerance, false));
+        assertTrue(
+                "The 2 envelopes aren't equal, expected " + expected + " but got " + actual,
+                expected.equals(actual, tolerance, false));
     }
 
     /**

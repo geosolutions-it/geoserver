@@ -9,10 +9,9 @@
       <directory>release/target/dependency</directory>
       <outputDirectory></outputDirectory>
       <includes>
-        <include>itextpdf*</include>
+        <include>openpdf*</include>
         <include>metrics-*</include>
         <include>jyaml*</include>
-        <include>mapfish-geo-lib*</include>
         <include>gs-printing-*.jar</include>
         <include>print-lib-*.jar</include>
         <include>xercesImpl-*.jar</include>
@@ -28,11 +27,28 @@
     </fileSet>
     <fileSet>
       <directory>release/target/html/licenses</directory>
-      <outputDirectory></outputDirectory>
+      <outputDirectory>licenses</outputDirectory>
       <includes>
          <include>GPL.html</include>
          <include>NOTICE.html</include>
       </includes>
     </fileSet>
   </fileSets>
+  <files>
+     <file>
+       <source>release/extensions/README.md</source>
+       <outputDirectory></outputDirectory>
+       <destName>README.txt</destName>
+     </file>
+     <file>
+       <source>release/target/html/extensions/printing/mapfish-LICENSE.html</source>
+       <outputDirectory></outputDirectory>
+       <destName>LICENSE.html</destName>
+     </file>
+     <file>
+       <source>release/target/html/extensions/README.html</source>
+       <outputDirectory></outputDirectory>
+       <destName>README.html</destName>
+     </file>
+  </files>
 </assembly>

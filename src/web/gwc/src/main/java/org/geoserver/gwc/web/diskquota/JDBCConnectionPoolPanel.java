@@ -18,6 +18,7 @@ import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.validation.validator.RangeValidator;
+import org.geoserver.web.data.store.PasswordTextFieldWriteOnlyModel;
 import org.geowebcache.diskquota.jdbc.JDBCConfiguration.ConnectionPoolConfiguration;
 
 public class JDBCConnectionPoolPanel extends Panel {
@@ -36,7 +37,8 @@ public class JDBCConnectionPoolPanel extends Panel {
                 new ContainsAutoCompleteBehavior(
                         "org.postgresql.Driver",
                         "oracle.jdbc.driver.OracleDriver",
-                        "org.h2.Driver"));
+                        "org.h2.Driver",
+                        "org.hsqldb.jdbcDriver"));
         add(driver);
 
         TextField<String> url = new TextField<>("jdbcUrl", new PropertyModel<>(model, "url"));
@@ -44,6 +46,7 @@ public class JDBCConnectionPoolPanel extends Panel {
         url.add(
                 new ContainsAutoCompleteBehavior(
                         "jdbc:h2://{server}:{9092}/{db-name}",
+                        "jdbc:hsqldb:hsql//{server}:{9001}/{db-name}",
                         "jdbc:postgresql:[{//host}[:{5432}/]]{database}",
                         "jdbc:oracle:thin:@{server}[:{1521}]:{database_name}"));
 
@@ -54,7 +57,8 @@ public class JDBCConnectionPoolPanel extends Panel {
         add(user);
 
         PasswordTextField password =
-                new PasswordTextField("jdbcPassword", new PropertyModel<>(model, "password"));
+                new PasswordTextFieldWriteOnlyModel(
+                        "jdbcPassword", new PropertyModel<String>(model, "password"));
         password.setResetPassword(false);
         add(password);
 

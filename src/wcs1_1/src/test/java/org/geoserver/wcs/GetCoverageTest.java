@@ -10,6 +10,7 @@ import static org.geoserver.data.test.MockData.WORLD;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.vfny.geoserver.wcs.WcsException.WcsExceptionCode.InvalidParameterValue;
@@ -19,6 +20,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
@@ -34,18 +36,17 @@ import org.geoserver.config.GeoServer;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.ServiceException;
+import org.geotools.api.coverage.grid.GridCoverage;
+import org.geotools.api.coverage.grid.GridEnvelope;
+import org.geotools.api.geometry.Bounds;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.gce.geotiff.GeoTiffReader;
-import org.geotools.geometry.Envelope2D;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.util.PreventLocalEntityResolver;
 import org.junit.Test;
-import org.opengis.coverage.grid.GridCoverage;
-import org.opengis.coverage.grid.GridEnvelope;
-import org.opengis.geometry.Envelope;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.vfny.geoserver.wcs.WcsException;
 import org.w3c.dom.Document;
@@ -72,6 +73,42 @@ public class GetCoverageTest extends AbstractGetCoverageTest {
                 null,
                 SystemTestData.class,
                 getCatalog());
+    }
+
+    @Test
+    public void testMissingInterpolation() throws Exception {
+        String request =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n"
+                        + "<wcs:GetCoverage service=\"WCS\" "
+                        + "xmlns:ows=\"http://www.opengis.net/ows/1.1\"\r\n"
+                        + "  xmlns:wcs=\"http://www.opengis.net/wcs/1.1.1\"\r\n"
+                        + "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \r\n"
+                        + "  xsi:schemaLocation=\"http://www.opengis.net/wcs/1.1.1 "
+                        + "                       schemas/wcs/1.1.1/wcsAll.xsd\"\r\n"
+                        + "  version=\"1.1.1\" >\r\n"
+                        + "  <ows:Identifier>wcs:BlueMarble</ows:Identifier>\r\n"
+                        + "  <wcs:DomainSubset>\r\n"
+                        + "    <ows:BoundingBox crs=\"urn:ogc:def:crs:EPSG:6.6:4326\">\r\n"
+                        + "      <ows:LowerCorner>-90 -180</ows:LowerCorner>\r\n"
+                        + "      <ows:UpperCorner>90 180</ows:UpperCorner>\r\n"
+                        + "    </ows:BoundingBox>\r\n"
+                        + "  </wcs:DomainSubset>\r\n"
+                        + "  <wcs:RangeSubset>\n"
+                        + "    <wcs:FieldSubset>\n"
+                        + "      <ows:Identifier>contents</ows:Identifier>\n"
+                        + "      <wcs:InterpolationType></wcs:InterpolationType>\n"
+                        + "    </wcs:FieldSubset>\n"
+                        + "  </wcs:RangeSubset>"
+                        + "  <wcs:Output format=\"image/tiff\"/>\r\n"
+                        + "</wcs:GetCoverage>";
+        try {
+            executeGetCoverageXml(request);
+            fail("missing interpolation - should have thrown an exception");
+        } catch (WcsException e) {
+            assertEquals(ServiceException.INVALID_PARAMETER_VALUE, e.getCode());
+            assertEquals("RangeSubset", e.getLocator());
+            assertTrue(e.getMessage().contains("InterpolationMethod"));
+        }
     }
 
     @Test
@@ -183,7 +220,7 @@ public class GetCoverageTest extends AbstractGetCoverageTest {
         raw.put("BoundingBox", "-45,146,-42,149,urn:ogc:def:crs:EPSG:6.6:4326");
 
         GridCoverage[] coverages = executeGetCoverageKvp(raw);
-        Envelope envelope = coverages[0].getEnvelope();
+        Bounds envelope = coverages[0].getEnvelope();
         assertEquals(-45d, envelope.getMinimum(0), 1e-6);
         assertEquals(-42d, envelope.getMaximum(0), 1e-6);
         assertEquals(146d, envelope.getMinimum(1), 1e-6);
@@ -227,7 +264,7 @@ public class GetCoverageTest extends AbstractGetCoverageTest {
         // System.out.println(coverages[0]);
 
         // check the envelope
-        Envelope envelope = coverages[0].getEnvelope();
+        Bounds envelope = coverages[0].getEnvelope();
         // System.out.println(envelope);
         CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:3857");
         assertEquals(targetCRS, envelope.getCoordinateReferenceSystem());
@@ -262,7 +299,7 @@ public class GetCoverageTest extends AbstractGetCoverageTest {
         // System.out.println(coverages[0]);
 
         // check the envelope
-        Envelope envelope = coverages[0].getEnvelope();
+        Bounds envelope = coverages[0].getEnvelope();
         // System.out.println(envelope);
         CoordinateReferenceSystem targetCRS = CRS.decode("urn:x-ogc:def:crs:EPSG:3003");
         assertEquals(targetCRS, envelope.getCoordinateReferenceSystem());
@@ -346,8 +383,8 @@ public class GetCoverageTest extends AbstractGetCoverageTest {
         assertEquals(originalRange.getSpan(1), actualRange.getSpan(1));
 
         // check also the geographic bounds
-        Envelope2D originalEnv = original.getEnvelope2D();
-        Envelope2D actualEnv = result.getEnvelope2D();
+        ReferencedEnvelope originalEnv = original.getEnvelope2D();
+        ReferencedEnvelope actualEnv = result.getEnvelope2D();
         assertEquals(originalEnv.getMinX(), actualEnv.getMinX(), 1e-6);
         assertEquals(originalEnv.getMinY(), actualEnv.getMinY(), 1e-6);
         assertEquals(originalEnv.getMaxX(), actualEnv.getMaxX(), 1e-6);
@@ -715,6 +752,49 @@ public class GetCoverageTest extends AbstractGetCoverageTest {
             assertEquals(response.getStatus(), 200);
         } catch (ClassCastException e) {
             assertEquals("application/xml", response.getContentType());
+        }
+    }
+
+    @Test
+    public void testIAUCoverage() throws Exception {
+        String layer = getLayerId(SystemTestData.MARS_VIKING);
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wcs?request=GetCoverage&service=WCS&version=1.1.0"
+                                + "&BoundingBox=-180,-90,180,90,urn:ogc:def:crs:IAU::49900"
+                                + "&identifier="
+                                + layer
+                                + "&format=image/tiff");
+        // got back a tiff
+        assertThat(response.getContentType(), containsString("multipart/related"));
+        assertEquals(200, response.getStatus());
+
+        // parse the multipart, check there are two parts
+        Multipart multipart = getMultipart(response);
+        assertEquals(2, multipart.getCount());
+        BodyPart coveragePart = multipart.getBodyPart(1);
+        assertEquals("image/tiff", coveragePart.getContentType());
+        assertEquals("<theCoverage>", coveragePart.getHeader("Content-ID")[0]);
+
+        // check the tiff structure is the one requested
+        final GeoTiffReader reader =
+                new GeoTiffReader(ImageIO.createImageInputStream(coveragePart.getInputStream()));
+        GridCoverage2D coverage = null;
+        try {
+            CoordinateReferenceSystem crs = CRS.decode("IAU:49900");
+            assertTrue(CRS.equalsIgnoreMetadata(reader.getCoordinateReferenceSystem(), crs));
+
+            coverage = reader.read(null);
+            assertNotNull(coverage);
+        } finally {
+            if (reader != null) {
+                try {
+                    if (reader != null) reader.dispose();
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, e.getLocalizedMessage(), e);
+                }
+                if (coverage != null) coverage.dispose(true);
+            }
         }
     }
 }

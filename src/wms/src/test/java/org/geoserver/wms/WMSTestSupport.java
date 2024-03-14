@@ -59,19 +59,19 @@ import org.geoserver.ows.Request;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.test.GeoServerSystemTestSupport;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.style.Style;
 import org.geotools.coverage.grid.GridCoverage2D;
-import org.geotools.data.FeatureSource;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.GridCoverageLayer;
 import org.geotools.map.Layer;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.geotools.styling.Style;
 import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Parser;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.feature.Feature;
-import org.opengis.feature.type.FeatureType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -101,6 +101,10 @@ public abstract class WMSTestSupport extends GeoServerSystemTestSupport {
 
     protected static final Color COLOR_PLACES_GRAY = new Color(170, 170, 170);
     protected static final Color COLOR_LAKES_BLUE = new Color(64, 64, 192);
+
+    protected static final QName VIKING =
+            new QName(SystemTestData.CITE_URI, "viking", SystemTestData.CITE_PREFIX);
+
     /** @return The global wms singleton from the application context. */
     protected WMS getWMS() {
         WMS wms = (WMS) applicationContext.getBean("wms");
@@ -132,6 +136,9 @@ public abstract class WMSTestSupport extends GeoServerSystemTestSupport {
 
         // Add a raster layer
         testData.setUpRasterLayer(WORLD, "world.tiff", null, null, TestData.class);
+
+        // Add a IAU layer (mars)
+        testData.setupIAULayers(true, true);
     }
 
     @Override

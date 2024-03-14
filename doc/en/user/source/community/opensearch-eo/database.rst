@@ -54,7 +54,8 @@ a more up to date version of it):
       "eoSecurityConstraints" boolean,
       "eoDissemination" varchar,
       "eoAcquisitionStation" varchar,
-      "queryables" varchar[]
+      "queryables" varchar[],
+      "workspaces" varchar[]
     );
 
 Most of the attributes should be rather self-explanatory to those familiar with OGC Earth Observation terminology.
@@ -65,12 +66,16 @@ Specific attributes notes:
 
 * A ``primary`` collection is normally linked to a particular satellite/sensor and contains its own products.
   Setting "primary" to false makes the collection "virtual" and the ``productCQLFilter`` field should be filled with
-  a CQL filter that will collect all the products in the collection (warning, virtual collections are largerly
+  a CQL filter that will collect all the products in the collection (warning, virtual collections are largely
   untested at the moment)
 * The ``footprint`` field is used for spatial searches, while ``timeStart`` and ``timeEnd`` are used for
   temporal ones
 * The ``htmlDescription`` drives the generation of the visible part of the Atom OpenSearch response, see the
   dedicated section later to learn more about filling it
+* The ``workspaces`` field is an array used to specify the GeoServer workspaces that the collection is associated with.
+  If the field is left empty or null, or if the array contains a null value, the collection will be associated with all
+  workspaces.  If the field is populated, the collection will only be associated with the specified workspaces and will
+  be hidden from workspace specific STAC calls.
 
 The ``collection_ogclink`` table contains the OGC links towards the services providing visualization and
 download access to the collection contents. See the "OGC links" section to gather more information about it.
@@ -225,7 +230,7 @@ The granules associated to a product can have different topologies:
 
 * A single raster file containing all the information about the product
 * Multiple raster files splitting the products spatially in regular tiles
-* Multiple raster files splitting the product wavelenght wise
+* Multiple raster files splitting the product wavelength wise
 * A mix of the two above
 
 Notes about the columns:

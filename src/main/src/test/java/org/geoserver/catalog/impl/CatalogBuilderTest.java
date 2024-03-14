@@ -50,14 +50,18 @@ import org.geoserver.test.GeoServerMockTestSupport;
 import org.geoserver.test.RemoteOWSTestSupport;
 import org.geoserver.test.http.MockHttpClient;
 import org.geoserver.test.http.MockHttpResponse;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.ResourceInfo;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.parameter.GeneralParameterValue;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.datum.PixelInCell;
 import org.geotools.coverage.grid.GridEnvelope2D;
 import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
-import org.geotools.data.ResourceInfo;
 import org.geotools.feature.NameImpl;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope3D;
 import org.geotools.referencing.CRS;
@@ -68,10 +72,6 @@ import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.util.factory.Hints;
 import org.junit.Test;
 import org.locationtech.jts.geom.Point;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.parameter.GeneralParameterValue;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.datum.PixelInCell;
 
 public class CatalogBuilderTest extends GeoServerMockTestSupport {
 
@@ -321,6 +321,28 @@ public class CatalogBuilderTest extends GeoServerMockTestSupport {
             ReferencedEnvelope bbox = ci.boundingBox();
             assertNotSame(nativeBounds, bbox);
         }
+    }
+
+    @Test
+    public void testBoundingBoxGeneration() throws Exception {
+        Catalog cat = getCatalog();
+        CatalogBuilder cb = new CatalogBuilder(cat);
+        cb.setStore(cat.getCoverageStoreByName(MockData.TASMANIA_DEM.getLocalPart()));
+        CoverageInfo ci = cb.buildCoverage();
+
+        ReferencedEnvelope bbox = ci.getNativeBoundingBox();
+        assertNotNull(bbox.getCoordinateReferenceSystem());
+
+        // simulate missing srs
+        ci.setNativeBoundingBox(ReferencedEnvelope.create(bbox, null));
+        assertEquals(ci.getNativeCRS(), ci.boundingBox().getCoordinateReferenceSystem());
+
+        // simulate everything being missing
+        ci.setNativeBoundingBox(null);
+        ci.setSRS(null);
+
+        // this will attempt to back-project form LatLon
+        assertNull(ci.boundingBox());
     }
 
     @Test
@@ -774,7 +796,7 @@ public class CatalogBuilderTest extends GeoServerMockTestSupport {
         AbstractGridCoverage2DReader reader = createMock(AbstractGridCoverage2DReader.class);
         AbstractGridFormat format = createMock(AbstractGridFormat.class);
 
-        expect(reader.getOriginalEnvelope()).andReturn(new GeneralEnvelope(envelope)).anyTimes();
+        expect(reader.getOriginalEnvelope()).andReturn(new GeneralBounds(envelope)).anyTimes();
         expect(reader.getCoordinateReferenceSystem())
                 .andReturn(envelope.getCoordinateReferenceSystem())
                 .anyTimes();
@@ -828,5 +850,45 @@ public class CatalogBuilderTest extends GeoServerMockTestSupport {
         assertEquals("RED_BAND", dimensions.get(0).getName());
         assertEquals("GREEN_BAND", dimensions.get(1).getName());
         assertEquals("BLUE_BAND", dimensions.get(2).getName());
+    }
+
+    @Test
+    public void testLookupSRSPlanetary() throws Exception {
+        Catalog cat = getCatalog();
+        CatalogBuilder cb = new CatalogBuilder(cat);
+
+        cb.setStore(cat.getDataStoreByName(MockData.LINES.getPrefix()));
+        FeatureTypeInfo fti = cb.buildFeatureType(toName(MockData.LINES));
+        fti.setNativeCRS(CRS.decode("IAU:1000")); // Sun geographic crs
+
+        cb.lookupSRS(fti, false);
+        assertEquals("IAU:1000", fti.getSRS());
+    }
+
+    @Test
+    public void testLookupSRSPlanetaryExtensive() throws Exception {
+        Catalog cat = getCatalog();
+        CatalogBuilder cb = new CatalogBuilder(cat);
+
+        cb.setStore(cat.getDataStoreByName(MockData.LINES.getPrefix()));
+        FeatureTypeInfo fti = cb.buildFeatureType(toName(MockData.LINES));
+
+        // Sun CRS, without authority and code
+        String wkt =
+                "GEOGCS[\"Sun (2015) - Sphere / Ocentric\",\n"
+                        + "    DATUM[\"Sun (2015) - Sphere\",\n"
+                        + "        SPHEROID[\"Sun (2015) - Sphere\",695700000,0,\n"
+                        + "            AUTHORITY[\"IAU\",\"1000\"]],\n"
+                        + "        AUTHORITY[\"IAU\",\"1000\"]],\n"
+                        + "    PRIMEM[\"Reference Meridian\",0,\n"
+                        + "        AUTHORITY[\"IAU\",\"1000\"]],\n"
+                        + "    UNIT[\"degree\",0.0174532925199433,\n"
+                        + "        AUTHORITY[\"EPSG\",\"9122\"]]]";
+        CoordinateReferenceSystem crs = CRS.parseWKT(wkt);
+        fti.setNativeCRS(crs);
+
+        // no codes available, thus, extensive lookup needed
+        cb.lookupSRS(fti, true);
+        assertEquals("IAU:1000", fti.getSRS());
     }
 }

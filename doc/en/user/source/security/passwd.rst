@@ -3,7 +3,7 @@
 Passwords
 =========
 
-Passwords are a central aspect of any security system. This section describes how GeoServer handles passwords. 
+Passwords are a central aspect of any security system. This section describes how GeoServer handles passwords.
 
 .. _security_passwd_encryption:
 
@@ -17,7 +17,7 @@ A GeoServer configuration stores two types of passwords:
 
 As these passwords are typically stored on disk it is strongly recommended that they be encrypted and not stored as human-readable text. GeoServer security provides four schemes for encrypting passwords: **empty**, **plain text**, **Digest**, and **Password-based encryption (PBE)**.
 
-The password encryption scheme is specified as a global setting that affects the encryption of passwords used for external resources, and as an encryption scheme for each :ref:`user/group service <security_rolesystem_usergroupservices>`. The encryption scheme for external resources has to be be :ref:`reversible <security_passwd_reversible>`, while the user/group services can use any scheme.
+The password encryption scheme is specified as a global setting that affects the encryption of passwords used for external resources, and as an encryption scheme for each :ref:`user/group service <security_rolesystem_usergroupservices>`. The encryption scheme for external resources has to be :ref:`reversible <security_passwd_reversible>`, while the user/group services can use any scheme.
 
 Empty
 ~~~~~
@@ -32,7 +32,7 @@ Plain text passwords provide no encryption at all. In this case, passwords are h
 Digest
 ~~~~~~
 
-Digest encryption is not reversible. It applies, 100,000 times through an iterative process, a SHA-256 `cryptographic hash function <http://en.wikipedia.org/wiki/Cryptographic_hash_function>`_ 
+Digest encryption is not reversible. It applies, 100,000 times through an iterative process, a SHA-256 `cryptographic hash function <http://en.wikipedia.org/wiki/Cryptographic_hash_function>`_
 to passwords. This scheme is "one-way" in that it is virtually impossible to reverse and obtain the original password from its hashed representation. Please see the section on :ref:`security_passwd_reversible` for more information on reversibility.
 
 To protect from well known attacks, a random value called a `salt <http://en.wikipedia.org/wiki/Salt_%28cryptography%29>`_ is added to the password when generating the key. For each digesting, a separate random salt is used. Digesting the same password twice results in different hashed representations.
@@ -52,21 +52,15 @@ GeoServer supports two forms of PBE. **Weak PBE** (the GeoServer default) uses a
 
 **Strong PBE** uses a much stronger encryption method based on an `AES <http://en.wikipedia.org/wiki/Advanced_Encryption_Standard>`_ 256-bit algorithm with `CBC <http://en.wikipedia.org/wiki/Block_cipher_modes_of_operation>`_. The key length is 256 bit and is derived using `SHA-256 <http://en.wikipedia.org/wiki/SHA-2>`_ instead of MD5. Using Strong PBE is highly recommended.
 
-As an example, the password ``geoserver`` is encrypted to ``crypt1:KWhO7jrTz/Gi0oTQRKsVeCmWIZY5VZaD``. 
+As an example, the password ``geoserver`` is encrypted to ``crypt1:KWhO7jrTz/Gi0oTQRKsVeCmWIZY5VZaD``.
 ``crypt1`` indicates the usage of Weak PBE. The prefix for Strong PBE is ``crypt2``. The ciphertext and the salt are base 64 encoded.
-
-.. _security_passwd_encryption_policies:
-
-.. note::
-
-   Strong PBE is not natively available on all Java virtual machines and may require :ref:`java_policyfiles`
 
 .. _security_passwd_reversible:
 
 Reversible encryption
 ~~~~~~~~~~~~~~~~~~~~~
 
-Password encryption methods can be **reversible**, meaning that it is possible (and desirable) to obtain the plain-text password from its encrypted version. Reversible passwords are necessary for database connections or external OGC services such as :ref:`cascading WMS <data_external_wms>` and :ref:`cascading WFS <data_external_wfs>`, since GeoServer must be able to decode the encrypted password and pass it to the external service. Plain text and PBE passwords are reversible. 
+Password encryption methods can be **reversible**, meaning that it is possible (and desirable) to obtain the plain-text password from its encrypted version. Reversible passwords are necessary for database connections or external OGC services such as :ref:`cascading WMS <data_external_wms>` and :ref:`cascading WFS <data_external_wfs>`, since GeoServer must be able to decode the encrypted password and pass it to the external service. Plain text and PBE passwords are reversible.
 
 Non-reversible passwords provide the highest level of security, and therefore should be used for user accounts and wherever else possible. Using password digesting is highly recommended, the installation of the unrestricted policy files is not required.
 
@@ -120,3 +114,12 @@ Each user/group service uses a password policy to enforce these rules. The defau
 * Password minimum length
 * Password maximum length
 
+Parametrized Passwords
+-----------------------
+It is possible to parametrize users' passwords in a similar way to the catalog settings (see :ref:`datadir_configtemplate`). Parametrization is supported when the encryption method used to store the place holder in the password field is plain text or is reversible (pbe, strong pbe). Non reversible encoding for the placeholder (e.g. digest) is not supported. On the contrary the actual value can be defined in the ``geoserver-environment.properties`` with any password encoding method supported by GeoServer. Examples are provided below:
+
+.. code-block:: properties
+
+ pwd.one=plain:clear_text_password
+ pwd.two=digest1:D9miJH/hVgfxZJscMafEtbtliG0ROxhLfsznyWfG38X2pda2JOSV4POi55PQI4tw
+ pwd.three=crypt1:xZJscMafEtbtliG0ROxhLfsznyWfG38X2pda2JOSV4POi55PQI4tw

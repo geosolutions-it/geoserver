@@ -29,6 +29,15 @@ import org.geoserver.wfs.WFSGetFeatureOutputFormat;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
 import org.geoserver.wfs.response.ComplexFeatureAwareFormat;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.ReferenceIdentifier;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -36,15 +45,6 @@ import org.geotools.gml2.SrsSyntax;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.NamedIdentifier;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.ReferenceIdentifier;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * A GetFeatureInfo response handler specialized in producing Json and JsonP data for a
@@ -408,18 +408,9 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat
                     }
                     // start writing the simple feature geometry JSON object
                     Geometry aGeom = (Geometry) simpleFeature.getDefaultGeometry();
+                    hasGeom |= aGeom != null;
                     if (aGeom != null || writeNullGeometries()) {
-                        jsonWriter.key("geometry");
-                        // Write the geometry, whether it is a null or not
-                        if (aGeom != null) {
-                            jsonWriter.writeGeom(aGeom);
-                            hasGeom = true;
-                        } else {
-                            jsonWriter.value(null);
-                        }
-                        if (defaultGeomType != null) {
-                            jsonWriter.key("geometry_name").value(defaultGeomType.getLocalName());
-                        }
+                        writeGeometry(jsonWriter, defaultGeomType, aGeom);
                     }
                     // start writing feature properties JSON object
                     jsonWriter.key("properties");
@@ -493,6 +484,28 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat
     }
 
     /**
+     * Writes the "geometry" key and its value. May be overridden by subclasses to encode geometry
+     * in a different manner
+     *
+     * @param jsonWriter the GeoJSONBuilder to write to
+     * @param descriptor the geometry descriptor
+     * @param aGeom the geometry to write
+     */
+    protected void writeGeometry(
+            GeoJSONBuilder jsonWriter, GeometryDescriptor descriptor, Geometry aGeom) {
+        jsonWriter.key("geometry");
+        // Write the geometry, whether it is a null or not
+        if (aGeom != null) {
+            jsonWriter.writeGeom(aGeom);
+        } else {
+            jsonWriter.value(null);
+        }
+        if (descriptor != null) {
+            jsonWriter.key("geometry_name").value(descriptor.getLocalName());
+        }
+    }
+
+    /**
      * By spec the geometry should be there and null. This method allows subclasses to go outside of
      * the spec and save some payload.
      *
@@ -525,15 +538,7 @@ public class GeoJSONGetFeatureResponse extends WFSGetFeatureOutputFormat
     private void writeCrs(final GeoJSONBuilder jsonWriter, CoordinateReferenceSystem crs)
             throws FactoryException {
         if (crs != null) {
-            String identifier = null;
-            Integer code = CRS.lookupEpsgCode(crs, true);
-            if (code != null) {
-                if (code != null) {
-                    identifier = SrsSyntax.OGC_URN.getPrefix() + code;
-                }
-            } else {
-                identifier = CRS.lookupIdentifier(crs, true);
-            }
+            String identifier = SrsSyntax.OGC_URN.getSRS(CRS.lookupIdentifier(crs, true));
 
             jsonWriter.key("crs");
             jsonWriter.object();

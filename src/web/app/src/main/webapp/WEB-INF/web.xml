@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" "http://java.sun.com/dtd/web-app_2_3.dtd">
-<web-app>
+<web-app 
+        xmlns="http://xmlns.jcp.org/xml/ns/javaee" 
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+        metadata-complete="false"
+        version="3.1">
     <display-name>GeoServer</display-name>
   
       <context-param>
@@ -186,7 +190,7 @@
       <url-pattern>/*</url-pattern>
     </filter-mapping>
    
-   <!-- Uncomment following filter to enable CORS
+    <!-- Uncomment following filter-mapping to enable CORS
     <filter-mapping>
         <filter-name>cross-origin</filter-name>
         <url-pattern>/*</url-pattern>
@@ -273,6 +277,17 @@
         <servlet-name>dispatcher</servlet-name>
         <url-pattern>/*</url-pattern>
     </servlet-mapping>
+
+    <session-config>
+        <cookie-config>
+            <http-only>true</http-only>
+            <!-- The Secure flag should be set on session cookies but is commented out by default since it -->
+            <!-- will break non-HTTPS web UI access and may cause problems with some proxy configurations. -->
+            <!-- Uncomment the following line to add the Secure flag to session cookies. -->
+            <!-- <secure>true</secure> -->
+        </cookie-config>
+        <tracking-mode>COOKIE</tracking-mode>
+    </session-config>
     
     <mime-mapping>
       <extension>xsl</extension>
@@ -285,6 +300,10 @@
     <mime-mapping>
       <extension>json</extension>
       <mime-type>application/json</mime-type>
+    </mime-mapping>
+    <mime-mapping>
+      <extension>yaml</extension>
+      <mime-type>text/plain</mime-type>
     </mime-mapping>
   
     <welcome-file-list>

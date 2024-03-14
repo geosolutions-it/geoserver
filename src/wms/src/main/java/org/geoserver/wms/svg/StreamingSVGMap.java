@@ -5,26 +5,28 @@
  */
 package org.geoserver.wms.svg;
 
+import static org.apache.commons.text.StringEscapeUtils.escapeXml10;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.logging.Logger;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.WebMap;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.spatial.BBOX;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureIterator;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.Layer;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.Point;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.spatial.BBOX;
 
 /**
  * Streaming SVG encoder (does not support styling)
@@ -111,7 +113,7 @@ public class StreamingSVGMap extends WebMap {
     /** @task TODO: respect layer filtering given by their Styles */
     private void writeLayers() throws IOException {
         List<Layer> layers = mapContent.layers();
-        FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
+        FilterFactory ff = CommonFactoryFinder.getFilterFactory();
 
         for (Layer layer : layers) {
             SimpleFeatureSource fSource = (SimpleFeatureSource) layer.getFeatureSource();
@@ -138,10 +140,10 @@ public class StreamingSVGMap extends WebMap {
 
                 String styleName = layer.getStyle().getName();
 
-                writer.write("<g id=\"" + groupId + "\"");
+                writer.write("<g id=\"" + escapeXml10(groupId) + "\"");
 
                 if (!styleName.startsWith("#")) {
-                    writer.write(" class=\"" + styleName + "\"");
+                    writer.write(" class=\"" + escapeXml10(styleName) + "\"");
                 }
 
                 writer.write(">\n");

@@ -11,37 +11,49 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
+import org.bson.Document;
 import org.geoserver.schemalessfeatures.data.ComplexContentDataAccess;
 import org.geoserver.schemalessfeatures.data.SchemalessFeatureSource;
 import org.geoserver.schemalessfeatures.mongodb.MongoSchemalessUtils;
 import org.geoserver.schemalessfeatures.mongodb.filter.MongoTypeFinder;
 import org.geoserver.schemalessfeatures.mongodb.filter.SchemalessFilterToMongo;
 import org.geoserver.schemalessfeatures.type.DynamicFeatureType;
+import org.geotools.api.data.FeatureReader;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.QueryCapabilities;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.GeometryType;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.BinaryComparisonOperator;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.expression.Expression;
+import org.geotools.api.filter.expression.Literal;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.filter.sort.SortOrder;
+import org.geotools.api.geometry.MismatchedDimensionException;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FeatureReader;
 import org.geotools.data.FilteringFeatureReader;
-import org.geotools.data.Query;
-import org.geotools.data.QueryCapabilities;
+import org.geotools.data.mongodb.MongoCollectionMeta;
 import org.geotools.data.mongodb.MongoFilterSplitter;
 import org.geotools.feature.AttributeTypeBuilder;
+import org.geotools.filter.visitor.DuplicatingFilterVisitor;
 import org.geotools.filter.visitor.PostPreProcessFilterSplittingVisitor;
+import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.Feature;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.GeometryType;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.BinaryComparisonOperator;
-import org.opengis.filter.Filter;
-import org.opengis.filter.expression.Expression;
-import org.opengis.filter.expression.Literal;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.filter.sort.SortOrder;
 
 public class MongoSchemalessFeatureSource extends SchemalessFeatureSource {
 
@@ -81,7 +93,7 @@ public class MongoSchemalessFeatureSource extends SchemalessFeatureSource {
     protected FeatureReader<FeatureType, Feature> getReaderInteranl(Query query) {
         List<Filter> postFilterList = new ArrayList<>();
         FeatureReader<FeatureType, Feature> reader =
-                new MongoComplexReader(toCursor(query, postFilterList), this);
+                new MongoComplexReader(toCursor(query, postFilterList), this, query);
         if (!postFilterList.isEmpty())
             return new FilteringFeatureReader<>(reader, postFilterList.get(0));
         return reader;
@@ -172,6 +184,10 @@ public class MongoSchemalessFeatureSource extends SchemalessFeatureSource {
             return new BasicDBObject();
         }
 
+        // apply filter reprojection to EPSG:4326
+        SimpleReprojectingVisitor reprojectingFilterVisitor = new SimpleReprojectingVisitor();
+        f = (Filter) f.accept(reprojectingFilterVisitor, null);
+
         SchemalessFilterToMongo v =
                 new SchemalessFilterToMongo((DynamicFeatureType) getSchema(), collection);
 
@@ -180,7 +196,11 @@ public class MongoSchemalessFeatureSource extends SchemalessFeatureSource {
 
     Filter[] splitFilter(Filter f) {
         PostPreProcessFilterSplittingVisitor splitter =
-                new MongoFilterSplitter(getDataStore().getFilterCapabilities(), null, null) {
+                new MongoFilterSplitter(
+                        getDataStore().getFilterCapabilities(),
+                        null,
+                        null,
+                        new MongoCollectionMeta(getIndexesInfoMap())) {
                     @Override
                     protected void visitBinaryComparisonOperator(BinaryComparisonOperator filter) {
                         Expression expression1 = filter.getExpression1();
@@ -197,6 +217,19 @@ public class MongoSchemalessFeatureSource extends SchemalessFeatureSource {
                 };
         f.accept(splitter, null);
         return new Filter[] {splitter.getFilterPre(), splitter.getFilterPost()};
+    }
+
+    private Map<String, String> getIndexesInfoMap() {
+        Map<String, String> indexes = new HashMap<>();
+        for (Document doc : collection.listIndexes()) {
+            Document key = (Document) doc.get("key");
+            if (key != null) {
+                for (Map.Entry indexData : key.entrySet()) {
+                    indexes.put(indexData.getKey().toString(), indexData.getValue().toString());
+                }
+            }
+        }
+        return indexes;
     }
 
     @Override
@@ -234,5 +267,47 @@ public class MongoSchemalessFeatureSource extends SchemalessFeatureSource {
             q.setPropertyNames(MongoSchemalessUtils.toPropertyName(geometryPath));
         }
         return super.getBoundsInternal(q);
+    }
+
+    /** Reprojects all geometry and referenced envelope literals to EPSG:4326. */
+    private class SimpleReprojectingVisitor extends DuplicatingFilterVisitor {
+        @Override
+        public Object visit(Literal expression, Object extraData) {
+            if (expression.getValue() instanceof Geometry) {
+                Geometry geom = (Geometry) expression.getValue();
+                CoordinateReferenceSystem crs = JTS.getCRS(geom);
+                if (crs != null && !CRS.equalsIgnoreMetadata(crs, DefaultGeographicCRS.WGS84)) {
+                    try {
+                        geom =
+                                JTS.transform(
+                                        geom,
+                                        CRS.findMathTransform(crs, DefaultGeographicCRS.WGS84));
+                    } catch (MismatchedDimensionException
+                            | TransformException
+                            | FactoryException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                return ff.literal(geom);
+            } else if (expression.getValue() instanceof ReferencedEnvelope) {
+                ReferencedEnvelope env = (ReferencedEnvelope) expression.getValue();
+                CoordinateReferenceSystem crs = env.getCoordinateReferenceSystem();
+                if (crs != null && !CRS.equalsIgnoreMetadata(crs, DefaultGeographicCRS.WGS84)) {
+                    try {
+                        Envelope transformedEnv =
+                                JTS.transform(
+                                        env,
+                                        CRS.findMathTransform(crs, DefaultGeographicCRS.WGS84));
+                        env = new ReferencedEnvelope(transformedEnv, DefaultGeographicCRS.WGS84);
+                    } catch (TransformException e) {
+                        throw new RuntimeException(e);
+                    } catch (FactoryException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                return ff.literal(env);
+            }
+            return super.visit(expression, extraData);
+        }
     }
 }

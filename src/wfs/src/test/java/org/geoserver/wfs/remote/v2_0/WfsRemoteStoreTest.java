@@ -24,7 +24,7 @@ import org.geoserver.test.http.MockHttpClient;
 import org.geoserver.test.http.MockHttpResponse;
 import org.geoserver.util.IOUtils;
 import org.geoserver.wfs.v2_0.WFS20TestSupport;
-import org.geotools.data.DataAccess;
+import org.geotools.api.data.DataAccess;
 import org.geotools.data.util.NullProgressListener;
 import org.geotools.data.wfs.WFSDataStore;
 import org.geotools.data.wfs.WFSDataStoreFactory;
@@ -67,7 +67,8 @@ public class WfsRemoteStoreTest extends WFS20TestSupport {
                         + "&RESULTTYPE=RESULTS"
                         + "&OUTPUTFORMAT=application%2Fgml%2Bxml%3B+version%3D3.2"
                         + "&VERSION=2.0.0"
-                        + "&SERVICE=WFS",
+                        + "&SERVICE=WFS"
+                        + "&COUNT=1000000",
                 "tiger_roads_get_feature_resp_1.xml",
                 environment);
         registerHttpGetFromResource(
@@ -78,7 +79,8 @@ public class WfsRemoteStoreTest extends WFS20TestSupport {
                         + "&RESULTTYPE=RESULTS"
                         + "&OUTPUTFORMAT=application%2Fgml%2Bxml%3B+version%3D3.2"
                         + "&VERSION=2.0.0"
-                        + "&SERVICE=WFS",
+                        + "&SERVICE=WFS"
+                        + "&COUNT=1000000",
                 "tiger_roads_get_feature_resp_1.xml",
                 environment);
 
@@ -148,7 +150,8 @@ public class WfsRemoteStoreTest extends WFS20TestSupport {
                         + "&RESULTTYPE=RESULTS"
                         + "&OUTPUTFORMAT=application%2Fgml%2Bxml%3B+version%3D3.2"
                         + "&VERSION=2.0.0"
-                        + "&SERVICE=WFS",
+                        + "&SERVICE=WFS"
+                        + "&COUNT=1000000",
                 "tiger_roads_get_feature_resp_special_chars.xml",
                 environment);
         registerHttpGetFromResource(
@@ -159,7 +162,8 @@ public class WfsRemoteStoreTest extends WFS20TestSupport {
                         + "&RESULTTYPE=RESULTS"
                         + "&OUTPUTFORMAT=application%2Fgml%2Bxml%3B+version%3D3.2"
                         + "&VERSION=2.0.0"
-                        + "&SERVICE=WFS",
+                        + "&SERVICE=WFS"
+                        + "&COUNT=1000000",
                 "tiger_roads_get_feature_resp_special_chars.xml",
                 environment);
 

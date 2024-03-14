@@ -132,7 +132,7 @@ public class CapabilitiesTest extends WMSTestSupport {
         // using an invalid mime type should throw an exception
         response = getAsServletResponse("wms?request=getCapabilities&version=1.1.1&format=invalid");
         assertThat(response.getStatus(), is(200));
-        assertThat(response.getContentType(), is("application/vnd.ogc.se_xml"));
+        assertThat(getBaseMimeType(response.getContentType()), is("application/vnd.ogc.se_xml"));
         // using an empty mime type should fall back to the default mime type
         response = getAsServletResponse("wms?request=getCapabilities&version=1.1.1&format=");
         assertThat(response.getStatus(), is(200));
@@ -405,6 +405,16 @@ public class CapabilitiesTest extends WMSTestSupport {
         assertTrue(href.contains("GetLegendGraphic"));
         assertTrue(href.contains("layer=cdf%3AFifteen"));
         assertTrue(href.contains("style=point"));
+
+        // Default style set to point
+        layer.setDefaultStyle(pointStyle);
+        getCatalog().save(layer);
+        Document document = getAsDOM("wms?service=WMS&request=getCapabilities&version=1.1.1", true);
+        assertXpathEvaluatesTo("1", "count(//Layer[Name='cdf:Fifteen'])", document);
+        assertXpathEvaluatesTo("1", "count(//Layer[Name='cdf:Fifteen']/Style)", document);
+        // getStyles() has the default style, styles() doesnt have default style
+        assertTrue(layer.getStyles().contains(pointStyle));
+        assertFalse(layer.styles().contains(pointStyle));
     }
 
     @Test

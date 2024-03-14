@@ -2,7 +2,7 @@
 
 Status
 ======
-The Server Status page has two tabs to summarize the current status of GeoServer. The Status tab provides a summary of server configuration parameters and run-time status. The modules tab provides the status of the various modules installed on the server. This page provides a useful diagnostic tool in a testing environment. 
+The Server Status page has two tabs to summarize the current status of GeoServer. The Status tab provides a summary of server configuration parameters and run-time status. The modules tab provides the status of the various modules installed on the server. This page provides a useful diagnostic tool in a testing environment.
 
 Server Status
 -------------
@@ -234,7 +234,7 @@ The available system information is:
      - 5.83 %
      - Percentage of the JVM memory used by GeoServer
 
-If some information is not available the special term ``NOT AVAILABLE`` will appear. Values will be automatically converted to best human readable unit. 
+If some information is not available the special term ``NOT AVAILABLE`` will appear. Values will be automatically converted to best human readable unit.
 
 .. _config_serverstatus_jvm:
 

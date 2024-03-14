@@ -30,13 +30,13 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.transform.TransformerException;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.ows.util.RequestUtils;
+import org.geotools.api.style.ResourceLocator;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.StyledLayerDescriptor;
+import org.geotools.brewer.styling.builder.StyledLayerDescriptorBuilder;
 import org.geotools.sld.v1_1.SLD;
 import org.geotools.sld.v1_1.SLDConfiguration;
 import org.geotools.styling.DefaultResourceLocator;
-import org.geotools.styling.NamedLayer;
-import org.geotools.styling.ResourceLocator;
-import org.geotools.styling.Style;
-import org.geotools.styling.StyledLayerDescriptor;
 import org.geotools.util.URLs;
 import org.geotools.util.Version;
 import org.geotools.util.logging.Logging;
@@ -153,7 +153,7 @@ public class SLDHandler extends StyleHandler {
             EntityResolver entityResolver)
             throws IOException {
         if (version == null) {
-            Object[] versionAndReader = getVersionAndReader(input);
+            Object[] versionAndReader = getVersionAndReader(input, true);
             version = (Version) versionAndReader[0];
             input = versionAndReader[1];
         }
@@ -186,9 +186,10 @@ public class SLDHandler extends StyleHandler {
                 // style and then wrap it in an sld
                 Style[] style = p.readDOM();
                 if (style.length > 0) {
-                    NamedLayer l = styleFactory.createNamedLayer();
-                    l.addStyle(style[0]);
-                    sld.addStyledLayer(l);
+                    StyledLayerDescriptorBuilder sldBuilder =
+                            new StyledLayerDescriptorBuilder().reset(sld);
+                    sldBuilder.namedLayer().style().reset(style[0]);
+                    sld = sldBuilder.build();
                 }
             }
             return sld;
@@ -295,7 +296,7 @@ public class SLDHandler extends StyleHandler {
     public List<Exception> validate(Object input, Version version, EntityResolver entityResolver)
             throws IOException {
         if (version == null) {
-            Object[] versionAndReader = getVersionAndReader(input);
+            Object[] versionAndReader = getVersionAndReader(input, true);
             version = (Version) versionAndReader[0];
             input = versionAndReader[1];
         }
@@ -329,12 +330,12 @@ public class SLDHandler extends StyleHandler {
 
     @Override
     public Version version(Object input) throws IOException {
-        Object[] versionAndReader = getVersionAndReader(input);
+        Object[] versionAndReader = getVersionAndReader(input, false);
         return (Version) versionAndReader[0];
     }
 
     /** Helper method for finding which style handler/version to use from the actual content. */
-    Object[] getVersionAndReader(Object input) throws IOException {
+    Object[] getVersionAndReader(Object input, boolean needReader) throws IOException {
         // need to determine version of sld from actual content
         @SuppressWarnings("PMD.CloseResource") // returned as part of the response
         BufferedReader reader = null;
@@ -390,7 +391,15 @@ public class SLDHandler extends StyleHandler {
             version = "1.0.0";
         }
 
-        return new Object[] {new Version(version), reader};
+        Object[] result;
+        if (needReader) {
+            result = new Object[] {new Version(version), reader};
+        } else {
+            reader.close();
+            result = new Object[] {new Version(version)};
+        }
+
+        return result;
     }
 
     @Override

@@ -46,10 +46,13 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.rest.RestBaseController;
-import org.geotools.data.DataAccess;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.Name;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.NameImpl;
@@ -65,8 +68,6 @@ import org.junit.Test;
 import org.locationtech.jts.geom.MultiLineString;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.Name;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -1039,5 +1040,21 @@ public class FeatureTypeControllerTest extends CatalogRESTTestSupport {
         VirtualTable vt2 =
                 ft.getMetadata().get(FeatureTypeInfo.JDBC_VIRTUAL_TABLE, VirtualTable.class);
         assertEquals(newVirtualTable, vt2.getName());
+    }
+
+    @Test
+    public void testPostWithAttributes() throws Exception {
+        // create a new sibling feature type with all attributes already listed
+        String xml = getAsString(BASEPATH + "/workspaces/sf/featuretypes/PrimitiveGeoFeature.xml");
+        String typeName2 = "PrimitiveGeoFeature2";
+        String xml2 =
+                xml.replace("<name>PrimitiveGeoFeature</name>", "<name>" + typeName2 + "</name>");
+
+        MockHttpServletResponse sr =
+                postAsServletResponse(BASEPATH + "/workspaces/sf/featuretypes", xml2);
+        assertEquals(201, sr.getStatus());
+
+        FeatureTypeInfo ft = getCatalog().getFeatureTypeByName("sf", typeName2);
+        assertNotNull(ft.getFeatureType());
     }
 }

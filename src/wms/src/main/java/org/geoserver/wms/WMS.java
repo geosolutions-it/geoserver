@@ -5,6 +5,8 @@
  */
 package org.geoserver.wms;
 
+import static org.geoserver.catalog.ResourceInfo.ELEVATION;
+import static org.geoserver.catalog.ResourceInfo.TIME;
 import static org.geoserver.util.HTTPWarningAppender.addWarning;
 
 import java.awt.geom.AffineTransform;
@@ -19,12 +21,14 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.StringUtils;
 import org.geoserver.catalog.AttributeTypeInfo;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
@@ -55,14 +59,32 @@ import org.geoserver.util.DimensionWarning;
 import org.geoserver.util.NearestMatchFinder;
 import org.geoserver.wms.WMSInfo.WMSInterpolation;
 import org.geoserver.wms.WatermarkInfo.Position;
+import org.geoserver.wms.capabilities.DimensionHelper;
 import org.geoserver.wms.dimension.DimensionDefaultValueSelectionStrategy;
 import org.geoserver.wms.dimension.DimensionDefaultValueSelectionStrategyFactory;
 import org.geoserver.wms.featureinfo.GetFeatureInfoOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapResponse;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.PropertyIsBetween;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.parameter.GeneralParameterDescriptor;
+import org.geotools.api.parameter.GeneralParameterValue;
+import org.geotools.api.parameter.ParameterDescriptor;
+import org.geotools.api.parameter.ParameterValue;
+import org.geotools.api.parameter.ParameterValueGroup;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.Style;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
+import org.geotools.data.DataUtilities;
 import org.geotools.data.ows.OperationType;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureCollection;
@@ -71,11 +93,12 @@ import org.geotools.feature.visitor.MaxVisitor;
 import org.geotools.feature.visitor.MinVisitor;
 import org.geotools.feature.visitor.UniqueVisitor;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.gml2.SrsSyntax;
+import org.geotools.gml2.bindings.GML2EncodingUtils;
 import org.geotools.ows.wms.Layer;
 import org.geotools.ows.wms.WMSCapabilities;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
-import org.geotools.styling.Style;
 import org.geotools.util.Converters;
 import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
@@ -87,18 +110,6 @@ import org.geotools.util.factory.GeoTools;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.PropertyIsBetween;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.parameter.GeneralParameterDescriptor;
-import org.opengis.parameter.GeneralParameterValue;
-import org.opengis.parameter.ParameterDescriptor;
-import org.opengis.parameter.ParameterValue;
-import org.opengis.parameter.ParameterValueGroup;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -138,6 +149,9 @@ public class WMS implements ApplicationContextAware {
     public static final String SVG_SIMPLE = "Simple";
 
     public static final String SVG_BATIK = "Batik";
+
+    /** Prefix for custom dimensions used in GetMap requests */
+    public static final String DIM_ = "dim_";
 
     /** KML reflector mode */
     public static String KML_REFLECTOR_MODE = "kmlReflectorMode";
@@ -268,6 +282,15 @@ public class WMS implements ApplicationContextAware {
     }
 
     /**
+     * Whether to throw an InvalidDimensioValue on invalid dimension values
+     *
+     * @return
+     */
+    public boolean exceptionOnInvalidDimension() {
+        return getServiceInfo().exceptionOnInvalidDimension();
+    }
+
+    /**
      * /** Returns a supported version according to the version negotiation rules in section 6.2.4
      * of the WMS 1.3.0 spec.
      *
@@ -320,6 +343,105 @@ public class WMS implements ApplicationContextAware {
             version = versions.get(0).toString();
         }
         return version;
+    }
+
+    /**
+     * Checks if request would result in a number of dimensions that exceeds the configured maximum
+     *
+     * @param mapLayerInfo the layer info
+     * @param times the times requested
+     * @param elevations the elevations requested
+     * @param isCoverage true if the layer is a coverage
+     * @throws IOException if an error occurs
+     */
+    public void checkMaxDimensions(
+            MapLayerInfo mapLayerInfo,
+            List<Object> times,
+            List<Object> elevations,
+            boolean isCoverage)
+            throws IOException {
+        if (getServiceInfo() == null
+                || getServiceInfo().getMaxRequestedDimensionValues()
+                        == DimensionInfo.DEFAULT_MAX_REQUESTED_DIMENSION_VALUES) {
+            // max is default, which is unlimited
+            return;
+        }
+        TreeSet<Object> treeSet = new TreeSet<>();
+        int maxDimensionsToTest = getServiceInfo().getMaxRequestedDimensionValues();
+        if (times != null && !times.isEmpty() && times.get(0) != null) {
+            // list is null for default value
+            ListIterator<Object> timesIterator = times.listIterator();
+            while (timesIterator.hasNext()) {
+                Object time = timesIterator.next();
+                if (time instanceof DateRange) {
+                    DateRange range = (DateRange) times.get(timesIterator.previousIndex());
+                    if (isCoverage) {
+                        treeSet.addAll(
+                                queryCoverageTimes(
+                                        mapLayerInfo.getCoverage(),
+                                        range,
+                                        maxDimensionsToTest + 1));
+                    } else {
+                        treeSet.addAll(
+                                queryFeatureTypeTimes(
+                                        mapLayerInfo.getFeature(), range, maxDimensionsToTest + 1));
+                    }
+                } else {
+                    treeSet.add(time);
+                }
+                // check dimensions after each time parameter is added to treeset
+                checkDimensions(treeSet, maxDimensionsToTest, ResourceInfo.TIME);
+            }
+        }
+
+        if (elevations != null && !elevations.isEmpty() && elevations.get(0) != null) {
+            // list is null for default value, so we skip it
+            ListIterator<Object> elevationsIterator = elevations.listIterator();
+            while (elevationsIterator.hasNext()) {
+                Object elevation = elevationsIterator.next();
+                if (elevation instanceof NumberRange) {
+                    NumberRange range =
+                            (NumberRange) elevations.get(elevationsIterator.previousIndex());
+                    if (isCoverage) {
+                        treeSet.addAll(
+                                queryCoverageElevations(
+                                        mapLayerInfo.getCoverage(),
+                                        range,
+                                        maxDimensionsToTest + 1));
+                    } else {
+                        treeSet.addAll(
+                                queryFeatureTypeElevations(
+                                        mapLayerInfo.getFeature(), range, maxDimensionsToTest + 1));
+                    }
+                } else if (elevation instanceof Double) {
+                    // The queryElevations calls that check ranges are populating the treeset with
+                    // integers,
+                    // so we need to convert the double to an integer for this check
+                    Double elevationSingle = (Double) elevation;
+                    treeSet.add(elevationSingle.intValue());
+                } else {
+                    treeSet.add(elevation);
+                }
+                // check dimensions after each elevation parameter is added to treeset
+                checkDimensions(treeSet, maxDimensionsToTest, ResourceInfo.ELEVATION);
+            }
+        }
+    }
+
+    private static void checkDimensions(
+            TreeSet<Object> treeSet, int maxDimensionsToTest, String dimensionName) {
+        if (treeSet.size() > maxDimensionsToTest) {
+            throw new ServiceException(
+                    "This request would process more "
+                            + dimensionName
+                            + " than the maximum allowed: "
+                            + maxDimensionsToTest
+                            + ". Please reduce the size of the requested "
+                            + dimensionName
+                            + " range.",
+                    "InvalidParameterValue",
+                    dimensionName);
+        }
     }
 
     public GeoServer getGeoServer() {
@@ -877,7 +999,7 @@ public class WMS implements ApplicationContextAware {
      *     version matching on of the available wms versions will be returned.
      */
     public static Version version(String version, boolean exact) {
-        if (version == null || 0 == version.trim().length()) {
+        if (version == null || version.trim().isEmpty()) {
             return null;
         }
         if (VERSION_1_1_1.toString().equals(version)) {
@@ -899,9 +1021,18 @@ public class WMS implements ApplicationContextAware {
      * "EPSG:" namespace with the explicit.
      */
     public static String toInternalSRS(String srs, Version version) {
-        if (VERSION_1_3_0.equals(version)) {
-            if (srs != null && srs.toUpperCase().startsWith("EPSG:")) {
-                srs = srs.toUpperCase().replace("EPSG:", "urn:ogc:def:crs:EPSG:");
+        if (srs != null && VERSION_1_3_0.equals(version)) {
+            try {
+                CoordinateReferenceSystem crs = CRS.decode(srs);
+                if (crs != null) {
+                    return GML2EncodingUtils.toURI(crs, SrsSyntax.OGC_URN, false);
+                }
+            } catch (FactoryException e) {
+                throw new ServiceException(
+                        "Could not decode CRS: " + srs,
+                        e,
+                        ServiceException.INVALID_PARAMETER_VALUE,
+                        "crs");
             }
         }
 
@@ -1144,7 +1275,7 @@ public class WMS implements ApplicationContextAware {
                                     + maxValues
                                     + " dimension values specified in the request, bailing out.",
                             ServiceException.INVALID_PARAMETER_VALUE,
-                            "DIM_" + domain.toUpperCase());
+                            DimensionInfo.getDimensionKey(domain));
                 }
 
                 readParameters =
@@ -1273,6 +1404,17 @@ public class WMS implements ApplicationContextAware {
         FeatureCollection collection = getDimensionCollection(typeInfo, time);
 
         TreeSet<Date> result = new TreeSet<>();
+
+        String startValue = time.getStartValue();
+        String endValue = time.getEndValue();
+        if (!StringUtils.isEmpty(startValue)
+                && !StringUtils.isEmpty(endValue)
+                && time.getPresentation() != DimensionPresentation.LIST) {
+            result.add(DimensionHelper.parseTimeRangeValue(startValue));
+            result.add(DimensionHelper.parseTimeRangeValue(endValue));
+            return result;
+        }
+
         if (time.getPresentation() == DimensionPresentation.LIST) {
             final UniqueVisitor visitor = new UniqueVisitor(time.getAttribute());
             collection.accepts(visitor, null);
@@ -1354,6 +1496,16 @@ public class WMS implements ApplicationContextAware {
         FeatureCollection collection = getDimensionCollection(typeInfo, elevation);
 
         TreeSet<Double> result = new TreeSet<>();
+
+        String startValue = elevation.getStartValue();
+        String endValue = elevation.getEndValue();
+        if (!StringUtils.isEmpty(startValue)
+                && !StringUtils.isEmpty(endValue)
+                && elevation.getPresentation() != DimensionPresentation.LIST) {
+            result.add(Double.parseDouble(startValue));
+            result.add(Double.parseDouble(endValue));
+            return result;
+        }
         if (elevation.getPresentation() == DimensionPresentation.LIST
                 || (elevation.getPresentation() == DimensionPresentation.DISCRETE_INTERVAL
                         && elevation.getResolution() == null)) {
@@ -1553,18 +1705,10 @@ public class WMS implements ApplicationContextAware {
         return source;
     }
 
-    /**
-     * Builds a filter for the current time and elevation, should the layer support them. Only one
-     * among time and elevation can be multi-valued
-     */
-    public Filter getTimeElevationToFilter(
-            List<Object> times, List<Object> elevations, FeatureTypeInfo typeInfo)
+    public Filter getTimeFilter(
+            List<Object> times, FeatureTypeInfo typeInfo, DimensionFilterBuilder builder)
             throws IOException {
         DimensionInfo timeInfo = typeInfo.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
-        DimensionInfo elevationInfo =
-                typeInfo.getMetadata().get(ResourceInfo.ELEVATION, DimensionInfo.class);
-
-        DimensionFilterBuilder builder = new DimensionFilterBuilder(ff);
 
         // handle time support
         if (timeInfo != null && timeInfo.isEnabled() && times != null) {
@@ -1591,6 +1735,15 @@ public class WMS implements ApplicationContextAware {
             }
         }
 
+        return builder.getFilter();
+    }
+
+    public Filter getElevationFilter(
+            List<Object> elevations, FeatureTypeInfo typeInfo, DimensionFilterBuilder builder)
+            throws IOException {
+        DimensionInfo elevationInfo =
+                typeInfo.getMetadata().get(ResourceInfo.ELEVATION, DimensionInfo.class);
+
         // handle elevation support
         if (elevationInfo != null && elevationInfo.isEnabled() && elevations != null) {
             List<Object> defaultedElevations = new ArrayList<>(elevations.size());
@@ -1610,8 +1763,114 @@ public class WMS implements ApplicationContextAware {
                     defaultedElevations);
         }
 
-        Filter result = builder.getFilter();
-        return result;
+        return builder.getFilter();
+    }
+
+    /** Validates the vector dimensions, if enabled and available */
+    public void validateVectorDimensions(
+            List<Object> times,
+            List<Object> elevations,
+            FeatureTypeInfo typeInfo,
+            GetMapRequest request)
+            throws IOException {
+        // value validation and exception throwing enabled?
+        if (!exceptionOnInvalidDimension()) return;
+
+        FeatureSource<? extends FeatureType, ? extends Feature> fs =
+                typeInfo.getFeatureSource(null, null);
+
+        validateTimes(times, typeInfo, fs, request);
+        validateElevations(elevations, typeInfo, fs, request);
+        validateCustomDimensions(typeInfo, fs, request);
+    }
+
+    private void validateCustomDimensions(
+            FeatureTypeInfo typeInfo,
+            FeatureSource<? extends FeatureType, ? extends Feature> fs,
+            GetMapRequest request)
+            throws IOException {
+        CustomDimensionFilterConverter converter = getCustomDimensionFilterConverter(typeInfo);
+        Map<String, DimensionInfo> dimensions = converter.getCustomDimensions();
+        for (String dimension : dimensions.keySet()) {
+            DimensionFilterBuilder filterBuilder = new DimensionFilterBuilder(ff);
+            converter.getDimensionsToFilter(request.getRawKvp(), filterBuilder);
+            Filter filter = filterBuilder.getFilter();
+            if (DataUtilities.first(fs.getFeatures(filter)) == null) {
+                String key = (DIM_ + dimension).toUpperCase();
+                throwInvalidDimensionValue(request, dimension, key);
+            }
+        }
+    }
+
+    private void validateTimes(
+            List<Object> times,
+            FeatureTypeInfo typeInfo,
+            FeatureSource<? extends FeatureType, ? extends Feature> fs,
+            GetMapRequest request)
+            throws IOException {
+        DimensionInfo timeInfo = typeInfo.getMetadata().get(TIME, DimensionInfo.class);
+        if (timeInfo == null || !timeInfo.isEnabled() || timeInfo.isNearestMatchEnabled()) return;
+
+        if (times != null) {
+            DimensionFilterBuilder builder = new DimensionFilterBuilder(ff);
+            List<Object> explicitTimes =
+                    times.stream().filter(v -> v != null).collect(Collectors.toList());
+            getTimeFilter(explicitTimes, typeInfo, builder);
+            Filter filter = builder.getFilter();
+            if (DataUtilities.first(fs.getFeatures(filter)) == null) {
+                throwInvalidDimensionValue(request, TIME, TIME);
+            }
+        }
+    }
+
+    private void validateElevations(
+            List<Object> elevations,
+            FeatureTypeInfo typeInfo,
+            FeatureSource<? extends FeatureType, ? extends Feature> fs,
+            GetMapRequest request)
+            throws IOException {
+        DimensionInfo elevationInfo = typeInfo.getMetadata().get(ELEVATION, DimensionInfo.class);
+        // elevation does not currently support nearest match
+        if (elevationInfo == null || !elevationInfo.isEnabled()) return;
+
+        if (elevations != null) {
+            DimensionFilterBuilder builder = new DimensionFilterBuilder(ff);
+            List<Object> explicitEleevations =
+                    elevations.stream().filter(v -> v != null).collect(Collectors.toList());
+            getElevationFilter(explicitEleevations, typeInfo, builder);
+            Filter filter = builder.getFilter();
+            if (DataUtilities.first(fs.getFeatures(filter)) == null) {
+                throwInvalidDimensionValue(request, ELEVATION, ELEVATION);
+            }
+        }
+    }
+
+    /** Returns a filter based on times, elevation and custom dimensions found in the request. */
+    public Filter getDimensionFilter(
+            List<Object> times,
+            List<Object> elevations,
+            final FeatureTypeInfo featureTypeInfo,
+            final GetMapRequest request)
+            throws IOException {
+        DimensionFilterBuilder builder = new DimensionFilterBuilder(ff);
+        getTimeFilter(times, featureTypeInfo, builder);
+        getElevationFilter(elevations, featureTypeInfo, builder);
+        getCustomDimensionFilter(request.getRawKvp(), featureTypeInfo, builder);
+        return builder.getFilter();
+    }
+
+    /**
+     * Builds a filter for the current time and elevation, should the layer support them. Only one
+     * among time and elevation can be multi-valued
+     */
+    @Deprecated
+    public Filter getTimeElevationToFilter(
+            List<Object> times, List<Object> elevations, FeatureTypeInfo typeInfo)
+            throws IOException {
+        DimensionFilterBuilder builder = new DimensionFilterBuilder(ff);
+        getTimeFilter(times, typeInfo, builder);
+        getElevationFilter(elevations, typeInfo, builder);
+        return builder.getFilter();
     }
 
     /**
@@ -1620,15 +1879,102 @@ public class WMS implements ApplicationContextAware {
      * @param rawKVP Request KVP map
      * @param typeInfo Feature type info instance
      * @return builded filter
+     * @deprecated Use {@link #getCustomDimensionFilter(Map, FeatureTypeInfo,
+     *     DimensionFilterBuilder)} instead
      */
+    @Deprecated
     public Filter getDimensionsToFilter(
             final Map<String, String> rawKVP, final FeatureTypeInfo typeInfo) {
+        DimensionFilterBuilder builder = new DimensionFilterBuilder(ff);
+        return getCustomDimensionFilter(rawKVP, typeInfo, builder);
+    }
+
+    /**
+     * Builds filters for the custom dimensions, given the request to gather the custom dimension
+     * values, the feature type info to check they are configured, and a filter builder to accumlate
+     * the filters build at each step
+     */
+    public Filter getCustomDimensionFilter(
+            Map<String, String> rawKVP, FeatureTypeInfo typeInfo, DimensionFilterBuilder builder) {
+        CustomDimensionFilterConverter converter = getCustomDimensionFilterConverter(typeInfo);
+        return converter.getDimensionsToFilter(rawKVP, builder);
+    }
+
+    private CustomDimensionFilterConverter getCustomDimensionFilterConverter(
+            FeatureTypeInfo typeInfo) {
         CustomDimensionFilterConverter.DefaultValueStrategyFactory defaultValueStrategyFactory =
                 (resource, dimensionName, dimensionInfo) ->
                         getDefaultValueStrategy(resource, dimensionName, dimensionInfo);
         final CustomDimensionFilterConverter converter =
-                new CustomDimensionFilterConverter(defaultValueStrategyFactory, ff);
-        return converter.getDimensionsToFilter(rawKVP, typeInfo);
+                new CustomDimensionFilterConverter(typeInfo, defaultValueStrategyFactory);
+        return converter;
+    }
+
+    /**
+     * Validates that the provided custom dimension values are within the allowed range, eventually
+     * throws ServiceException#INVALID_DIMENSION_VALUE if not.
+     *
+     * @param times
+     * @param elevations
+     * @param mapLayerInfo
+     * @param request
+     */
+    public void validateRasterDimensions(
+            List<Object> times,
+            List<Object> elevations,
+            MapLayerInfo mapLayerInfo,
+            GetMapRequest request)
+            throws IOException {
+        // value validation and exception throwing enabled?
+        if (!exceptionOnInvalidDimension()) return;
+
+        CoverageInfo coverage = mapLayerInfo.getCoverage();
+        Map<String, DimensionInfo> dimensions =
+                coverage.getMetadata().entrySet().stream()
+                        .filter(e -> e.getValue() instanceof DimensionInfo)
+                        .filter(e -> ((DimensionInfo) e.getValue()).isEnabled())
+                        .filter(e -> !((DimensionInfo) e.getValue()).isNearestMatchEnabled())
+                        .collect(
+                                Collectors.toMap(
+                                        e -> e.getKey(), e -> (DimensionInfo) e.getValue()));
+        ReaderDimensionsAccessor accessor =
+                new ReaderDimensionsAccessor(
+                        (GridCoverage2DReader) mapLayerInfo.getCoverageReader());
+        for (Map.Entry<String, DimensionInfo> entry : dimensions.entrySet()) {
+            String key = entry.getKey().replaceFirst(DIM_, "");
+            if (key.equalsIgnoreCase(TIME)) {
+                List<Object> nonDefaultTimes =
+                        times.stream().filter(t -> t != null).collect(Collectors.toList());
+                if (nonDefaultTimes.isEmpty()) continue;
+                if (!accessor.hasAnyTime(nonDefaultTimes)) {
+                    throwInvalidDimensionValue(request, TIME, key);
+                }
+            } else if (key.equalsIgnoreCase(ELEVATION)) {
+                List<Object> nonDefaultElevations =
+                        elevations.stream().filter(e -> e != null).collect(Collectors.toList());
+                if (nonDefaultElevations.isEmpty()) continue;
+                if (!accessor.hasAnyElevation(nonDefaultElevations)) {
+                    throwInvalidDimensionValue(request, ELEVATION, key);
+                }
+            } else {
+                key = key.replaceFirst(ResourceInfo.CUSTOM_DIMENSION_PREFIX, "");
+                List<String> values = request.getCustomDimension(key);
+                if (values == null) continue;
+                if (!accessor.hasAnyCustomDimension(key, values)) {
+                    throwInvalidDimensionValue(request, key, (DIM_ + key).toUpperCase());
+                }
+            }
+        }
+    }
+
+    private static void throwInvalidDimensionValue(
+            GetMapRequest request, String dimension, String key) {
+        throw new ServiceException(
+                String.format(
+                        "Could not find a match for '%s' value: '%s'",
+                        dimension, request.getRawKvp().get(key)),
+                ServiceException.INVALID_DIMENSION_VALUE,
+                key);
     }
 
     /**
@@ -1785,7 +2131,21 @@ public class WMS implements ApplicationContextAware {
         final FeatureCollection fcollection = getDimensionCollection(typeInfo, dimensionInfo);
 
         final TreeSet<Object> result = new TreeSet<>();
-        if (dimensionInfo.getPresentation() == DimensionPresentation.LIST
+
+        String startValue = dimensionInfo.getStartValue();
+        String endValue = dimensionInfo.getEndValue();
+
+        if (dimensionInfo.getPresentation() != DimensionPresentation.LIST
+                && !StringUtils.isEmpty(startValue)
+                && !StringUtils.isEmpty(endValue)) {
+            try {
+                result.add(Double.parseDouble(startValue));
+                result.add(Double.parseDouble(endValue));
+            } catch (NumberFormatException e) {
+                result.add(DimensionHelper.parseTimeRangeValue(startValue));
+                result.add(DimensionHelper.parseTimeRangeValue(endValue));
+            }
+        } else if (dimensionInfo.getPresentation() == DimensionPresentation.LIST
                 || (dimensionInfo.getPresentation() == DimensionPresentation.DISCRETE_INTERVAL
                         && dimensionInfo.getResolution() == null)) {
             final UniqueVisitor uniqueVisitor = new UniqueVisitor(dimensionInfo.getAttribute());
@@ -1816,6 +2176,10 @@ public class WMS implements ApplicationContextAware {
 
     public boolean isDefaultGroupStyleEnabled() {
         return getServiceInfo().isDefaultGroupStyleEnabled();
+    }
+
+    public boolean isTransformFeatureInfo() {
+        return !getServiceInfo().isTransformFeatureInfoDisabled();
     }
 
     public boolean isAutoEscapeTemplateValues() {

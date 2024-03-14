@@ -48,8 +48,8 @@ import org.geoserver.security.WMSAccessLimits;
 import org.geoserver.security.WMTSAccessLimits;
 import org.geoserver.security.WorkspaceAccessLimits;
 import org.geoserver.security.impl.LayerGroupContainmentCache.LayerGroupSummary;
+import org.geotools.api.filter.Filter;
 import org.geotools.util.logging.Logging;
-import org.opengis.filter.Filter;
 import org.springframework.security.core.Authentication;
 
 /**
@@ -83,6 +83,13 @@ import org.springframework.security.core.Authentication;
  */
 public class DefaultResourceAccessManager implements ResourceAccessManager {
     static final Logger LOGGER = Logging.getLogger(DefaultResourceAccessManager.class);
+
+    /**
+     * Flag to enable previous resource filter building logic. This could be used to prevent
+     * performance regressions in JDCBConfig. Defaults to False.
+     */
+    static final Boolean RESOURCE_EQUALITY_FILTER_ENABLED =
+            Boolean.getBoolean("geoserver.access.resourceEqualityFilterEnabled");
 
     /** A {@link LayerGroupSummary} extended with the associated secure tree node */
     static class SecuredGroupSummary extends LayerGroupSummary {
@@ -549,79 +556,10 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         } else if (PublishedInfo.class.isAssignableFrom(clazz)
                 || ResourceInfo.class.isAssignableFrom(clazz)
                 || CoverageInfo.class.isAssignableFrom(clazz)) {
-            // base access
-            boolean rootAccess = canAccess(user, root);
-            List<Filter> exceptions = new ArrayList<>();
-
-            // get the right ws property name
-            String wsNameProperty;
-            if (LayerGroupInfo.class.isAssignableFrom(clazz)) {
-                // resource.store.workspace.name is not applicable for layergroups
-                wsNameProperty = "workspace.name";
-            } else if (PublishedInfo.class.isAssignableFrom(clazz)) {
-                wsNameProperty = "resource.store.workspace.name";
+            if (RESOURCE_EQUALITY_FILTER_ENABLED) {
+                return buildEqualityResourceFilter(user, clazz);
             } else {
-                wsNameProperty = "store.workspace.name";
-            }
-
-            // workspace exceptions
-            for (Map.Entry<String, SecureTreeNode> wsEntry : root.getChildren().entrySet()) {
-                String wsName = wsEntry.getKey();
-                SecureTreeNode wsNode = wsEntry.getValue();
-                boolean wsAccess = canAccess(user, wsNode);
-
-                List<Filter> layerExceptions = new ArrayList<>();
-                for (Map.Entry<String, SecureTreeNode> layerEntry :
-                        wsNode.getChildren().entrySet()) {
-                    String layerName = layerEntry.getKey();
-                    SecureTreeNode layerNode = layerEntry.getValue();
-                    String prefixedName = wsName + ":" + layerName;
-                    Filter typeFilter = getTypeFilter(prefixedName, clazz);
-                    if (typeFilter == null) {
-                        // dangling rule, referencing a non existing layer/group, continue
-                        continue;
-                    }
-
-                    boolean layerAccess = canAccess(user, layerNode);
-                    if (layerAccess != wsAccess) {
-                        Filter prefixedNameFilter =
-                                Predicates.and(
-                                        typeFilter, Predicates.equal("prefixedName", prefixedName));
-                        if (wsAccess) {
-                            layerExceptions.add(Predicates.not(prefixedNameFilter));
-                        } else {
-                            layerExceptions.add(prefixedNameFilter);
-                        }
-                    }
-                }
-
-                Filter wsFilter = null;
-                if (rootAccess && !wsAccess) {
-                    wsFilter = Predicates.notEqual(wsNameProperty, wsName);
-                } else if (!rootAccess && wsAccess) {
-                    wsFilter = Predicates.equal(wsNameProperty, wsName);
-                }
-
-                if (layerExceptions.isEmpty()) {
-                    if (wsFilter != null) {
-                        exceptions.add(wsFilter);
-                    }
-                } else {
-                    if (wsFilter != null) {
-                        layerExceptions.add(wsFilter);
-                    }
-                    Filter combined =
-                            wsAccess
-                                    ? Predicates.and(layerExceptions)
-                                    : Predicates.or(layerExceptions);
-                    exceptions.add(combined);
-                }
-            }
-
-            if (exceptions.isEmpty()) {
-                return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
-            } else {
-                return rootAccess ? Predicates.and(exceptions) : Predicates.or(exceptions);
+                return buildInFunctionResourceFilter(user, clazz);
             }
         } else if (StyleInfo.class.isAssignableFrom(clazz)
                 || LayerGroupInfo.class.isAssignableFrom(clazz)) {
@@ -649,6 +587,190 @@ public class DefaultResourceAccessManager implements ResourceAccessManager {
         } else {
             // for the other types we have no clue, use the in memory filtering
             return InMemorySecurityFilter.buildUserAccessFilter(this, user);
+        }
+    }
+
+    private Filter buildEqualityResourceFilter(
+            Authentication user, Class<? extends CatalogInfo> clazz) {
+        // base access
+        boolean rootAccess = canAccess(user, root);
+        List<Filter> exceptions = new ArrayList<>();
+
+        // workspace exceptions
+        for (Map.Entry<String, SecureTreeNode> wsEntry : root.getChildren().entrySet()) {
+            String wsName = wsEntry.getKey();
+            SecureTreeNode wsNode = wsEntry.getValue();
+            boolean wsAccess = canAccess(user, wsNode);
+
+            List<Filter> layerExceptions = new ArrayList<>();
+            for (Map.Entry<String, SecureTreeNode> layerEntry : wsNode.getChildren().entrySet()) {
+                String layerName = layerEntry.getKey();
+                SecureTreeNode layerNode = layerEntry.getValue();
+                String prefixedName = wsName + ":" + layerName;
+                Filter typeFilter = getTypeFilter(prefixedName, clazz);
+                if (typeFilter == null) {
+                    // dangling rule, referencing a non existing layer/group, continue
+                    continue;
+                }
+
+                boolean layerAccess = canAccess(user, layerNode);
+                if (layerAccess != wsAccess) {
+                    Filter prefixedNameFilter =
+                            Predicates.and(
+                                    typeFilter, Predicates.equal("prefixedName", prefixedName));
+                    if (wsAccess) {
+                        layerExceptions.add(Predicates.not(prefixedNameFilter));
+                    } else {
+                        layerExceptions.add(prefixedNameFilter);
+                    }
+                }
+            }
+
+            // get the right ws property name
+            Filter wsNamePropertyFilter;
+            if (LayerGroupInfo.class.isAssignableFrom(clazz)) {
+                // resource.store.workspace.name is not applicable for layergroups
+                wsNamePropertyFilter = Predicates.equal("workspace.name", wsName);
+            } else if (LayerInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter = Predicates.equal("resource.store.workspace.name", wsName);
+            } else if (PublishedInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter =
+                        Predicates.or(
+                                Predicates.and(
+                                        Predicates.isInstanceOf(LayerInfo.class),
+                                        Predicates.equal("resource.store.workspace.name", wsName)),
+                                Predicates.and(
+                                        Predicates.isInstanceOf(PublishedInfo.class),
+                                        Predicates.equal("workspace.name", wsName)));
+            } else {
+                wsNamePropertyFilter = Predicates.equal("store.workspace.name", wsName);
+            }
+
+            Filter wsFilter = null;
+            if (rootAccess && !wsAccess) {
+                wsFilter = Predicates.not(wsNamePropertyFilter);
+            } else if (!rootAccess && wsAccess) {
+                wsFilter = wsNamePropertyFilter;
+            }
+
+            if (layerExceptions.isEmpty()) {
+                if (wsFilter != null) {
+                    exceptions.add(wsFilter);
+                }
+            } else {
+                if (wsFilter != null) {
+                    layerExceptions.add(wsFilter);
+                }
+                Filter combined =
+                        wsAccess ? Predicates.and(layerExceptions) : Predicates.or(layerExceptions);
+                exceptions.add(combined);
+            }
+        }
+
+        if (exceptions.isEmpty()) {
+            return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
+        } else {
+            return rootAccess ? Predicates.and(exceptions) : Predicates.or(exceptions);
+        }
+    }
+
+    protected Filter buildInFunctionResourceFilter(
+            Authentication user, Class<? extends CatalogInfo> clazz) {
+        // base access
+        boolean rootAccess = canAccess(user, root);
+
+        List<Filter> filters = new ArrayList<>();
+        // workspace exceptions
+        for (Map.Entry<String, SecureTreeNode> wsEntry : root.getChildren().entrySet()) {
+            String wsName = wsEntry.getKey();
+            if (rawCatalog.getWorkspaceByName(wsName) == null) {
+                // dangling rule, workspace does not exist, skip it
+                continue;
+            }
+            SecureTreeNode wsNode = wsEntry.getValue();
+            boolean wsAccess = canAccess(user, wsNode);
+
+            List<String> layerExceptionIds = new ArrayList<>();
+            for (Map.Entry<String, SecureTreeNode> layerEntry : wsNode.getChildren().entrySet()) {
+                String layerName = layerEntry.getKey();
+                SecureTreeNode layerNode = layerEntry.getValue();
+                String prefixedName = wsName + ":" + layerName;
+                PublishedInfo published = rawCatalog.getLayerByName(prefixedName);
+                if (published == null) {
+                    published = rawCatalog.getLayerGroupByName(prefixedName);
+                    if (published == null) {
+                        // dangling rule, referencing a non-existing layer/group, continue
+                        continue;
+                    }
+                }
+                boolean layerAccess = canAccess(user, layerNode);
+                if (layerAccess != wsAccess) {
+                    if (ResourceInfo.class.isAssignableFrom(clazz)
+                            && published instanceof LayerInfo) {
+                        layerExceptionIds.add(((LayerInfo) published).getResource().getId());
+                    } else {
+                        layerExceptionIds.add(published.getId());
+                    }
+                }
+            }
+
+            // get the right ws property name
+            Filter wsNamePropertyFilter;
+            if (LayerGroupInfo.class.isAssignableFrom(clazz)) {
+                // resource.store.workspace.name is not applicable for layergroups
+                wsNamePropertyFilter = Predicates.equal("workspace.name", wsName);
+            } else if (LayerInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter = Predicates.equal("resource.store.workspace.name", wsName);
+            } else if (PublishedInfo.class.isAssignableFrom(clazz)) {
+                wsNamePropertyFilter =
+                        Predicates.or(
+                                Predicates.and(
+                                        Predicates.isInstanceOf(LayerInfo.class),
+                                        Predicates.equal("resource.store.workspace.name", wsName)),
+                                Predicates.and(
+                                        Predicates.isInstanceOf(PublishedInfo.class),
+                                        Predicates.equal("workspace.name", wsName)));
+            } else {
+                wsNamePropertyFilter = Predicates.equal("store.workspace.name", wsName);
+            }
+
+            // need to set up a wsFilter if the workspace is an exception compared to the root
+            Filter wsFilter = null;
+            if (rootAccess && !wsAccess) {
+                wsFilter = Predicates.not(wsNamePropertyFilter);
+            } else if (!rootAccess && wsAccess) {
+                wsFilter = wsNamePropertyFilter;
+            }
+
+            if (layerExceptionIds.isEmpty()) {
+                if (wsFilter != null) {
+                    filters.add(wsFilter);
+                }
+            } else {
+                Filter id = Predicates.in("id", layerExceptionIds);
+
+                // if we can access the workspace, the ids are the ones we want to exclude,
+                // otherwise, the ids are the ones we want to make an exception for instead
+                if (wsAccess) {
+                    id = Predicates.not(id);
+                }
+                if (wsFilter != null) {
+                    if (wsAccess)
+                        // ws is the one, but exclude selected layers in it
+                        filters.add(Predicates.and(wsFilter, id));
+                    else
+                        // ws is not the one, but make an exception for selected layers in it
+                        filters.add(Predicates.or(wsFilter, id));
+                } else {
+                    filters.add(id);
+                }
+            }
+        }
+
+        if (filters.isEmpty()) {
+            return rootAccess ? Filter.INCLUDE : Filter.EXCLUDE;
+        } else {
+            return rootAccess ? Predicates.and(filters) : Predicates.or(filters);
         }
     }
 

@@ -5,8 +5,8 @@
  */
 package org.geoserver.security;
 
+import org.geotools.api.filter.Filter;
 import org.locationtech.jts.geom.MultiPolygon;
-import org.opengis.filter.Filter;
 
 /**
  * Describes access limits on a cascaded WMS layer
@@ -41,9 +41,17 @@ public class WMSAccessLimits extends DataAccessLimits {
         return rasterFilter;
     }
 
+    public void setRasterFilter(MultiPolygon rasterFilter) {
+        this.rasterFilter = rasterFilter;
+    }
+
     /** Wheter to allow GetFeatureInfo cascading or not */
     public boolean isAllowFeatureInfo() {
         return allowFeatureInfo;
+    }
+
+    public void setAllowFeatureInfo(boolean allowFeatureInfo) {
+        this.allowFeatureInfo = allowFeatureInfo;
     }
 
     @Override

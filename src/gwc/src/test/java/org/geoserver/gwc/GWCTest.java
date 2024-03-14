@@ -100,6 +100,7 @@ import org.geoserver.wms.WebMap;
 import org.geoserver.wms.WebMapService;
 import org.geoserver.wms.kvp.PaletteManager;
 import org.geoserver.wms.map.RawMap;
+import org.geotools.api.filter.Filter;
 import org.geotools.filter.identity.FeatureIdImpl;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -147,7 +148,6 @@ import org.junit.Test;
 import org.locationtech.jts.geom.Envelope;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
-import org.opengis.filter.Filter;
 import org.springframework.context.ApplicationContext;
 
 /** Unit test suite for the {@link GWC} mediator. */
@@ -219,7 +219,7 @@ public class GWCTest {
     public void setUp() throws Exception {
 
         System.setProperty("ALLOW_ENV_PARAMETRIZATION", "true");
-        System.setProperty("TEST_ENV_PROPERTY", "H2");
+        System.setProperty("TEST_ENV_PROPERTY", "HSQL");
 
         catalog = mock(Catalog.class);
         layer = mockLayer("testLayer", new String[] {"style1", "style2"}, PublishedType.RASTER);
@@ -378,7 +378,7 @@ public class GWCTest {
         if (GeoWebCacheEnvironment.ALLOW_ENV_PARAMETRIZATION) {
             jdbcConfiguration.setDialect("${TEST_ENV_PROPERTY}");
         } else {
-            jdbcConfiguration.setDialect("H2");
+            jdbcConfiguration.setDialect("HSQL");
         }
         File jdbcConfigurationFile =
                 File.createTempFile("jdbcConfigurationFile", ".tmp", tmpDir().dir());
@@ -1628,7 +1628,7 @@ public class GWCTest {
     @Test
     public void testGeoServerEnvParametrization() throws Exception {
         if (GeoServerEnvironment.allowEnvParametrization()) {
-            assertEquals("H2", jdbcStorage.getJDBCDiskQuotaConfig().clone(true).getDialect());
+            assertEquals("HSQL", jdbcStorage.getJDBCDiskQuotaConfig().clone(true).getDialect());
         }
     }
 

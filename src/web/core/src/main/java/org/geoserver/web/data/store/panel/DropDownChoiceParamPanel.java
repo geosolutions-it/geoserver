@@ -7,6 +7,7 @@ package org.geoserver.web.data.store.panel;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.UUID;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.validation.FormComponentFeedbackBorder;
@@ -42,6 +43,8 @@ public class DropDownChoiceParamPanel extends Panel implements ParamPanel<Serial
         add(label);
 
         choice = new Select2DropDownChoice<>("paramValue", paramValue, options);
+        choice.setOutputMarkupId(true);
+        choice.setMarkupId(select2UniqueIdentifier());
         choice.setRequired(required);
         if (!required) {
             choice.setNullValid(true);
@@ -50,6 +53,15 @@ public class DropDownChoiceParamPanel extends Panel implements ParamPanel<Serial
         FormComponentFeedbackBorder feedback = new FormComponentFeedbackBorder("border");
         feedback.add(choice);
         add(feedback);
+    }
+
+    /**
+     * Select2 javascript code needs a unique HTML id for each component. This method generates a
+     * unique id for the component using the component's markup id and a random UUID.
+     */
+    private String select2UniqueIdentifier() {
+        UUID randomUUID = UUID.randomUUID();
+        return "paramValue" + randomUUID.toString().replaceAll("_", "");
     }
 
     @Override

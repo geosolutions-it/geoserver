@@ -6,6 +6,7 @@
 package org.geoserver.wms.map;
 
 import static org.geoserver.catalog.LayerGroupHelper.isSingleOrOpaque;
+import static org.geoserver.platform.ServiceException.INVALID_PARAMETER_VALUE;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -60,6 +61,7 @@ import org.geoserver.config.ServiceInfo;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.KvpRequestReader;
 import org.geoserver.ows.util.KvpUtils;
+import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.util.EntityResolverProvider;
 import org.geoserver.wms.CacheConfiguration;
@@ -70,29 +72,31 @@ import org.geoserver.wms.WMSErrorCode;
 import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.capabilities.CapabilityUtil;
 import org.geoserver.wms.clip.ClipWMSGetMapCallBack;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.Id;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.filter.identity.FeatureId;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.style.FeatureTypeStyle;
+import org.geotools.api.style.NamedLayer;
+import org.geotools.api.style.NamedStyle;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.StyledLayer;
+import org.geotools.api.style.StyledLayerDescriptor;
+import org.geotools.api.style.UserLayer;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.data.DataStore;
-import org.geotools.data.simple.SimpleFeatureSource;
+import org.geotools.data.ows.URLCheckerException;
+import org.geotools.data.ows.URLCheckers;
 import org.geotools.data.wfs.WFSDataStoreFactory;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.referencing.CRS;
 import org.geotools.renderer.style.StyleAttributeExtractor;
-import org.geotools.styling.FeatureTypeStyle;
-import org.geotools.styling.NamedLayer;
-import org.geotools.styling.NamedStyle;
-import org.geotools.styling.Style;
-import org.geotools.styling.StyledLayer;
-import org.geotools.styling.StyledLayerDescriptor;
-import org.geotools.styling.UserLayer;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.Id;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.identity.FeatureId;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.lang.Nullable;
 import org.vfny.geoserver.util.Requests;
@@ -459,7 +463,7 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
         // check the view params
         List<Map<String, String>> viewParams = getMap.getViewParams();
         if (viewParams != null && !viewParams.isEmpty()) {
-            applyViewParams(getMap, viewParams);
+            applyViewParams(getMap, viewParams, requestedLayerInfos);
         }
 
         // check if layers have time/elevation support
@@ -550,17 +554,38 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
         }
     }
 
-    private void applyViewParams(GetMapRequest getMap, List<Map<String, String>> viewParams) {
+    private void applyViewParams(
+            GetMapRequest getMap,
+            List<Map<String, String>> viewParams,
+            List<Object> requestedLayerInfos) {
         int layerCount = getMap.getLayers().size();
+        if (viewParams.size() == layerCount) return;
 
-        // if we have just one replicate over all layers
+        List<Map<String, String>> replacement = new ArrayList<>();
         if (viewParams.size() == 1 && layerCount > 1) {
-            List<Map<String, String>> replacement = new ArrayList<>();
+            // if we have just one replicate over all layers
             for (int i = 0; i < layerCount; i++) {
                 replacement.add(viewParams.get(0));
             }
-            getMap.setViewParams(replacement);
-        } else if (viewParams.size() != layerCount) {
+        } else {
+            // expand based on group/layer/other
+            for (int i = 0; i < requestedLayerInfos.size(); i++) {
+                Object o = requestedLayerInfos.get(i);
+                Map<String, String> layerParams = viewParams.get(i);
+                if (o instanceof LayerGroupInfo) {
+                    LayerGroupInfo groupInfo = (LayerGroupInfo) o;
+                    List<LayerInfo> layers = groupInfo.layers();
+                    if (layers != null) layers.stream().forEach(l -> replacement.add(layerParams));
+                } else {
+                    replacement.add(layerParams);
+                }
+            }
+        }
+        getMap.setViewParams(replacement);
+
+        // final check, did we re-align? otherwiser report based on original list,
+        // that is, what the user actually provided
+        if (replacement.size() != layerCount) {
             String msg =
                     layerCount
                             + " layers requested, but found "
@@ -568,6 +593,9 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
                             + " view params specified. ";
             throw new ServiceException(msg, getClass().getName());
         }
+
+        // update view params
+
     }
 
     @SuppressWarnings("PMD.ForLoopCanBeForeach")
@@ -780,6 +808,13 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
             LOGGER.fine("Getting layers and styles from reomte SLD");
         }
 
+        // check we can actually connect to server, throw an exception with locator otherwise
+        try {
+            URLCheckers.confirm(getMap.getSld());
+        } catch (URLCheckerException e) {
+            throw new ServiceException(
+                    "Invalid SLD URL: " + getMap.getSld(), e, INVALID_PARAMETER_VALUE, "sld");
+        }
         try (InputStream input = getStream(getMap)) {
             if (input != null) {
                 try (InputStreamReader reader = new InputStreamReader(input)) {
@@ -847,20 +882,20 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
     }
 
     private void parseCRS(GetMapRequest getMap) {
-        String epsgCode = getMap.getSRS();
-        epsgCode = WMS.toInternalSRS(epsgCode, WMS.version(getMap.getVersion()));
-        getMap.setSRS(epsgCode);
+        String srs = getMap.getSRS();
+        srs = WMS.toInternalSRS(srs, WMS.version(getMap.getVersion()));
+        getMap.setSRS(srs);
 
-        if (epsgCode != null) {
+        if (srs != null) {
             try {
                 // set the crs as well
-                CoordinateReferenceSystem mapcrs = CRS.decode(epsgCode);
+                CoordinateReferenceSystem mapcrs = CRS.decode(srs);
                 getMap.setCrs(mapcrs);
             } catch (Exception e) {
                 // couldnt make it - we send off a service exception with the
                 // correct info
                 throw new ServiceException(
-                        "Error occurred decoding the espg code " + epsgCode,
+                        "Error occurred decoding the espg code " + srs,
                         e,
                         WMSErrorCode.INVALID_CRS.get(getMap.getVersion()));
             }
@@ -869,12 +904,11 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
 
     private InputStream getStream(GetMapRequest getMap) throws IOException {
         URL styleUrl = getMap.getStyleUrl().toURL();
-        InputStream input;
         if (styleUrl.getProtocol().toLowerCase().indexOf("http") == 0) {
-            input = getHttpInputStream(styleUrl, getMap.getHttpRequestHeader("Authorization"));
+            return getHttpInputStream(styleUrl, getMap.getHttpRequestHeader("Authorization"));
         } else {
             try {
-                input = Requests.getInputStream(styleUrl);
+                return Requests.getInputStream(styleUrl);
             } catch (Exception ex) {
                 LOGGER.log(Level.WARNING, "Exception while getting SLD.", ex);
                 // KMS: Replace with a generic exception so it can't be used to port scan the
@@ -883,7 +917,6 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
                 throw new ServiceException("Error while getting SLD.");
             }
         }
-        return input;
     }
 
     private InputStream getHttpInputStream(URL styleUrl, String authorizationHeader)
@@ -1514,50 +1547,6 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
                 layersOrGroups.add(layerGroup);
             }
         }
-        // pre GEOS-2652
-        // Integer layerType = catalog.getLayerType(layerName);
-        // if (layerType != null) {
-        // layers.add(buildMapLayerInfo(layerName));
-        // } else {
-        // if(wms.getBaseMapLayers().containsKey(layerName)) {
-        // layers.add(buildMapLayerInfo(layerName));
-        // } else {
-        // ////
-        // // Search for grouped layers (attention: heavy process)
-        // ////
-        // boolean found = false;
-        // String catalogLayerName = null;
-        //
-        // for (Iterator c_keys = catalog.getLayerNames().iterator(); c_keys.hasNext();) {
-        // catalogLayerName = (String) c_keys.next();
-        //
-        // try {
-        // FeatureTypeInfo ftype = findFeatureLayer(catalogLayerName);
-        // String wmsPath = ftype.getWmsPath();
-        //
-        // if ((wmsPath != null) && wmsPath.matches(".*/" + layerName)) {
-        // layers.add(buildMapLayerInfo(catalogLayerName));
-        // found = true;
-        // }
-        // } catch (Exception e_1) {
-        // try {
-        // CoverageInfo cv = findCoverageLayer(catalogLayerName);
-        // String wmsPath = cv.getWmsPath();
-        //
-        // if ((wmsPath != null) && wmsPath.matches(".*/" + layerName)) {
-        // layers.add(buildMapLayerInfo(catalogLayerName));
-        // found = true;
-        // }
-        // } catch (Exception e_2) {
-        // }
-        // }
-        // }
-        // if(!found)
-        // throw new ServiceException("Could not find layer " + layerName,"LayerNotDefined");
-        // }
-
-        // }
-        // }
 
         if (layersOrGroups.isEmpty()) {
             throw new ServiceException("No LAYERS has been requested", getClass().getName());
@@ -1566,12 +1555,21 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
     }
 
     private static DataStore connectRemoteWFS(URL remoteOwsUrl) throws ServiceException {
+        // check we can actually connect to server, throw an exception with locator otherwise
+        try {
+            URLCheckers.confirm(remoteOwsUrl);
+        } catch (URLCheckerException e) {
+            String msg = "Invalid remote URL: " + remoteOwsUrl;
+            throw new ServiceException(msg, e, INVALID_PARAMETER_VALUE, "REMOTE_OWS_URL");
+        }
+
         try {
             WFSDataStoreFactory factory = new WFSDataStoreFactory();
             Map<String, Object> params = new HashMap<>();
             params.put(
                     WFSDataStoreFactory.URL.key,
-                    remoteOwsUrl + "&request=GetCapabilities&service=WFS");
+                    ResponseUtils.appendQueryString(
+                            remoteOwsUrl.toExternalForm(), "REQUEST=GetCapabilities&SERVICE=WFS"));
             params.put(WFSDataStoreFactory.TRY_GZIP.key, Boolean.TRUE);
             return factory.createDataStore(params);
         } catch (Exception e) {

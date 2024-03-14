@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- 
+<!--
  Copyright (C) 2014 - Open Source Geospatial Foundation. All rights reserved.
  This code is licensed under the GPL 2.0 license, available at the root
  application directory.
@@ -46,7 +46,6 @@
           <descriptors>
             <descriptor>release/ext-jdbcconfig.xml</descriptor>
             <descriptor>release/ext-dds.xml</descriptor>
-            <descriptor>release/ext-wms-eo.xml</descriptor>
             <descriptor>release/ext-colormap.xml</descriptor>
             <descriptor>release/ext-mbtiles.xml</descriptor>
             <descriptor>release/ext-mbtiles-store.xml</descriptor>
@@ -55,6 +54,7 @@
             <descriptor>release/ext-dyndimension.xml</descriptor>
             <descriptor>release/ext-flatgeobuf.xml</descriptor>
             <descriptor>release/ext-spatialjson.xml</descriptor>
+            <descriptor>release/ext-webp.xml</descriptor>
             <descriptor>release/ext-gpx.xml</descriptor>
             <descriptor>release/ext-jms-cluster.xml</descriptor>
             <descriptor>release/ext-hz-cluster.xml</descriptor>
@@ -75,25 +75,25 @@
             <descriptor>release/ext-oauth2-openid-connect.xml</descriptor>
             <descriptor>release/ext-keycloak.xml</descriptor>
             <descriptor>release/ext-backup-restore.xml</descriptor>
-            <descriptor>release/ext-saml.xml</descriptor>
             <descriptor>release/ext-notification.xml</descriptor>
-            <descriptor>release/ext-ows-simulate.xml</descriptor>
             <descriptor>release/ext-jdbc-metrics.xml</descriptor>
             <descriptor>release/ext-opensearch-eo.xml</descriptor>
-            <descriptor>release/ext-nsg-wmts-profile.xml</descriptor>
             <descriptor>release/ext-taskmanager-core.xml</descriptor>
             <descriptor>release/ext-taskmanager-s3.xml</descriptor>
             <descriptor>release/ext-netcdf-ghrsst.xml</descriptor>
             <descriptor>release/ext-cog.xml</descriptor>
             <descriptor>release/ext-s3-geotiff.xml</descriptor>
-            <descriptor>release/ext-wmts-styles.xml</descriptor>
             <descriptor>release/ext-ogr-datastore.xml</descriptor>
-            <descriptor>release/ext-ogcapi.xml</descriptor>
-            <descriptor>release/ext-geostyler.xml</descriptor>
-            <descriptor>release/ext-csw-iso.xml</descriptor>
+            <descriptor>release/ext-ogcapi-coverages.xml</descriptor>
+            <descriptor>release/ext-ogcapi-dggs.xml</descriptor>
+            <descriptor>release/ext-ogcapi-features.xml</descriptor>
+            <descriptor>release/ext-ogcapi-images.xml</descriptor>
+            <descriptor>release/ext-ogcapi-maps.xml</descriptor>
+            <descriptor>release/ext-ogcapi-styles.xml</descriptor>
+            <descriptor>release/ext-ogcapi-tiled-features.xml</descriptor>
+            <descriptor>release/ext-ogcapi-tiles.xml</descriptor>
             <descriptor>release/ext-importer-jdbc.xml</descriptor>
             <descriptor>release/ext-features-templating.xml</descriptor>
-            <descriptor>release/ext-metadata.xml</descriptor>
             <descriptor>release/ext-gsr.xml</descriptor>
             <descriptor>release/ext-smart-data-loader.xml</descriptor>
             <descriptor>release/ext-cov-json.xml</descriptor>
@@ -101,9 +101,16 @@
             <descriptor>release/ext-web-service-auth.xml</descriptor>
             <descriptor>release/ext-gwc-mbtiles.xml</descriptor>
             <descriptor>release/ext-vsi.xml</descriptor>
-            <descriptor>release/ext-teradata.xml</descriptor>
             <descriptor>release/ext-libdeflate.xml</descriptor>
+            <descriptor>release/ext-stac-datastore.xml</descriptor>
+            <descriptor>release/ext-vector-mosaic-datastore.xml</descriptor>
+            <descriptor>release/ext-proxy-base-ext.xml</descriptor>
+            <descriptor>release/ext-imagemap.xml</descriptor>
+            <descriptor>release/ext-xslt.xml</descriptor>
+            <descriptor>release/ext-datadir-catalog-loader.xml</descriptor>
+            <descriptor>release/ext-wps-longitudinal-profile.xml</descriptor>
           </descriptors>
+          <finalName>geoserver-${project.version}</finalName>
         </configuration>
       </plugin>
       <plugin>
@@ -181,12 +188,6 @@
       </modules>
     </profile>
     <profile>
-      <id>saml</id>
-      <modules>
-        <module>saml</module>
-      </modules>
-    </profile>
-    <profile>
       <id>notification</id>
       <modules>
         <module>notification-common</module>
@@ -200,17 +201,10 @@
       </modules>
     </profile>
     <profile>
-      <id>geostyler</id>
-      <modules>
-        <module>geostyler</module>
-      </modules>
-    </profile>
-    <profile>
       <id>communityRelease</id>
       <modules>
         <module>dds</module>
         <module>jdbcconfig</module>
-        <module>wms-eo</module>
         <module>colormap</module>
         <module>mbtiles</module>
         <module>geopkg</module>
@@ -218,6 +212,7 @@
         <module>dyndimension</module>
         <module>flatgeobuf</module>
         <module>spatialjson</module>
+        <module>webp</module>
         <module>gpxppio</module>
         <module>jms-cluster</module>
         <module>hz-cluster</module>
@@ -232,24 +227,17 @@
         <module>backup-restore</module>
         <module>ncwms</module>
         <module>gwc-sqlite</module>
-        <module>geostyler</module>
         <module>security</module>
-        <module>wmts-styles</module>
-        <module>saml</module>
         <module>notification</module>
         <module>notification-common</module>
         <module>notification-geonode</module>
-        <module>ows-simulate</module>
         <module>jdbc-metrics</module>
         <module>oseo</module>
         <module>s3-geotiff</module>
-        <module>nsg-profiles</module>
         <module>netcdf-ghrsst</module>
         <module>taskmanager</module>
         <module>web-ogr</module>
         <module>ogcapi</module>
-        <module>metadata</module>
-        <module>csw-iso</module>
         <module>importer-jdbc</module>
         <module>features-templating</module>
         <module>gsr</module>
@@ -261,8 +249,13 @@
         <module>web-service-auth</module>
         <module>gwc-mbtiles</module>
         <module>vsi</module>
-        <module>teradata</module>
         <module>libdeflate</module>
+        <module>vector-mosaic</module>
+        <module>proxy-base-ext</module>
+        <module>xslt</module>
+        <module>imagemap</module>
+        <module>datadir-catalog-loader</module>
+        <module>wps-longitudinal-profile</module>
       </modules>
     </profile>
     <profile>
@@ -287,23 +280,6 @@
       </activation>
       <modules>
         <module>pgraster</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>wms-eo</id>
-      <activation>
-        <property>
-          <name>wms-eo</name>
-        </property>
-      </activation>
-      <modules>
-        <module>wms-eo</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>importer-fgdb</id>
-      <modules>
-        <module>importer-fgdb</module>
       </modules>
     </profile>
     <profile>
@@ -340,6 +316,12 @@
       <id>spatialjson</id>
       <modules>
         <module>spatialjson</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>webp</id>
+      <modules>
+        <module>webp</module>
       </modules>
     </profile>
     <profile>
@@ -524,18 +506,6 @@
       </modules>
     </profile>
     <profile>
-      <id>wmts-styles</id>
-      <modules>
-        <module>wmts-styles</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>ows-simulate</id>
-      <modules>
-        <module>ows-simulate</module>
-      </modules>
-    </profile>
-    <profile>
       <id>oseo</id>
       <modules>
         <module>oseo</module>
@@ -551,12 +521,6 @@
       <id>s3-geotiff</id>
       <modules>
         <module>s3-geotiff</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>nsg-wmts-profile</id>
-      <modules>
-        <module>nsg-profiles</module>
       </modules>
     </profile>
     <profile>
@@ -596,12 +560,6 @@
       </modules>
     </profile>
     <profile>
-      <id>metadata</id>
-      <modules>
-        <module>metadata</module>
-      </modules>
-    </profile>
-    <profile>
       <id>monitor-hibernate</id>
       <build>
         <plugins>
@@ -630,12 +588,6 @@
       <id>ogcapi</id>
       <modules>
         <module>ogcapi</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>csw-iso</id>
-      <modules>
-        <module>csw-iso</module>
       </modules>
     </profile>
     <profile>
@@ -693,15 +645,45 @@
       </modules>
     </profile>
     <profile>
-      <id>teradata</id>
-      <modules>
-        <module>teradata</module>
-      </modules>
-    </profile>
-    <profile>
       <id>libdeflate</id>
       <modules>
         <module>libdeflate</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>vector-mosaic</id>
+      <modules>
+        <module>vector-mosaic</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>proxy-base-ext</id>
+      <modules>
+        <module>proxy-base-ext</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>xslt</id>
+      <modules>
+        <module>xslt</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>imagemap</id>
+      <modules>
+        <module>imagemap</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>datadir-catalog-loader</id>
+      <modules>
+        <module>datadir-catalog-loader</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>wps-longitudinal-profile</id>
+      <modules>
+        <module>wps-longitudinal-profile</module>
       </modules>
     </profile>
   </profiles>

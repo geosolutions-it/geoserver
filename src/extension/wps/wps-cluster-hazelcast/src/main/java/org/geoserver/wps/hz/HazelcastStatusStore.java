@@ -6,12 +6,12 @@ package org.geoserver.wps.hz;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceAware;
-import com.hazelcast.core.IMap;
-import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.PagingPredicate;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.query.TruePredicate;
+import com.hazelcast.query.impl.predicates.PagingPredicateImpl;
+import com.hazelcast.query.impl.predicates.TruePredicate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -26,17 +26,17 @@ import org.geoserver.wps.ProcessStatusStore;
 import org.geoserver.wps.WPSException;
 import org.geoserver.wps.executor.ExecutionStatus;
 import org.geoserver.wps.executor.ProcessState;
-import org.geotools.data.Query;
+import org.geotools.api.data.Query;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.filter.sort.SortOrder;
+import org.geotools.api.filter.temporal.After;
+import org.geotools.api.filter.temporal.Before;
 import org.geotools.filter.FilterCapabilities;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.text.ecql.ECQL;
 import org.geotools.filter.visitor.PostPreProcessFilterSplittingVisitor;
 import org.geotools.util.logging.Logging;
-import org.opengis.filter.Filter;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.filter.sort.SortOrder;
-import org.opengis.filter.temporal.After;
-import org.opengis.filter.temporal.Before;
 
 /**
  * A Hazelcast based implementation of the {@link ProcessStatusStore} interface
@@ -124,7 +124,7 @@ public class HazelcastStatusStore implements ProcessStatusStore {
         }
 
         FilterPredicate filterPredicate = new FilterPredicate(filter);
-        Predicate predicate = filterPredicate.predicate;
+        Predicate<String, ExecutionStatus> predicate = filterPredicate.predicate;
         Filter postFilter = filterPredicate.postFilter;
 
         Map<String, Object> results =
@@ -140,7 +140,7 @@ public class HazelcastStatusStore implements ProcessStatusStore {
         int startIndex = query.getStartIndex() == null ? 0 : query.getStartIndex();
         boolean needsSorting = query.getSortBy() != null && query.getSortBy().length > 0;
         FilterPredicate filterPredicate = new FilterPredicate(query.getFilter());
-        Predicate predicate = filterPredicate.predicate;
+        Predicate<String, ExecutionStatus> predicate = filterPredicate.predicate;
         Filter postFilter = filterPredicate.postFilter;
 
         // Two cases here: if we have post-filtering we are going to run an entry processor,
@@ -162,9 +162,9 @@ public class HazelcastStatusStore implements ProcessStatusStore {
                     pagingComparator = getComparator("value.", query.getSortBy());
                 }
                 if (pagingComparator != null) {
-                    predicate = new PagingPredicate(predicate, pagingComparator, maxFeatures);
+                    predicate = new PagingPredicateImpl(predicate, pagingComparator, maxFeatures);
                 } else {
-                    predicate = new PagingPredicate(predicate, maxFeatures);
+                    predicate = new PagingPredicateImpl(predicate, maxFeatures);
                 }
             }
 
@@ -298,7 +298,7 @@ public class HazelcastStatusStore implements ProcessStatusStore {
      * serializable
      */
     private abstract static class AbstractFilteringEntryProcessor
-            implements EntryProcessor<String, ExecutionStatus> {
+            implements EntryProcessor<String, ExecutionStatus, Object> {
         private static final long serialVersionUID = -912785821605141531L;
 
         transient Filter filter;
@@ -311,7 +311,7 @@ public class HazelcastStatusStore implements ProcessStatusStore {
         }
 
         @Override
-        public EntryBackupProcessor<String, ExecutionStatus> getBackupProcessor() {
+        public EntryProcessor<String, ExecutionStatus, Object> getBackupProcessor() {
             return null;
         }
 

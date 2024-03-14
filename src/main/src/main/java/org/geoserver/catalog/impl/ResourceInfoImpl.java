@@ -8,6 +8,7 @@ package org.geoserver.catalog.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.catalog.Catalog;
@@ -20,15 +21,14 @@ import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.util.InternationalStringUtils;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.util.InternationalString;
 import org.geotools.feature.NameImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.logging.Logging;
-import org.locationtech.jts.geom.Envelope;
-import org.opengis.feature.type.Name;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.util.InternationalString;
 
 /** Default implementation of {@link ResourceInfo}. */
 @SuppressWarnings("serial")
@@ -241,30 +241,70 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
         CoordinateReferenceSystem nativeCRS = getNativeCRS();
         ProjectionPolicy php = getProjectionPolicy();
 
-        ReferencedEnvelope nativeBox = this.nativeBoundingBox;
+        ReferencedEnvelope nativeBox = getNativeBoundingBox();
         if (nativeBox == null) {
             // back project from lat lon
             try {
-                nativeBox = getLatLonBoundingBox().transform(declaredCRS, true);
+                if (declaredCRS != null) {
+                    nativeBox = getLatLonBoundingBox().transform(declaredCRS, true);
+                } else {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Failed to derive native bbox, there is no declared CRS provided");
+                    return null;
+                }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Failed to derive native bbox from declared one", e);
                 return null;
             }
+        } else if (nativeBox.getCoordinateReferenceSystem() == null) {
+            if (nativeCRS != null) {
+                // Ensure provided nativeBox using nativeCRS
+                nativeBox = ReferencedEnvelope.create(nativeBox, nativeCRS);
+            }
+        } else if (nativeCRS != null
+                && !CRS.equalsIgnoreMetadata(nativeBox.getCoordinateReferenceSystem(), nativeCRS)) {
+            LOGGER.log(Level.FINE, "The native bounding box srs does not match native crs");
         }
 
-        ReferencedEnvelope result;
-        if (!CRS.equalsIgnoreMetadata(declaredCRS, nativeCRS)
-                && php == ProjectionPolicy.REPROJECT_TO_DECLARED) {
-            result = nativeBox.transform(declaredCRS, true);
+        //
+        if (php == ProjectionPolicy.REPROJECT_TO_DECLARED
+                && (!CRS.equalsIgnoreMetadata(declaredCRS, nativeCRS)
+                        || !nativeCRSHasIdentifiers(nativeCRS))) {
+            if (nativeBox.getCoordinateReferenceSystem() == null) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to reproject to declared crs (native bounding box srs and native crs are not defined)");
+                return null;
+            }
+            // transform below makes a copy, in no case the actual field value is returned to the
+            // client, this is not a getter, it's a derivative, thus ModificationProxy won't do
+            // a copy on its own
+            return nativeBox.transform(declaredCRS, true);
         } else if (php == ProjectionPolicy.FORCE_DECLARED) {
-            result = ReferencedEnvelope.create((Envelope) nativeBox, declaredCRS);
+            // create below makes a copy, in no case the actual field value is returned to the
+            // client, this is not a getter, it's a derivative, thus ModificationProxy won't do
+            // a copy on its own
+            return ReferencedEnvelope.envelope(nativeBox, declaredCRS);
         } else {
-            result = nativeBox;
+            if (nativeBox == null || nativeBox.getCoordinateReferenceSystem() == null) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Unable to determine native bounding crs (both native bounding box srs and native crs are not defined)");
+                // return null;
+            }
+            // create below makes a copy, in no case the actual field value is returned to the
+            // client, this is not a getter, it's a derivative, thus ModificationProxy won't do
+            // a copy on its own
+            return ReferencedEnvelope.create(nativeBox);
         }
+    }
 
-        // make sure that in no case the actual field value is returned to the client, this
-        // is not a getter, it's a derivative, thus ModificationProxy won't do a copy on its own
-        return ReferencedEnvelope.create(result);
+    private static boolean nativeCRSHasIdentifiers(CoordinateReferenceSystem nativeCRS) {
+        return Optional.ofNullable(nativeCRS)
+                .map(CoordinateReferenceSystem::getIdentifiers)
+                .filter(c -> !c.isEmpty())
+                .isPresent();
     }
 
     @Override
@@ -357,7 +397,7 @@ public abstract class ResourceInfoImpl implements ResourceInfo {
             return CRS.decode(getSRS());
         } catch (Exception e) {
             throw new RuntimeException(
-                    "This is unexpected, the layer seems to be mis-configured", e);
+                    "This is unexpected, the layer srs seems to be mis-configured", e);
         }
     }
 

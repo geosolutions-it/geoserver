@@ -5,119 +5,57 @@
  */
 package org.geoserver.web.admin;
 
+import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
+import org.apache.wicket.model.PropertyModel;
+import org.apache.wicket.model.StringResourceModel;
 import org.geoserver.config.ContactInfo;
 import org.geoserver.web.EmailAddressValidator;
+import org.geoserver.web.InternationalStringPanel;
 import org.geoserver.web.StringAndInternationalStringPanel;
 
 public class ContactPanel extends Panel {
 
     public ContactPanel(String id, final IModel<ContactInfo> model) {
         super(id, model);
-        String contactPerson = "contactPerson";
-        add(
-                new StringAndInternationalStringPanel(
-                        contactPerson,
-                        model,
-                        contactPerson,
-                        contactPerson,
-                        "internationalContactPerson",
-                        this));
-        String contactOrg = "contactOrganization";
-        add(
-                new StringAndInternationalStringPanel(
-                        contactOrg,
-                        model,
-                        contactOrg,
-                        contactOrg,
-                        "internationalContactOrganization",
-                        this));
-        String contactPosition = "contactPosition";
-        add(
-                new StringAndInternationalStringPanel(
-                        contactPosition,
-                        model,
-                        contactPosition,
-                        contactPosition,
-                        "internationalContactPosition",
-                        this));
-        String addressType = "addressType";
-        add(
-                new StringAndInternationalStringPanel(
-                        addressType,
-                        model,
-                        addressType,
-                        addressType,
-                        "internationalAddressType",
-                        this));
-        String address = "address";
-        add(
-                new StringAndInternationalStringPanel(
-                        address, model, address, address, "internationalAddress", this, null));
-        String addressDeliveryPt = "addressDeliveryPoint";
-        add(
-                new StringAndInternationalStringPanel(
-                        addressDeliveryPt,
-                        model,
-                        addressDeliveryPt,
-                        addressDeliveryPt,
-                        "internationalAddressDeliveryPoint",
-                        this));
-        String addressCity = "addressCity";
-        add(
-                new StringAndInternationalStringPanel(
-                        addressCity,
-                        model,
-                        addressCity,
-                        addressCity,
-                        "internationalAddressCity",
-                        this));
-        String addressState = "addressState";
-        add(
-                new StringAndInternationalStringPanel(
-                        addressState,
-                        model,
-                        addressState,
-                        addressState,
-                        "internationalAddressState",
-                        this));
-        String addressPostalCode = "addressPostalCode";
-        add(
-                new StringAndInternationalStringPanel(
-                        addressPostalCode,
-                        model,
-                        addressPostalCode,
-                        addressPostalCode,
-                        "internationalAddressPostalCode",
-                        this));
-        String addressCountry = "addressCountry";
-        add(
-                new StringAndInternationalStringPanel(
-                        addressCountry,
-                        model,
-                        addressCountry,
-                        addressCountry,
-                        "internationalAddressCountry",
-                        this));
-        String contactVoice = "contactVoice";
-        add(
-                new StringAndInternationalStringPanel(
-                        contactVoice,
-                        model,
-                        contactVoice,
-                        contactVoice,
-                        "internationalContactVoice",
-                        this));
-        String contactFacsimile = "contactFacsimile";
-        add(
-                new StringAndInternationalStringPanel(
-                        contactFacsimile,
-                        model,
-                        contactFacsimile,
-                        contactFacsimile,
-                        "internationalContactFacsimile",
-                        this));
+        add(new StringAndInternationalStringPanel("contactOrganization", model, this));
+        add(new StringAndInternationalStringPanel("onlineResource", model, this));
+
+        // setup the "welcome" text as either a textarea (non-international)
+        // or as a set of textareas (international).
+        WebMarkupContainer abstractLabelContainer = new WebMarkupContainer("welcomeLabel");
+        abstractLabelContainer.add(
+                new Label("welcomeLabel", new StringResourceModel("welcome", this)));
+        add(abstractLabelContainer);
+        TextArea<String> area = new TextArea<>("welcome", new PropertyModel<>(model, "welcome"));
+        add(area);
+        InternationalStringPanel<TextArea<String>> internationalStringPanelAbstract =
+                new InternationalStringPanel<TextArea<String>>(
+                        "internationalWelcome",
+                        new PropertyModel<>(model, "internationalWelcome"),
+                        area,
+                        abstractLabelContainer) {
+                    @Override
+                    protected TextArea<String> getTextComponent(String id, IModel<String> model) {
+                        return new TextArea<>(id, model);
+                    }
+                };
+        add(internationalStringPanelAbstract);
+
+        add(new StringAndInternationalStringPanel("contactPerson", model, this));
+        add(new StringAndInternationalStringPanel("contactPosition", model, this));
+        add(new StringAndInternationalStringPanel("addressType", model, this));
+        add(new StringAndInternationalStringPanel("address", model, this));
+        add(new StringAndInternationalStringPanel("addressDeliveryPoint", model, this));
+        add(new StringAndInternationalStringPanel("addressCity", model, this));
+        add(new StringAndInternationalStringPanel("addressState", model, this));
+        add(new StringAndInternationalStringPanel("addressPostalCode", model, this));
+        add(new StringAndInternationalStringPanel("addressCountry", model, this));
+        add(new StringAndInternationalStringPanel("contactVoice", model, this));
+        add(new StringAndInternationalStringPanel("contactFacsimile", model, this));
 
         String contactEmail = "contactEmail";
         add(

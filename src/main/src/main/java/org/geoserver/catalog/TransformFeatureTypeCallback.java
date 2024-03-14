@@ -7,22 +7,26 @@ package org.geoserver.catalog;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.geoserver.platform.ServiceException;
-import org.geotools.data.DataAccess;
-import org.geotools.data.DataStore;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.simple.SimpleFeatureSource;
+import org.geoserver.util.GeoServerDefaultLocale;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.filter.expression.Expression;
+import org.geotools.api.util.InternationalString;
 import org.geotools.data.transform.Definition;
 import org.geotools.data.transform.TransformFactory;
 import org.geotools.filter.text.cql2.CQLException;
 import org.geotools.filter.text.ecql.ECQL;
-import org.opengis.feature.Feature;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.filter.expression.Expression;
+import org.geotools.util.SimpleInternationalString;
 
 /**
- * Transforms a vector layer {@link org.opengis.feature.type.FeatureType} based on the definitions
- * contains in the eventual {@link AttributeTypeInfo} list.
+ * Transforms a vector layer {@link org.geotools.api.feature.type.FeatureType} based on the
+ * definitions contains in the eventual {@link AttributeTypeInfo} list.
  */
 public class TransformFeatureTypeCallback {
 
@@ -72,7 +76,19 @@ public class TransformFeatureTypeCallback {
             String name = ati.getName();
             Expression source = ECQL.toExpression(ati.getSource());
             Class<?> binding = ati.getBinding();
-            return new Definition(name, source, binding);
+            InternationalString descriptionInternational = ati.getDescription();
+            String description = null;
+            if (descriptionInternational != null) {
+                description =
+                        StringUtils.trimToNull(
+                                ati.getDescription().toString(GeoServerDefaultLocale.get()));
+                if (description != null) {
+                    descriptionInternational = new SimpleInternationalString(description);
+                } else {
+                    descriptionInternational = null;
+                }
+            }
+            return new Definition(name, source, binding, null, descriptionInternational);
         } catch (CQLException e) {
             throw new ServiceException(
                     "Failed to parse the attribute source definition to a valid OGC Expression", e);

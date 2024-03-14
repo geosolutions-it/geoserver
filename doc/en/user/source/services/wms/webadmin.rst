@@ -46,6 +46,18 @@ The Web Map Service Interface Standard (WMS) provides a simple way to request an
 
 **Bicubic** -Looks at the sixteen nearest cells and fits a smooth curve through the points to find the output value. Bicubic interpolation may both change the input value as well as place the output value outside of the range of input values. Bicubic interpolation is recommended for smoothing continuous data, but this incurs a processing performance overhead.
 
+Dimensions settings
+-------------------
+
+The WMS specification mandates the throwing of an ``InvalidDimensionValue`` exception when a dimension value is not valid, and the nearest match is not enabled. 
+This is the default behavior of GeoServer starting with version 2.25, while older versions simply ignored the invalid value and returned empty responses.
+
+The behavior can be controlled in the **Dimension Settings** section, with a choice of three possible values:
+
+* **Use GS version default**. Will return an exception if version is greater or equal than 2.25, otherwise will ignore the invalid value.
+* **Return InvalidDimensionValue**. Will return an exception on invalid value, unless nearest neighbor match has been enabled for the layer (standard compliant behavior).
+* **Ignore invalid value**. Will ignore invalid values and return an empty map/info (legacy behavior).
+
 Watermark Settings
 ------------------
 
@@ -186,6 +198,21 @@ By default GetFeatureInfo results are reproject to the map coordinate reference 
 .. figure:: img/service_WMS_disableFeaturesReprojection.png
 
 When the flag is checked, GetFeatureInfo requests results will not be reprojected and will instead used the layer coordinate reference system.
+
+.. _services_webadmin_wms_featureinfo_transformation:
+
+Disabling GetFeatureInfo requests results transformation
+--------------------------------------------------------
+
+By default GetFeatureInfo results are determined from the output after evaluating rendering transformation on the layer data. This behavior can be changed only for **raster** sources (i.e., raster-to-raster and raster-to-vector transformations). This behavior can be deactivated on a global or per virtual service basis in the **GetFeatureInfo results transformation** section. This setting can be overridden for individual FeatureTypeStyle elements using the ``transformFeatureInfo`` SLD vendor option (See section :ref:`rendering_transform`).
+
+.. figure:: img/service_WMS_disableFeatureInfoTransformation.png
+
+When the flag is checked, GetFeatureInfo requests results will not be transformed and will instead use the raw, underlying raster data.
+
+.. note:: **WMS Specification**
+
+  While this option provides a way to revert to the behavior that was used in older GeoServer versions (<2.21.0), the WMS specification states that "The GetFeatureInfo operation is designed to provide clients of a WMS with more information about features in the pictures of maps that were returned by previous Map requests" so using this option might not be the behavior as the specification intended it.
 
 Enabling GetFeatureInfo requests results HTML auto-escaping
 -----------------------------------------------------------

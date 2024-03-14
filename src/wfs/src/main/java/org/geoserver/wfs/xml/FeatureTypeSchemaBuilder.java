@@ -56,6 +56,15 @@ import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resource.Type;
 import org.geoserver.wfs.GMLInfo;
 import org.geoserver.wfs.WFSInfo;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.AttributeType;
+import org.geotools.api.feature.type.ComplexType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.feature.type.PropertyDescriptor;
+import org.geotools.api.feature.type.Schema;
+import org.geotools.api.util.InternationalString;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.type.Types;
 import org.geotools.gml2.GMLConfiguration;
@@ -65,14 +74,7 @@ import org.geotools.xlink.XLINK;
 import org.geotools.xs.XS;
 import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Schemas;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.AttributeType;
-import org.opengis.feature.type.ComplexType;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.Name;
-import org.opengis.feature.type.PropertyDescriptor;
-import org.opengis.feature.type.Schema;
+import org.w3c.dom.Element;
 import org.w3c.dom.Element;
 
 /**
@@ -820,6 +822,7 @@ public abstract class FeatureTypeSchemaBuilder {
         particle.setContent(group);
         xsdComplexType.setContent(particle);
 
+        Map<XSDElementDeclaration, InternationalString> annotationCache = new HashMap<>();
         for (PropertyDescriptor pd : complexType.getDescriptors()) {
             if (pd instanceof AttributeDescriptor) {
                 AttributeDescriptor attribute = (AttributeDescriptor) pd;
@@ -852,6 +855,7 @@ public abstract class FeatureTypeSchemaBuilder {
                     annotation.getElement().appendChild(documentation);
                 }
 
+                AttributeType attributeType = attribute.getType();
                 Name typeName = attributeType.getName();
                 // skip if it's XS.AnyType. It's not added to XS.Profile, because
                 // a lot of types extend XS.AnyType causing it to be the returned
@@ -892,8 +896,29 @@ public abstract class FeatureTypeSchemaBuilder {
                 }
                 XSDTypeDefinition type = resolveTypeInSchema(schema, typeName);
                 element.setTypeDefinition(type);
+
+                if (attributeType.getDescription() != null) {
+                    annotationCache.put(element, attributeType.getDescription());
+                }
             }
         }
+
+        // Post process to add annotations. Annotations can only be added once the type is in the
+        // schema. This is much faster than adding the elements in the schema earlier and
+        // adding the annotation during the pass above, as early add causes many "patch" operations
+        // in the schema itself, much to detriment of performance.
+        annotationCache.forEach(
+                (element, description) -> {
+                    XSDAnnotation annotation = factory.createXSDAnnotation();
+                    element.setAnnotation(annotation);
+                    Element documentation = annotation.createUserInformation(null);
+                    documentation.appendChild(
+                            documentation
+                                    .getOwnerDocument()
+                                    .createTextNode(description.toString()));
+                    annotation.getElement().appendChild(documentation);
+                });
+
         return xsdComplexType;
     }
 

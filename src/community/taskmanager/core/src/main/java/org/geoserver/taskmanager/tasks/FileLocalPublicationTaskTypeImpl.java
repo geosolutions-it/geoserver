@@ -32,10 +32,10 @@ import org.geoserver.taskmanager.schedule.TaskContext;
 import org.geoserver.taskmanager.schedule.TaskException;
 import org.geoserver.taskmanager.schedule.TaskResult;
 import org.geoserver.taskmanager.schedule.TaskType;
+import org.geotools.api.feature.type.Name;
 import org.geotools.coverage.grid.io.GridFormatFinder;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.util.decorate.Wrapper;
-import org.opengis.feature.type.Name;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -92,8 +92,8 @@ public class FileLocalPublicationTaskTypeImpl implements TaskType {
         CatalogFactory catalogFac = new CatalogFactoryImpl(catalog);
 
         final Name layerName = (Name) ctx.getParameterValues().get(PARAM_LAYER);
-        final NamespaceInfo ns = catalog.getNamespaceByURI(layerName.getNamespaceURI());
-        final WorkspaceInfo ws = catalog.getWorkspaceByName(ns.getName());
+        final WorkspaceInfo ws =
+                getWorkspace(ctx, catalog.getNamespaceByURI(layerName.getNamespaceURI()));
 
         FileReference fileRef =
                 (FileReference)
@@ -276,14 +276,23 @@ public class FileLocalPublicationTaskTypeImpl implements TaskType {
         };
     }
 
+    private WorkspaceInfo getWorkspace(TaskContext ctx, NamespaceInfo ns) throws TaskException {
+        WorkspaceInfo ws = (WorkspaceInfo) ctx.getParameterValues().get(PARAM_WORKSPACE);
+        if (ws == null) {
+            ws = catalog.getWorkspaceByName(ns.getName());
+        }
+        return ws;
+    }
+
     @Override
     public void cleanup(TaskContext ctx) throws TaskException {
         final Name layerName = (Name) ctx.getParameterValues().get(PARAM_LAYER);
-        final String workspace = catalog.getNamespaceByURI(layerName.getNamespaceURI()).getPrefix();
+        final WorkspaceInfo ws =
+                getWorkspace(ctx, catalog.getNamespaceByURI(layerName.getNamespaceURI()));
 
         final LayerInfo layer = catalog.getLayerByName(layerName);
         final StoreInfo store =
-                catalog.getStoreByName(workspace, layerName.getLocalPart(), StoreInfo.class);
+                catalog.getStoreByName(ws.getName(), layerName.getLocalPart(), StoreInfo.class);
         final ResourceInfo resource = catalog.getResourceByName(layerName, ResourceInfo.class);
 
         catalog.remove(layer);

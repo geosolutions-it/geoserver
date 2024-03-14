@@ -40,9 +40,9 @@ import org.geoserver.data.test.SystemTestData.LayerProperty;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSTestSupport;
+import org.geotools.api.style.Style;
 import org.geotools.image.ImageWorker;
 import org.geotools.image.test.ImageAssert;
-import org.geotools.styling.Style;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -202,6 +202,16 @@ public class GetMapIntegrationTest extends WMSTestSupport {
 
         BufferedImage image = ImageIO.read(getBinaryInputStream(response));
         assertEquals(Color.GREEN, getPixelColor(image, 5, 10));
+    }
+
+    @Test
+    public void testEmptyCQLFilter() throws Exception {
+        MockHttpServletResponse response =
+                getAsServletResponse(
+                        "wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,0,1,1&WIDTH=150&HEIGHT=150&transparent=false&CQL_FILTER=");
+
+        assertEquals("image/png", response.getContentType());
     }
 
     /**

@@ -18,12 +18,18 @@ import net.opengis.wfs.FeatureCollectionType;
 import net.opengis.wfs.WfsFactory;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.geoserver.feature.RetypingFeatureCollection;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.data.crs.ForceCoordinateSystemFeatureResults;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.store.ReprojectingFeatureCollection;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
+import org.geotools.gml2.SrsSyntax;
 import org.geotools.gml3.GML;
 import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
@@ -32,11 +38,6 @@ import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Encoder;
 import org.geotools.xsd.Parser;
 import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.xml.sax.ContentHandler;
 
 /** Allows reading and writing a WFS feature collection */
@@ -106,10 +107,11 @@ public class WFSPPIO extends XMLPPIO {
                     fc = new ForceCoordinateSystemFeatureResults(fc, crs, false);
                 }
 
-                // we assume the crs has a valid EPSG code
-                Integer code = CRS.lookupEpsgCode(crs, false);
-                if (code != null) {
-                    CoordinateReferenceSystem lonLatCrs = CRS.decode("EPSG:" + code, true);
+                // we assume the crs has a valid identity
+                String identifier = CRS.lookupIdentifier(crs, false);
+                if (identifier != null) {
+                    String eastNorthId = SrsSyntax.AUTH_CODE.getSRS(identifier);
+                    CoordinateReferenceSystem lonLatCrs = CRS.decode(eastNorthId, true);
                     if (!CRS.equalsIgnoreMetadata(crs, lonLatCrs)) {
                         // we need axis flipping
                         fc = new ReprojectingFeatureCollection(fc, lonLatCrs);

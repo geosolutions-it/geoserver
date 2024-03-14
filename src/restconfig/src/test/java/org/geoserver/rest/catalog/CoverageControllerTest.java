@@ -33,13 +33,14 @@ import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.rest.RestBaseController;
+import org.geotools.api.coverage.grid.GridCoverageReader;
+import org.geotools.api.geometry.Bounds;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.util.NumberRange;
 import org.geotools.util.URLs;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.coverage.grid.GridCoverageReader;
 import org.opengis.geometry.Envelope;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -534,7 +535,7 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
         CoverageInfo ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
         assertNotNull(ci);
         GridCoverage2D gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
-        Envelope envelope = gridCoverage.getEnvelope();
+        Bounds envelope = gridCoverage.getEnvelope();
         dispose(gridCoverage);
 
         // now go and clear
@@ -555,7 +556,7 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
         // checking the envelope changed. Cannot check the bands, unlike features, their definition
         // is part of the configuration, in case of modification it requires an explicit PUT
         gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
-        Envelope envelopeNew = gridCoverage.getEnvelope();
+        Bounds envelopeNew = gridCoverage.getEnvelope();
         assertNotEquals(envelopeNew, envelope);
         dispose(gridCoverage);
     }
@@ -567,7 +568,7 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
         CoverageInfo ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
         assertNotNull(ci);
         GridCoverage2D gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
-        Envelope envelope = gridCoverage.getEnvelope();
+        Bounds envelope = gridCoverage.getEnvelope();
         assertEquals(3, ci.getDimensions().size());
         dispose(gridCoverage);
 
@@ -601,7 +602,7 @@ public class CoverageControllerTest extends CatalogRESTTestSupport {
 
         ci = catalog.getCoverageByName(getLayerId(SystemTestData.TASMANIA_BM));
         gridCoverage = (GridCoverage2D) ci.getGridCoverage(null, null);
-        Envelope envelopeNew = gridCoverage.getEnvelope();
+        Bounds envelopeNew = gridCoverage.getEnvelope();
         assertNotEquals(envelopeNew, envelope);
         assertEquals(1, ci.getDimensions().size());
         dispose(gridCoverage);

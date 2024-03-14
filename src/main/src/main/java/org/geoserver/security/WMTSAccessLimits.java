@@ -4,8 +4,8 @@
  */
 package org.geoserver.security;
 
+import org.geotools.api.filter.Filter;
 import org.locationtech.jts.geom.MultiPolygon;
-import org.opengis.filter.Filter;
 
 /**
  * Describes access limits on a cascaded WMTS layer
@@ -32,6 +32,15 @@ public class WMTSAccessLimits extends DataAccessLimits {
     /** Acts as a ROI on the returned images */
     public MultiPolygon getRasterFilter() {
         return rasterFilter;
+    }
+
+    /**
+     * Sets the polygon that will clip the returned images
+     *
+     * @param rasterFilter the polygon that will clip the returned images
+     */
+    public void setRasterFilter(MultiPolygon rasterFilter) {
+        this.rasterFilter = rasterFilter;
     }
 
     @Override

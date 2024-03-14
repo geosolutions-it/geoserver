@@ -11,6 +11,7 @@ import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,11 +26,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -68,20 +71,42 @@ import org.geoserver.platform.resource.ResourceListener;
 import org.geoserver.platform.resource.ResourceNotification;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.util.EntityResolverProvider;
+import org.geotools.api.coverage.grid.GridCoverage;
+import org.geotools.api.coverage.grid.GridCoverageReader;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.data.DataAccessFactory;
+import org.geotools.api.data.DataAccessFactory.Param;
+import org.geotools.api.data.DataAccessFinder;
+import org.geotools.api.data.DataSourceException;
+import org.geotools.api.data.DataStore;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Join;
+import org.geotools.api.data.Repository;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.feature.type.PropertyDescriptor;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.metadata.citation.Citation;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CRSAuthorityFactory;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.crs.GeographicCRS;
+import org.geotools.api.referencing.crs.SingleCRS;
+import org.geotools.api.referencing.cs.CoordinateSystem;
+import org.geotools.api.referencing.operation.TransformException;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.StyledLayerDescriptor;
+import org.geotools.brewer.styling.builder.StyleBuilder;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.data.DataAccess;
-import org.geotools.data.DataAccessFactory;
-import org.geotools.data.DataAccessFactory.Param;
-import org.geotools.data.DataAccessFinder;
-import org.geotools.data.DataSourceException;
-import org.geotools.data.DataStore;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Join;
-import org.geotools.data.Repository;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.store.ContentDataStore;
 import org.geotools.data.store.ContentFeatureSource;
 import org.geotools.data.store.ContentState;
@@ -90,7 +115,7 @@ import org.geotools.feature.FeatureTypes;
 import org.geotools.feature.NameImpl;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.gce.geotiff.GeoTiffFormat;
-import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.gml2.GML;
 import org.geotools.http.HTTPClient;
@@ -98,6 +123,7 @@ import org.geotools.http.HTTPClientFinder;
 import org.geotools.http.HTTPConnectionPooling;
 import org.geotools.http.SimpleHttpClient;
 import org.geotools.measure.Measure;
+import org.geotools.metadata.iso.citation.Citations;
 import org.geotools.ows.wms.Layer;
 import org.geotools.ows.wms.WMSCapabilities;
 import org.geotools.ows.wms.WebMapServer;
@@ -106,9 +132,7 @@ import org.geotools.ows.wmts.WebMapTileServer;
 import org.geotools.ows.wmts.model.WMTSCapabilities;
 import org.geotools.ows.wmts.model.WMTSLayer;
 import org.geotools.referencing.CRS;
-import org.geotools.styling.Style;
-import org.geotools.styling.StyleImpl;
-import org.geotools.styling.StyledLayerDescriptor;
+import org.geotools.referencing.ReferencingFactoryFinder;
 import org.geotools.util.CanonicalSet;
 import org.geotools.util.SoftValueHashMap;
 import org.geotools.util.URLs;
@@ -119,22 +143,6 @@ import org.geotools.xml.DocumentFactory;
 import org.geotools.xml.XMLHandlerHints;
 import org.geotools.xml.handlers.DocumentHandler;
 import org.geotools.xsd.Schemas;
-import org.opengis.coverage.grid.GridCoverage;
-import org.opengis.coverage.grid.GridCoverageReader;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.Name;
-import org.opengis.feature.type.PropertyDescriptor;
-import org.opengis.filter.Filter;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.crs.GeographicCRS;
-import org.opengis.referencing.crs.SingleCRS;
-import org.opengis.referencing.cs.CoordinateSystem;
-import org.opengis.referencing.operation.TransformException;
 import org.springframework.context.ApplicationContext;
 import org.vfny.geoserver.global.GeoServerFeatureLocking;
 import org.vfny.geoserver.global.GeoServerFeatureSource;
@@ -186,8 +194,12 @@ public class ResourcePool {
     /** Default number of hard references */
     static int FEATURETYPE_CACHE_SIZE_DEFAULT = 100;
 
+    static String CRS_NOT_FOUND = "CRS_NOT_FOUND";
+    static Map<CoordinateReferenceSystem, String> crsIdentifierCache = new SoftValueHashMap<>();
+
     Catalog catalog;
     Map<String, CoordinateReferenceSystem> crsCache;
+
     DataStoreCache dataStoreCache;
     Map<String, FeatureType> featureTypeCache;
     Map<String, List<AttributeTypeInfo>> featureTypeAttributeCache;
@@ -196,6 +208,7 @@ public class ResourcePool {
     Map<CoverageHintReaderKey, GridCoverageReader> hintCoverageReaderCache;
     Map<String, StyledLayerDescriptor> sldCache;
     Map<String, Style> styleCache;
+
     List<Listener> listeners;
     ThreadPoolExecutor coverageExecutor;
     CatalogRepository repository;
@@ -271,7 +284,7 @@ public class ResourcePool {
         this.repository = new CatalogRepository(catalog);
 
         catalog.removeListeners(CacheClearingListener.class);
-        catalog.addListener(new CacheClearingListener());
+        catalog.addListener(new CacheClearingListener(this));
     }
 
     /**
@@ -465,9 +478,9 @@ public class ResourcePool {
      * <p>The <tt>srsName</tt> parameter should have one of the forms:
      *
      * <ul>
-     *   <li>EPSG:XXXX
-     *   <li>http://www.opengis.net/gml/srs/epsg.xml#XXXX
-     *   <li>urn:x-ogc:def:crs:EPSG:XXXX
+     *   <li><authority>:XXXX
+     *   <li>http://www.opengis.net/gml/srs/<authority>.xml#XXXX
+     *   <li>urn:x-ogc:def:crs:<authority>:XXXX
      * </ul>
      *
      * OR be something parsable by {@link CRS#decode(String)}.
@@ -496,6 +509,69 @@ public class ResourcePool {
         }
 
         return crs;
+    }
+
+    /**
+     * Looks up the identifier of a given {@link CoordinateReferenceSystem} object, giving a
+     * preference to EPSG codes expressed as <code>EPSG:xyzw</code>, when possible, and returning
+     * another code, otherwise. This behavior is specific to GeoServer, thus, it has not been
+     * included in the GeoTools {@link CRS} facade.
+     *
+     * @param crs The coordinate reference system.
+     * @param fullScan If {@code true}, an exhaustive full scan against all registered objects will
+     *     be performed (may be slow). Otherwise only a fast lookup based on embedded identifiers
+     *     and names will be performed.
+     */
+    public static String lookupIdentifier(CoordinateReferenceSystem crs, boolean fullScan)
+            throws FactoryException {
+        // full scan can be pretty expensive, cache results
+        if (fullScan) {
+            String identifier = crsIdentifierCache.get(crs);
+            if (identifier != null) {
+                return CRS_NOT_FOUND.equals(identifier) ? null : identifier;
+            }
+
+            identifier = lookupIdentifierInternal(crs, fullScan);
+            crsIdentifierCache.put(crs, identifier == null ? CRS_NOT_FOUND : identifier);
+            return identifier;
+        } else {
+            return lookupIdentifierInternal(crs, fullScan);
+        }
+    }
+
+    private static String lookupIdentifierInternal(CoordinateReferenceSystem crs, boolean fullScan)
+            throws FactoryException {
+        // privilege EPSG is possible
+        Integer code = CRS.lookupEpsgCode(crs, false);
+        if (code != null) {
+            return "EPSG:" + code;
+        }
+        // otherwise see if there is any code in the object itself
+        String result =
+                crs.getIdentifiers().stream()
+                        .filter(id -> id.getAuthority() != null)
+                        .filter(id -> id.getCode() != null)
+                        .findFirst()
+                        .map(id -> id.toString())
+                        .orElse(null);
+
+        if (result != null) return result;
+
+        // search in other authorities, skipping the alias ones
+        final Set<Citation> authorities = new LinkedHashSet<>();
+        for (final CRSAuthorityFactory factory :
+                ReferencingFactoryFinder.getCRSAuthorityFactories(null)) {
+            authorities.add(factory.getAuthority());
+        }
+        authorities.remove(Citations.HTTP_OGC);
+        authorities.remove(Citations.HTTP_URI_OGC);
+        authorities.remove(Citations.AUTO);
+        authorities.remove(Citations.URN_OGC);
+        for (Citation authority : authorities) {
+            result = CRS.lookupIdentifier(authority, crs, fullScan);
+            if (result != null) return result;
+        }
+        return null;
     }
 
     /**
@@ -574,11 +650,26 @@ public class ResourcePool {
                     // fine, we had to try
                 }
             }
+            disableStoreInfoIfNeeded(info, DataStoreInfo.class, e);
+
             if (e instanceof IOException) {
                 throw (IOException) e;
             } else {
                 throw (IOException) new IOException().initCause(e);
             }
+        }
+    }
+
+    private void disableStoreInfoIfNeeded(
+            StoreInfo storeInfo, Class<? extends StoreInfo> clazz, Exception e) {
+        if (storeInfo.isEnabled() && storeInfo.isDisableOnConnFailure()) {
+            LOGGER.warning(
+                    "Auto disable option is set to true. Disabling the store due connection error: "
+                            + e.getMessage());
+            StoreInfo toDisable =
+                    catalog.getStoreByName(storeInfo.getWorkspace(), storeInfo.getName(), clazz);
+            toDisable.setEnabled(false);
+            catalog.save(toDisable);
         }
     }
 
@@ -677,6 +768,10 @@ public class ResourcePool {
         if (dataStore == null) {
             throw new NullPointerException(
                     "Could not acquire data access '" + info.getName() + "'");
+        } else if (info.isDisableOnConnFailure()) {
+            // do getNames() to force the store to open a connection and eventually to fail
+            // for misconfiguration so that autodisable can then work properly.
+            dataStore.getNames();
         }
         return dataStore;
     }
@@ -739,7 +834,7 @@ public class ResourcePool {
                                 true);
                 entry.setValue((V) URLs.fileToUrl(fixedPath));
             } else if ((key != null)
-                    && (key.equals("directory") || key.equals("database"))
+                    && (key.equals("directory") || key.equals("database") || key.equals("file"))
                     && value instanceof String) {
                 String path = (String) value;
                 // if a url is used for a directory (for example property store), convert it to path
@@ -1529,7 +1624,11 @@ public class ResourcePool {
 
         final AbstractGridFormat gridFormat = info.getFormat();
         if (gridFormat == null) {
-            throw new IOException("Could not find the raster plugin for format " + info.getType());
+            IOException e =
+                    new IOException(
+                            "Could not find the raster plugin for format " + info.getType());
+            disableStoreInfoIfNeeded(info, CoverageStoreInfo.class, e);
+            throw e;
         }
 
         // we are going to add the repository anyways, but we don't want to modify the original
@@ -1556,26 +1655,31 @@ public class ResourcePool {
                     reader = hintCoverageReaderCache.get(key);
                 }
                 if (reader == null) {
-                    /////////////////////////////////////////////////////////
-                    //
-                    // Getting coverage reader using the format and the real path.
-                    //
-                    // /////////////////////////////////////////////////////////
-                    final String urlString = expandedStore.getURL();
-                    Object readObject =
-                            getObjectToRead(urlString, coverageInfo, expandedStore, hints);
+                    try {
+                        /////////////////////////////////////////////////////////
+                        //
+                        // Getting coverage reader using the format and the real path.
+                        //
+                        // /////////////////////////////////////////////////////////
+                        final String urlString = expandedStore.getURL();
+                        Object readObject =
+                                getObjectToRead(urlString, coverageInfo, expandedStore, hints);
 
-                    // readers might change the provided hints, pass down a defensive copy
-                    reader = gridFormat.getReader(readObject, hints);
-                    if (reader == null) {
-                        throw new IOException(
-                                "Failed to create reader from "
-                                        + urlString
-                                        + " and hints "
-                                        + hints);
-                    }
-                    if (key != null) {
-                        hintCoverageReaderCache.put(key, reader);
+                        // readers might change the provided hints, pass down a defensive copy
+                        reader = gridFormat.getReader(readObject, hints);
+                        if (reader == null) {
+                            throw new IOException(
+                                    "Failed to create reader from "
+                                            + urlString
+                                            + " and hints "
+                                            + hints);
+                        }
+                        if (key != null) {
+                            hintCoverageReaderCache.put(key, reader);
+                        }
+                    } catch (Exception e) {
+                        disableStoreInfoIfNeeded(info, CoverageStoreInfo.class, e);
+                        throw e;
                     }
                 }
             }
@@ -1716,11 +1820,11 @@ public class ResourcePool {
             throw (IOException) new IOException("unable to calculate coverage bounds").initCause(e);
         }
 
-        GeneralEnvelope envelope = null;
+        GeneralBounds envelope = null;
         if (env == null) {
-            envelope = new GeneralEnvelope(coverageBounds);
+            envelope = new GeneralBounds(coverageBounds);
         } else {
-            envelope = new GeneralEnvelope(env);
+            envelope = new GeneralBounds(env);
         }
 
         // /////////////////////////////////////////////////////////
@@ -1834,8 +1938,10 @@ public class ResourcePool {
 
             return wms;
         } catch (IOException ioe) {
+            disableStoreInfoIfNeeded(info, WMSStoreInfo.class, ioe);
             throw ioe;
         } catch (Exception e) {
+            disableStoreInfoIfNeeded(info, WMSStoreInfo.class, e);
             throw (IOException) new IOException().initCause(e);
         }
     }
@@ -1891,8 +1997,10 @@ public class ResourcePool {
 
             return wmts;
         } catch (IOException ioe) {
+            disableStoreInfoIfNeeded(info, WMTSStoreInfo.class, ioe);
             throw ioe;
         } catch (Exception e) {
+            disableStoreInfoIfNeeded(info, WMTSStoreInfo.class, e);
             throw new IOException(e);
         }
     }
@@ -2105,12 +2213,7 @@ public class ResourcePool {
                     "Could not extract a UserStyle definition from " + info.getName());
         }
         // Make sure we don't change the name of an object in sldCache
-        if (style instanceof StyleImpl) {
-            style = (Style) ((StyleImpl) style).clone();
-        }
-        // remove this when wms works off style info
-        style.setName(info.getName());
-        return style;
+        return new StyleBuilder().reset(style).name(info.getName()).buildStyle();
     }
 
     /**
@@ -2134,9 +2237,10 @@ public class ResourcePool {
      */
     public BufferedReader readStyle(StyleInfo style) throws IOException {
         Resource styleResource = dataDir().style(style);
-        if (styleResource == null) {
-            throw new IOException("No such resource: " + style.getFilename());
+        if (styleResource.getType() != Resource.Type.RESOURCE) {
+            throw new FileNotFoundException("No such resource: " + style.getFilename());
         }
+
         return new BufferedReader(new InputStreamReader(styleResource.in()));
     }
 
@@ -2519,7 +2623,15 @@ public class ResourcePool {
         }
     }
     /** Listens to catalog events clearing cache entires when resources are modified. */
-    public class CacheClearingListener extends CatalogVisitorAdapter implements CatalogListener {
+    public static class CacheClearingListener extends CatalogVisitorAdapter
+            implements CatalogListener {
+
+        private final ResourcePool pool;
+
+        public CacheClearingListener(ResourcePool pool) {
+            Objects.requireNonNull(pool);
+            this.pool = pool;
+        }
 
         @Override
         public void handleAddEvent(CatalogAddEvent event) {}
@@ -2531,20 +2643,12 @@ public class ResourcePool {
         public void handlePostModifyEvent(CatalogPostModifyEvent event) {
             CatalogInfo source = event.getSource();
             source.accept(this);
-
-            if (source instanceof FeatureTypeInfo) {
-                flushDataStore((FeatureTypeInfo) source);
-            }
         }
 
         @Override
         public void handleRemoveEvent(CatalogRemoveEvent event) {
             CatalogInfo source = event.getSource();
             source.accept(this);
-
-            if (source instanceof FeatureTypeInfo) {
-                flushDataStore((FeatureTypeInfo) source);
-            }
         }
 
         @Override
@@ -2552,27 +2656,27 @@ public class ResourcePool {
 
         @Override
         public void visit(DataStoreInfo dataStore) {
-            clear(dataStore);
+            pool.clear(dataStore);
         }
 
         @Override
         public void visit(CoverageStoreInfo coverageStore) {
-            clear(coverageStore);
+            pool.clear(coverageStore);
         }
 
         @Override
         public void visit(FeatureTypeInfo featureType) {
-            clear(featureType);
+            pool.clear(featureType);
         }
 
         @Override
         public void visit(WMSStoreInfo wmsStore) {
-            clear(wmsStore);
+            pool.clear(wmsStore);
         }
 
         @Override
         public void visit(StyleInfo style) {
-            clear(style);
+            pool.clear(style);
         }
     }
     /**

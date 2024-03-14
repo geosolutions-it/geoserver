@@ -44,6 +44,7 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.test.http.MockHttpClient;
 import org.geoserver.test.http.MockHttpResponse;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.feature.NameImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
@@ -53,7 +54,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;
@@ -249,7 +249,7 @@ public class WMTSLayerTest extends CatalogRESTTestSupport {
                         + "</wmtsLayer>";
         MockHttpServletResponse response =
                 postAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmtsstores/demo/layers/",
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmtsstores/demo/layers",
                         xml,
                         "text/xml");
 
@@ -288,7 +288,7 @@ public class WMTSLayerTest extends CatalogRESTTestSupport {
                         + "</wmtsLayer>";
         MockHttpServletResponse response =
                 postAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmtslayers/",
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmtslayers",
                         xml,
                         "text/xml");
 
@@ -328,7 +328,7 @@ public class WMTSLayerTest extends CatalogRESTTestSupport {
                         + "}";
         MockHttpServletResponse response =
                 postAsServletResponse(
-                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmtsstores/demo/layers/",
+                        RestBaseController.ROOT_PATH + "/workspaces/sf/wmtsstores/demo/layers",
                         json,
                         "text/json");
 

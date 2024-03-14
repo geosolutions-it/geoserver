@@ -36,14 +36,14 @@ import org.geoserver.wfs.request.FeatureCollectionResponse;
 import org.geoserver.wfs.request.GetFeatureRequest;
 import org.geoserver.wfs.request.Query;
 import org.geoserver.wfs.response.ComplexFeatureAwareFormat;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.gml.producer.FeatureTransformer;
 import org.geotools.gml.producer.FeatureTransformer.FeatureTypeNamespaces;
 import org.geotools.gml2.bindings.GML2EncodingUtils;
 import org.geotools.referencing.CRS;
 import org.geotools.wfs.WFS;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * Encodes features in Geographic Markup Language (GML) version 2.
@@ -108,9 +108,9 @@ public class GML2OutputFormat extends WFSGetFeatureOutputFormat
         FeatureTypeNamespaces ftNames = transformer.getFeatureTypeNamespaces();
         Map ftNamespaces = new HashMap();
 
-        // TODO: the srs is a back, it only will work property when there is
+        // TODO: the crs is a back, it only will work property when there is
         // one type, we really need to set it on the feature level
-        int srs = -1;
+        CoordinateReferenceSystem crs = null;
         int numDecimals = -1;
         boolean padWithZeros = false;
         boolean forcedDecimal = false;
@@ -155,9 +155,7 @@ public class GML2OutputFormat extends WFSGetFeatureOutputFormat
                     srsName = meta.getSRS();
                 }
                 if (srsName != null) {
-                    CoordinateReferenceSystem crs = CRS.decode(srsName);
-                    String epsgCode = GML2EncodingUtils.epsgCode(crs);
-                    srs = Integer.parseInt(epsgCode);
+                    crs = CRS.decode(srsName);
                 }
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Problem encoding:" + query.getSrsName(), e);
@@ -221,8 +219,9 @@ public class GML2OutputFormat extends WFSGetFeatureOutputFormat
             transformer.setLockId(results.getLockId());
         }
 
-        if (srs != -1) {
-            transformer.setSrsName(gml.getSrsNameStyle().getPrefix() + srs);
+        if (crs != null) {
+            String srsURI = GML2EncodingUtils.toURI(crs, gml.getSrsNameStyle().toSrsSyntax(), true);
+            if (srsURI != null) transformer.setSrsName(srsURI);
         }
     }
 

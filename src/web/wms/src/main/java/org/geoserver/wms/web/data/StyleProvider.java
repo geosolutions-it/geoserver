@@ -21,8 +21,8 @@ import org.geoserver.catalog.util.CloseableIterator;
 import org.geoserver.web.GeoServerApplication;
 import org.geoserver.web.data.style.StyleDetachableModel;
 import org.geoserver.web.wicket.GeoServerDataProvider;
-import org.opengis.filter.Filter;
-import org.opengis.filter.sort.SortBy;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.sort.SortBy;
 
 /** A {@link GeoServerDataProvider} provider for styles */
 @SuppressWarnings("serial")
@@ -38,7 +38,12 @@ public class StyleProvider extends GeoServerDataProvider<StyleInfo> {
     static final Property<StyleInfo> CREATED_TIMESTAMP =
             new BeanProperty<>("datecreated", "dateCreated");
 
-    static List<Property<StyleInfo>> PROPERTIES = Arrays.asList(NAME, WORKSPACE);
+    static final Property<StyleInfo> FORMAT = new BeanProperty<>("format", "format");
+
+    static final Property<StyleInfo> FORMAT_VERSION =
+            new BeanProperty<>("formatversion", "formatVersion");
+
+    static List<Property<StyleInfo>> PROPERTIES = Arrays.asList(NAME, FORMAT, WORKSPACE);
 
     public StyleProvider() {
         setSort(new SortParam<>(NAME.getName(), true));

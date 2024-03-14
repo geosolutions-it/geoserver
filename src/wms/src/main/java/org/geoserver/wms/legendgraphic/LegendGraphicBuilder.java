@@ -5,15 +5,38 @@
 package org.geoserver.wms.legendgraphic;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetLegendGraphicRequest;
 import org.geoserver.wms.GetLegendGraphicRequest.LegendRequest;
+import org.geotools.api.data.Parameter;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.IllegalAttributeException;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.feature.type.GeometryDescriptor;
+import org.geotools.api.feature.type.GeometryType;
+import org.geotools.api.feature.type.Name;
+import org.geotools.api.filter.capability.FunctionName;
+import org.geotools.api.filter.expression.Expression;
+import org.geotools.api.filter.expression.Function;
+import org.geotools.api.filter.expression.Literal;
+import org.geotools.api.style.FeatureTypeStyle;
+import org.geotools.api.style.LineSymbolizer;
+import org.geotools.api.style.PointSymbolizer;
+import org.geotools.api.style.PolygonSymbolizer;
+import org.geotools.api.style.RasterSymbolizer;
+import org.geotools.api.style.Rule;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.Symbolizer;
+import org.geotools.api.style.TextSymbolizer;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.Parameter;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.SchemaException;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
@@ -25,15 +48,6 @@ import org.geotools.process.Processors;
 import org.geotools.process.function.ProcessFunction;
 import org.geotools.renderer.lite.MetaBufferEstimator;
 import org.geotools.renderer.lite.RendererUtilities;
-import org.geotools.styling.FeatureTypeStyle;
-import org.geotools.styling.LineSymbolizer;
-import org.geotools.styling.PointSymbolizer;
-import org.geotools.styling.PolygonSymbolizer;
-import org.geotools.styling.RasterSymbolizer;
-import org.geotools.styling.Rule;
-import org.geotools.styling.Style;
-import org.geotools.styling.Symbolizer;
-import org.geotools.styling.TextSymbolizer;
 import org.geotools.styling.visitor.DpiRescaleStyleVisitor;
 import org.geotools.styling.visitor.LegendRenderingSelectorStyleVisitor;
 import org.geotools.styling.visitor.RenderingSelectorStyleVisitor;
@@ -46,17 +60,6 @@ import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.Feature;
-import org.opengis.feature.IllegalAttributeException;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.feature.type.GeometryDescriptor;
-import org.opengis.feature.type.GeometryType;
-import org.opengis.feature.type.Name;
-import org.opengis.filter.expression.Expression;
-import org.opengis.filter.expression.Literal;
 
 /** @author ian */
 public abstract class LegendGraphicBuilder {
@@ -506,23 +509,46 @@ public abstract class LegendGraphicBuilder {
         for (FeatureTypeStyle fts : ftsList) {
             Expression exp = fts.getTransformation();
             if (exp != null) {
-                ProcessFunction processFunction = (ProcessFunction) exp;
-                Name processName = processFunction.getProcessName();
-                Map<String, Parameter<?>> outputs = Processors.getResultInfo(processName, null);
-                if (outputs.isEmpty()) {
-                    continue;
+                Map<String, Parameter<?>> outputs = Collections.emptyMap();
+                if (exp instanceof ProcessFunction) {
+                    ProcessFunction processFunction = (ProcessFunction) exp;
+                    Name processName = processFunction.getProcessName();
+                    outputs = Processors.getResultInfo(processName, null);
+                    if (outputs.isEmpty()) {
+                        continue;
+                    }
+                } else if (exp instanceof Function) {
+                    Function function = (Function) exp;
+                    FunctionName functionName = function.getFunctionName();
+                    if (functionName != null
+                            && functionName.getReturn() != null
+                            && functionName.getReturn().getName() != null
+                            && functionName.getReturn() instanceof Parameter<?>) {
+                        outputs = new HashMap<>();
+                        outputs.put(
+                                functionName.getReturn().getName(),
+                                (Parameter<?>) functionName.getReturn());
+                    }
+                    if (outputs.isEmpty()) {
+                        continue;
+                    }
                 }
                 Parameter<?> output =
                         outputs.values().iterator().next(); // we assume there is only one output
-                if (SimpleFeatureCollection.class.isAssignableFrom(output.getType())) {
-                    hasVectorTransformation = true;
-                    break;
-                } else if (GridCoverage2D.class.isAssignableFrom(output.getType())) {
-                    hasRasterTransformation = true;
-                    break;
-                }
+                if (isVectorOrRaster(output)) break;
             }
         }
+    }
+
+    private boolean isVectorOrRaster(Parameter<?> output) {
+        if (SimpleFeatureCollection.class.isAssignableFrom(output.getType())) {
+            hasVectorTransformation = true;
+            return true;
+        } else if (GridCoverage2D.class.isAssignableFrom(output.getType())) {
+            hasRasterTransformation = true;
+            return true;
+        }
+        return false;
     }
 
     /**

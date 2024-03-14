@@ -3,7 +3,7 @@
 The STAC extension  
 ==================
 
-The OpenSeach for EO subsytem exposes also a `STAC <https://stacspec.org/>`__ service, implemented
+The OpenSeach for EO subsystem exposes also a `STAC <https://stacspec.org/>`__ service, implemented
 as a OGC API Features conformant `STAC API <https://github.com/radiantearth/stac-api-spec>`_.
 
 The landing page of the STAC API is linked from the GeoServer home page, and available at ``$HOST:$PORT/geoserver/ogc/stac``.
@@ -47,7 +47,7 @@ in the ``$GEOSERER_DATA_DIR/templates/ogc/stac`` folder:
 Specifically for the JSON output:
 
 * `$GEOSERER_DATA_DIR/templates/ogc/stac/collections.json` is the `collections template <https://raw.githubusercontent.com/geoserver/geoserver/main/src/community/oseo/oseo-stac/src/main/resources/org/geoserver/ogcapi/stac/collections.json>`_
-* `$GEOSERER_DATA_DIR/templates/os-eo/items.json` is the `items template <https://raw.githubusercontent.com/geoserver/geoserver/main/src/community/oseo/oseo-service/src/main/resources/org/geoserver/opensearch/eo/items.json>`_
+* `$GEOSERER_DATA_DIR/templates/ogc/stac/items.json` is the `items template <https://raw.githubusercontent.com/geoserver/geoserver/main/src/community/oseo/oseo-stac/src/main/resources/org/geoserver/ogcapi/stac/items.json>`_
 
 The JSON templates in the case of STAC also drive database querying, the exposed STAC properties
 are back-mapped into database properties by interpreting the template. It is advised to keep 
@@ -71,8 +71,78 @@ According to the current specification:
 
 - If no ``fields`` query parameter is specified all the item's attribute are returned.
 - If a ``fields`` attribute is specified with no values, only the item's default values (the one necessary to have a valid STAC entity) are returned: ``id``,``type``,``geometry``,``bbox``,``links``,``assets``,``properties.datetime``,``properties.created``.
-- If ``fields`` value is specified GeoServer will return always the default attributes, if the user doesn't target them as exluded. Eg. ``assets`` will always be present if not exluced explicitly (``fields=-assets,...``).
+- If ``fields`` value is specified GeoServer will return always the default attributes, if the user doesn't target them as excluded. Eg. ``assets`` will always be present if not exluced explicitly (``fields=-assets,...``).
 - If only include is specified, these attributes are added to the default set of attributes (set union operation).
 - If only exclude is specified, these attributes are subtracted from the union of the default set of attributes and the include attributes (set difference operation). This will result in an entity that is not a valid Item if any of the excluded attributes are in the default set of attributes, but no error message will be raised by GeoServer.
 - If a attribute is included, e.g. ``properties``, but one or more of the nested attributes is excluded, e.g. ``-properties.datetime``, then the excluded nested attributes will not appear in properties.
 - If an attribute is excluded, e.g. ``-properties.nestedObj``, but one of more of the nested attributes is included, e.g. ``properties.nestedObject.attribute``, then ``nestedObject`` will appear in the output with the included attributes only.
+
+Datacube Extension Support
+--------------------------
+Support for the `STAC Datacube Extension <https://github.com/stac-extensions/datacube>`_ "cube_dimensions" elements is available in HTML and JSON templates via the `eoSummaries` function.  `eoSummaries` supports presenting the following collection-wide summary statistics:
+
+* min - The minimum value of the field in the collection
+* max - The maximum value of the field in the collection
+* distinct - An array of distinct values of the field in the collection
+* bounds - Minimum and maximum dimension values of the spatial bounding box of the collection (either x or y, presented as a two value array or xmin, xmax, ymin, ymax presented as individual dimension values)
+
+`eoSummaries` has three arguments:
+
+* aggregate - The type of summary statistic.  One of "min", "max", "distinct", or "bounds".
+* collectionIdentifier - The name of the collection that is being summarized.
+* property - The name of the property being summarized.  
+	
+	* Note that for the "bounds" aggregate, this value should either be "x","y","xmin","ymin","xmax", or "ymax".
+
+**JSON Template Example**:
+
+.. code-block:: none
+
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          "$${eoSummaries('bounds',eo:parentIdentifier,'xmin')}",
+          "$${eoSummaries('bounds',eo:parentIdentifier,'ymin')}",
+          "$${eoSummaries('bounds',eo:parentIdentifier,'xmax')}",
+          "$${eoSummaries('bounds',eo:parentIdentifier,'ymax')}"
+        ]
+      ]
+    },
+	"cube:dimensions"\: {
+     "x": {
+      	"type": "spatial",
+      	"axis": "x",
+      	"extent": "$${eoSummaries('bounds',eo:parentIdentifier,'x')}",
+      	"reference_system": 4326},
+			"y": {
+     		"type": "spatial",
+     		"axis": "y",
+     		"extent": "$${eoSummaries('bounds',eo:parentIdentifier,'y')}",
+     		"reference_system": 4326},
+     		"time": 
+     			{"type": "temporal",
+     			"extent": 
+     				["$${eoSummaries('min',eo:parentIdentifier,'timeStart')}",
+     			"$${eoSummaries('min',eo:parentIdentifier,'timeEnd')}"]
+     			}
+     	}
+    
+**HTML/FTL Example**:
+
+.. code-block:: none
+
+	<li><b>Extents</b>:
+	     <ul>
+        <li data-tid='gbounds'>Geographic (WGS84):
+					${model.eoSummaries("bounds",a.name.value,"x")[0]}, 
+					${model.eoSummaries("bounds",a.name.value,"y")[0]}, 
+					${model.eoSummaries("bounds",a.name.value,"x")[1]}, 
+					${model.eoSummaries("bounds",a.name.value,"y")[1]}.
+				</li>
+				<li data-tid='tbounds'>Temporal: 
+					${model.eoSummaries("min",a.name.value,"timeStart")}/
+					${model.eoSummaries("max",a.name.value,"timeEnd")}
+				</li> 
+			</ul>
+	</li>

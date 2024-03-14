@@ -20,9 +20,9 @@ import org.geoserver.platform.Service;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wfs.xml.GML3OutputFormat;
 import org.geoserver.wms.GetFeatureInfoRequest;
+import org.geotools.api.feature.type.Name;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.gml2.bindings.GML2EncodingUtils;
-import org.opengis.feature.type.Name;
 
 /**
  * A GetFeatureInfo response handler specialized in producing GML 3 data for a GetFeatureInfo
@@ -83,12 +83,10 @@ public class GML3FeatureInfoOutputFormat extends GetFeatureInfoOutputFormat {
 
             qt.setTypeName(Collections.singletonList(qname));
 
-            String crs = GML2EncodingUtils.epsgCode(fc.getSchema().getCoordinateReferenceSystem());
-            if (crs != null) {
-                final String srsName = "EPSG:" + crs;
+            String srsName = GML2EncodingUtils.toURI(fc.getSchema().getCoordinateReferenceSystem());
+            if (srsName != null) {
                 try {
                     qt.setSrsName(new URI(srsName));
-
                 } catch (URISyntaxException e) {
                     throw new ServiceException(
                             "Unable to determite coordinate system for featureType "

@@ -7,7 +7,7 @@
 <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
 
 <beans>
-    <bean class="org.geoserver.platform.ModuleStatusImpl">
+    <bean id="wmsExtension" class="org.geoserver.platform.ModuleStatusImpl">
       <constructor-arg index="0" value="gs-wms"/>
       <constructor-arg index="1" value="GeoServer Web Map Service"/>
     </bean>
@@ -54,7 +54,9 @@
 	</bean>
 		
 	<bean id="wmsGetFeatureInfo"
-		class="org.geoserver.wms.GetFeatureInfo"/>
+		class="org.geoserver.wms.GetFeatureInfo">
+        <constructor-arg ref="wms"/>
+    </bean>
 		
 	<bean id="wmsGetLegendGraphic"
 		class="org.geoserver.wms.GetLegendGraphic">
@@ -854,5 +856,10 @@
 
     <bean id="wmsCiteComplianceCallback" class="org.geoserver.wms.CiteComplianceCallback">
         <constructor-arg ref="geoServer"/>
+    </bean>
+
+    <bean id="wmsFilterKvpParser" class="org.geoserver.wms.kvp.FilterKvpParser">
+        <constructor-arg ref="entityResolverProvider"/>
+        <property name="service"><value>WMS</value></property>
     </bean>
 </beans>

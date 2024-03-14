@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageTypeSpecifier;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.platform.ExtensionPriority;
 import org.geoserver.platform.ServiceException;
@@ -43,14 +44,27 @@ import org.geoserver.wms.RenderingVariables;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
-import org.geotools.data.FeatureSource;
-import org.geotools.data.Query;
-import org.geotools.data.QueryCapabilities;
+import org.geotools.api.data.FeatureSource;
+import org.geotools.api.data.Query;
+import org.geotools.api.data.QueryCapabilities;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.spatial.BBOX;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.referencing.operation.TransformException;
+import org.geotools.api.style.Rule;
+import org.geotools.api.style.Style;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
+import org.geotools.filter.Filters;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.FeatureLayer;
@@ -61,23 +75,11 @@ import org.geotools.renderer.lite.MetaBufferEstimator;
 import org.geotools.renderer.lite.RendererUtilities;
 import org.geotools.renderer.lite.StreamingRenderer;
 import org.geotools.renderer.style.StyleAttributeExtractor;
-import org.geotools.styling.Rule;
-import org.geotools.styling.Style;
 import org.geotools.styling.visitor.DpiRescaleStyleVisitor;
 import org.geotools.styling.visitor.UomRescaleStyleVisitor;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.FeatureType;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory2;
-import org.opengis.filter.spatial.BBOX;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.TransformException;
 
 /**
  * Painting based layer identifier: this method actually paints a reduced version of the map to find
@@ -100,7 +102,7 @@ public class VectorRenderingLayerIdentifier extends AbstractVectorLayerIdentifie
 
     private WMS wms;
     private VectorBasicLayerIdentifier fallback;
-    private static final FilterFactory2 FF = CommonFactoryFinder.getFilterFactory2();
+    private static final FilterFactory FF = CommonFactoryFinder.getFilterFactory();
 
     static {
         String value = System.getProperty(FEATURE_INFO_RENDERING_ENABLED_KEY, "true");
@@ -358,23 +360,14 @@ public class VectorRenderingLayerIdentifier extends AbstractVectorLayerIdentifie
         List<Object> elevations = params.getElevations();
         Filter layerFilter = params.getFilter();
         MapLayerInfo layer = params.getLayer();
-        Filter staticDimensionFilter =
-                wms.getTimeElevationToFilter(times, elevations, layer.getFeature());
-        Filter customDimensionsFilter =
-                wms.getDimensionsToFilter(
-                        params.getGetMapRequest().getRawKvp(), layer.getFeature());
-        final Filter dimensionFilter =
-                FF.and(Arrays.asList(staticDimensionFilter, customDimensionsFilter));
-        Filter filter;
-        if (layerFilter == null) {
-            filter = dimensionFilter;
-        } else if (dimensionFilter == null) {
-            filter = layerFilter;
-        } else {
-            filter = FF.and(Arrays.asList(layerFilter, dimensionFilter));
-        }
+        GetMapRequest getMapRequest = params.getGetMapRequest();
+        FeatureTypeInfo featureInfo = layer.getFeature();
+        wms.validateVectorDimensions(times, elevations, featureInfo, getMapRequest);
+        Filter dimensionFilter =
+                wms.getDimensionFilter(times, elevations, featureInfo, getMapRequest);
+        Filter filter = Filters.and(FF, dimensionFilter, layerFilter);
 
-        GetMapRequest getMap = params.getGetMapRequest();
+        GetMapRequest getMap = getMapRequest;
         FeatureSource<? extends FeatureType, ? extends Feature> featureSource =
                 super.handleClipParam(params, layer.getFeatureSource(true, getMap.getCrs()));
         final Query definitionQuery = new Query(featureSource.getSchema().getName().getLocalPart());

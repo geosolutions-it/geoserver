@@ -17,9 +17,9 @@ import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.ServiceInfo;
 import org.geoserver.util.InternationalStringUtils;
+import org.geotools.api.util.InternationalString;
 import org.geotools.util.GrowableInternationalString;
 import org.geotools.util.Version;
-import org.opengis.util.InternationalString;
 
 public class ServiceInfoImpl implements ServiceInfo {
 
@@ -78,6 +78,25 @@ public class ServiceInfoImpl implements ServiceInfo {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    /**
+     * Default implementation attempts to determine service type based on class naming convention.
+     * Subclasses are encouraged to override.
+     *
+     * @return service type based on class name, truncating ServiceInfo.
+     */
+    @Override
+    public String getType() {
+        String simpleName = getClass().getSimpleName();
+        int truncate = simpleName.indexOf("ServiceInfo");
+        if (truncate > 0) {
+            return simpleName.substring(0, truncate);
+        } else {
+            // this default, while incorrect, has the greatest chance of
+            // success across data directories
+            return getName() != null ? getName().toUpperCase() : null;
+        }
     }
 
     @Override

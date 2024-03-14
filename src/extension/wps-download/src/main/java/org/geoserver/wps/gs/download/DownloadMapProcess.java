@@ -44,6 +44,7 @@ import org.geoserver.platform.Service;
 import org.geoserver.util.HTTPWarningAppender;
 import org.geoserver.wms.GetMap;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.RasterCleaner;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.map.AbstractMapOutputFormat;
@@ -56,9 +57,13 @@ import org.geoserver.wps.WPSException;
 import org.geoserver.wps.gs.GeoServerProcess;
 import org.geoserver.wps.process.ByteArrayRawData;
 import org.geoserver.wps.process.RawData;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.api.util.ProgressListener;
 import org.geotools.data.util.DefaultProgressListener;
 import org.geotools.filter.function.EnvFunction;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.gml2.SrsSyntax;
 import org.geotools.http.HTTPClient;
 import org.geotools.http.HTTPClientFinder;
 import org.geotools.ows.ServiceException;
@@ -72,9 +77,6 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.util.Version;
 import org.geotools.util.logging.Logging;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.util.ProgressListener;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -94,12 +96,14 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
     private final WMS wms;
     private final GetMapKvpRequestReader getMapReader;
     private final HTTPWarningAppender warningAppender;
+    private final RasterCleaner rasterCleaner;
     private Service service;
     // defaulting to a stateless but reliable http client
     private Supplier<org.geotools.http.HTTPClient> httpClientSupplier =
             () -> HTTPClientFinder.createClient();
 
-    public DownloadMapProcess(GeoServer geoServer, HTTPWarningAppender warningAppender) {
+    public DownloadMapProcess(
+            GeoServer geoServer, HTTPWarningAppender warningAppender, RasterCleaner rasterCleaner) {
         // TODO: make these configurable
         this.wms =
                 new WMS(geoServer) {
@@ -115,6 +119,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                 };
         this.getMapReader = new GetMapKvpRequestReader(wms);
         this.warningAppender = warningAppender;
+        this.rasterCleaner = rasterCleaner;
     }
 
     /** This process returns a potentially large map */
@@ -252,6 +257,11 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         } finally {
             // avoid accumulation of warnings in the executor thread that run this request
             warningAppender.finished(Dispatcher.REQUEST.get());
+            // clean up images, this process runs in a background thread, it won't get
+            // the callback invoked and the thread locals would accumulate images
+            rasterCleaner.finished(null);
+            // not wrong, and allows tests to check the raster cleaner has done its job
+            progressListener.progress(100);
         }
 
         // we got here, no supported format found
@@ -397,13 +407,13 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
             throw new WPSException("The BBOX parameter must have a coordinate reference system");
         } else {
             // handle possible axis flipping by changing the WMS version accordingly
-            Integer code = CRS.lookupEpsgCode(crs, false);
+            String code = CRS.lookupIdentifier(crs, false);
             if (CRS.getAxisOrder(crs) == CRS.AxisOrder.EAST_NORTH) {
                 template.put("version", "1.1.0");
-                template.put("srs", "EPSG:" + code);
+                template.put("srs", SrsSyntax.AUTH_CODE.getSRS(code));
             } else {
                 template.put("version", "1.3.0");
-                template.put("crs", "EPSG:" + code);
+                template.put("crs", SrsSyntax.AUTH_CODE.getSRS(code));
             }
         }
 
@@ -452,11 +462,8 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                 image = getImageFromWebMapServer(layer, template, bbox, serverCache);
             }
 
-            if (result == null) {
-                result = image;
-            } else {
-                result = mergeImage(result, image);
-            }
+            result = mergeImage(result, image, layer);
+
             // past the first layer switch transparency on to allow overlaying
             template.put("transparent", "true");
             // track progress and bail out if necessary
@@ -494,7 +501,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                 RenderedImageMapOutputFormat renderer = new RenderedImageMapOutputFormat(wms);
                 RenderedImageMap map = renderer.produceMap(content);
 
-                result = mergeImage(result, map.getImage());
+                result = mergeImage(result, map.getImage(), null);
             } finally {
                 content.dispose();
             }
@@ -516,7 +523,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
                     image = map.getImage();
                     map.getMapContext().dispose();
                     if (result != null) {
-                        result = mergeImage(result, image);
+                        result = mergeImage(result, image, null);
                     }
                 }
             }
@@ -524,7 +531,7 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
             progressListener.progress(95f * (++i) / layers.length / 2);
         }
 
-        progressListener.progress(100);
+        progressListener.progress(90);
 
         return result;
     }
@@ -583,10 +590,11 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
 
         // check version, if we are using 1.3 we might need to flip the bbox, if version 1.1 and the
         // original bbox was flipped, we'll need to un-flip (what a mess...)
-        Integer code = CRS.lookupEpsgCode(bbox.getCoordinateReferenceSystem(), false);
-        CoordinateReferenceSystem epsgOrderCrs = CRS.decode("urn:ogc:def:crs:EPSG:" + code, false);
+        String crsId = CRS.lookupIdentifier(bbox.getCoordinateReferenceSystem(), true);
+        CoordinateReferenceSystem epsgOrderCrs = CRS.decode(SrsSyntax.OGC_URN.getSRS(crsId));
         CRS.AxisOrder axisOrder = CRS.getAxisOrder(epsgOrderCrs);
-        getMap.setSRS("EPSG:" + code); // takes into account the version already here
+        getMap.setSRS(
+                SrsSyntax.AUTH_CODE.getSRS(crsId)); // takes into account the version already here
         boolean flipNeeded =
                 !template.containsKey("crs")
                         && new Version(server.getCapabilities().getVersion())
@@ -689,7 +697,19 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         return result;
     }
 
-    private RenderedImage mergeImage(RenderedImage result, RenderedImage image) {
+    private RenderedImage mergeImage(RenderedImage result, RenderedImage image, Layer layer) {
+        if (result == null && layer != null) {
+            // assume this is the first layer
+            // nothing to do if no opacity is requested
+            if (layer.getOpacity() == null) {
+                return image;
+            } else {
+                // if opacity is requested, create an empty image to merge with
+                result =
+                        new BufferedImage(
+                                image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            }
+        }
         // make sure we can paint on it
         if (!(result instanceof BufferedImage)) {
             result = PlanarImage.wrapRenderedImage(result).getAsBufferedImage();
@@ -698,9 +718,25 @@ public class DownloadMapProcess implements GeoServerProcess, ApplicationContextA
         // this way at most two at any time are around, so uses less memory overall
         BufferedImage bi = (BufferedImage) result;
         Graphics2D graphics = (Graphics2D) bi.getGraphics();
+        if (layer != null && layer.getOpacity() != null) {
+            applyOpacity(image, layer, graphics);
+        }
         graphics.drawRenderedImage(image, AffineTransform.getScaleInstance(1, 1));
         graphics.dispose();
         return result;
+    }
+
+    private static void applyOpacity(RenderedImage image, Layer layer, Graphics2D graphics) {
+        if (layer.getOpacity() < 0 || layer.getOpacity() > 100) {
+            throw new WPSException(
+                    "Layer: "
+                            + layer.getName()
+                            + " has opacity set to an invalid value (only 0-100 allowed): "
+                            + layer.getOpacity());
+        }
+        graphics.setComposite(
+                java.awt.AlphaComposite.getInstance(
+                        java.awt.AlphaComposite.SRC_OVER, layer.getOpacity().floatValue() / 100));
     }
 
     private GetMapRequest produceGetMapRequest(Layer layer, Map<String, Object> kvpTemplate)

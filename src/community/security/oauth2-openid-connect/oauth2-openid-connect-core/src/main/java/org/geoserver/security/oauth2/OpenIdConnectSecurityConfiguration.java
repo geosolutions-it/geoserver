@@ -1,12 +1,11 @@
-/*
- * (c) 2018 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2018 Open Source Geospatial Foundation - all rights reserved
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
- *
  */
 package org.geoserver.security.oauth2;
 
 import java.util.List;
+import org.geoserver.security.oauth2.pkce.PKCERequestEnhancer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
@@ -60,7 +59,8 @@ class OpenIdConnectSecurityConfiguration extends GeoServerOAuth2SecurityConfigur
             return new ValidatingOAuth2RestTemplate(
                     geoServerOAuth2Resource(),
                     new DefaultOAuth2ClientContext(getAccessTokenRequest()),
-                    jwkUri);
+                    jwkUri,
+                    config);
         }
         return super.getOAuth2RestTemplate();
     }
@@ -69,6 +69,12 @@ class OpenIdConnectSecurityConfiguration extends GeoServerOAuth2SecurityConfigur
     @Bean(name = "authorizationAccessTokenProvider")
     @Scope(value = "prototype")
     public AuthorizationCodeAccessTokenProvider authorizationAccessTokenProvider() {
-        return super.authorizationAccessTokenProvider();
+        AuthorizationCodeAccessTokenProvider authorizationCodeAccessTokenProvider =
+                super.authorizationAccessTokenProvider();
+        if (config != null && config.isUsePKCE()) {
+            authorizationCodeAccessTokenProvider.setTokenRequestEnhancer(
+                    new PKCERequestEnhancer(config));
+        }
+        return authorizationCodeAccessTokenProvider;
     }
 }

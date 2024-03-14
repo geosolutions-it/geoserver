@@ -21,10 +21,12 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageDimensionInfo;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
+import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.config.GeoServerInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.wcs.test.WCSTestSupport;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -35,6 +37,8 @@ import org.w3c.dom.NodeList;
 public class DescribeCoverageTest extends WCSTestSupport {
 
     public static QName NO_RANGE = new QName(MockData.WCS_URI, "NoRange", MockData.WCS_PREFIX);
+    public static QName NO_ENVELOPE_SRS =
+            new QName(MockData.WCS_URI, "NoEnvelopeSRS", MockData.WCS_PREFIX);
     private static final QName SF_RAIN = new QName(MockData.SF_URI, "rain", MockData.SF_PREFIX);
     private static final QName GS_RAIN =
             new QName(MockData.DEFAULT_URI, "rain", MockData.DEFAULT_PREFIX);
@@ -57,6 +61,19 @@ public class DescribeCoverageTest extends WCSTestSupport {
         CoverageDimensionInfo cdi = noRange.getDimensions().get(0);
         cdi.setRange(null);
         getCatalog().save(noRange);
+
+        testData.addRasterLayer(
+                NO_ENVELOPE_SRS,
+                "norange.tiff",
+                null,
+                null,
+                DescribeCoverageTest.class,
+                getCatalog());
+        CoverageInfo noEnvelopeSRS = getCatalog().getCoverageByName(getLayerId(NO_ENVELOPE_SRS));
+        ReferencedEnvelope bbox = noEnvelopeSRS.getNativeBoundingBox();
+        noEnvelopeSRS.setNativeBoundingBox(ReferencedEnvelope.create(bbox, null));
+        noEnvelopeSRS.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
+        getCatalog().save(noEnvelopeSRS);
 
         GeoServerInfo global = getGeoServer().getGlobal();
         global.getSettings().setProxyBaseUrl("src/test/resources/geoserver");
@@ -167,8 +184,39 @@ public class DescribeCoverageTest extends WCSTestSupport {
                         BASEPATH
                                 + "?request=DescribeCoverage&service=WCS&version=1.1.1&identifiers="
                                 + getLayerId(TASMANIA_DEM));
+        print(dom);
         checkValidationErrors(dom, WCS11_SCHEMA);
         checkDemCoverageDescription(dom);
+    }
+
+    @Test
+    public void testDescribeNoEnvelopeSRS() throws Exception {
+        Document dom =
+                getAsDOM(
+                        BASEPATH
+                                + "?request=DescribeCoverage&service=WCS&version=1.1.1&identifiers="
+                                + getLayerId(NO_ENVELOPE_SRS));
+        // print(dom);
+        checkValidationErrors(dom, WCS11_SCHEMA);
+
+        // check the basics, the output is a single coverage description with the expected id
+        assertEquals(1, dom.getElementsByTagName("wcs:CoverageDescriptions").getLength());
+        assertEquals(1, dom.getElementsByTagName("wcs:CoverageDescription").getLength());
+        assertXpathEvaluatesTo(
+                getLayerId(NO_ENVELOPE_SRS),
+                "/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Identifier",
+                dom);
+        // check we generated a ows:AnyValue for the field definition (since we have no validity
+        // range)
+        assertXpathEvaluatesTo(
+                "2",
+                "/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Domain/wcs:SpatialDomain/ows:BoundingBox/@dimensions",
+                dom);
+
+        assertXpathEvaluatesTo(
+                "1",
+                "count(/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Domain/wcs:SpatialDomain/ows:BoundingBox[@crs='urn:ogc:def:crs:EPSG::26713' and @dimensions='2'])",
+                dom);
     }
 
     @Test
@@ -403,5 +451,44 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("simple", xpathBase + "/@xlink:type", dom);
         assertXpathEvaluatesTo(
                 proxyBaseUrl + "/metadata?key=value", xpathBase + "/@xlink:href", dom);
+    }
+
+    @Test
+    public void testDescribeIAU() throws Exception {
+        Document dom =
+                getAsDOM(
+                        BASEPATH
+                                + "?request=DescribeCoverage&service=WCS&version=1.1.1&identifiers="
+                                + getLayerId(SystemTestData.MARS_VIKING));
+
+        checkValidationErrors(dom, WCS11_SCHEMA);
+        // check the basics, the output is a single coverage description with the expected id
+        assertEquals(1, dom.getElementsByTagName("wcs:CoverageDescriptions").getLength());
+        assertEquals(1, dom.getElementsByTagName("wcs:CoverageDescription").getLength());
+        assertXpathEvaluatesTo(
+                getLayerId(SystemTestData.MARS_VIKING),
+                "/wcs:CoverageDescriptions/wcs:CoverageDescription/wcs:Identifier",
+                dom);
+        // check there is no rotation
+        Node gridOffsets =
+                xpath.getMatchingNodes(
+                                "/wcs:CoverageDescriptions/wcs:CoverageDescription/"
+                                        + "wcs:Domain/wcs:SpatialDomain/wcs:GridCRS/wcs:GridOffsets",
+                                dom)
+                        .item(0);
+        String[] offsetStrs = gridOffsets.getTextContent().split(" ");
+        assertEquals(4, offsetStrs.length);
+        double[] offsets = new double[4];
+        for (int i = 0; i < offsetStrs.length; i++) {
+            offsets[i] = Double.parseDouble(offsetStrs[i]);
+        }
+        assertTrue(offsets[0] > 0);
+        assertEquals(0.0, offsets[1], 0d);
+        assertEquals(0.0, offsets[2], 0d);
+        assertTrue(offsets[3] < 0);
+        // check there is one field, one axis, three key (this one is a RGB image)
+        assertEquals(1, dom.getElementsByTagName("wcs:Field").getLength());
+        assertEquals(1, dom.getElementsByTagName("wcs:Axis").getLength());
+        assertEquals(3, dom.getElementsByTagName("wcs:Key").getLength());
     }
 }

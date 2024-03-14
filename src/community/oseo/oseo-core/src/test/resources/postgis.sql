@@ -41,6 +41,7 @@ create table collection (
   "eoAcquisitionStation" varchar,
   "license" varchar,
   "queryables" varchar[],
+  "workspaces" varchar[],
   "enabled" boolean not null DEFAULT true,
   "assets" json
 );
@@ -137,7 +138,9 @@ create table product (
   "atmAlgorithmName" varchar[],
   "atmAlgorithmVersion" varchar[],
   "enabled" boolean not null DEFAULT true,
-  "assets" json
+  "assets" json,
+  "assetsb" jsonb,
+  "keywords" varchar[]
 );
 
 -- index all (really, this is a search engine)

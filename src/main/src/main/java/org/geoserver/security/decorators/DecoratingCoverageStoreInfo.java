@@ -14,11 +14,11 @@ import org.geoserver.catalog.CatalogVisitor;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geotools.api.coverage.grid.GridCoverageReader;
+import org.geotools.api.util.ProgressListener;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.util.decorate.AbstractDecorator;
 import org.geotools.util.factory.Hints;
-import org.opengis.coverage.grid.GridCoverageReader;
-import org.opengis.util.ProgressListener;
 
 /**
  * Delegates all methods to the provided delegate. Suclasses will override methods in order to
@@ -164,5 +164,15 @@ public class DecoratingCoverageStoreInfo extends AbstractDecorator<CoverageStore
     @Override
     public void setDateModified(Date dateModified) {
         delegate.setDateModified(dateModified);
+    }
+
+    @Override
+    public boolean isDisableOnConnFailure() {
+        return delegate.isDisableOnConnFailure();
+    }
+
+    @Override
+    public void setDisableOnConnFailure(boolean disableOnConnFailure) {
+        delegate.setDisableOnConnFailure(disableOnConnFailure);
     }
 }

@@ -1,0 +1,51 @@
+name: Assembly GitHub CI
+
+on:
+  pull_request
+
+env:
+  MAVEN_OPTS: -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 -Dmaven.wagon.http.retryHandler.count=3 -Xmx756m -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Dspotless.apply.skip=true
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            jdk: 11
+            dist: 'temurin'
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ matrix.jdk }}
+        distribution: ${{ matrix.dist }}
+    - name: Set up Maven
+      uses: stCarolas/setup-maven@v4.5
+      with:
+        maven-version: 3.9.5
+    - name: Maven repository caching
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: gs-${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          gs-${{ runner.os }}-maven-
+    - name: Build GeoServer modules and extensions without tests
+      run: |
+        mvn --version
+        mvn -B -ntp -U -T3 -DskipTests -Prelease -f src/pom.xml install
+    - name: Package GeoServer modules and extensions
+      run: |
+        mvn -B -ntp -nsu -N -f src/pom.xml assembly:single
+    - name: Build community modules without tests
+      run: |
+        mvn -B -ntp -U -T3 -DskipTests -PcommunityRelease -f src/community/pom.xml install
+    - name: Package community modules
+      run:  |
+        mvn -B -ntp -nsu -N -f src/community/pom.xml assembly:single
+    - name: Remove SNAPSHOT jars from repository
+      run: |
+        find ~/.m2/repository -name "*SNAPSHOT*" -type d | xargs rm -rf {}

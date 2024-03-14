@@ -130,13 +130,6 @@
     </profile>
 
     <profile>
-      <id>imagemap</id>
-      <modules>
-        <module>imagemap</module>
-      </modules>
-    </profile>
-
-    <profile>
       <id>ogr</id>
       <modules>
         <module>ogr</module>
@@ -194,13 +187,6 @@
       <id>security</id>
       <modules>
         <module>security</module>
-      </modules>
-    </profile>
-
-    <profile>
-      <id>xslt</id>
-      <modules>
-        <module>xslt</module>
       </modules>
     </profile>
 
@@ -346,7 +332,6 @@
       </activation>
       <modules>
         <module>geofence</module>
-        <module>geofence-server</module>
       </modules>
     </profile>
     <profile>
@@ -403,6 +388,12 @@
         <module>geopkg-output</module>
       </modules>
     </profile>
+    <profile>
+      <id>metadata</id>
+      <modules>
+        <module>metadata</module>
+      </modules>
+    </profile>
 
     <!-- allExtensions profile, includes all modules -->
     <profile>
@@ -414,7 +405,6 @@
         <module>oracle</module>
         <module>mysql</module>
         <module>db2</module>
-        <module>imagemap</module>
         <module>gdal</module>
         <module>jp2k</module>
         <module>ogr</module>
@@ -426,7 +416,6 @@
         <module>querylayer</module>
         <module>monitor</module>
         <module>security</module>
-        <module>xslt</module>
         <module>inspire</module>
         <module>css</module>
         <module>csw</module>
@@ -444,14 +433,16 @@
         <module>mongodb</module>
         <module>sldService</module>
         <module>geofence</module>
-        <module>geofence-server</module>
         <module>authkey</module>
         <module>web-resource</module>
         <module>params-extractor</module>
         <module>gwc-s3</module>
+        <module>wmts-multi-dimensional</module>
         <module>wps-download</module>
+        <module>wps-jdbc</module>
         <module>mapml</module>
         <module>geopkg-output</module>
+        <module>metadata</module>
       </modules>
     </profile>
 
@@ -465,7 +456,6 @@
         <module>oracle</module>
         <module>mysql</module>
         <module>db2</module>
-        <module>imagemap</module>
         <module>gdal</module>
         <module>jp2k</module>
         <module>ogr</module>
@@ -477,7 +467,6 @@
         <module>querylayer</module>
         <module>monitor</module>
         <module>security</module>
-        <module>xslt</module>
         <module>inspire</module>
         <module>css</module>
         <module>csw</module>
@@ -495,7 +484,6 @@
         <module>mongodb</module>
         <module>sldService</module>
         <module>geofence</module>
-        <module>geofence-server</module>
         <module>authkey</module>
         <module>web-resource</module>
         <module>params-extractor</module>
@@ -505,6 +493,7 @@
         <module>wps-jdbc</module>
         <module>mapml</module>
         <module>geopkg-output</module>
+        <module>metadata</module>
       </modules>
     </profile>
   </profiles>

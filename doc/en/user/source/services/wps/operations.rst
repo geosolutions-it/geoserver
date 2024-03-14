@@ -3,12 +3,24 @@
 WPS Operations
 ==============
 
-WPS defines three operations for the discovery and execution of geospatial processes.  
-The operations are:
+The WPS 1.0.0 standard defines three operations for the discovery and execution of geospatial processes, and GeoServer extends these with two further vendor or pseudo-operations.  The operations are:
 
-* GetCapabilities
-* DescribeProcess
-* Execute
+.. list-table::
+   :widths: 20 80
+
+   * - **Operation**
+     - **Description**
+   * - `GetCapabilities`_
+     - Retrieves details of the service offering, including service metadata and metadata describing the available processes 
+   * - `DescribeProcess`_
+     - Retrieves a description of a WPS process available through the service 
+   * - `Execute`_
+     - A request to perform the process with specified input values and required output data items 
+   * - `Dismiss`_ (vendor extension)
+     - Used to cancel the execution of a process 
+   * - `GetExecutions`_ (vendor extension)
+     - Retrieves a list of the current Execution Statuses
+
 
 .. _wps_getcaps:
 
@@ -175,6 +187,8 @@ For help in generating WPS requests you can use the built-in interactive :ref:`w
 Dismiss
 -------
 
+.. note:: This is a vendor extension of the GeoServer WPS Service. This operation is specific to GeoServer.
+
 According to the WPS specification, an asynchronous process execution returns a back link to a status 
 location that the client can ping to get progress report about the process, and eventually retrieve
 its final results.
@@ -184,7 +198,7 @@ has the following structure::
 
     http://host:port/geoserver/ows?service=WPS&version=1.0.0&request=GetExecutionStatus&executionId=397e8cbd-7d51-48c5-ad72-b0fcbe7cfbdb
 
-The ``executionId`` identifies the running request, and can be used in a the ``Dismiss`` vendor
+The ``executionId`` identifies the running request, and can be used in the ``Dismiss`` vendor
 operation in order to cancel the execution of the process:
 
    http://host:port/geoserver/ows?service=WPS&version=1.0.0&request=Dismiss&executionId=397e8cbd-7d51-48c5-ad72-b0fcbe7cfbdb
@@ -193,7 +207,7 @@ Upon receipt GeoServer will do its best to stop the running process, and subsequ
 or ``GetExecutionStatus`` will report that the executionId is not known anymore.
 Internally, GeoServer will stop any process that attempts to report progress, and poison input and
 outputs to break the execution of the process, but the execution of processes that already got their
-inputs, and are not reporting their progress back, will continue until its natural end.  
+inputs, and are not reporting their progress back, will continue until their natural end.  
 
 For example, let's consider the "geo:Buffer" process, possibly working against a very large input 
 GML geometry, to be fetched from another host. The process itself does a single call to a  JTS function,
@@ -206,9 +220,9 @@ which cannot report progress. Here are three possible scenarios, depending on wh
 GetExecutions
 -------------
 
-.. note:: This is an extension of the GeoServer WPS Service. This operation is specific to this GeoServer instance.
+.. note:: This is a vendor extension of the GeoServer WPS Service. This operation is specific to GeoServer.
 
-This specific operation allows a client to recognize the list of WPS Executions.
+This operation allows a client to recognize the list of WPS Executions.
 
 .. figure:: images/getExecutions_001.png
    :align: center
@@ -226,7 +240,7 @@ If the “lineage” option of the WPS Execute Request has been specified, the c
 StatusInfo Document
 ^^^^^^^^^^^^^^^^^^^
 
-Refers to http://docs.opengeospatial.org/is/14-065/14-065.html 9.5 and extends it.
+Refers to http://docs.opengeospatial.org/is/14-065/14-065.html section 9.5 and extends it.
 
 The StatusInfo document is used to provide identification and status information about jobs on a WPS server. The operation adds additional fields to the StatusInfo Document reporting also the WPS Process Identifier and other information on estimated execution and expiration time.
 
@@ -267,7 +281,7 @@ Response paging
 
 Response paging is the ability of a client to scroll through a set of response values, N values at-a-time much like one scrolls through the response from a search engine one page at a time.
 
-Similarly to the WFS 2.0.0 response paging mechanism (see See section “7.7.4.4 Response paging” of the specification), the output will show to the client the following attributes as part of the response document.
+Similar to the WFS 2.0.0 response paging mechanism (see section “7.7.4.4 Response paging” of the specification), the output will show to the client the following attributes as part of the response document.
 
 .. figure:: images/getExecutions_006.png
    :align: center

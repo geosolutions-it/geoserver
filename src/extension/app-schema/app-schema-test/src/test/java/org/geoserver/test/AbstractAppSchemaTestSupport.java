@@ -6,6 +6,7 @@
 
 package org.geoserver.test;
 
+import static java.util.Map.entry;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -21,7 +22,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,10 +44,12 @@ import org.custommonkey.xmlunit.exceptions.XpathException;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.util.IOUtils;
 import org.geoserver.wfs.WFSInfo;
+import org.geotools.api.data.DataAccess;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.appschema.jdbc.NestedFilterToSQL;
 import org.geotools.appschema.resolver.xml.AppSchemaValidator;
 import org.geotools.appschema.resolver.xml.AppSchemaXSDRegistry;
-import org.geotools.data.DataAccess;
 import org.geotools.data.complex.AppSchemaDataAccess;
 import org.geotools.data.complex.AppSchemaDataAccessRegistry;
 import org.geotools.data.complex.DataAccessRegistry;
@@ -64,8 +66,6 @@ import org.geotools.jdbc.SQLDialect;
 import org.geotools.xml.resolver.SchemaCache;
 import org.geotools.xml.resolver.SchemaCatalog;
 import org.geotools.xml.resolver.SchemaResolver;
-import org.opengis.feature.Feature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
@@ -94,22 +94,17 @@ public abstract class AbstractAppSchemaTestSupport extends GeoServerSystemTestSu
     /** WFS namespaces, for use by XMLUnit. A seen in WFSTestSupport, plus xlink. */
     @SuppressWarnings("serial")
     private final Map<String, String> WFS_NAMESPACES =
-            Collections.unmodifiableMap(
-                    new HashMap<String, String>() {
-                        {
-                            put("wfs", "http://www.opengis.net/wfs");
-                            put("ows", "http://www.opengis.net/ows");
-                            put("ogc", "http://www.opengis.net/ogc");
-                            put("xs", "http://www.w3.org/2001/XMLSchema");
-                            put("xsd", "http://www.w3.org/2001/XMLSchema");
-                            put("gml", "http://www.opengis.net/gml");
-                            put("xlink", "http://www.w3.org/1999/xlink");
-                            put("xsi", "http://www.w3.org/2001/XMLSchema-instance");
-                            put(
-                                    "wms",
-                                    "http://www.opengis.net/wms"); // NC - wms added for wms tests
-                        }
-                    });
+            Map.ofEntries(
+                    entry("wfs", "http://www.opengis.net/wfs"),
+                    entry("ows", "http://www.opengis.net/ows"),
+                    entry("ogc", "http://www.opengis.net/ogc"),
+                    entry("xs", "http://www.w3.org/2001/XMLSchema"),
+                    entry("xsd", "http://www.w3.org/2001/XMLSchema"),
+                    entry("gml", "http://www.opengis.net/gml"),
+                    entry("xlink", "http://www.w3.org/1999/xlink"),
+                    entry("xsi", "http://www.w3.org/2001/XMLSchema-instance"),
+                    entry("wms", "http://www.opengis.net/wms") // NC - wms added for wms tests
+                    );
 
     /** The XpathEngine to be used for this namespace context. */
     private XpathEngine xpathEngine;

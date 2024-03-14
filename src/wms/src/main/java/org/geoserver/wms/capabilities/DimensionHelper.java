@@ -5,6 +5,8 @@
  */
 package org.geoserver.wms.capabilities;
 
+import static org.geoserver.wms.WMS.DIM_;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -20,6 +22,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
@@ -43,6 +46,7 @@ import org.geotools.ows.wmts.model.WMTSLayer;
 import org.geotools.temporal.object.DefaultPeriodDuration;
 import org.geotools.util.Converters;
 import org.geotools.util.DateRange;
+import org.geotools.util.DateTimeParser;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.xml.sax.Attributes;
@@ -53,7 +57,7 @@ import org.xml.sax.helpers.AttributesImpl;
  *
  * @author Andrea Aime - GeoSolutions
  */
-abstract class DimensionHelper {
+public abstract class DimensionHelper {
 
     static final Logger LOGGER = Logging.getLogger(DimensionHelper.class);
     public static final String NEAREST_VALUE = "nearestValue";
@@ -63,6 +67,7 @@ abstract class DimensionHelper {
     public static final String TIME = "time";
     public static final String ELEVATION = "elevation";
     public static final String UNIT_SYMBOL = "unitSymbol";
+    public static final String PRESENT = "present";
 
     enum Mode {
         WMS11,
@@ -167,7 +172,7 @@ abstract class DimensionHelper {
                 metadata = "";
             }
             String defaultValue =
-                    getDefaultValueRepresentation(featureTypeInfo, "dim_" + customDim.getKey(), "");
+                    getDefaultValueRepresentation(featureTypeInfo, DIM_ + customDim.getKey(), "");
             writeCustomDimensionVector(
                     customDim.getKey(), values, metadata, units, unitSymbol, defaultValue);
         } catch (IOException e) {
@@ -185,14 +190,10 @@ abstract class DimensionHelper {
                         e ->
                                 e.getValue() instanceof DimensionInfo
                                         && e.getKey() != null
-                                        && e.getKey().startsWith("dim_")
+                                        && e.getKey().startsWith(DIM_)
                                         && !ResourceInfo.ELEVATION.equals(e.getKey())
                                         && !ResourceInfo.TIME.equals(e.getKey()))
-                .map(
-                        e ->
-                                Pair.of(
-                                        e.getKey().replaceFirst("dim_", ""),
-                                        (DimensionInfo) e.getValue()))
+                .map(e -> Pair.of(e.getKey().replaceFirst(DIM_, ""), (DimensionInfo) e.getValue()))
                 .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
     }
 
@@ -341,11 +342,19 @@ abstract class DimensionHelper {
         TreeSet<Object> elevations = null;
         try {
             if (elevInfo.getPresentation() != DimensionPresentation.LIST) {
-                Double minValue = dimensions.getMinElevation();
-                if (minValue != null) {
+                String startValue = elevInfo.getStartValue();
+                String endValue = elevInfo.getEndValue();
+                if (!StringUtils.isEmpty(startValue) && !StringUtils.isEmpty(endValue)) {
                     elevations = new TreeSet<>();
-                    elevations.add(minValue);
-                    elevations.add(dimensions.getMaxElevation());
+                    elevations.add(Double.parseDouble(startValue));
+                    elevations.add(Double.parseDouble(endValue));
+                } else {
+                    Double minValue = dimensions.getMinElevation();
+                    if (minValue != null) {
+                        elevations = new TreeSet<>();
+                        elevations.add(minValue);
+                        elevations.add(dimensions.getMaxElevation());
+                    }
                 }
             }
             if (elevations == null) {
@@ -387,11 +396,19 @@ abstract class DimensionHelper {
         TreeSet<Object> temporalDomain = null;
         try {
             if (timeInfo.getPresentation() != DimensionPresentation.LIST) {
-                Date minValue = dimension.getMinTime();
-                if (minValue != null) {
+                String startValue = timeInfo.getStartValue();
+                String endValue = timeInfo.getEndValue();
+                if (startValue != null && endValue != null) {
                     temporalDomain = new TreeSet<>();
-                    temporalDomain.add(minValue);
-                    temporalDomain.add(dimension.getMaxTime());
+                    temporalDomain.add(parseTimeRangeValue(startValue));
+                    temporalDomain.add(parseTimeRangeValue(endValue));
+                } else {
+                    Date minValue = dimension.getMinTime();
+                    if (minValue != null) {
+                        temporalDomain = new TreeSet<>();
+                        temporalDomain.add(minValue);
+                        temporalDomain.add(dimension.getMaxTime());
+                    }
                 }
             }
             if (temporalDomain == null) {
@@ -864,5 +881,18 @@ abstract class DimensionHelper {
             elevDim.addAttribute("", UNIT_SYMBOL, UNIT_SYMBOL, "", unitSymNotNull);
         }
         element("Dimension", metadata, elevDim);
+    }
+
+    public static Date parseTimeRangeValue(String value) {
+        if (value.equalsIgnoreCase(PRESENT)) {
+            return new Date();
+        } else {
+            try {
+                DateTimeParser dateTimeParser = new DateTimeParser();
+                return (Date) ((List) dateTimeParser.parse(value)).get(0);
+            } catch (Exception e) {
+                throw new ServiceException("Unable to parse the range value", e);
+            }
+        }
     }
 }

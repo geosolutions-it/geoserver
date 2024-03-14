@@ -9,18 +9,20 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.ParametersAreNonnullByDefault;
+import org.geotools.api.filter.And;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.MultiValuedFilter.MatchAction;
+import org.geotools.api.filter.Not;
+import org.geotools.api.filter.Or;
+import org.geotools.api.filter.PropertyIsEqualTo;
+import org.geotools.api.filter.expression.Expression;
+import org.geotools.api.filter.expression.Function;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.api.filter.sort.SortBy;
+import org.geotools.api.filter.sort.SortOrder;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.util.Converters;
-import org.opengis.filter.And;
-import org.opengis.filter.Filter;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.MultiValuedFilter.MatchAction;
-import org.opengis.filter.Not;
-import org.opengis.filter.Or;
-import org.opengis.filter.PropertyIsEqualTo;
-import org.opengis.filter.expression.PropertyName;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.filter.sort.SortOrder;
 
 /**
  * Static factory method utility to build well known types of {@link Filter} instances.
@@ -238,8 +240,11 @@ public class Predicates {
      * a false predicate is found.
      */
     public static Filter and(Filter... operands) {
+        if (operands == null || operands.length == 0) return Filter.INCLUDE;
+        else if (operands.length == 1) return operands[0];
+
         List<Filter> anded = Lists.newArrayList(operands);
-        return factory.and(anded);
+        return and(anded);
     }
 
     /**
@@ -341,5 +346,14 @@ public class Predicates {
      */
     public static Filter notEqual(final String property, final Object expected) {
         return factory.notEqual(factory.property(property), factory.literal(expected));
+    }
+
+    /** Encodes a Filter checking that the given property is equal to one of the provided values. */
+    public static Filter in(String propertyName, List<? extends Object> values) {
+        List<Expression> arguments = new ArrayList<>();
+        arguments.add(factory.property(propertyName));
+        values.stream().map(v -> factory.literal(v)).forEach(l -> arguments.add(l));
+        Function in = factory.function("in", arguments.toArray(new Expression[arguments.size()]));
+        return factory.equals(in, factory.literal(true));
     }
 }

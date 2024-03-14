@@ -5,6 +5,7 @@
 
 package org.geoserver.mapml;
 
+import static org.apache.commons.text.StringEscapeUtils.escapeHtml4;
 import static org.geoserver.mapml.MapMLConstants.MAPML_MIME_TYPE;
 
 import java.io.IOException;
@@ -27,11 +28,11 @@ import org.geoserver.mapml.xml.ProjType;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.wms.WMS;
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.NoSuchAuthorityCodeException;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.NoSuchAuthorityCodeException;
-import org.opengis.referencing.operation.TransformException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -186,13 +187,12 @@ public class MapMLController {
                         "/mapml/viewer/widget/mapml-viewer.js",
                         null,
                         URLMangler.URLType.RESOURCE);
-        String title = layerLabel;
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n")
                 .append("<html>\n")
                 .append("<head>\n")
                 .append("<title>")
-                .append(title)
+                .append(escapeHtml4(layerLabel))
                 .append("</title>\n")
                 .append("<meta charset='utf-8'>\n")
                 .append("<script type=\"module\"  src=\"")
@@ -201,7 +201,8 @@ public class MapMLController {
                 .append("<style>\n")
                 .append("html, body { height: 100%; }\n")
                 .append("* { margin: 0; padding: 0; }\n")
-                .append("mapml-viewer:defined { max-width: 100%; width: 100%; height: 100%; }\n")
+                .append(
+                        "mapml-viewer:defined { max-width: 100%; width: 100%; height: 100%; border: none; vertical-align: middle }\n")
                 .append("mapml-viewer:not(:defined) > * { display: none; } n")
                 .append("layer- { display: none; }\n")
                 .append("</style>\n")
@@ -222,19 +223,19 @@ public class MapMLController {
                 .append("\" ")
                 .append("lon=\"")
                 .append(longitude)
-                .append("\" controls>\n")
+                .append("\" controls controlslist=\"geolocation\">\n")
                 .append("<layer- label=\"")
-                .append(layerLabel)
+                .append(escapeHtml4(layerLabel))
                 .append("\" ")
                 .append("src=\"")
                 .append(request.getContextPath())
                 .append(request.getServletPath())
                 .append("/")
-                .append(layer)
+                .append(escapeHtml4(layer))
                 .append("/")
                 .append(proj)
                 .append("/")
-                .append(!styleName.isEmpty() ? "?style=" + styleName : "")
+                .append(!styleName.isEmpty() ? "?style=" + escapeHtml4(styleName) : "")
                 .append("\" checked></layer->\n")
                 .append("</mapml-viewer>\n")
                 .append("</body>\n")

@@ -5,10 +5,10 @@
  */
 package org.geoserver.importer;
 
+import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.referencing.CRS;
 import org.geotools.util.SoftValueHashMap;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * Caches expensive EPSG code lookups
@@ -18,15 +18,15 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 class EPSGCodeLookupCache {
 
     /** Marker for failed lookups */
-    static final Integer FAILED_LOOKUP = Integer.MIN_VALUE;
+    static final String FAILED_LOOKUP = "NOT_FOUND";
 
     /** The lookup cache */
-    SoftValueHashMap<CoordinateReferenceSystem, Integer> cache = new SoftValueHashMap<>(100);
+    SoftValueHashMap<CoordinateReferenceSystem, String> cache = new SoftValueHashMap<>(100);
 
-    public Integer lookupEPSGCode(CoordinateReferenceSystem crs) throws FactoryException {
-        Integer code = cache.get(crs);
+    public String lookupIdentifier(CoordinateReferenceSystem crs) throws FactoryException {
+        String code = cache.get(crs);
         if (code == null) {
-            code = CRS.lookupEpsgCode(crs, true);
+            code = CRS.lookupIdentifier(crs, true);
             if (code == null) {
                 cache.put(crs, FAILED_LOOKUP);
             } else {

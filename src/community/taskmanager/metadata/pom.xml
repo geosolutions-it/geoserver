@@ -25,7 +25,7 @@
     </dependency>
     <!--metadata support-->
     <dependency>
-      <groupId>org.geoserver.community</groupId>
+      <groupId>org.geoserver.extension</groupId>
       <artifactId>gs-metadata</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -43,6 +43,13 @@
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-core</artifactId>
+      <version>5.3.20.Final</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
 </project>
