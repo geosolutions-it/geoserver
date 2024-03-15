@@ -64,7 +64,7 @@ public class MapMLStyleVisitorTest extends MapMLTestSupport {
         assertEquals(
                 "Style classes string",
                 ".rule-2_symbolizer-1{stroke-opacity: 1.0;stroke-dashoffset: 0;stroke-width: 4.0;fill: #033080;fill-opacity: 0.74;stroke: #FF66FF;stroke-linecap: butt;} "
-                        + ".rule-1_symbolizer-1{stroke-opacity: 1.0;stroke-dashoffset: 0;stroke-width: 2.0;fill: #000080;fill-opacity: 0.5;stroke: #FFFFFF;stroke-linecap: butt;} ",
+                        + ".rule-1_symbolizer-1{stroke-opacity: 1.0;stroke-dashoffset: 0;stroke-width: 2.0;fill: #000080;fill-opacity: 0.5;stroke: #FFFFFF;stroke-linecap: butt;}",
                 mapmlFeatures.getHead().getStyle());
         assertEquals(
                 "XML feature count is equals the underlying features source count because multiple symbolizer classes are assigned at the feature level",
