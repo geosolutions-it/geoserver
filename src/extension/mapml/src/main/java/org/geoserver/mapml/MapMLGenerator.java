@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.xml.bind.JAXBElement;
 import org.apache.commons.text.StringEscapeUtils;
 import org.geoserver.mapml.xml.Coordinates;
@@ -21,6 +23,7 @@ import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.type.AttributeDescriptor;
 import org.geotools.api.feature.type.GeometryType;
 import org.geotools.gml.producer.CoordinateFormatter;
+import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.CoordinateSequence;
 import org.locationtech.jts.geom.Envelope;
@@ -38,13 +41,16 @@ import org.springframework.util.PropertyPlaceholderHelper;
  */
 public class MapMLGenerator {
 
+    static final Logger LOGGER = Logging.getLogger(MapMLGenerator.class);
+
     static ObjectFactory factory = new ObjectFactory();
 
     private int DEFAULT_NUM_DECIMALS = 8;
     private CoordinateFormatter formatter = new CoordinateFormatter(DEFAULT_NUM_DECIMALS);
     private Envelope clipBounds;
-
     private boolean skipAttributes;
+
+    private MapMLSimplifier simplifier;
 
     /**
      * @param sf a feature
@@ -76,11 +82,25 @@ public class MapMLGenerator {
 
         // if clipping is enabled, clip the geometry and return null if the clip removed it entirely
         Geometry g = (Geometry) sf.getDefaultGeometry();
+        if (g == null) return null;
+
+        // intersection check
+        if (clipBounds != null && !clipBounds.intersects(g.getEnvelopeInternal())) return null;
+        // eventual simplification (for WMS usage)
+        if (simplifier != null) {
+            try {
+                g = simplifier.simplify(g);
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "Failed to simplify geometry, using it as is.", e);
+            }
+        }
+        // and clipping (again for WMS usage)
         if (g != null && !g.isEmpty() && clipBounds != null) {
             MapMLGeometryClipper clipper = new MapMLGeometryClipper(g, clipBounds);
             g = clipper.clipAndTag();
-            if (g == null || g.isEmpty()) return null;
         }
+        if (g == null || g.isEmpty()) return null;
+
         f.setGeometry(buildGeometry(g));
         return f;
     }
@@ -123,6 +143,10 @@ public class MapMLGenerator {
     /** Enables disables alphanumeric attribute skipping */
     public void setSkipAttributes(boolean skipAttributes) {
         this.skipAttributes = skipAttributes;
+    }
+
+    public void setSimplifier(MapMLSimplifier simplifier) {
+        this.simplifier = simplifier;
     }
 
     private static class AttributeValueResolver {

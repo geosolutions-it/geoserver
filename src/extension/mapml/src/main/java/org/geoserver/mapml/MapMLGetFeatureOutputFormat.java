@@ -93,7 +93,8 @@ public class MapMLGetFeatureOutputFormat extends WFSGetFeatureOutputFormat {
                         numDecimals,
                         forcedDecimal,
                         padWithZeros,
-                        false);
+                        false,
+                        null);
 
         // write to output
         OutputStreamWriter osw = new OutputStreamWriter(out, gs.getSettings().getCharset());
