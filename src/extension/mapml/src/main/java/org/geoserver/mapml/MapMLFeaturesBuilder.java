@@ -107,20 +107,7 @@ public class MapMLFeaturesBuilder {
             reprojectedFeatureCollection = fc;
         }
 
-        MapMLStyleVisitor styleVisitor = new MapMLStyleVisitor();
-        Style style = getMapRequest.getStyles().get(0);
-        if (style == null) {
-            StyleInfo styleInfo = getMapRequest.getLayers().get(0).getLayerInfo().getDefaultStyle();
-            if (styleInfo != null && styleInfo.getStyle() != null) {
-                style = styleInfo.getStyle();
-            } else {
-                throw new ServiceException(
-                        "No style or default style found for layer"
-                                + getMapRequest.getLayers().get(0).getLayerInfo().getName());
-            }
-        }
-        style.accept(styleVisitor);
-        Map<String, MapMLStyle> styles = styleVisitor.getStyles();
+        Map<String, MapMLStyle> styles = getMapMLStyleMap();
 
         LayerInfo layerInfo = geoServer.getCatalog().getLayerByName(fc.getSchema().getTypeName());
         CoordinateReferenceSystem crs = mapContent.getRequest().getCrs();
@@ -136,6 +123,24 @@ public class MapMLFeaturesBuilder {
                 getForcedDecimal(meta),
                 getPadWithZeros(meta),
                 styles);
+    }
+
+    private Map<String, MapMLStyle> getMapMLStyleMap() throws IOException {
+        MapMLStyleVisitor styleVisitor = new MapMLStyleVisitor();
+        Style style = getMapRequest.getStyles().get(0);
+        if (style == null) {
+            StyleInfo styleInfo = getMapRequest.getLayers().get(0).getLayerInfo().getDefaultStyle();
+            if (styleInfo != null && styleInfo.getStyle() != null) {
+                style = styleInfo.getStyle();
+            } else {
+                throw new ServiceException(
+                        "No style or default style found for layer"
+                                + getMapRequest.getLayers().get(0).getLayerInfo().getName());
+            }
+        }
+        style.accept(styleVisitor);
+        Map<String, MapMLStyle> styles = styleVisitor.getStyles();
+        return styles;
     }
 
     /**

@@ -80,10 +80,6 @@ public class Feature {
     @XmlSchemaType(name = "anySimpleType")
     protected String id;
 
-    @XmlAttribute(name = "featuretype-class")
-    @XmlSchemaType(name = "anySimpleType")
-    protected String clazz;
-
     @XmlAttribute(name = "class")
     @XmlSchemaType(name = "anySimpleType")
     protected String style;
@@ -178,24 +174,6 @@ public class Feature {
      */
     public void setId(String value) {
         this.id = value;
-    }
-
-    /**
-     * Gets the value of the clazz property.
-     *
-     * @return possible object is {@link String }
-     */
-    public String getClazz() {
-        return clazz;
-    }
-
-    /**
-     * Sets the value of the clazz property.
-     *
-     * @param value allowed object is {@link String }
-     */
-    public void setClazz(String value) {
-        this.clazz = value;
     }
 
     /**

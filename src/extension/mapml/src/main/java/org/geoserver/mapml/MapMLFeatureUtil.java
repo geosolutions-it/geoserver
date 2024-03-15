@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
@@ -44,7 +46,7 @@ import org.geotools.util.logging.Logging;
 public class MapMLFeatureUtil {
     private static final Logger LOGGER = Logging.getLogger(MapMLFeatureUtil.class);
     public static final String STYLE_CLASS_PREFIX = ".";
-    public static final String STYLE_CLASS_SUFFIX = " ";
+    public static final String STYLE_CLASS_DELIMITER = " ";
 
     /**
      * Convert a feature collection to a MapML document
@@ -136,8 +138,8 @@ public class MapMLFeatureUtil {
                                     feature, fCaptionTemplate, applicableStyles);
                     // feature will be skipped if geometry incompatible with style symbolizer
                     f.ifPresent(features::add);
-                    // WFS GETFEATURE request with no styles
                 } else {
+                    // WFS GETFEATURE request with no styles
                     Optional<Feature> f =
                             featureBuilder.buildFeature(feature, fCaptionTemplate, null);
                     f.ifPresent(features::add);
@@ -171,7 +173,7 @@ public class MapMLFeatureUtil {
                 }
             }
         }
-        if (applicableStyles.isEmpty()) {
+        if (applicableStyles.isEmpty() && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.finer("No applicable SLD styles found for feature " + sf.getID());
         }
         return applicableStyles;
@@ -187,14 +189,12 @@ public class MapMLFeatureUtil {
         if (styles == null) {
             return null;
         }
-        StringBuilder style = new StringBuilder();
+        StringJoiner style = new StringJoiner(STYLE_CLASS_DELIMITER);
         for (Map.Entry<String, MapMLStyle> entry : styles.entrySet()) {
             MapMLStyle mapMLStyle = entry.getValue();
             // empty properties can happen when style elements are not supported
             if (mapMLStyle != null && !mapMLStyle.getProperties().isEmpty()) {
-                style.append(STYLE_CLASS_PREFIX);
-                style.append(mapMLStyle.getStyleAsCSS());
-                style.append(STYLE_CLASS_SUFFIX);
+                style.add(STYLE_CLASS_PREFIX + mapMLStyle.getStyleAsCSS());
             }
         }
         return style.toString();
