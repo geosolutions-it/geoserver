@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.geoserver</groupId>
   <artifactId>geoserver</artifactId>
-  <version>2.24.2</version>
+  <version>C105.2.24.2.00</version>
   <packaging>pom</packaging>
   <name>GeoServer</name>
   <inceptionYear>2006</inceptionYear>
@@ -88,7 +88,7 @@
   </distributionManagement>
 
   <properties>
-    <gs.version>2.24.2</gs.version>
+    <gs.version>C105.2.24.2.00</gs.version>
     <gt.version>30.2</gt.version>
     <gwc.version>1.24.2</gwc.version>
     <jts.version>1.19.0</jts.version>
