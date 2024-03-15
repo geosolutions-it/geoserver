@@ -1137,6 +1137,13 @@ public class MapMLDocumentBuilder {
         } else {
             params.put("format", imageFormat);
         }
+        if (mapMLLayerMetadata.isTimeEnabled()) {
+            params.put("time", "{time}");
+        }
+        if (mapMLLayerMetadata.isElevationEnabled()) {
+            params.put("elevation", "{elevation}");
+        }
+        if (cqlFilter.isPresent()) params.put("cql_filter", mapMLLayerMetadata.getCqlFilter());
         String urlTemplate = "";
         try {
             urlTemplate =
@@ -1259,6 +1266,7 @@ public class MapMLDocumentBuilder {
         if (mapMLLayerMetadata.isElevationEnabled()) {
             params.put("elevation", "{elevation}");
         }
+        if (cqlFilter.isPresent()) params.put("cql_filter", mapMLLayerMetadata.getCqlFilter());
         params.put("bbox", "{txmin},{tymin},{txmax},{tymax}");
         if (mapMLLayerMetadata.isUseFeatures()) {
             params.put("format", MAPML_MIME_TYPE);

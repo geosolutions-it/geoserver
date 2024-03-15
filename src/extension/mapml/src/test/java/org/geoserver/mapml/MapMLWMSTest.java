@@ -418,6 +418,71 @@ public class MapMLWMSTest extends MapMLTestSupport {
     }
 
     @Test
+    public void testCQLTiledLinks() throws Exception {
+        Catalog cat = getCatalog();
+        LayerInfo li = cat.getLayerByName(MockData.POLYGONS.getLocalPart());
+        li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
+        li.getResource().getMetadata().put(MAPML_USE_TILES, true);
+        cat.save(li);
+
+        Mapml mapmlExtent =
+                getWMSAsMapML(
+                        MockData.POLYGONS.getLocalPart(),
+                        null,
+                        null,
+                        null,
+                        "EPSG:3857",
+                        null,
+                        "id%3D%27t0002%27;INCLUDE",
+                        false);
+
+        List<Link> extentLinks =
+                getTypeFromInputOrDataListOrLink(
+                        mapmlExtent.getBody().getExtents().get(0).getInputOrDatalistOrLink(),
+                        Link.class);
+        List<Link> imageLinksForSingle = getLinkByRelType(extentLinks, RelType.TILE);
+        String url = imageLinksForSingle.get(0).getTref();
+        assertThat(url, Matchers.containsString("service=WMS"));
+        assertThat(url, Matchers.containsString("format_options=mapmlfeatures:true"));
+        assertThat(url, Matchers.containsString("format=text/mapml"));
+        assertThat(url, Matchers.containsString("cql_filter=id='t0002'"));
+    }
+
+    @Test
+    public void testCQLTiledCachedLinks() throws Exception {
+        // set up tile caching so that we can check WMTS links
+        Catalog cat = getCatalog();
+        LayerInfo li = cat.getLayerByName(MockData.POLYGONS.getLocalPart());
+        li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
+        li.getResource().getMetadata().put(MAPML_USE_TILES, true);
+        cat.save(li);
+
+        enableTileCaching(MockData.POLYGONS, cat);
+
+        Mapml mapmlExtent =
+                getWMSAsMapML(
+                        MockData.POLYGONS.getLocalPart(),
+                        null,
+                        null,
+                        null,
+                        "EPSG:3857",
+                        null,
+                        "id%3D%27t0002%27;INCLUDE",
+                        false);
+
+        List<Link> extentLinks =
+                getTypeFromInputOrDataListOrLink(
+                        mapmlExtent.getBody().getExtents().get(0).getInputOrDatalistOrLink(),
+                        Link.class);
+        List<Link> imageLinksForSingle = getLinkByRelType(extentLinks, RelType.TILE);
+        String url = imageLinksForSingle.get(0).getTref();
+        assertThat(url, Matchers.containsString("service=WMTS"));
+        assertThat(url, Matchers.containsString("format_options=mapmlfeatures:true"));
+        assertThat(url, Matchers.containsString("format=text/mapml"));
+        assertThat(url, Matchers.containsString("cql_filter=id='t0002'"));
+    }
+
+    @Test
     public void testMapMLMultiLayer() throws Exception {
         Catalog cat = getCatalog();
         GeoServer geoServer = getGeoServer();
