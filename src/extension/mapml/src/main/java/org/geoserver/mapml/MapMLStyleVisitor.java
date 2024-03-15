@@ -6,8 +6,6 @@ package org.geoserver.mapml;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -32,7 +30,12 @@ import org.geotools.filter.visitor.IsStaticExpressionVisitor;
 import org.geotools.styling.AbstractStyleVisitor;
 import org.geotools.util.logging.Logging;
 
-/** MapML Style Visitor to convert SLD to MapML CSS Styles */
+/**
+ * MapML Style Visitor to convert a limited set of SLD elements into CSS style classes for use with
+ * MapML XML feature rendering on the client-side. Includes support for basic rendering elements
+ * (static only) of PointSymbolizer, LineSymbolizer and PolygonSymbolizer. Skips and logs
+ * unsupported elements.
+ */
 public class MapMLStyleVisitor extends AbstractStyleVisitor {
     static final Logger LOGGER = Logging.getLogger(MapMLStyleVisitor.class);
     public static final String OPACITY = "opacity";
@@ -52,9 +55,9 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
     public static final String FILL_OPACITY = "fill-opacity";
 
     Map<String, MapMLStyle> styles = new HashMap<>();
-    AtomicInteger ruleCounter = new AtomicInteger(0);
-    AtomicInteger symbolizerCounter = new AtomicInteger(0);
-    AtomicBoolean isElseFilter = new AtomicBoolean(false);
+    int ruleCounter = 0;
+    int symbolizerCounter = 0;
+    boolean isElseFilter = false;
 
     Filter filter;
 
@@ -64,9 +67,9 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
     public void visit(FeatureTypeStyle fts) {
         for (Rule r : fts.rules()) {
             filter = r.getFilter();
-            isElseFilter.set(r.isElseFilter());
-            symbolizerCounter.set(0);
-            ruleCounter.incrementAndGet();
+            isElseFilter = r.isElseFilter();
+            symbolizerCounter = 0;
+            ruleCounter++;
             r.accept(this);
         }
     }
@@ -74,9 +77,11 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
     @Override
     public void visit(Fill fill) {
         if (fill.getGraphicFill() != null) {
-            LOGGER.log(
-                    Level.WARNING,
-                    "MapML feature styling does not currently support Graphic Fills");
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(
+                        Level.FINE,
+                        "MapML feature styling does not currently support Graphic Fills");
+            }
             return;
         }
         if (isNotNullAndIsStatic(fill.getColor())) {
@@ -92,15 +97,19 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
     @Override
     public void visit(Stroke stroke) {
         if (stroke.getGraphicStroke() != null) {
-            LOGGER.log(
-                    Level.WARNING,
-                    "MapML feature styling does not currently support Graphic Strokes");
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(
+                        Level.FINE,
+                        "MapML feature styling does not currently support Graphic Strokes");
+            }
             return;
         }
         if (stroke.getGraphicFill() != null) {
-            LOGGER.log(
-                    Level.WARNING,
-                    "MapML feature styling does not currently support Stroke Graphic Fills");
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(
+                        Level.FINE,
+                        "MapML feature styling does not currently support Stroke Graphic Fills");
+            }
             return;
         }
         if (isNotNullAndIsStatic(stroke.getColor())) {
@@ -131,17 +140,19 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
             style.setProperty(STROKE_DASHOFFSET, String.valueOf(value));
         }
 
-        if (stroke.getLineJoin() != null) {
-            LOGGER.log(Level.WARNING, "MapML feature styling does not currently support Line Join");
+        if (stroke.getLineJoin() != null && LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.log(Level.FINE, "MapML feature styling does not currently support Line Join");
         }
     }
 
     @Override
     public void visit(Symbolizer sym) {
         if (sym instanceof RasterSymbolizer) {
-            LOGGER.log(
-                    Level.WARNING,
-                    "MapML feature styling does not currently support Raster Symbolizers");
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(
+                        Level.FINE,
+                        "MapML feature styling does not currently support Raster Symbolizers");
+            }
         } else if (sym instanceof LineSymbolizer) {
             visit((LineSymbolizer) sym);
         } else if (sym instanceof PolygonSymbolizer) {
@@ -149,9 +160,11 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
         } else if (sym instanceof PointSymbolizer) {
             visit((PointSymbolizer) sym);
         } else if (sym instanceof TextSymbolizer) {
-            LOGGER.log(
-                    Level.WARNING,
-                    "MapML feature styling does not currently support Text Symbolizers");
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(
+                        Level.FINE,
+                        "MapML feature styling does not currently support Text Symbolizers");
+            }
         } else {
             throw new RuntimeException("visit(Symbolizer) unsupported");
         }
@@ -177,28 +190,27 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
             radius = value * DEFAULT_RADIUS;
         }
         style.setProperty(RADIUS, String.valueOf(radius));
-        if (gr.getRotation() != null) {
+        if (gr.getRotation() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Graphic Rotation");
         }
-        if (gr.getDisplacement() != null) {
+        if (gr.getDisplacement() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Graphic Displacement");
         }
-        if (gr.getAnchorPoint() != null) {
+        if (gr.getAnchorPoint() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Graphic Anchor Point");
         }
-        if (gr.getGap() != null) {
-            LOGGER.log(
-                    Level.WARNING, "MapML feature styling does not currently support Graphic Gap");
+        if (gr.getGap() != null && LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.log(Level.FINE, "MapML feature styling does not currently support Graphic Gap");
         }
-        if (gr.getInitialGap() != null) {
+        if (gr.getInitialGap() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Graphic Initial Gap");
         }
 
@@ -217,10 +229,9 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
             String value = mark.getWellKnownName().evaluate(null, String.class);
             style.setProperty("well-known-name", value);
         }
-        if (mark.getExternalMark() != null) {
+        if (mark.getExternalMark() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
-                    "MapML feature styling does not currently support External Marks");
+                    Level.FINE, "MapML feature styling does not currently support External Marks");
         }
         if (mark.getFill() != null) {
             mark.getFill().accept(this);
@@ -233,9 +244,9 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
     @Override
     public void visit(LineSymbolizer line) {
         createStyle(line);
-        if (line.getPerpendicularOffset() != null) {
+        if (line.getPerpendicularOffset() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Line Perpendicular Offset");
         }
         if (line.getStroke() != null) {
@@ -246,14 +257,14 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
     @Override
     public void visit(PolygonSymbolizer poly) {
         createStyle(poly);
-        if (poly.getDisplacement() != null) {
+        if (poly.getDisplacement() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Polygon Displacement");
         }
-        if (poly.getPerpendicularOffset() != null) {
+        if (poly.getPerpendicularOffset() != null && LOGGER.isLoggable(Level.FINE)) {
             LOGGER.log(
-                    Level.WARNING,
+                    Level.FINE,
                     "MapML feature styling does not currently support Polygon Perpendicular Offset");
         }
 
@@ -282,10 +293,10 @@ public class MapMLStyleVisitor extends AbstractStyleVisitor {
      */
     private void createStyle(Symbolizer sym) {
         style = new MapMLStyle();
-        style.setRuleId(ruleCounter.get());
-        style.setSymbolizerId(symbolizerCounter.incrementAndGet());
+        style.setRuleId(ruleCounter);
+        style.setSymbolizerId(++symbolizerCounter);
         style.setSymbolizerType(sym.getClass().getSimpleName());
-        style.setElseFilter(isElseFilter.get());
+        style.setElseFilter(isElseFilter);
         style.setFilter(filter);
         styles.put(style.getCSSClassName(), style);
     }

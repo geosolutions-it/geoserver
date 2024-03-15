@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javax.xml.bind.JAXBElement;
@@ -122,7 +123,7 @@ public class MapMLGenerator {
             f.setStyle(spaceDelimitedCSSClasses);
         }
         // can't convert geometry to type expected by symbolizer
-        if (geometryContent.isEmpty()) {
+        if (geometryContent.isEmpty() && LOGGER.isLoggable(Level.FINER)) {
             LOGGER.finer(
                     "Could not convert geometry of type"
                             + (g != null ? g.getGeometryType() : "null")
