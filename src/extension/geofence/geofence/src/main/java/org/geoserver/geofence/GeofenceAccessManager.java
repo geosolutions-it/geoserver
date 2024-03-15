@@ -124,8 +124,6 @@ public class GeofenceAccessManager
 
     private WPSHelper wpsHelper;
 
-    private GeoFenceAreaHelper helper;
-
     public GeofenceAccessManager(
             RuleReaderService rulesService,
             Catalog catalog,
@@ -535,6 +533,7 @@ public class GeofenceAccessManager
 
                 LOGGER.log(Level.FINE, "Setting role for filter: {0}", new Object[] {joinedRoles});
                 ruleFilter.setRole(joinedRoles);
+            } else {
                 ruleFilter.setRole(RuleFilter.SpecialFilterType.ANY);
             }
 

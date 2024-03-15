@@ -83,7 +83,6 @@ import org.geotools.ows.ServiceException;
 import org.geotools.parameter.Parameter;
 import org.geotools.referencing.CRS;
 import org.geotools.renderer.lite.RenderingTransformationHelper;
-import org.geotools.styling.FeatureTypeStyle;
 import org.geotools.util.factory.GeoTools;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;

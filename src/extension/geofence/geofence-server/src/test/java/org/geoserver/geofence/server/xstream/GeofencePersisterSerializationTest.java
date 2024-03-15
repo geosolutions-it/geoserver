@@ -2,11 +2,7 @@
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
-<<<<<<<< HEAD:src/extension/geofence/src/test/java/org/geoserver/geoserver/xstream/GeofencePersisterSerializationTest.java
-package org.geoserver.geoserver.xstream;
-========
 package org.geoserver.geofence.server.xstream;
->>>>>>>> 2.24.2:src/extension/geofence/geofence-server/src/test/java/org/geoserver/geofence/server/xstream/GeofencePersisterSerializationTest.java
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
@@ -22,21 +18,12 @@ import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.config.util.XStreamPersisterFactory;
 import org.geoserver.geofence.core.model.Rule;
 import org.geoserver.geofence.core.model.enums.GrantType;
-<<<<<<<< HEAD:src/extension/geofence/src/test/java/org/geoserver/geoserver/xstream/GeofencePersisterSerializationTest.java
-import org.geoserver.geofence.rest.xml.Batch;
-import org.geoserver.geofence.rest.xml.BatchOperation;
-import org.geoserver.geofence.rest.xml.JaxbAdminRule;
-import org.geoserver.geofence.rest.xml.JaxbRule;
-import org.geoserver.geofence.rest.xml.JaxbRule.Limits;
-import org.geoserver.geofence.rest.xml.JaxbRuleList;
-========
 import org.geoserver.geofence.server.rest.xml.Batch;
 import org.geoserver.geofence.server.rest.xml.BatchOperation;
 import org.geoserver.geofence.server.rest.xml.JaxbAdminRule;
 import org.geoserver.geofence.server.rest.xml.JaxbRule;
 import org.geoserver.geofence.server.rest.xml.JaxbRule.Limits;
 import org.geoserver.geofence.server.rest.xml.JaxbRuleList;
->>>>>>>> 2.24.2:src/extension/geofence/geofence-server/src/test/java/org/geoserver/geofence/server/xstream/GeofencePersisterSerializationTest.java
 import org.junit.Before;
 import org.junit.Test;
 import org.locationtech.jts.geom.MultiPolygon;
@@ -166,30 +153,6 @@ public class GeofencePersisterSerializationTest {
         List<BatchOperation> operations = batch.getOperations();
         assertEquals(3, operations.size());
         for (BatchOperation op : operations) {
-<<<<<<<< HEAD:src/extension/geofence/src/test/java/org/geoserver/geoserver/xstream/GeofencePersisterSerializationTest.java
-            if (op.getType().equals(BatchOperation.TypeName.update)) {
-                assertEquals(BatchOperation.ServiceName.rules, op.getService());
-                assertEquals(3l, op.getId().longValue());
-                JaxbRule rule = (JaxbRule) op.getPayload();
-                assertEquals("ALLOW", rule.getAccess());
-                assertEquals("layer", rule.getLayer());
-                assertEquals(5l, rule.getPriority().longValue());
-                assertEquals("GETMAP", rule.getRequest());
-                assertEquals("WMS", rule.getService());
-                assertEquals("ws", rule.getWorkspace());
-                assertEquals("ROLE_AUTHENTICATED", rule.getRoleName());
-            } else if (op.getType().equals(BatchOperation.TypeName.delete)) {
-                assertEquals(BatchOperation.ServiceName.rules, op.getService());
-                assertEquals(5l, op.getId().longValue());
-            } else {
-                assertEquals(BatchOperation.TypeName.insert, op.getType());
-                assertEquals(BatchOperation.ServiceName.adminrules, op.getService());
-                JaxbAdminRule adminRule = (JaxbAdminRule) op.getPayload();
-                assertEquals("ADMIN", adminRule.getAccess());
-                assertEquals("ROLE_USER", adminRule.getRoleName());
-                assertEquals("ws", adminRule.getWorkspace());
-                assertEquals(2l, adminRule.getPriority().longValue());
-========
             switch (op.getType()) {
                 case update:
                     assertEquals(BatchOperation.ServiceName.rules, op.getService());
@@ -216,7 +179,6 @@ public class GeofencePersisterSerializationTest {
                     assertEquals("ws", adminRule.getWorkspace());
                     assertEquals(2l, adminRule.getPriority().longValue());
                     break;
->>>>>>>> 2.24.2:src/extension/geofence/geofence-server/src/test/java/org/geoserver/geofence/server/xstream/GeofencePersisterSerializationTest.java
             }
         }
     }

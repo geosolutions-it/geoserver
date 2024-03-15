@@ -51,14 +51,4 @@
      </file>
 
   </files>
-         <include>LGPL.html</include>
-         <include>OGC.html</include>
-         <include>W3C.html</include>
-  <files>
-     <file>
-       <source>../licenses/NOTICE.md</source>
-       <outputDirectory>license</outputDirectory>
-       <destName>NOTICE.txt</destName>
-     </file>
-  </files>
 </assembly>

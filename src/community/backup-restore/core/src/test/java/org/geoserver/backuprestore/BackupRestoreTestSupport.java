@@ -44,7 +44,6 @@ import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.junit.Before;
 import org.locationtech.jts.io.WKTReader;
-import org.opengis.referencing.FactoryException;
 
 /** @author Alessio Fabiani, GeoSolutions */
 public class BackupRestoreTestSupport extends GeoServerSystemTestSupport {

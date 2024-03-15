@@ -48,7 +48,6 @@ import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * Testing WCS 2.0 Core {@link GetCoverage}

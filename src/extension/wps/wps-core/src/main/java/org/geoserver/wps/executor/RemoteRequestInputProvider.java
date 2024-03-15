@@ -72,14 +72,10 @@ public class RemoteRequestInputProvider extends AbstractInputProvider {
         socketFactory = newSocketFactory;
     }
 
-    @VisibleForTesting
-    protected static void setSocketFactory(LayeredConnectionSocketFactory newSocketFactory) {
-        socketFactory = newSocketFactory;
-    }
-
     @Override
     protected Object getValueInternal(ProgressListener listener) throws Exception {
         InputReferenceType ref = input.getReference();
+
         // execute the request
         listener.started();
         String location = ref.getHref();

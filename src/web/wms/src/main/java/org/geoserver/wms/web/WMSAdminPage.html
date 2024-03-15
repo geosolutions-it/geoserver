@@ -46,18 +46,6 @@
     </fieldset>
 
     <fieldset>
-        <legend>
-          <span><wicket:message key="AllowedURLsForAuthForwarding">AllowedURLsForAuthForwarding</wicket:message></span>
-        </legend>
-        <ul>
-          <li>
-            <textarea class="input textarea" rows="10" cols="30" wicket:id="allowedURLsForAuthForwarding"></textarea>
-          </li>
-        </ul>
-      </fieldset>
-    </li>
-    <li>
-      <fieldset>
       <legend><span><wicket:message key="projectionHandlingOptions">Raster Rendering Options</wicket:message></span></legend>
       <ul class="choiceList">
         <li>
@@ -260,21 +248,6 @@
           <label for="disableFeaturesReproject">
             <wicket:message key="disableFeaturesReproject">
               Reproject GetFeatureInfo request results to the map coordinate reference system
-              </wicket:message>
-            </label>
-          </li>
-        </ul>
-      </fieldset>
-    </li>
-    <li>
-      <fieldset>
-        <legend><span><wicket:message key="autoEscapeTemplateValuesTitle"></wicket:message></span></legend>
-        <ul class="choiceList">
-          <li>
-            <input type="checkbox" wicket:id="autoEscapeTemplateValues"></input>
-            <label for="autoEscapeTemplateValues">
-              <wicket:message key="autoEscapeTemplateValues">
-                Enable auto-escaping for HTML GetFeatureInfo template values
             </wicket:message>
           </label>
         </li>

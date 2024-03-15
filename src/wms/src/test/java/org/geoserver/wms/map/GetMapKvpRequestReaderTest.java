@@ -794,8 +794,6 @@ public class GetMapKvpRequestReaderTest extends KvpRequestReaderTestSupport {
     }
 
     @Test
-
-    @Test
     public void testSldNotExist() throws Exception {
         // Specified external SLD does not exist
         HashMap kvp = new HashMap();
@@ -1445,14 +1443,6 @@ public class GetMapKvpRequestReaderTest extends KvpRequestReaderTestSupport {
 
             GetMapRequest request = reader.createRequest();
             request = reader.read(request, parseKvp(raw), caseInsensitiveKvp(raw));
-        } catch (ServiceException ex) {
-            serviceException = ex;
-        } finally {
-            Dispatcher.REQUEST.set(null);
-        }
-        assertNotNull("ServiceException not catched", serviceException);
-        assertEquals(serviceException.getLocator(), "viewParamsFormat");
-        assertEquals(serviceException.getCode(), ServiceException.INVALID_PARAMETER_VALUE);
         } catch (ServiceException ex) {
             serviceException = ex;
         } finally {

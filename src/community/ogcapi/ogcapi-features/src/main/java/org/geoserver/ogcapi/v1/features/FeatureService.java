@@ -17,6 +17,7 @@ import static org.geoserver.ogcapi.ConformanceClass.ECQL_TEXT;
 import static org.geoserver.ogcapi.ConformanceClass.FEATURES_FILTER;
 import static org.geoserver.ogcapi.ConformanceClass.FILTER;
 import static org.geoserver.ogcapi.ConformanceClass.IDS;
+import static org.geoserver.ogcapi.ConformanceClass.SEARCH;
 import static org.geoserver.ogcapi.ConformanceClass.SORTBY;
 import static org.geoserver.ogcapi.MappingJackson2YAMLMessageConverter.APPLICATION_YAML_VALUE;
 import static org.geoserver.ogcapi.OpenAPIMessageConverter.OPEN_API_MEDIA_TYPE_VALUE;
@@ -41,6 +42,7 @@ import net.opengis.wfs20.Wfs20Factory;
 import org.apache.commons.io.IOUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.ResourcePool;
 import org.geoserver.config.GeoServer;
 import org.geoserver.crs.CapabilitiesCRSProvider;
 import org.geoserver.ogcapi.APIBBoxParser;
@@ -48,6 +50,7 @@ import org.geoserver.ogcapi.APIDispatcher;
 import org.geoserver.ogcapi.APIException;
 import org.geoserver.ogcapi.APIFilterParser;
 import org.geoserver.ogcapi.APIRequestInfo;
+import org.geoserver.ogcapi.APISearchQuery;
 import org.geoserver.ogcapi.APIService;
 import org.geoserver.ogcapi.ConformanceDocument;
 import org.geoserver.ogcapi.DefaultContentType;
@@ -81,11 +84,11 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.util.DateRange;
 import org.springframework.http.HttpStatus;
-import org.opengis.filter.sort.SortBy;
-import org.opengis.referencing.FactoryException;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -165,7 +168,7 @@ public class FeatureService {
         if (CRS.equalsIgnoreMetadata(crs, DefaultGeographicCRS.WGS84)) {
             return FeatureService.DEFAULT_CRS;
         }
-        String identifier = CRS.lookupIdentifier(crs, false);
+        String identifier = ResourcePool.lookupIdentifier(crs, false);
         return mapResponseSRS(identifier);
     }
 
@@ -311,6 +314,7 @@ public class FeatureService {
                         CRS_BY_REFERENCE,
                         FEATURES_FILTER,
                         FILTER,
+                        SEARCH,
                         ECQL,
                         ECQL_TEXT,
                         CQL2_BASIC,
@@ -435,6 +439,34 @@ public class FeatureService {
         // build a response tracking both results and request to allow reusing the existing WFS
         // output formats
         return new FeaturesResponse(request.getAdaptee(), response);
+    }
+
+    @PostMapping(path = "collections/{collectionId}/search", name = "searchFeatures")
+    @ResponseBody
+    @DefaultContentType(OGCAPIMediaTypes.GEOJSON_VALUE)
+    public FeaturesResponse search(
+            @PathVariable(name = "collectionId") String collectionId,
+            @RequestBody APISearchQuery query)
+            throws Exception {
+
+        // WARNING:
+        // This endpoint is part of the draft proposal "OGC API - Features - Part 5". The syntax and
+        // semantic of the endpoint is subject to change in a future release. Its usage should be
+        // carefully considered.
+        return items(
+                collectionId,
+                query.getStartIndex(),
+                query.getLimit(),
+                query.getBbox(),
+                query.getBboxCRS(),
+                query.getDatetime(),
+                query.getFilter(),
+                query.getFilterLang(),
+                query.getFilterCRS(),
+                query.getSortBy(),
+                query.getCrs(),
+                query.getIds(),
+                null);
     }
 
     /** TODO: use DimensionInfo instead? It's used to return the time range in the collection */

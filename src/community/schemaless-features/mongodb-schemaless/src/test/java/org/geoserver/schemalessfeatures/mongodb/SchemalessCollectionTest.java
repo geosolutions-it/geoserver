@@ -29,7 +29,6 @@ import org.geotools.feature.FeatureIterator;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.filter.expression.Expression;
 
 public class SchemalessCollectionTest extends AbstractMongoDBOnlineTestSupport {
 

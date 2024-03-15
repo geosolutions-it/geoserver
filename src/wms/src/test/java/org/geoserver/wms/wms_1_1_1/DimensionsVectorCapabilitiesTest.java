@@ -641,64 +641,6 @@ public class DimensionsVectorCapabilitiesTest extends WMSDimensionsTestSupport {
     }
 
     @Test
-    public void testCustomContinuousWithEnd() throws Exception {
-        setupVectorDimensionWithEnd(
-                "dim_custom",
-                "startElevation",
-                "endElevation",
-                DimensionPresentation.CONTINUOUS_INTERVAL,
-                null,
-                UNITS,
-                UNIT_SYMBOL);
-
-        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
-        // print(dom);
-        assertXpathEvaluatesTo(
-                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@name", dom);
-        assertXpathEvaluatesTo(
-                UNIT_SYMBOL,
-                "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@unitSymbol",
-                dom);
-        assertXpathEvaluatesTo(
-                UNITS, "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@units", dom);
-        assertXpathEvaluatesTo(
-                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@name", dom);
-        assertXpathEvaluatesTo(
-                "1.0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@default", dom);
-        assertXpathEvaluatesTo(
-                "1.0/3.0/0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/text()", dom);
-    }
-
-    @Test
-    public void testCustomDiscreteIntervalWithEnd() throws Exception {
-        setupVectorDimensionWithEnd(
-                "dim_custom",
-                "startElevation",
-                "endElevation",
-                DimensionPresentation.DISCRETE_INTERVAL,
-                1.0,
-                UNITS,
-                UNIT_SYMBOL);
-
-        Document dom = dom(get("wms?request=getCapabilities&version=1.1.1"), false);
-        // print(dom);
-        assertXpathEvaluatesTo(
-                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@name", dom);
-        assertXpathEvaluatesTo(
-                UNIT_SYMBOL,
-                "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@unitSymbol",
-                dom);
-        assertXpathEvaluatesTo(
-                UNITS, "//Layer[Name='sf:TimeElevationWithStartEnd']/Dimension/@units", dom);
-        assertXpathEvaluatesTo(
-                "custom", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@name", dom);
-        assertXpathEvaluatesTo(
-                "1.0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/@default", dom);
-        assertXpathEvaluatesTo(
-                "1.0/3.0/1.0", "//Layer[Name='sf:TimeElevationWithStartEnd']/Extent/text()", dom);
-    }
-
-    @Test
     public void testCustomContinuousDate() throws Exception {
         setupVectorDimension(
                 "dim_custom",

@@ -94,11 +94,9 @@ import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.HarvestedSource;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.data.DataUtilities;
-import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultTransaction;
 import org.geotools.data.directory.DirectoryDataStore;
 import org.geotools.data.shapefile.ShapefileDataStore;
-import org.geotools.data.simple.SimpleFeatureStore;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geometry.GeneralBounds;
@@ -1493,12 +1491,6 @@ public class Importer implements DisposableBean, ApplicationListener {
                             (FeatureStore) dataStore.getFeatureSource(featureType.getTypeName());
                     fs.setTransaction(transaction);
 
-                // @todo implement me - need to specify attribute used for id
-                if (updateMode == UpdateMode.UPDATE) {
-                    FeatureStore fs =
-                            (FeatureStore) dataStore.getFeatureSource(featureType.getTypeName());
-                    fs.setTransaction(transaction);
-
                     throw new UnsupportedOperationException(
                             "updateMode UPDATE is not supported yet");
                 }
@@ -2224,7 +2216,6 @@ public class Importer implements DisposableBean, ApplicationListener {
             } else {
                 r.setLatLonBoundingBox(nativeBbox.transform(CRS.decode("EPSG:4326"), true));
                 return true;
-            }
             }
         }
         return false;

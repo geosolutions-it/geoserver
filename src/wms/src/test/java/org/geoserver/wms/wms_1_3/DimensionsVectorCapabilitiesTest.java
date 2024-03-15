@@ -689,32 +689,6 @@ public class DimensionsVectorCapabilitiesTest extends WMSDimensionsTestSupport {
     }
 
     @Test
-    public void testCustomDiscreteIntervalWithEnd() throws Exception {
-        setupVectorDimensionWithEnd(
-                "dim_custom",
-                "startElevation",
-                "endElevation",
-                DimensionPresentation.DISCRETE_INTERVAL,
-                1.0,
-                UNITS,
-                UNIT_SYMBOL);
-
-        Document dom = dom(get("wms?request=getCapabilities&version=1.3.0"), false);
-        // print(dom);
-
-        // check dimension has been declared
-        assertXpathEvaluatesTo("1", "count(//wms:Layer/wms:Dimension)", dom);
-        assertXpathEvaluatesTo("custom", "//wms:Layer/wms:Dimension/@name", dom);
-        assertXpathEvaluatesTo(UNITS, "//wms:Layer/wms:Dimension/@units", dom);
-        assertXpathEvaluatesTo(UNIT_SYMBOL, "//wms:Layer/wms:Dimension/@unitSymbol", dom);
-        // check we have the extent
-        assertXpathEvaluatesTo("1", "count(//wms:Layer/wms:Dimension)", dom);
-        assertXpathEvaluatesTo("custom", "//wms:Layer/wms:Dimension/@name", dom);
-        assertXpathEvaluatesTo("1.0", "//wms:Layer/wms:Dimension/@default", dom);
-        assertXpathEvaluatesTo("1.0/3.0/1.0", "//wms:Layer/wms:Dimension", dom);
-    }
-
-    @Test
     public void testCustomContinuousDate() throws Exception {
         setupVectorDimension(
                 "dim_custom", "time", DimensionPresentation.LIST, null, UNITS, UNIT_SYMBOL);

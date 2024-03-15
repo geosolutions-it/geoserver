@@ -43,7 +43,6 @@ import org.geotools.renderer.lite.MetaBufferEstimator;
 import org.geotools.util.factory.Hints;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.type.Name;
 
 /**
  * An identifier for vector layers that will take into account the filters, viewparams, styles and

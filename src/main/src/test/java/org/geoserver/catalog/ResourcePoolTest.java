@@ -101,9 +101,7 @@ import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.coverage.util.CoverageUtilities;
-import org.geotools.data.FeatureSource;
 import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.data.simple.SimpleFeatureLocking;
 import org.geotools.data.wfs.WFSDataStoreFactory;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.FeatureIterator;
@@ -753,22 +751,6 @@ public class ResourcePoolTest extends GeoServerSystemTestSupport {
                                         .toASCIIString());
                     }
                 });
-    }
-
-    /**
-     * This checks that the resource pool does NOT wrap the FeatureSource so that it prevents
-     * locking
-     */
-    @Test
-    public void testSourceIsNotIncorrectlyWrappedAndCanLock() throws IOException {
-        Catalog cat = getCatalog();
-        ResourcePool resourcePool = cat.getResourcePool();
-
-        FeatureTypeInfo featureTypeInfo = cat.getFeatureTypeByName("Lines");
-        featureTypeInfo.getAttributes().addAll(featureTypeInfo.attributes());
-        FeatureSource source = resourcePool.getFeatureSource(featureTypeInfo, null);
-
-        assertTrue(source instanceof SimpleFeatureLocking);
     }
 
     /**

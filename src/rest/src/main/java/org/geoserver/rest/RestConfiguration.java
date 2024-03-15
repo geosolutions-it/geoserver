@@ -205,9 +205,6 @@ public class RestConfiguration extends DelegatingWebMvcConfiguration {
 
         // finally, allow any other WebMvcConfigurer in the application context to do its thing
         super.configureContentNegotiation(configurer);
-
-        // finally, allow any other WebMvcConfigurer in the application context to do its thing
-        super.configureContentNegotiation(configurer);
     }
     // PathMatchConfigurer.setUseSuffixPatternMatch is deprecated because Spring wants to
     // discourage extensions in paths

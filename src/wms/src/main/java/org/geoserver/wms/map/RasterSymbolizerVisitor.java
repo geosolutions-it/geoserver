@@ -185,7 +185,6 @@ public class RasterSymbolizerVisitor implements StyleVisitor {
                 for (Rule r : fts.rules()) {
                     r.accept(this);
                 }
-                }
             }
         }
     }

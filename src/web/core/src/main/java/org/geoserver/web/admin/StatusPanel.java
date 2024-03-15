@@ -41,8 +41,6 @@ import org.geotools.api.feature.type.FeatureType;
 import org.geotools.api.filter.Filter;
 import org.geotools.data.InProcessLockingManager;
 import org.geotools.util.logging.Logging;
-import org.opengis.feature.Feature;
-import org.opengis.feature.type.FeatureType;
 
 public class StatusPanel extends Panel {
 
@@ -397,10 +395,6 @@ public class StatusPanel extends Panel {
         count += pool.getFeatureTypeAttributeCache().size();
         count += pool.getHintCoverageReaderCache().size();
         count += pool.getWmsCache().size();
-        count += pool.getWmtsCache().size();
-        count += pool.getStyleCache().size();
-        count += pool.getSldCache().size();
-
         count += pool.getWmtsCache().size();
         count += pool.getStyleCache().size();
         count += pool.getSldCache().size();

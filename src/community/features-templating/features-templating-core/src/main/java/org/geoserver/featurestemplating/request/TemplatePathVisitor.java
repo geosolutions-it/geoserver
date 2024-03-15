@@ -27,7 +27,6 @@ import org.geotools.api.filter.expression.Function;
 import org.geotools.api.filter.expression.PropertyName;
 import org.geotools.filter.AttributeExpressionImpl;
 import org.geotools.filter.visitor.DuplicatingFilterVisitor;
-import org.opengis.filter.expression.Function;
 
 /**
  * This visitor search for a Filter in {@link TemplateBuilder} tree using the path provided as a

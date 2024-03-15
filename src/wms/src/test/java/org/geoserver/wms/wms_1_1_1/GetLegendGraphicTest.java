@@ -118,49 +118,6 @@ public class GetLegendGraphicTest extends WMSTestSupport {
         assertPixel(image, 10, 10, Converters.convert("#4040C0", Color.class));
     }
 
-    @Test
-    public void testPlainMemoryLimit() throws Exception {
-        // 1kb, not enough for even the smallest image
-        setMemoryLimit(1);
-        Document dom =
-                getAsDOM(
-                        "wms?service=WMS&version=1.1.1&request=GetLegendGraphic"
-                                + "&layer="
-                                + getLayerId(MockData.LAKES)
-                                + "&style=Lakes"
-                                + "&format=image/png&width=20&height=20");
-        String message = checkLegacyException(dom, ServiceException.MAX_MEMORY_EXCEEDED, null);
-        assertEquals(LegendGraphicBuilder.MEMORY_USAGE_EXCEEDED, message.trim());
-    }
-
-    @Test
-    public void testHighMemoryLimit() throws Exception {
-        // going to increase the size of the image sample until we get OOM
-        String template =
-                "wms?service=WMS&version=1.1.1&request=GetLegendGraphic"
-                        + "&layer="
-                        + getLayerId(MockData.LAKES)
-                        + "&style=Lakes"
-                        + "&format=image/png&width=%d&height=%d";
-
-        // 8 MB limit, a 2000x2000 uses 16MB
-        setMemoryLimit(8196);
-        int[] sizes = {20, 200, 1000, 2000};
-        for (int size : sizes) {
-            MockHttpServletResponse response =
-                    getAsServletResponse(String.format(template, size, size));
-            if (size < 2000) {
-                assertEquals("image/png", response.getContentType());
-            } else {
-                assertEquals("application/vnd.ogc.se_xml", response.getContentType());
-                Document dom = dom(response, true);
-                String message =
-                        checkLegacyException(dom, ServiceException.MAX_MEMORY_EXCEEDED, null);
-                assertEquals(LegendGraphicBuilder.MEMORY_USAGE_EXCEEDED, message.trim());
-            }
-        }
-    }
-
     /**
      * Tests that GetLegendGraphic works with a style that has a non-process function
      *

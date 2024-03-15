@@ -41,7 +41,6 @@ import org.geotools.util.NumberRange;
 import org.geotools.util.URLs;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.geometry.Envelope;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;

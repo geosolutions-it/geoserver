@@ -6,7 +6,6 @@ package org.geoserver.ogcapi.v1.features;
 
 import static org.junit.Assert.assertEquals;
 
-
 import org.geoserver.test.AbstractAppSchemaMockData;
 import org.geoserver.test.AbstractAppSchemaTestSupport;
 import org.geoserver.test.FeatureChainingMockData;

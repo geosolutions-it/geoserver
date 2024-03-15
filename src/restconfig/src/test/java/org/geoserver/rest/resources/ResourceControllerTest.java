@@ -12,7 +12,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.text.DateFormat;
@@ -445,9 +444,6 @@ public class ResourceControllerTest extends GeoServerSystemTestSupport {
                         + "    }\n"
                         + "  ]}\n"
                         + "}}";
-        // starting with JDK 17 (v3?) json is correctly recognized, the test output
-        String jsonType = URLConnection.guessContentTypeFromName("test.json");
-        if (jsonType != null) expected = expected.replace("application/octet-stream", jsonType);
         JSONAssert.assertEquals(expected, (JSONObject) json);
     }
 

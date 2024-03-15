@@ -38,7 +38,6 @@ import org.geotools.data.property.PropertyDataStore;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.feature.type.FeatureType;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.w3c.dom.Document;

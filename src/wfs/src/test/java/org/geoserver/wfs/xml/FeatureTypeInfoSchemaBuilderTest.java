@@ -33,8 +33,6 @@ import org.geotools.gml2.GML;
 import org.geotools.xsd.Schemas;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.feature.type.AttributeDescriptor;
-import org.opengis.feature.type.FeatureType;
 import org.w3c.dom.Document;
 
 public class FeatureTypeInfoSchemaBuilderTest extends WFSTestSupport {

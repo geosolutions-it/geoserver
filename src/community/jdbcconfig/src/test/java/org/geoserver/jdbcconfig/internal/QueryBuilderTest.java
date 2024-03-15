@@ -37,8 +37,6 @@ import org.geotools.api.filter.sort.SortBy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.opengis.filter.FilterFactory;
-import org.opengis.filter.sort.SortBy;
 
 /**
  * @author groldan

@@ -80,11 +80,6 @@
        <include>GPL.html</include>
        <include>OGC.html</include>
        <include>W3C.html</include>
-       <include>GEOTOOLS_NOTICE.html</include>
-       <include>HSQL.html</include>
-       <include>LGPL.html</include>
-       <include>OGC.html</include>
-       <include>W3C.html</include>
     </includes>
   </fileSet>
   <fileSet>

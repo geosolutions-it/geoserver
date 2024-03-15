@@ -815,6 +815,7 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
             throw new ServiceException(
                     "Invalid SLD URL: " + getMap.getSld(), e, INVALID_PARAMETER_VALUE, "sld");
         }
+
         try (InputStream input = getStream(getMap)) {
             if (input != null) {
                 try (InputStreamReader reader = new InputStreamReader(input)) {
@@ -904,6 +905,7 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
 
     private InputStream getStream(GetMapRequest getMap) throws IOException {
         URL styleUrl = getMap.getStyleUrl().toURL();
+
         if (styleUrl.getProtocol().toLowerCase().indexOf("http") == 0) {
             return getHttpInputStream(styleUrl, getMap.getHttpRequestHeader("Authorization"));
         } else {

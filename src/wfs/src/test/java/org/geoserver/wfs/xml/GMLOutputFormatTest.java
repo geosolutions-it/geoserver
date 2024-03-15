@@ -11,10 +11,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
-import javax.xml.namespace.QName;
 import javax.xml.namespace.QName;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.data.test.MockData;
@@ -162,36 +160,6 @@ public class GMLOutputFormatTest extends WFSTestSupport {
     }
 
     @Test
-    public void testGML2Formatting() throws Exception {
-        enableFormatting();
-        Document dom =
-                getAsDOM(
-                        "wfs?request=getfeature&version=1.0.0&outputFormat=gml2&typename="
-                                + MockData.BASIC_POLYGONS.getPrefix()
-                                + ":"
-                                + MockData.BASIC_POLYGONS.getLocalPart());
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        print(dom, bos);
-        assertTrue(bos.toString().contains("\n        <gml"));
-    }
-
-    private void enableFormatting() {
-        FeatureTypeInfo info =
-                getGeoServer()
-                        .getCatalog()
-                        .getResourceByName(
-                                new NameImpl(
-                                        MockData.BASIC_POLYGONS.getPrefix(),
-                                        MockData.BASIC_POLYGONS.getLocalPart()),
-                                FeatureTypeInfo.class);
-        info.setNumDecimals(4);
-        info.setForcedDecimal(true);
-        info.setPadWithZeros(true);
-        getGeoServer().getSettings().setVerbose(true);
-        getGeoServer().getCatalog().save(info);
-    }
-
-    @Test
     public void testGML2GZIP() throws Exception {
         //        InputStream input = get(
         // "wfs?request=getfeature&version=1.0.0&outputFormat=gml2-gzip&typename=" +
@@ -265,21 +233,6 @@ public class GMLOutputFormatTest extends WFSTestSupport {
     }
 
     @Test
-    public void testGML3Formatting() throws Exception {
-        enableFormatting();
-        Document dom =
-                getAsDOM(
-                        "wfs?request=getfeature&version=1.0.0&outputFormat=gml3&typename="
-                                + MockData.BASIC_POLYGONS.getPrefix()
-                                + ":"
-                                + MockData.BASIC_POLYGONS.getLocalPart());
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-
-        print(dom, bos);
-        assertTrue(bos.toString().contains("\n        <gml"));
-    }
-
-    @Test
     public void testGML32() throws Exception {
         Document dom =
                 getAsDOM(
@@ -348,20 +301,6 @@ public class GMLOutputFormatTest extends WFSTestSupport {
     @Test
     public void testGML32InvalidNamespacePrefix() throws Exception {
         testInvalidResponse(INVALID_PREFIX, 32, "INVALID_CHARACTER_ERR");
-    }
-
-    private void testInvalidResponse(QName layer, int version, String message) throws Exception {
-        Document dom =
-                getAsDOM(
-                        "wfs?request=getfeature&version=1.0.0&outputFormat=gml"
-                                + version
-                                + "&typename="
-                                + layer.getPrefix()
-                                + ":"
-                                + layer.getLocalPart());
-        assertXpathValuesEqual("1", "count(/ogc:ServiceExceptionReport/ogc:ServiceException)", dom);
-        String text = dom.getElementsByTagName("ServiceException").item(0).getTextContent();
-        assertThat(text, containsString(message));
     }
 
     private void testInvalidResponse(QName layer, int version, String message) throws Exception {

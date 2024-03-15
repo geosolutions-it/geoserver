@@ -75,7 +75,6 @@ import org.geotools.api.filter.temporal.TEquals;
 import org.geotools.api.filter.temporal.TOverlaps;
 import org.geotools.filter.Capabilities;
 import org.geotools.filter.LikeFilterImpl;
-import org.opengis.filter.BinaryLogicOperator;
 
 /** */
 public class FilterToCatalogSQL implements FilterVisitor, ExpressionVisitor {

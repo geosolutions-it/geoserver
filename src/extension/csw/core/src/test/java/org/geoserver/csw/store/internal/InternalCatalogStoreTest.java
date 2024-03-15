@@ -47,7 +47,7 @@ public class InternalCatalogStoreTest extends CSWTestSupport {
         CatalogStoreMapping mapping = store.getMappings("Record").get(0);
         assertNotNull(mapping.getElement("identifier.value"));
         assertNull(mapping.getElement("format.value"));
-                .until(
+
         // On Linux and older versions of JDK last modification resolution is one second,
         // and we need the watcher to see the file as changed. Account for slow build servers too.
         PropertyFileWatcher watcher = store.watchers.get("Record").iterator().next();

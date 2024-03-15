@@ -1365,11 +1365,6 @@
           <artifactId>gs-sec-oauth2-openid-connect-web</artifactId>
           <version>${project.version}</version>
         </dependency>
-          <version>${project.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.geoserver.community.security</groupId>
-          <artifactId>gs-sec-oauth2-openid-connect-web</artifactId>
       </dependencies>
     </profile>
     <profile>
@@ -1670,16 +1665,6 @@
         <dependency>
           <groupId>org.geoserver.community</groupId>
           <artifactId>gs-flatgeobuf</artifactId>
-          <version>${project.version}</version>
-        </dependency>
-      </dependencies>
-    </profile>
-    <profile>
-      <id>spatialjson</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.geoserver.community</groupId>
-          <artifactId>gs-spatialjson</artifactId>
           <version>${project.version}</version>
         </dependency>
       </dependencies>

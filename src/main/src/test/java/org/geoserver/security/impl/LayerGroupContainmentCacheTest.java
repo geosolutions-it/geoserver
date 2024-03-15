@@ -47,7 +47,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.ContextRefreshedEvent;
 
 /** Tests {@link LayerGroupContainmentCache} udpates in face of catalog setup and changes */
 public class LayerGroupContainmentCacheTest {

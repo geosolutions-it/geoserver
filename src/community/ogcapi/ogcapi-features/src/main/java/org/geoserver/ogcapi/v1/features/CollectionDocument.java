@@ -32,8 +32,6 @@ import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.DateRange;
 import org.geotools.util.logging.Logging;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.springframework.http.MediaType;
 
 /** Description of a single collection, that will be serialized to JSON/XML/HTML */
@@ -119,30 +117,6 @@ public class CollectionDocument extends AbstractCollectionDocument<FeatureTypeIn
     private static boolean isOWSAvailable(GeoServer geoServer, String serviceId) {
         return geoServer.getServices().stream()
                 .anyMatch(s -> serviceId.equalsIgnoreCase(s.getName()) && s.isEnabled());
-    }
-
-    private String lookupStorageCrs() {
-        CoordinateReferenceSystem crs = getSchemaCRS();
-
-        if (crs != null) {
-            try {
-                return FeatureService.getCRSURI(crs);
-            } catch (FactoryException e) {
-                LOGGER.log(Level.FINER, "Error looking up epsg code", e);
-            }
-        }
-
-        return null;
-    }
-
-    private CoordinateReferenceSystem getSchemaCRS() {
-        FeatureType schema = getSchema();
-
-        if (schema != null) {
-            return schema.getCoordinateReferenceSystem();
-        }
-
-        return null;
     }
 
     private String lookupStorageCrs() {
