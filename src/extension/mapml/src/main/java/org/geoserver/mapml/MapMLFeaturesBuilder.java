@@ -125,6 +125,12 @@ public class MapMLFeaturesBuilder {
                 styles);
     }
 
+    /**
+     * Get the MapML styles based on Layer Styles
+     *
+     * @return the MapML styles
+     * @throws IOException if an error occurs
+     */
     private Map<String, MapMLStyle> getMapMLStyleMap() throws IOException {
         MapMLStyleVisitor styleVisitor = new MapMLStyleVisitor();
         Style style = getMapRequest.getStyles().get(0);
