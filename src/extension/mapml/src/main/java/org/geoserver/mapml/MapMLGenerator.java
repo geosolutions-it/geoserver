@@ -123,12 +123,14 @@ public class MapMLGenerator {
             f.setStyle(spaceDelimitedCSSClasses);
         }
         // can't convert geometry to type expected by symbolizer
-        if (geometryContent.isEmpty() && LOGGER.isLoggable(Level.FINER)) {
-            LOGGER.finer(
-                    "Could not convert geometry of type"
-                            + (g != null ? g.getGeometryType() : "null")
-                            + " to symbolizer type: "
-                            + mapMLStyles.get(0).getSymbolizerType());
+        if (geometryContent.isEmpty()) {
+            if (LOGGER.isLoggable(Level.FINER)) {
+                LOGGER.finer(
+                        "Could not convert geometry of type"
+                                + (g != null ? g.getGeometryType() : "null")
+                                + " to symbolizer type: "
+                                + mapMLStyles.get(0).getSymbolizerType());
+            }
             return Optional.empty();
         }
         f.setGeometry(geometryContent.get());
