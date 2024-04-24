@@ -12,7 +12,7 @@
           <RasterSymbolizer>
             <Opacity>1.0</Opacity>
             <ColorMap>
-               <ColorMapEntry color="#fcffa8" quantity="0"/> 
+               <ColorMapEntry color="#fcffa8" quantity="61" opacity="0"/> 
                <ColorMapEntry color="#fcffa8" quantity="62"/>
                <ColorMapEntry color="#d4448a" quantity="81"/>
                <ColorMapEntry color="#3d35a9" quantity="100"/>
