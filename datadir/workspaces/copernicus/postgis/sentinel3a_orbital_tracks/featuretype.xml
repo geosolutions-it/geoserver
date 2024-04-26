@@ -43,7 +43,10 @@
         <enabled>false</enabled>
       </dimensionInfo>
     </entry>
+    <entry key="MD_DOMAIN_EXPAND_LIMIT">50</entry>
+    <entry key="wmtsMultidimSidecarType">sentinel3a_orbital_tracks_histogram</entry>
     <entry key="cacheAgeMax">604800</entry>
+    <entry key="MD_DOMAIN_EXPAND_LIMIT_MAX">100</entry>
     <entry key="time">
       <dimensionInfo>
         <enabled>true</enabled>
@@ -63,6 +66,8 @@
     <id>DataStoreInfoImpl-5014580a:1785f16c77f:-7986</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
+  <internationalTitle/>
+  <internationalAbstract/>
   <maxFeatures>0</maxFeatures>
   <numDecimals>0</numDecimals>
   <padWithZeros>false</padWithZeros>
