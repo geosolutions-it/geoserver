@@ -8,6 +8,8 @@ package org.geoserver.wps.web;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -17,6 +19,13 @@ import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.web.GeoServerWicketTestSupport;
+import org.geoserver.web.demo.DemoRequest;
+import org.geoserver.web.demo.DemoRequestsPage;
+import org.geoserver.wps.ProcessGroupInfo;
+import org.geoserver.wps.WPSInfo;
+import org.geoserver.wps.process.GeoServerProcessors;
+import org.geotools.api.feature.type.Name;
+import org.geotools.process.ProcessFactory;
 import org.junit.Test;
 
 /** @author Martin Davis OpenGeo */
@@ -73,14 +82,27 @@ public class WPSRequestBuilderTest extends GeoServerWicketTestSupport {
                 "requestBuilder:inputContainer:inputs:0:paramValue:editor:textarea",
                 "POLYGON((0 0, 0 10, 10 10, 10 0, 0 0))");
         form.submit();
+
         tester.clickLink("form:execute", true);
 
-        // print(tester.getLastRenderedPage(), true, true);
+        var model = (DemoRequest) tester.getLastRenderedPage().getDefaultModel().getObject();
 
+        assertEquals("http://localhost/context/ows?strict=true", model.getRequestUrl());
+        assertTrue(model.getRequestBody().contains("wps:Execute"));
+
+        assertEquals(DemoRequestsPage.class, tester.getLastRenderedPage().getClass());
+        assertEquals(2, tester.getLastRenderedPage().getPageParameters().getAllNamed().size());
+        assertEquals(
+                "http://localhost/context/ows?strict=true",
+                tester.getLastRenderedPage().getPageParameters().get("url").toString());
         assertTrue(
-                tester.getComponentFromLastRenderedPage("responseWindow")
-                        .getDefaultModelObjectAsString()
-                        .contains("wps:Execute"));
+                (tester.getLastRenderedPage()
+                        .getPageParameters()
+                        .get("xml")
+                        .toString()
+                        .contains("wps:Execute")));
+
+        // print(tester.getLastRenderedPage(), true, true);
 
         // unfortunately the wicket tester does not allow us to get work with the popup window
         // contents,
