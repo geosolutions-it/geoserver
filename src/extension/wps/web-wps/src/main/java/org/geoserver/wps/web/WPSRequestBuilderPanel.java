@@ -235,9 +235,11 @@ public class WPSRequestBuilderPanel extends Panel {
                     protected void onClick(AjaxRequestTarget target, Form form) {
                         processChoice.processInput();
                         if (execute.processName != null) {
-                            responseWindow.setDefaultModel(
-                                    new Model<String>(getDescribeXML(execute.processName)));
-                            responseWindow.show(target);
+                            var xmlText = getDescribeXML(execute.processName);
+                            var xml = (TextField) form.get("xml");
+                            xml.setModelObject(xmlText);
+                            target.add(xml);
+                            target.appendJavaScript("executeWPS()");
                         }
                     }
                 };
