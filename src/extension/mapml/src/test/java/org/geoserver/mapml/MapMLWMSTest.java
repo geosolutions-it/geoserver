@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -40,10 +41,14 @@ import javax.xml.bind.DataBindingException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.namespace.QName;
+
+import org.apache.commons.io.FileUtils;
+import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
@@ -1572,6 +1577,42 @@ public class MapMLWMSTest extends MapMLTestSupport {
         String layerSrc = layer.attr("src");
         assertThat(layerSrc, startsWith("http://localhost:8080/geoserver/cite/wms?"));
         assertThat(layerSrc, containsString("LAYERS=Lakes"));
+    }
+
+    @Test
+    public void testPreviewHeadTemplate() throws Exception {
+        File template = null;
+        try {
+            String layerId = getLayerId(MockData.LAKES);
+            FeatureTypeInfo resource =
+                    getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
+            File parent = getDataDirectory().get(resource).dir();
+            template = new File(parent, "mapml-preview-head.ftl");
+            FileUtils.write(template, "<link rel=\"stylesheet\" href=\"mystyle.css\">", "UTF-8");
+
+            String path =
+                    "cite/wms?LAYERS=Lakes"
+                            + "&STYLES=&FORMAT="
+                            + MapMLConstants.MAPML_HTML_MIME_TYPE
+                            + "&SERVICE=WMS&VERSION=1.3.0"
+                            + "&REQUEST=GetMap"
+                            + "&SRS=epsg:3857"
+                            + "&BBOX=-13885038,2870337,-7455049,6338174"
+                            + "&WIDTH=150"
+                            + "&HEIGHT=150"
+                            + "&format_options="
+                            + MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION
+                            + ":image/png";
+            Document doc = getAsJSoup(path);
+            Element layer = doc.select("mapml-viewer > layer-").first();
+            String layerSrc = layer.attr("src");
+            assertThat(layerSrc, startsWith("http://localhost:8080/geoserver/cite/wms?"));
+            assertThat(layerSrc, containsString("LAYERS=Lakes"));
+        } finally {
+            if (template != null) {
+                template.delete();
+            }
+        }
     }
 
     @Test

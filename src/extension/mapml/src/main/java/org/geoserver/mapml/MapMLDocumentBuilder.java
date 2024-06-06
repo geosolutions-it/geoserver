@@ -19,6 +19,7 @@ import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -71,14 +72,20 @@ import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.capabilities.CapabilityUtil;
+import org.geoserver.wms.featureinfo.FeatureTemplate;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.api.style.Style;
+import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
@@ -152,6 +159,8 @@ public class MapMLDocumentBuilder {
     private Mapml mapml;
 
     private Boolean isMultiExtent = MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
+
+    private FeatureTemplate featureTemplate = new FeatureTemplate();
 
     static {
         PREVIEW_TCRS_MAP.put("OSMTILE", new TiledCRS("OSMTILE"));
@@ -1723,6 +1732,7 @@ public class MapMLDocumentBuilder {
                         "/mapml/viewer/widget/mapml-viewer.js",
                         null,
                         URLMangler.URLType.RESOURCE);
+        List<String> headerContent = getTemplates("mapml-preview-head.ftl");
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n")
                 .append("<html>\n")
@@ -1779,6 +1789,42 @@ public class MapMLDocumentBuilder {
                 .append("</body>\n")
                 .append("</html>");
         return sb.toString();
+    }
+
+    private List<String> getTemplates(String templateName) {
+        List<String> templates = new ArrayList<>();
+        SimpleFeatureType featureType = null;
+        try {
+            for (MapLayerInfo mapLayerInfo : mapContent.getRequest().getLayers()) {
+                if (mapLayerInfo.getFeature() != null
+                        && mapLayerInfo.getFeature().getFeatureType() != null
+                        && mapLayerInfo.getFeature().getFeatureType()
+                                instanceof SimpleFeatureType) {
+                    featureType = (SimpleFeatureType) mapLayerInfo.getFeature().getFeatureType();
+                    if (!featureTemplate.isTemplateEmpty(
+                            featureType, templateName, FeatureTemplate.class, "0\n")) {
+                        // no feature is passed in so none is needed for this template
+                        SimpleFeature feature =
+                                new SimpleFeatureImpl(
+                                        new ArrayList<>(
+                                                Collections.nCopies(
+                                                        featureType.getAttributeCount(), "")),
+                                        featureType,
+                                        null);
+                        templates.add(
+                                featureTemplate.template(
+                                        feature, templateName, FeatureTemplate.class));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            LOGGER.fine(
+                    "Template not found: "
+                            + templateName
+                            + " for schema: "
+                            + featureType.getTypeName());
+        }
+        return templates;
     }
 
     /** Builds the GetMap backlink to get MapML */
