@@ -8,6 +8,7 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
+import static org.geoserver.mapml.MapMLDocumentBuilder.MAPML_PREVIEW_HEAD_FTL;
 import static org.geowebcache.grid.GridSubsetFactory.createGridSubSet;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -1587,7 +1588,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
             FeatureTypeInfo resource =
                     getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
             File parent = getDataDirectory().get(resource).dir();
-            template = new File(parent, "mapml-preview-head.ftl");
+            template = new File(parent, MAPML_PREVIEW_HEAD_FTL);
             FileUtils.write(template, "<link rel=\"stylesheet\" href=\"mystyle.css\">", "UTF-8");
 
             String path =

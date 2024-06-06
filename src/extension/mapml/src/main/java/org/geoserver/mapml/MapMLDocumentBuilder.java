@@ -85,6 +85,8 @@ import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.api.style.Style;
+import org.geotools.data.DataUtilities;
+import org.geotools.data.EmptyFeatureWriter;
 import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
@@ -116,6 +118,7 @@ public class MapMLDocumentBuilder {
     private static final int BYTES_PER_PIXEL_TRANSPARENT = 4;
     private static final int BYTES_PER_KILOBYTE = 1024;
     public static final String DEFAULT_MIME_TYPE = "image/png";
+    public static final String MAPML_PREVIEW_HEAD_FTL = "mapml-preview-head.ftl";
 
     private final WMS wms;
 
@@ -1732,7 +1735,7 @@ public class MapMLDocumentBuilder {
                         "/mapml/viewer/widget/mapml-viewer.js",
                         null,
                         URLMangler.URLType.RESOURCE);
-        List<String> headerContent = getTemplates("mapml-preview-head.ftl");
+        List<String> headerContentTemplates = getTemplates(MAPML_PREVIEW_HEAD_FTL);
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n")
                 .append("<html>\n")
@@ -1804,13 +1807,7 @@ public class MapMLDocumentBuilder {
                     if (!featureTemplate.isTemplateEmpty(
                             featureType, templateName, FeatureTemplate.class, "0\n")) {
                         // no feature is passed in so none is needed for this template
-                        SimpleFeature feature =
-                                new SimpleFeatureImpl(
-                                        new ArrayList<>(
-                                                Collections.nCopies(
-                                                        featureType.getAttributeCount(), "")),
-                                        featureType,
-                                        null);
+                        SimpleFeature feature = DataUtilities.template(featureType);
                         templates.add(
                                 featureTemplate.template(
                                         feature, templateName, FeatureTemplate.class));
