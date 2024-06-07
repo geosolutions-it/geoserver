@@ -1760,6 +1760,7 @@ public class MapMLDocumentBuilder {
                 .append("mapml-viewer:not(:defined) > :not(layer-) { display: initial; }\n")
                 .append("</style>\n")
                 .append("</noscript>\n")
+                .append(String.join("\n", headerContentTemplates))
                 .append("</head>\n")
                 .append("<body>\n")
                 .append("<mapml-viewer projection=\"")
@@ -1806,7 +1807,7 @@ public class MapMLDocumentBuilder {
                     featureType = (SimpleFeatureType) mapLayerInfo.getFeature().getFeatureType();
                     if (!featureTemplate.isTemplateEmpty(
                             featureType, templateName, FeatureTemplate.class, "0\n")) {
-                        // no feature is passed in so none is needed for this template
+                        // no feature is passed in so use an empty one
                         SimpleFeature feature = DataUtilities.template(featureType);
                         templates.add(
                                 featureTemplate.template(

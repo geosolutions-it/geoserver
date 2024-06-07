@@ -1590,6 +1590,15 @@ public class MapMLWMSTest extends MapMLTestSupport {
             File parent = getDataDirectory().get(resource).dir();
             template = new File(parent, MAPML_PREVIEW_HEAD_FTL);
             FileUtils.write(template, "<link rel=\"stylesheet\" href=\"mystyle.css\">", "UTF-8");
+            FileUtils.write(
+                    template,
+                    "<style>\n"
+                            + " body {\n"
+                            + "  background-color: linen;\n"
+                            + " }\n"
+                            + "</style>",
+                    "UTF-8",
+                    true);
 
             String path =
                     "cite/wms?LAYERS=Lakes"
@@ -1605,10 +1614,13 @@ public class MapMLWMSTest extends MapMLTestSupport {
                             + MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION
                             + ":image/png";
             Document doc = getAsJSoup(path);
-            Element layer = doc.select("mapml-viewer > layer-").first();
-            String layerSrc = layer.attr("src");
-            assertThat(layerSrc, startsWith("http://localhost:8080/geoserver/cite/wms?"));
-            assertThat(layerSrc, containsString("LAYERS=Lakes"));
+            Element link = doc.select("link").first();
+            String linkRel = link.attr("rel");
+            String linkSrc = link.attr("href");
+            assertThat(linkRel, containsString("stylesheet"));
+            assertThat(linkSrc, containsString("mystyle.css"));
+            Element style = doc.select("style").get(2);
+            assertEquals("body {\n" + "  background-color: linen;\n" + " }", style.html());
         } finally {
             if (template != null) {
                 template.delete();
