@@ -8,7 +8,8 @@ import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathExists;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
-import static org.geoserver.mapml.MapMLDocumentBuilder.MAPML_PREVIEW_HEAD_FTL;
+import static org.geoserver.mapml.MapMLDocumentBuilder.MAPML_XML_HEAD_FTL;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
 import static org.geowebcache.grid.GridSubsetFactory.createGridSubSet;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -44,7 +45,6 @@ import javax.xml.bind.JAXBException;
 import javax.xml.namespace.QName;
 
 import org.apache.commons.io.FileUtils;
-import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
 import org.geoserver.catalog.Catalog;
@@ -1578,6 +1578,48 @@ public class MapMLWMSTest extends MapMLTestSupport {
         String layerSrc = layer.attr("src");
         assertThat(layerSrc, startsWith("http://localhost:8080/geoserver/cite/wms?"));
         assertThat(layerSrc, containsString("LAYERS=Lakes"));
+    }
+
+    @Test
+    public void testXMLHeadTemplate() throws Exception {
+        File template = null;
+        try {
+            String layerId = getLayerId(MockData.ROAD_SEGMENTS);
+            FeatureTypeInfo resource =
+                    getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
+            File parent = getDataDirectory().get(resource).dir();
+            template = new File(parent, MAPML_XML_HEAD_FTL);
+            FileUtils.write(
+                    template,
+                    "<map-style>.polygon-r1-s1{stroke-opacity:3.0; stroke-dashoffset:4; stroke-width:2.0; fill:#AAAAAA; fill-opacity:3.0; stroke:#DD0000; stroke-linecap:butt}</map-style>\n"
+                            + "<map-link href=\"${serviceLink(${serviceRequest},${workspace},${format},${bbox},${layers},${width},${height},${layers})}\" rel=\"style\" title=\"templateinsertedstyle\"/>",
+                    "UTF-8");
+
+            MockRequestResponse requestResponse =
+                    getMockRequestResponse(
+                            MockData.ROAD_SEGMENTS.getPrefix()
+                                    + ":"
+                                    + MockData.ROAD_SEGMENTS.getLocalPart(),
+                            null,
+                            null,
+                            "EPSG:3857",
+                            null);
+            Mapml mapml = parseMapML(requestResponse);
+            List<Link> styleLinks = getLinkByRelType(mapml.getHead().getLinks(), RelType.STYLE);
+            Link templateStyleLink = styleLinks.get(0);
+            assertEquals("templateinsertedstyle", templateStyleLink.getTitle());
+            assertEquals(
+                    "http://localhost:8080/geoserver/cite/wms?LAYERS=RoadSegments&STYLES=&FORMAT=application/xml&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&SRS=EPSG:3857&BBOX=-13885038,2870337,-7455049,6338174&WIDTH=150&HEIGHT=150&format_options=mapml:application/xml",
+                    templateStyleLink.getHref());
+            String templateStyle = mapml.getHead().getStyle();
+            assertEquals(
+                    ".polygon-r1-s1{stroke-opacity:3.0; stroke-dashoffset:4; stroke-width:2.0; fill:#AAAAAA; fill-opacity:3.0; stroke:#DD0000; stroke-linecap:butt}",
+                    templateStyle);
+        } finally {
+            if (template != null) {
+                template.delete();
+            }
+        }
     }
 
     @Test

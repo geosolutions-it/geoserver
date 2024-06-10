@@ -12,6 +12,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -19,7 +20,6 @@ import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -48,6 +48,7 @@ import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.mapml.tcrs.Bounds;
 import org.geoserver.mapml.tcrs.Point;
 import org.geoserver.mapml.tcrs.TiledCRS;
+import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.AxisType;
 import org.geoserver.mapml.xml.Base;
 import org.geoserver.mapml.xml.BodyContent;
@@ -78,16 +79,11 @@ import org.geoserver.wms.WMSInfo;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.capabilities.CapabilityUtil;
 import org.geoserver.wms.featureinfo.FeatureTemplate;
-import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
-import org.geotools.api.feature.type.FeatureType;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.api.style.Style;
-import org.geotools.data.DataUtilities;
-import org.geotools.data.EmptyFeatureWriter;
-import org.geotools.feature.simple.SimpleFeatureImpl;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
@@ -118,7 +114,7 @@ public class MapMLDocumentBuilder {
     private static final int BYTES_PER_PIXEL_TRANSPARENT = 4;
     private static final int BYTES_PER_KILOBYTE = 1024;
     public static final String DEFAULT_MIME_TYPE = "image/png";
-    public static final String MAPML_PREVIEW_HEAD_FTL = "mapml-preview-head.ftl";
+    public static final String MAPML_XML_HEAD_FTL = "mapml-head.ftl";
 
     private final WMS wms;
 
@@ -163,7 +159,7 @@ public class MapMLDocumentBuilder {
 
     private Boolean isMultiExtent = MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
 
-    private FeatureTemplate featureTemplate = new FeatureTemplate();
+    private MapMLMapTemplate simpleStaticTemplate = new MapMLMapTemplate();
 
     static {
         PREVIEW_TCRS_MAP.put("OSMTILE", new TiledCRS("OSMTILE"));
@@ -1805,13 +1801,9 @@ public class MapMLDocumentBuilder {
                         && mapLayerInfo.getFeature().getFeatureType()
                                 instanceof SimpleFeatureType) {
                     featureType = (SimpleFeatureType) mapLayerInfo.getFeature().getFeatureType();
-                    if (!featureTemplate.isTemplateEmpty(
+                    if (!simpleStaticTemplate.isTemplateEmpty(
                             featureType, templateName, FeatureTemplate.class, "0\n")) {
-                        // no feature is passed in so use an empty one
-                        SimpleFeature feature = DataUtilities.template(featureType);
-                        templates.add(
-                                featureTemplate.template(
-                                        feature, templateName, FeatureTemplate.class));
+                        templates.add(simpleStaticTemplate.preview(featureType));
                     }
                 }
             }
