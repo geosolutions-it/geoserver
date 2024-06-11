@@ -1832,15 +1832,20 @@ public class MapMLDocumentBuilder {
         List<SimpleFeatureType> featureTypes = new ArrayList<>();
         try {
             for (MapLayerInfo mapLayerInfo : mapContent.getRequest().getLayers()) {
-                if (mapLayerInfo.getFeature() != null
+                if (mapLayerInfo.getType() == MapLayerInfo.TYPE_VECTOR
+                        && mapLayerInfo.getFeature() != null
                         && mapLayerInfo.getFeature().getFeatureType() != null
                         && mapLayerInfo.getFeature().getFeatureType()
                                 instanceof SimpleFeatureType) {
                     featureTypes.add(
                             (SimpleFeatureType) mapLayerInfo.getFeature().getFeatureType());
+                } else if (mapLayerInfo.getType() == MapLayerInfo.TYPE_RASTER) {
+                    LOGGER.fine(
+                            "Templating not supported for raster layers: "
+                                    + mapLayerInfo.getName());
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassCastException e) {
             LOGGER.fine("Error getting feature types: " + e.getMessage());
         }
         return featureTypes;
