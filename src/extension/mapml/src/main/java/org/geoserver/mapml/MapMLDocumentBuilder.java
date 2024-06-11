@@ -12,6 +12,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_HEAD_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
 
 import java.io.IOException;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
@@ -80,6 +82,7 @@ import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.capabilities.CapabilityUtil;
 import org.geoserver.wms.featureinfo.FeatureTemplate;
 import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.Name;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.TransformException;
@@ -149,6 +152,11 @@ public class MapMLDocumentBuilder {
     private ReferencedEnvelope projectedBox;
     private String bbox;
 
+    private static final String MAP_STYLE_OPEN_TAG = "<map-style>";
+    private static final String MAP_STYLE_CLOSE_TAG = "</map-style>";
+    private static final Pattern MAP_STYLE_REGEX =
+            Pattern.compile(MAP_STYLE_OPEN_TAG + "(.+?)" + MAP_STYLE_CLOSE_TAG, Pattern.DOTALL);
+
     private List<Object> extentList;
 
     private Input zoomInput;
@@ -159,7 +167,7 @@ public class MapMLDocumentBuilder {
 
     private Boolean isMultiExtent = MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
 
-    private MapMLMapTemplate simpleStaticTemplate = new MapMLMapTemplate();
+    private MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
 
     static {
         PREVIEW_TCRS_MAP.put("OSMTILE", new TiledCRS("OSMTILE"));
@@ -882,8 +890,36 @@ public class MapMLDocumentBuilder {
             }
         }
         String styles = buildStyles();
+        styles = appendStylesFromHeadTemplate(styles);
         if (styles != null) head.setStyle(styles);
         return head;
+    }
+
+    private String appendStylesFromHeadTemplate(String styles) {
+        List<String> stylesAndLinks = getHeaderTemplates(MAPML_HEAD_FTL, getFeatureTypes());
+        List<String> extractedStyles = extractStyles(stylesAndLinks);
+        for (String extractedStyle : extractedStyles) {
+            if (styles == null) {
+                styles = extractedStyle;
+            } else {
+                styles = styles + " " + extractedStyle;
+            }
+        }
+        return styles;
+    }
+
+    private List<String> extractStyles(List<String> stylesAndLinks) {
+        List<String> extractedStyles = new ArrayList<>();
+        for (String stylesAndLink : stylesAndLinks) {
+            Matcher matcher = MAP_STYLE_REGEX.matcher(stylesAndLink);
+            while (matcher.find()) {
+                extractedStyles.add(
+                        matcher.group()
+                                .replaceAll(MAP_STYLE_OPEN_TAG, "")
+                                .replace(MAP_STYLE_CLOSE_TAG, ""));
+            }
+        }
+        return extractedStyles;
     }
 
     /** Builds the CSS styles for all the layers involved in this GetMap */
@@ -1731,7 +1767,8 @@ public class MapMLDocumentBuilder {
                         "/mapml/viewer/widget/mapml-viewer.js",
                         null,
                         URLMangler.URLType.RESOURCE);
-        List<String> headerContentTemplates = getTemplates(MAPML_PREVIEW_HEAD_FTL);
+        List<String> headerContentTemplates =
+                getPreviewTemplates(MAPML_PREVIEW_HEAD_FTL, getFeatureTypes());
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n")
                 .append("<html>\n")
@@ -1791,28 +1828,71 @@ public class MapMLDocumentBuilder {
         return sb.toString();
     }
 
-    private List<String> getTemplates(String templateName) {
-        List<String> templates = new ArrayList<>();
-        SimpleFeatureType featureType = null;
+    private List<SimpleFeatureType> getFeatureTypes() {
+        List<SimpleFeatureType> featureTypes = new ArrayList<>();
         try {
             for (MapLayerInfo mapLayerInfo : mapContent.getRequest().getLayers()) {
                 if (mapLayerInfo.getFeature() != null
                         && mapLayerInfo.getFeature().getFeatureType() != null
                         && mapLayerInfo.getFeature().getFeatureType()
                                 instanceof SimpleFeatureType) {
-                    featureType = (SimpleFeatureType) mapLayerInfo.getFeature().getFeatureType();
-                    if (!simpleStaticTemplate.isTemplateEmpty(
-                            featureType, templateName, FeatureTemplate.class, "0\n")) {
-                        templates.add(simpleStaticTemplate.preview(featureType));
-                    }
+                    featureTypes.add(
+                            (SimpleFeatureType) mapLayerInfo.getFeature().getFeatureType());
                 }
             }
         } catch (IOException e) {
-            LOGGER.fine(
-                    "Template not found: "
-                            + templateName
-                            + " for schema: "
-                            + featureType.getTypeName());
+            LOGGER.fine("Error getting feature types: " + e.getMessage());
+        }
+        return featureTypes;
+    }
+
+    private List<String> getPreviewTemplates(
+            String templateName, List<SimpleFeatureType> featureTypes) {
+        List<String> templates = new ArrayList<>();
+        for (SimpleFeatureType featureType : featureTypes) {
+            try {
+                if (!mapMLMapTemplate.isTemplateEmpty(
+                        featureType, templateName, FeatureTemplate.class, "0\n")) {
+                    templates.add(mapMLMapTemplate.preview(featureType));
+                }
+
+            } catch (IOException e) {
+                LOGGER.fine(
+                        "Template not found: "
+                                + templateName
+                                + " for schema: "
+                                + featureType.getTypeName());
+            }
+        }
+        return templates;
+    }
+
+    private List<String> getHeaderTemplates(
+            String templateName, List<SimpleFeatureType> featureTypes) {
+        List<String> templates = new ArrayList<>();
+
+        for (SimpleFeatureType featureType : featureTypes) {
+            try {
+                Map<String, Object> model =
+                        getMapRequestElementsToModel(
+                                featureType.getName(),
+                                layersCommaDelimited,
+                                bbox,
+                                format,
+                                width,
+                                height);
+                if (!mapMLMapTemplate.isTemplateEmpty(
+                        featureType, templateName, FeatureTemplate.class, "0\n")) {
+                    templates.add(mapMLMapTemplate.head(model, featureType));
+                }
+
+            } catch (IOException e) {
+                LOGGER.fine(
+                        "Template not found: "
+                                + templateName
+                                + " for schema: "
+                                + featureType.getTypeName());
+            }
         }
         return templates;
     }
@@ -1881,6 +1961,35 @@ public class MapMLDocumentBuilder {
                 return li.getName().trim().isEmpty() ? def : li.getName().trim();
             }
         }
+    }
+
+    private Map<String, Object> getMapRequestElementsToModel(
+            Name typeName,
+            String layersCommaDelimited,
+            String bbox,
+            Optional<Object> format,
+            int width,
+            int height) {
+        HashMap<String, Object> model = new HashMap<>();
+        String workspace = getWorkspace(typeName);
+        model.put("serviceRequest", "getMap");
+        model.put("workspace", workspace);
+        model.put("format", format.isPresent() ? format.get() : DEFAULT_MIME_TYPE);
+        model.put("bbox", bbox);
+        model.put("layers", layersCommaDelimited);
+        model.put("width", String.valueOf(width));
+        model.put("height", String.valueOf(height));
+        return model;
+    }
+
+    private String getWorkspace(Name typeName) {
+        String workspace = "";
+        for (MapMLLayerMetadata mapMLLayerMetadata : mapMLLayerMetadataList) {
+            if (mapMLLayerMetadata.getLayerName().equals(typeName.getLocalPart())) {
+                return mapMLLayerMetadata.getWorkspace();
+            }
+        }
+        return workspace;
     }
 
     /** Raw KVP layer info */

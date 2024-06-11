@@ -55,6 +55,8 @@ public class MapMLMapTemplate {
 
     public static final String MAPML_PREVIEW_HEAD_FTL = "mapml-preview-head.ftl";
 
+    public static final String MAPML_HEAD_FTL = "mapml-head.ftl";
+
     /** Template cache used to avoid paying the cost of template lookup for each feature */
     Map<MapMLMapTemplate.TemplateKey, Template> templateCache = new HashMap<>();
 
@@ -72,6 +74,19 @@ public class MapMLMapTemplate {
     public String preview(SimpleFeatureType featureType) throws IOException {
         caw.reset();
         preview(Collections.emptyMap(), featureType, caw);
+
+        return caw.toString();
+    }
+
+    public void head(Map<String, Object> model, SimpleFeatureType featureType, Writer writer)
+            throws IOException {
+        execute(model, featureType, writer, MAPML_HEAD_FTL);
+    }
+
+    public String head(Map<String, Object> model, SimpleFeatureType featureType)
+            throws IOException {
+        caw.reset();
+        head(model, featureType, caw);
 
         return caw.toString();
     }
@@ -144,26 +159,6 @@ public class MapMLMapTemplate {
         String templateText = sw.toString();
         return "".equals(templateText)
                 || (defaultContent != null && defaultContent.equals(templateText));
-    }
-
-    public Map<String, String> getMapRequestElementsToModel(
-            String workspace,
-            String layersCommaDelimited,
-            String bbox,
-            String format,
-            String width,
-            String height) {
-        HashMap<String, String> model = new HashMap<>();
-        // <map-link
-        // href="${serviceLink(${serviceRequest},${workspace},${format},${bbox},${layers},${width},${height},${layers})}" rel="style" title="templateinsertedstyle"/>
-        model.put("serviceRequest", "getMap");
-        model.put("workspace", workspace);
-        model.put("format", format);
-        model.put("bbox", bbox);
-        model.put("layers", layersCommaDelimited);
-        model.put("width", width);
-        model.put("height", height);
-        return model;
     }
 
     private static class TemplateKey {
