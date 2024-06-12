@@ -21,6 +21,7 @@ import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -34,6 +35,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import freemarker.template.TemplateMethodModelEx;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -71,7 +79,9 @@ import org.geoserver.mapml.xml.RelType;
 import org.geoserver.mapml.xml.Select;
 import org.geoserver.mapml.xml.UnitType;
 import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.Request;
 import org.geoserver.ows.URLMangler;
+import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMapRequest;
@@ -96,6 +106,7 @@ import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.grid.GridSubset;
 import org.locationtech.jts.geom.Envelope;
+import org.w3c.dom.Node;
 
 /** Builds a MapML document from a WMSMapContent object */
 public class MapMLDocumentBuilder {
@@ -157,7 +168,11 @@ public class MapMLDocumentBuilder {
     private static final Pattern MAP_STYLE_REGEX =
             Pattern.compile(MAP_STYLE_OPEN_TAG + "(.+?)" + MAP_STYLE_CLOSE_TAG, Pattern.DOTALL);
     private static final Pattern MAP_LINK_REGEX =
-            Pattern.compile("<map-link>(.+?)</map-link>", Pattern.DOTALL);
+            Pattern.compile("<map-link (.+?)/>", Pattern.DOTALL);
+
+    private static final Pattern MAP_LINK_HREF_REGEX = Pattern.compile("href=\"(.+?)\"");
+
+    private static final Pattern MAP_LINK_TITLE_REGEX = Pattern.compile("title=\"(.+?)\"");
 
     private List<Object> extentList;
 
@@ -892,15 +907,36 @@ public class MapMLDocumentBuilder {
             }
         }
         String styles = buildStyles();
-        styles = appendStylesFromHeadTemplate(styles);
+        List<String> stylesAndLinks = getHeaderTemplates(MAPML_HEAD_FTL, getFeatureTypes());
+        styles = appendStylesFromHeadTemplate(styles, stylesAndLinks);
         if (styles != null) head.setStyle(styles);
+        links.addAll(getLinksFromHeadTemplate(stylesAndLinks));
         return head;
     }
 
-    private String appendStylesFromHeadTemplate(String styles) {
-        List<String> stylesAndLinks = getHeaderTemplates(MAPML_HEAD_FTL, getFeatureTypes());
-        List<String> extractedStyles = extractStyles(stylesAndLinks);
+    private List<Link> getLinksFromHeadTemplate(List<String> stylesAndLinks) {
+        List<Link> outLinks = new ArrayList<>();
         List<String> extractedLinks = extractLinks(stylesAndLinks);
+        for (String extractedLink : extractedLinks) {
+            Link link = new Link();
+            Matcher matcherTitle = MAP_LINK_TITLE_REGEX.matcher(extractedLink);
+            if (matcherTitle.find()) {
+                link.setTitle(matcherTitle.group(1));
+            }
+            Matcher matcherHref = MAP_LINK_HREF_REGEX.matcher(extractedLink);
+            if (matcherHref.find()) {
+                link.setRel(RelType.STYLE);
+                link.setHref(matcherHref.group(1));
+                // only add if mandatory href attribute is found
+                outLinks.add(link);
+            }
+        }
+        return outLinks;
+    }
+
+    private String appendStylesFromHeadTemplate(String styles, List<String> stylesAndLinks) {
+
+        List<String> extractedStyles = extractStyles(stylesAndLinks);
         for (String extractedStyle : extractedStyles) {
             if (styles == null) {
                 styles = extractedStyle;
@@ -1982,6 +2018,21 @@ public class MapMLDocumentBuilder {
         }
     }
 
+    /** Builds a service link back to the same service. Used for backlinks. */
+    private String serviceLink(List arguments) {
+        Request request = Dispatcher.REQUEST.get();
+        String baseURL = ResponseUtils.baseURL(request.getHttpRequest());
+        Map<String, String> kvp =
+                request.getKvp().entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
+        if (kvp.containsKey("STYLES")) {
+            kvp.put("STYLES", arguments.get(0).toString());
+        } else {
+            kvp.put("styles", arguments.get(0).toString());
+        }
+        return ResponseUtils.buildURL(baseURL, request.getPath(), kvp, URLMangler.URLType.SERVICE);
+    }
+
     private Map<String, Object> getMapRequestElementsToModel(
             Name typeName,
             String layersCommaDelimited,
@@ -1998,6 +2049,7 @@ public class MapMLDocumentBuilder {
         model.put("layers", layersCommaDelimited);
         model.put("width", String.valueOf(width));
         model.put("height", String.valueOf(height));
+        model.put("serviceLink", (TemplateMethodModelEx) arguments -> serviceLink(arguments));
         return model;
     }
 

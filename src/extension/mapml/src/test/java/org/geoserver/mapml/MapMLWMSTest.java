@@ -79,8 +79,6 @@ import org.geoserver.ows.util.KvpUtils;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.wfs.kvp.BBoxKvpParser;
 import org.geoserver.wms.WMSInfo;
-import org.geotools.api.data.DataAccessFinder;
-import org.geotools.api.data.DataStoreFinder;
 import org.geotools.api.filter.FilterFactory;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
@@ -1587,7 +1585,6 @@ public class MapMLWMSTest extends MapMLTestSupport {
     @Test
     public void testXMLHeadTemplate() throws Exception {
         File template = null;
-
         try {
             String layerId = getLayerId(MockData.ROAD_SEGMENTS);
             FeatureTypeInfo resource =
@@ -1597,9 +1594,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
             FileUtils.write(
                     template,
                     "<map-style>.polygon-r1-s1{stroke-opacity:3.0; stroke-dashoffset:4; stroke-width:2.0; fill:#AAAAAA; fill-opacity:3.0; stroke:#DD0000; stroke-linecap:butt}</map-style>\n"
-                            // + "<map-link
-                            // href=\"${serviceLink(\"${serviceRequest}\",\"${workspace}\",\"${format}\",\"${bbox}\",\"${layers}\",\"${width}\",\"${height}\")}\" rel=\"style\" title=\"templateinsertedstyle\"/>",
-                            + "<map-link href=\"${serviceLink(\"oseo/search\")}\" rel=\"style\" title=\"templateinsertedstyle\" />",
+                            + "<map-link href=\"${serviceLink(\"templateStyle\")}\" rel=\"style\" title=\"templateinsertedstyle\"/>",
                     "UTF-8");
 
             MockRequestResponse requestResponse =
@@ -1616,7 +1611,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
             Link templateStyleLink = styleLinks.get(0);
             assertEquals("templateinsertedstyle", templateStyleLink.getTitle());
             assertEquals(
-                    "http://localhost:8080/geoserver/cite/wms?LAYERS=RoadSegments&STYLES=&FORMAT=application/xml&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&SRS=EPSG:3857&BBOX=-13885038,2870337,-7455049,6338174&WIDTH=150&HEIGHT=150&format_options=mapml:application/xml",
+                    "http://localhost:8080/geoserver/wms?FORMAT=text%2Fmapml&REQUEST=GetMap&SRS=EPSG%3A3857&BBOX=SRSEnvelope%5B0.0%20%3A%20111319.49079327357%2C%20-7.081154551613622E-10%20%3A%20111325.14286638486%5D&FORMAT_OPTIONS=%7BMAPML-WMS-FORMAT%3Dimage%2Fpng%7D&VERSION=1.3.0&STYLES=templateStyle&SERVICE=WMS&WIDTH=150&HEIGHT=150&LAYERS=cite%3ARoadSegments",
                     templateStyleLink.getHref());
             String templateStyle = mapml.getHead().getStyle();
             assertEquals(
