@@ -156,6 +156,8 @@ public class MapMLDocumentBuilder {
     private static final String MAP_STYLE_CLOSE_TAG = "</map-style>";
     private static final Pattern MAP_STYLE_REGEX =
             Pattern.compile(MAP_STYLE_OPEN_TAG + "(.+?)" + MAP_STYLE_CLOSE_TAG, Pattern.DOTALL);
+    private static final Pattern MAP_LINK_REGEX =
+            Pattern.compile("<map-link>(.+?)</map-link>", Pattern.DOTALL);
 
     private List<Object> extentList;
 
@@ -898,6 +900,7 @@ public class MapMLDocumentBuilder {
     private String appendStylesFromHeadTemplate(String styles) {
         List<String> stylesAndLinks = getHeaderTemplates(MAPML_HEAD_FTL, getFeatureTypes());
         List<String> extractedStyles = extractStyles(stylesAndLinks);
+        List<String> extractedLinks = extractLinks(stylesAndLinks);
         for (String extractedStyle : extractedStyles) {
             if (styles == null) {
                 styles = extractedStyle;
@@ -906,6 +909,17 @@ public class MapMLDocumentBuilder {
             }
         }
         return styles;
+    }
+
+    private List<String> extractLinks(List<String> stylesAndLinks) {
+        List<String> extractedStyles = new ArrayList<>();
+        for (String stylesAndLink : stylesAndLinks) {
+            Matcher matcher = MAP_LINK_REGEX.matcher(stylesAndLink);
+            while (matcher.find()) {
+                extractedStyles.add(matcher.group());
+            }
+        }
+        return extractedStyles;
     }
 
     private List<String> extractStyles(List<String> stylesAndLinks) {
