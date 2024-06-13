@@ -18,7 +18,10 @@ import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_F
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -82,6 +85,7 @@ import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.util.KvpUtils;
+import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMapRequest;
@@ -2018,18 +2022,47 @@ public class MapMLDocumentBuilder {
         }
     }
 
+    /** Splits the query string in */
+    private Map<String, String> getParametersFromQuery(String query) {
+        return Arrays.stream(query.split("&"))
+                .map(this::splitQueryParameter)
+                .filter(e -> e.getValue() != null)
+                .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue(), (v1, v2) -> v2));
+    }
+
+    private AbstractMap.SimpleImmutableEntry<String, String> splitQueryParameter(String parameter) {
+        final int idx = parameter.indexOf("=");
+        final String key = idx > 0 ? parameter.substring(0, idx) : parameter;
+
+        try {
+            String value = null;
+            if (idx > 0 && parameter.length() > idx + 1) {
+                final String encodedValue = parameter.substring(idx + 1);
+                value = URLDecoder.decode(encodedValue, "UTF-8");
+            }
+            return new AbstractMap.SimpleImmutableEntry<>(key, value);
+        } catch (UnsupportedEncodingException e) {
+            // UTF-8 not supported??
+            throw new RuntimeException(e);
+        }
+    }
+
     /** Builds a service link back to the same service. Used for backlinks. */
     private String serviceLink(List arguments) {
         Request request = Dispatcher.REQUEST.get();
-        String baseURL = ResponseUtils.baseURL(request.getHttpRequest());
+        String baseURL =
+                arguments.get(0) != null
+                        ? arguments.get(0).toString()
+                        : ResponseUtils.baseURL(request.getHttpRequest());
+        String path = arguments.get(1) != null ? arguments.get(1).toString() : request.getPath();
         Map<String, String> kvp =
-                request.getKvp().entrySet().stream()
-                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
-        if (kvp.containsKey("STYLES")) {
-            kvp.put("STYLES", arguments.get(0).toString());
-        } else {
-            kvp.put("styles", arguments.get(0).toString());
-        }
+                arguments.get(2) != null
+                        ? getParametersFromQuery(arguments.get(2).toString())
+                        : request.getKvp().entrySet().stream()
+                                .collect(
+                                        Collectors.toMap(
+                                                Map.Entry::getKey, e -> e.getValue().toString()));
+
         return ResponseUtils.buildURL(baseURL, request.getPath(), kvp, URLMangler.URLType.SERVICE);
     }
 
@@ -2041,14 +2074,22 @@ public class MapMLDocumentBuilder {
             int width,
             int height) {
         HashMap<String, Object> model = new HashMap<>();
-        String workspace = getWorkspace(typeName);
-        model.put("serviceRequest", "getMap");
-        model.put("workspace", workspace);
-        model.put("format", format.isPresent() ? format.get() : DEFAULT_MIME_TYPE);
-        model.put("bbox", bbox);
-        model.put("layers", layersCommaDelimited);
-        model.put("width", String.valueOf(width));
-        model.put("height", String.valueOf(height));
+        Request request = Dispatcher.REQUEST.get();
+        String baseURL = ResponseUtils.baseURL(request.getHttpRequest());
+        String kvp =
+                request.getKvp().entrySet().stream()
+                        .map(
+                                p ->
+                                        URLEncoder.encode(p.getKey())
+                                                + "="
+                                                + URLEncoder.encode(p.getValue().toString()))
+                        .reduce((p1, p2) -> p1 + "&" + p2)
+                        .orElse("");
+        String path = request.getPath();
+        model.put("base", baseURL);
+        model.put("path", path);
+        model.put("kvp", kvp);
+        model.put("rel", "style");
         model.put("serviceLink", (TemplateMethodModelEx) arguments -> serviceLink(arguments));
         return model;
     }

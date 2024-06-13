@@ -1594,7 +1594,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
             FileUtils.write(
                     template,
                     "<map-style>.polygon-r1-s1{stroke-opacity:3.0; stroke-dashoffset:4; stroke-width:2.0; fill:#AAAAAA; fill-opacity:3.0; stroke:#DD0000; stroke-linecap:butt}</map-style>\n"
-                            + "<map-link href=\"${serviceLink(\"templateStyle\")}\" rel=\"style\" title=\"templateinsertedstyle\"/>",
+                            + "<map-link href=\"${serviceLink(\"${base}\",\"${path}\",\"${kvp}\")}\" rel=\"${rel}\" title=\"templateinsertedstyle\"/>",
                     "UTF-8");
 
             MockRequestResponse requestResponse =
@@ -1611,7 +1611,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
             Link templateStyleLink = styleLinks.get(0);
             assertEquals("templateinsertedstyle", templateStyleLink.getTitle());
             assertEquals(
-                    "http://localhost:8080/geoserver/wms?FORMAT=text%2Fmapml&REQUEST=GetMap&SRS=EPSG%3A3857&BBOX=SRSEnvelope%5B0.0%20%3A%20111319.49079327357%2C%20-7.081154551613622E-10%20%3A%20111325.14286638486%5D&FORMAT_OPTIONS=%7BMAPML-WMS-FORMAT%3Dimage%2Fpng%7D&VERSION=1.3.0&STYLES=templateStyle&SERVICE=WMS&WIDTH=150&HEIGHT=150&LAYERS=cite%3ARoadSegments",
+                    "http://localhost:8080/geoserver/wms?SRS=EPSG%3A3857&REQUEST=GetMap&FORMAT=text%2Fmapml&FORMAT_OPTIONS=%7BMAPML-WMS-FORMAT%3Dimage%2Fpng%7D&BBOX=SRSEnvelope%5B0.0%20%3A%20111319.49079327357%2C%20-7.081154551613622E-10%20%3A%20111325.14286638486%5D&VERSION=1.3.0&WIDTH=150&SERVICE=WMS&HEIGHT=150&LAYERS=cite%3ARoadSegments",
                     templateStyleLink.getHref());
             String templateStyle = mapml.getHead().getStyle();
             assertEquals(
