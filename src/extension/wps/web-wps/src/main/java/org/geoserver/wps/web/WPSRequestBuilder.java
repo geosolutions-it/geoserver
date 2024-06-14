@@ -67,7 +67,7 @@ public class WPSRequestBuilder extends GeoServerBasePage {
         Form form = new Form("form");
         add(form);
 
-        var model = new Model<>(new WPSRequestModel());
+        Model model = new Model<>(new WPSRequestModel());
         form.setDefaultModel(model);
 
         xml = new TextField<>("xml", new PropertyModel<>(model, "xml"));
@@ -128,7 +128,7 @@ public class WPSRequestBuilder extends GeoServerBasePage {
                     @Override
                     protected void onSubmit(AjaxRequestTarget target, Form form) {
                         try {
-                            var xmlText = getRequestXML();
+                            String xmlText = getRequestXML();
                             xml.setModelObject(xmlText);
                             target.add(xml);
                         } catch (Exception e) {
@@ -158,7 +158,7 @@ public class WPSRequestBuilder extends GeoServerBasePage {
                                         "ows",
                                         Collections.singletonMap("strict", "true"),
                                         URLType.SERVICE);
-                        var xml = getRequestXML();
+                        String xml = getRequestXML();
 
                         PageParameters parameters = new PageParameters();
                         parameters.add("url", url);
@@ -213,6 +213,7 @@ public class WPSRequestBuilder extends GeoServerBasePage {
 
     @Override
     public void renderHead(IHeaderResponse response) {
+        super.renderHead(response);
         response.render(
                 JavaScriptContentHeaderItem.forScript(
                         DemoRequestsPage.demoRequestsJavascript, null));
