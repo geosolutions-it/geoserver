@@ -17,8 +17,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.wicket.Component;
-import org.apache.wicket.Page;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.form.AjaxFormSubmitBehavior;
@@ -66,19 +64,19 @@ public class DemoRequestsPage extends GeoServerBasePage {
 
     static {
         try {
-            var demo_request_js =
+            String demo_request_js =
                     CharStreams.toString(
                             new InputStreamReader(
                                     DemoRequestsPage.class.getResourceAsStream(
                                             "/org/geoserver/web/demo/demo-requests.js"),
                                     Charsets.UTF_8));
-            var xml_pretty_print_js =
+            String xml_pretty_print_js =
                     CharStreams.toString(
                             new InputStreamReader(
                                     DemoRequestsPage.class.getResourceAsStream(
                                             "/org/geoserver/web/demo/xml-pretty-print.js"),
                                     Charsets.UTF_8));
-            var js = demo_request_js + "\n" + xml_pretty_print_js;
+            String js = demo_request_js + "\n" + xml_pretty_print_js;
             demoRequestsJavascript = js;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "error occurred reading demoRequestsJavascript", e);
@@ -115,6 +113,7 @@ public class DemoRequestsPage extends GeoServerBasePage {
 
     @Override
     public void renderHead(IHeaderResponse response) {
+        super.renderHead(response);
         response.render(JavaScriptContentHeaderItem.forScript(demoRequestsJavascript, null));
     }
 

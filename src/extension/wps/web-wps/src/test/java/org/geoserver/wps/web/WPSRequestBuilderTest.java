@@ -20,11 +20,6 @@ import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.web.GeoServerWicketTestSupport;
 import org.geoserver.web.demo.DemoRequest;
 import org.geoserver.web.demo.DemoRequestsPage;
-import org.geoserver.wps.ProcessGroupInfo;
-import org.geoserver.wps.WPSInfo;
-import org.geoserver.wps.process.GeoServerProcessors;
-import org.geotools.api.feature.type.Name;
-import org.geotools.process.ProcessFactory;
 import org.junit.Test;
 
 /** @author Martin Davis OpenGeo */
@@ -84,7 +79,8 @@ public class WPSRequestBuilderTest extends GeoServerWicketTestSupport {
 
         tester.clickLink("form:execute", true);
 
-        var model = (DemoRequest) tester.getLastRenderedPage().getDefaultModel().getObject();
+        DemoRequest model =
+                (DemoRequest) tester.getLastRenderedPage().getDefaultModel().getObject();
 
         assertEquals("http://localhost/context/ows?strict=true", model.getRequestUrl());
         assertTrue(model.getRequestBody().contains("wps:Execute"));
