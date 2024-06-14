@@ -15,16 +15,15 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_HEAD_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
 
+import freemarker.template.TemplateMethodModelEx;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -38,13 +37,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-
-import freemarker.template.TemplateMethodModelEx;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -84,8 +76,6 @@ import org.geoserver.mapml.xml.UnitType;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.URLMangler;
-import org.geoserver.ows.util.KvpUtils;
-import org.geoserver.ows.util.RequestUtils;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMapRequest;
@@ -110,7 +100,6 @@ import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.grid.GridSubset;
 import org.locationtech.jts.geom.Envelope;
-import org.w3c.dom.Node;
 
 /** Builds a MapML document from a WMSMapContent object */
 public class MapMLDocumentBuilder {
@@ -911,6 +900,7 @@ public class MapMLDocumentBuilder {
             }
         }
         String styles = buildStyles();
+        // get the styles and links from the head template
         List<String> stylesAndLinks = getHeaderTemplates(MAPML_HEAD_FTL, getFeatureTypes());
         styles = appendStylesFromHeadTemplate(styles, stylesAndLinks);
         if (styles != null) head.setStyle(styles);
@@ -918,6 +908,12 @@ public class MapMLDocumentBuilder {
         return head;
     }
 
+    /**
+     * Get Links generated from the head template
+     *
+     * @param stylesAndLinks Styles and links from the head template
+     * @return List of Link objects
+     */
     private List<Link> getLinksFromHeadTemplate(List<String> stylesAndLinks) {
         List<Link> outLinks = new ArrayList<>();
         List<String> extractedLinks = extractLinks(stylesAndLinks);
@@ -1821,6 +1817,7 @@ public class MapMLDocumentBuilder {
                         "/mapml/viewer/widget/mapml-viewer.js",
                         null,
                         URLMangler.URLType.RESOURCE);
+        // get header content from templates
         List<String> headerContentTemplates =
                 getPreviewTemplates(MAPML_PREVIEW_HEAD_FTL, getFeatureTypes());
         StringBuilder sb = new StringBuilder();
@@ -1882,6 +1879,11 @@ public class MapMLDocumentBuilder {
         return sb.toString();
     }
 
+    /**
+     * Get FeatureTYpes based on requested layers
+     *
+     * @return list of SimpleFeatureType
+     */
     private List<SimpleFeatureType> getFeatureTypes() {
         List<SimpleFeatureType> featureTypes = new ArrayList<>();
         try {
@@ -1905,6 +1907,13 @@ public class MapMLDocumentBuilder {
         return featureTypes;
     }
 
+    /**
+     * Get Preview Header Content from templates
+     *
+     * @param templateName template name
+     * @param featureTypes list of feature types
+     * @return list of head content
+     */
     private List<String> getPreviewTemplates(
             String templateName, List<SimpleFeatureType> featureTypes) {
         List<String> templates = new ArrayList<>();
@@ -1926,6 +1935,13 @@ public class MapMLDocumentBuilder {
         return templates;
     }
 
+    /**
+     * Get the MapML head content from templates
+     *
+     * @param templateName template name
+     * @param featureTypes list of feature types
+     * @return list of head content
+     */
     private List<String> getHeaderTemplates(
             String templateName, List<SimpleFeatureType> featureTypes) {
         List<String> templates = new ArrayList<>();
@@ -1934,12 +1950,7 @@ public class MapMLDocumentBuilder {
             try {
                 Map<String, Object> model =
                         getMapRequestElementsToModel(
-                                featureType.getName(),
-                                layersCommaDelimited,
-                                bbox,
-                                format,
-                                width,
-                                height);
+                                layersCommaDelimited, bbox, format, width, height);
                 if (!mapMLMapTemplate.isTemplateEmpty(
                         featureType, templateName, FeatureTemplate.class, "0\n")) {
                     templates.add(mapMLMapTemplate.head(model, featureType));
@@ -2022,7 +2033,12 @@ public class MapMLDocumentBuilder {
         }
     }
 
-    /** Splits the query string in */
+    /**
+     * Converts URL query string to a map of key value pairs
+     *
+     * @param query URL query string
+     * @return Map of key value pairs
+     */
     private Map<String, String> getParametersFromQuery(String query) {
         return Arrays.stream(query.split("&"))
                 .map(this::splitQueryParameter)
@@ -2047,7 +2063,13 @@ public class MapMLDocumentBuilder {
         }
     }
 
-    /** Builds a service link back to the same service. Used for backlinks. */
+    /**
+     * Builds a link from the arguments passed into the template
+     *
+     * @param arguments List of arguments, the first argument is the base URL, the second is the
+     *     path, and the third is the query string
+     * @return URL string
+     */
     private String serviceLink(List arguments) {
         Request request = Dispatcher.REQUEST.get();
         String baseURL =
@@ -2066,8 +2088,17 @@ public class MapMLDocumentBuilder {
         return ResponseUtils.buildURL(baseURL, request.getPath(), kvp, URLMangler.URLType.SERVICE);
     }
 
+    /**
+     * Convert GetMapRequest elements to a map model for the template
+     *
+     * @param layersCommaDelimited Comma delimited list of layer names
+     * @param bbox
+     * @param format
+     * @param width
+     * @param height
+     * @return
+     */
     private Map<String, Object> getMapRequestElementsToModel(
-            Name typeName,
             String layersCommaDelimited,
             String bbox,
             Optional<Object> format,

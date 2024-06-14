@@ -1,18 +1,12 @@
+/* (c) 2024 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.mapml.template;
 
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import org.geoserver.catalog.Catalog;
-import org.geoserver.catalog.PublishedInfo;
-import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.GeoServerResourceLoader;
-import org.geoserver.template.GeoServerTemplateLoader;
-import org.geoserver.template.TemplateUtils;
-import org.geoserver.wms.GetMapRequest;
-import org.geoserver.wms.featureinfo.FeatureTemplate;
-import org.geotools.api.feature.simple.SimpleFeatureType;
-
 import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -21,22 +15,23 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.platform.GeoServerExtensions;
+import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.template.GeoServerTemplateLoader;
+import org.geoserver.template.TemplateUtils;
+import org.geoserver.wms.featureinfo.FeatureTemplate;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 
+/** A template engine for generating MapML content. */
 public class MapMLMapTemplate {
-    /** The template configuration used for placemark descriptions */
+    /** The template configuration */
     static Configuration templateConfig;
 
     static {
         // initialize the template engine, this is static to maintain a cache
         templateConfig = TemplateUtils.getSafeConfiguration();
 
-        // set the default output formats for dates
-        templateConfig.setDateFormat("MM/dd/yyyy");
-        templateConfig.setDateTimeFormat("MM/dd/yyyy HH:mm:ss");
-        templateConfig.setTimeFormat("HH:mm:ss");
-
-        // set the default locale to be US and the
-        // TODO: this may be somethign we want to configure/change
         templateConfig.setLocale(Locale.US);
         templateConfig.setNumberFormat("0.###########");
 
@@ -44,20 +39,13 @@ public class MapMLMapTemplate {
         templateConfig.setDefaultEncoding("UTF-8");
     }
 
-    /** The pattern used by DATETIME_FORMAT */
-    public static String DATE_FORMAT_PATTERN = "MM/dd/yy";
-
-    /** The pattern used by DATETIME_FORMAT */
-    public static String DATETIME_FORMAT_PATTERN = "MM/dd/yy HH:mm:ss";
-
-    /** The pattern used by DATETIME_FORMAT */
-    public static String TIME_FORMAT_PATTERN = "HH:mm:ss";
-
+    /** The template used to add to the head of the preview viewer. */
     public static final String MAPML_PREVIEW_HEAD_FTL = "mapml-preview-head.ftl";
 
+    /** The template used to add to the head of the xml representation */
     public static final String MAPML_HEAD_FTL = "mapml-head.ftl";
 
-    /** Template cache used to avoid paying the cost of template lookup for each feature */
+    /** Template cache used to avoid paying the cost of template lookup for each GetMap call */
     Map<MapMLMapTemplate.TemplateKey, Template> templateCache = new HashMap<>();
 
     /**
@@ -66,11 +54,26 @@ public class MapMLMapTemplate {
      */
     CharArrayWriter caw = new CharArrayWriter();
 
+    /**
+     * Generates the preview content for the given feature type.
+     *
+     * @param model the model to use for the template
+     * @param featureType the feature type to use for the template
+     * @param writer the writer to write the output to
+     * @throws IOException in case of an error
+     */
     public void preview(Map<String, Object> model, SimpleFeatureType featureType, Writer writer)
             throws IOException {
         execute(model, featureType, writer, MAPML_PREVIEW_HEAD_FTL);
     }
 
+    /**
+     * Generates the preview content for the given feature type.
+     *
+     * @param featureType the feature type to use for the template
+     * @return the preview content
+     * @throws IOException in case of an error
+     */
     public String preview(SimpleFeatureType featureType) throws IOException {
         caw.reset();
         preview(Collections.emptyMap(), featureType, caw);
@@ -78,11 +81,27 @@ public class MapMLMapTemplate {
         return caw.toString();
     }
 
+    /**
+     * Generates the head content for the given feature type.
+     *
+     * @param model the model to use for the template
+     * @param featureType the feature type to use for the template
+     * @param writer the writer to write the output to
+     * @throws IOException in case of an error
+     */
     public void head(Map<String, Object> model, SimpleFeatureType featureType, Writer writer)
             throws IOException {
         execute(model, featureType, writer, MAPML_HEAD_FTL);
     }
 
+    /**
+     * Generates the head content for the given feature type.
+     *
+     * @param model the model to use for the template
+     * @param featureType the feature type to use for the template
+     * @return the head content
+     * @throws IOException in case of an error
+     */
     public String head(Map<String, Object> model, SimpleFeatureType featureType)
             throws IOException {
         caw.reset();
@@ -161,10 +180,17 @@ public class MapMLMapTemplate {
                 || (defaultContent != null && defaultContent.equals(templateText));
     }
 
+    /** Template key class used to cache templates by feature type and template name. */
     private static class TemplateKey {
         SimpleFeatureType type;
         String template;
 
+        /**
+         * Template key constructor
+         *
+         * @param type the feature type
+         * @param template the template name
+         */
         public TemplateKey(SimpleFeatureType type, String template) {
             super();
             this.type = type;
