@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -2111,9 +2112,11 @@ public class MapMLDocumentBuilder {
                 request.getKvp().entrySet().stream()
                         .map(
                                 p ->
-                                        URLEncoder.encode(p.getKey())
+                                        URLEncoder.encode(p.getKey(), StandardCharsets.UTF_8)
                                                 + "="
-                                                + URLEncoder.encode(p.getValue().toString()))
+                                                + URLEncoder.encode(
+                                                        p.getValue().toString(),
+                                                        StandardCharsets.UTF_8))
                         .reduce((p1, p2) -> p1 + "&" + p2)
                         .orElse("");
         String path = request.getPath();
