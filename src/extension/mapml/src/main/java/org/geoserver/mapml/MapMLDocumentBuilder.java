@@ -87,7 +87,6 @@ import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.capabilities.CapabilityUtil;
 import org.geoserver.wms.featureinfo.FeatureTemplate;
 import org.geotools.api.feature.simple.SimpleFeatureType;
-import org.geotools.api.feature.type.Name;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.TransformException;
@@ -2077,7 +2076,6 @@ public class MapMLDocumentBuilder {
                 arguments.get(0) != null
                         ? arguments.get(0).toString()
                         : ResponseUtils.baseURL(request.getHttpRequest());
-        String path = arguments.get(1) != null ? arguments.get(1).toString() : request.getPath();
         Map<String, String> kvp =
                 arguments.get(2) != null
                         ? getParametersFromQuery(arguments.get(2).toString())
@@ -2126,16 +2124,6 @@ public class MapMLDocumentBuilder {
         model.put("rel", "style");
         model.put("serviceLink", (TemplateMethodModelEx) arguments -> serviceLink(arguments));
         return model;
-    }
-
-    private String getWorkspace(Name typeName) {
-        String workspace = "";
-        for (MapMLLayerMetadata mapMLLayerMetadata : mapMLLayerMetadataList) {
-            if (mapMLLayerMetadata.getLayerName().equals(typeName.getLocalPart())) {
-                return mapMLLayerMetadata.getWorkspace();
-            }
-        }
-        return workspace;
     }
 
     /** Raw KVP layer info */
