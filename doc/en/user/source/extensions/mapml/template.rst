@@ -53,11 +53,11 @@ GetMap XML Head Stylesheet Templating
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 MapML in XML format includes a map-head element that includes map-link elements to link to other resources, including map style variants.  Additional map-link elements can be added to the map-head element by creating a mapml-head.ftl template in the GeoServer data directory in the directory for the layer we wish to append map-links to.  For example we could create the head.ftl file under ``workspaces/tiger/poly_landmarks_shapefile/poly_landmarks``: 
 
-.. code-block:: html
+.. code-block:: bash
 
  <!-- Added from the template -->	
  <map-style>.polygon-r1-s1{stroke-opacity:3.0; stroke-dashoffset:4; stroke-width:2.0; fill:#AAAAAA; fill-opacity:3.0; stroke:#DD0000; stroke-linecap:butt}</map-style>
- <map-link href="${serviceLink("${base}","${path}","${kvp}")}" rel="${rel}" title="templateinsertedstyle"/>
+ <map-link href="${serviceLink("${base}","${path}","${kvp}")}" rel="\${rel}" title="templateinsertedstyle"/>
  <!-- End of added from the template -->
 
 This would result in a map-head section that would resemble:
