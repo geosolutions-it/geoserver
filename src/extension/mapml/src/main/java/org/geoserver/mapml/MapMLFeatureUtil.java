@@ -7,6 +7,7 @@ package org.geoserver.mapml;
 import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
+import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.BodyContent;
 import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.HeadContent;
@@ -37,6 +39,7 @@ import org.geoserver.ows.Request;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.platform.ServiceException;
+import org.geoserver.wms.featureinfo.FeatureTemplate;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
@@ -56,6 +59,7 @@ public class MapMLFeatureUtil {
     public static final String STYLE_CLASS_PREFIX = ".";
     public static final String STYLE_CLASS_DELIMITER = " ";
     public static final String BBOX_DISPLAY_NONE = ".bbox {display:none}";
+    private static final MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
 
     /**
      * Convert a feature collection to a MapML document
@@ -91,6 +95,11 @@ public class MapMLFeatureUtil {
             throw new ServiceException("MapML OutputFormat does not support Complex Features.");
         }
         SimpleFeatureCollection fc = (SimpleFeatureCollection) featureCollection;
+        boolean hasTemplate = false;
+        if (!mapMLMapTemplate.isTemplateEmpty(
+                fc.getSchema(), MAPML_FEATURE_FTL, FeatureTemplate.class, "0\n")) {
+            hasTemplate = true;
+        }
 
         ResourceInfo resourceInfo = layerInfo.getResource();
         MetadataMap layerMeta = resourceInfo.getMetadata();
@@ -151,6 +160,9 @@ public class MapMLFeatureUtil {
         try (SimpleFeatureIterator iterator = fc.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
+                if (hasTemplate) {
+                    String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
+                }
                 // convert feature to xml
                 if (styles != null) {
                     List<MapMLStyle> applicableStyles = getApplicableStyles(feature, styles);

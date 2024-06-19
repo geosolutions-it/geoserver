@@ -18,15 +18,24 @@ import java.util.Map;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.template.DirectTemplateFeatureCollectionFactory;
+import org.geoserver.template.FeatureWrapper;
 import org.geoserver.template.GeoServerTemplateLoader;
 import org.geoserver.template.TemplateUtils;
 import org.geoserver.wms.featureinfo.FeatureTemplate;
+import org.geotools.api.feature.Feature;
+import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.FeatureType;
+import org.geotools.feature.FeatureCollection;
 
 /** A template engine for generating MapML content. */
 public class MapMLMapTemplate {
     /** The template configuration */
     static Configuration templateConfig;
+
+    static DirectTemplateFeatureCollectionFactory FC_FACTORY =
+            new DirectTemplateFeatureCollectionFactory();
 
     static {
         // initialize the template engine, this is static to maintain a cache
@@ -34,6 +43,7 @@ public class MapMLMapTemplate {
 
         templateConfig.setLocale(Locale.US);
         templateConfig.setNumberFormat("0.###########");
+        templateConfig.setObjectWrapper(new FeatureWrapper(FC_FACTORY));
 
         // encoding
         templateConfig.setDefaultEncoding("UTF-8");
@@ -43,7 +53,9 @@ public class MapMLMapTemplate {
     public static final String MAPML_PREVIEW_HEAD_FTL = "mapml-preview-head.ftl";
 
     /** The template used to add to the head of the xml representation */
-    public static final String MAPML_HEAD_FTL = "mapml-head.ftl";
+    public static final String MAPML_XML_HEAD_FTL = "mapml-head.ftl";
+
+    public static final String MAPML_FEATURE_FTL = "mapml-feature.ftl";
 
     /** Template cache used to avoid paying the cost of template lookup for each GetMap call */
     Map<MapMLMapTemplate.TemplateKey, Template> templateCache = new HashMap<>();
@@ -81,6 +93,18 @@ public class MapMLMapTemplate {
         return caw.toString();
     }
 
+    public String features(SimpleFeatureType featureType, SimpleFeature feature)
+            throws IOException {
+        caw.reset();
+        features(featureType, feature, caw);
+        return caw.toString();
+    }
+
+    public void features(SimpleFeatureType featureType, SimpleFeature feature, Writer writer)
+            throws IOException {
+        execute(feature, featureType, writer, MAPML_FEATURE_FTL);
+    }
+
     /**
      * Generates the head content for the given feature type.
      *
@@ -91,7 +115,7 @@ public class MapMLMapTemplate {
      */
     public void head(Map<String, Object> model, SimpleFeatureType featureType, Writer writer)
             throws IOException {
-        execute(model, featureType, writer, MAPML_HEAD_FTL);
+        execute(model, featureType, writer, MAPML_XML_HEAD_FTL);
     }
 
     /**
@@ -125,6 +149,24 @@ public class MapMLMapTemplate {
 
         try {
             t.process(model, writer);
+        } catch (TemplateException e) {
+            String msg = "Error occured processing template.";
+            throw (IOException) new IOException(msg).initCause(e);
+        }
+    }
+
+    /*
+     * Internal helper method to exceute the template against feature or
+     * feature collection.
+     */
+    private void execute(
+            Feature feature, SimpleFeatureType featureType, Writer writer, String template)
+            throws IOException {
+
+        Template t = lookupTemplate(featureType, template, null);
+
+        try {
+            t.process(feature, writer);
         } catch (TemplateException e) {
             String msg = "Error occured processing template.";
             throw (IOException) new IOException(msg).initCause(e);

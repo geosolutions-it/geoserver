@@ -12,8 +12,8 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
-import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_HEAD_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_XML_HEAD_FTL;
 
 import freemarker.template.TemplateMethodModelEx;
 import java.io.IOException;
@@ -121,7 +121,6 @@ public class MapMLDocumentBuilder {
     private static final int BYTES_PER_PIXEL_TRANSPARENT = 4;
     private static final int BYTES_PER_KILOBYTE = 1024;
     public static final String DEFAULT_MIME_TYPE = "image/png";
-    public static final String MAPML_XML_HEAD_FTL = "mapml-head.ftl";
 
     private final WMS wms;
 
@@ -901,7 +900,7 @@ public class MapMLDocumentBuilder {
         }
         String styles = buildStyles();
         // get the styles and links from the head template
-        List<String> stylesAndLinks = getHeaderTemplates(MAPML_HEAD_FTL, getFeatureTypes());
+        List<String> stylesAndLinks = getHeaderTemplates(MAPML_XML_HEAD_FTL, getFeatureTypes());
         styles = appendStylesFromHeadTemplate(styles, stylesAndLinks);
         if (styles != null) head.setStyle(styles);
         links.addAll(getLinksFromHeadTemplate(stylesAndLinks));

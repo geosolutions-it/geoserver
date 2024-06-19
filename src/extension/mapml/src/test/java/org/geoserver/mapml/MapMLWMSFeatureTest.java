@@ -6,11 +6,13 @@ package org.geoserver.mapml;
 
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.awt.Rectangle;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,8 +20,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import javax.xml.bind.JAXBElement;
+
+import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.data.test.MockData;
@@ -287,6 +292,71 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         assertFalse(
                 "Query filter does not include the SLD filter because the else clause is used",
                 qElse.getFilter().toString().contains("ADDRESS = 123 Main Street"));
+    }
+
+    @Test
+    public void testMapMLFeatureHasClass() throws Exception {
+        File template = null;
+        try {
+            Catalog cat = getCatalog();
+            LayerInfo li = cat.getLayerByName(MockData.BUILDINGS.getLocalPart());
+            li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
+            li.getResource().getMetadata().put(MAPML_USE_TILES, false);
+            cat.save(li);
+            String layerId = getLayerId(MockData.BUILDINGS);
+            FeatureTypeInfo resource =
+                    getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
+            File parent = getDataDirectory().get(resource).dir();
+            template = new File(parent, MAPML_FEATURE_FTL);
+            FileUtils.write(
+                    template,
+                    "<map-head>\n"
+                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
+                            + "</map-head>\n"
+                            + "  <#list attributes as attribute>\n"
+                            + "    <#if attribute.name == \"ADDRESS\">\n"
+                            + "      <map-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
+                            + "      <#elseif !attribute.isGeometry>\n"
+                            + "      <map-property name=\"${attribute.name}\" value=\"${attribute.value}\"/>\n"
+                            + "    </#if>\n"
+                            + "    <#if attribute.isGeometry>\n"
+                            + "      <map-polygon>\n"
+                            + "       <map-coordinates>\n"
+                            + "      <#list attribute.rawValue.coordinates as coord>\n"
+                            + "        <#if coord?index == 3>\n"
+                            + "          <span class=\"desired\">${coord.x} ${coord.y}\n"
+                            + "        <#elseif coord?index == 4>\n"
+                            + "          ${coord.x} ${coord.y}</span>\n"
+                            + "        <#else>\n"
+                            + "          ${coord.x} ${coord.y}\n"
+                            + "        </#if>\n"
+                            + "      </#list>\n"
+                            + "      </map-coordinates>\n"
+                            + "      </map-polygon>\n"
+                            + "    </#if>\n"
+                            + "  </#list>\n",
+                    "UTF-8");
+            Mapml mapmlFeatures =
+                    new MapMLWMSRequest()
+                            .name(MockData.BUILDINGS.getLocalPart())
+                            .bbox("-180,-90,180,90")
+                            .srs("EPSG:4326")
+                            .feature(true)
+                            .getAsMapML();
+
+            String mapmlStyle = mapmlFeatures.getHead().getStyle();
+
+            Feature feature2 =
+                    mapmlFeatures
+                            .getBody()
+                            .getFeatures()
+                            .get(1); // get the second feature, which has a class
+            assertEquals("desired", feature2.getStyle());
+        } finally {
+            if (template != null) {
+                template.delete();
+            }
+        }
     }
 
     @Test
