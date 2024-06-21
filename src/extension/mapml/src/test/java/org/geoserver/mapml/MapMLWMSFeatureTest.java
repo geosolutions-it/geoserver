@@ -295,7 +295,137 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
     }
 
     @Test
-    public void testMapMLFeatureHasClass() throws Exception {
+    public void testMapMLFeaturePointHasClass() throws Exception {
+        File template = null;
+        try {
+            Catalog cat = getCatalog();
+            LayerInfo li = cat.getLayerByName(MockData.BRIDGES.getLocalPart());
+            li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
+            li.getResource().getMetadata().put(MAPML_USE_TILES, false);
+            cat.save(li);
+            String layerId = getLayerId(MockData.BRIDGES);
+            FeatureTypeInfo resource =
+                    getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
+            File parent = getDataDirectory().get(resource).dir();
+            template = new File(parent, MAPML_FEATURE_FTL);
+            FileUtils.write(
+                    template,
+                    "<mapml-interpolated xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                            + "<map-head>\n"
+                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
+                            + "</map-head>\n"
+                            + "  <#list attributes as attribute>\n"
+                            + "    <#if attribute.name == \"NAME\">\n"
+                            + "      <map-interpolated-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
+                            + "    </#if>\n"
+                            + "  </#list>\n"
+                            + "  <#list attributes as gattribute>\n"
+                            + "    <#if gattribute.isGeometry>\n"
+                            + "      <map-interpolated-geometry type=\"point\" >\n"
+                            + "       <map-coordinates>"
+                            + "      <#list gattribute.rawValue.coordinates as coord>"
+                            + "        <#if coord?index == 0>"
+                            + "          <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<![CDATA[</span>]]>"
+                            + "        <#else>"
+                            + "          ${coord.x} ${coord.y}"
+                            + "        </#if>"
+                            + "      </#list>"
+                            + "      </map-coordinates>"
+                            + "      </map-interpolated-geometry>"
+                            + "    </#if>\n"
+                            + "  </#list>\n"
+                            + "</mapml-interpolated>\n",
+                    "UTF-8");
+            Mapml mapmlFeatures =
+                    new MapMLWMSRequest()
+                            .name(MockData.BRIDGES.getLocalPart())
+                            .bbox("-180,-90,180,90")
+                            .srs("EPSG:4326")
+                            .feature(true)
+                            .getAsMapML();
+
+            String mapmlStyle = mapmlFeatures.getHead().getStyle();
+
+            Feature feature2 =
+                    mapmlFeatures
+                            .getBody()
+                            .getFeatures()
+                            .get(1); // get the second feature, which has a class
+            assertEquals("desired", feature2.getStyle());
+        } finally {
+            if (template != null) {
+                template.delete();
+            }
+        }
+    }
+
+    @Test
+    public void testMapMLFeatureLineHasClass() throws Exception {
+        File template = null;
+        try {
+            Catalog cat = getCatalog();
+            LayerInfo li = cat.getLayerByName(MockData.ROAD_SEGMENTS.getLocalPart());
+            li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
+            li.getResource().getMetadata().put(MAPML_USE_TILES, false);
+            cat.save(li);
+            String layerId = getLayerId(MockData.BUILDINGS);
+            FeatureTypeInfo resource =
+                    getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
+            File parent = getDataDirectory().get(resource).dir();
+            template = new File(parent, MAPML_FEATURE_FTL);
+            FileUtils.write(
+                    template,
+                    "<map-head>\n"
+                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
+                            + "</map-head>\n"
+                            + "  <#list attributes as attribute>\n"
+                            + "    <#if attribute.name == \"NAME\">\n"
+                            + "      <map-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
+                            + "      <#elseif !attribute.isGeometry>\n"
+                            + "      <map-property name=\"${attribute.name}\" value=\"${attribute.value}\"/>\n"
+                            + "    </#if>\n"
+                            + "    <#if attribute.isGeometry>\n"
+                            + "      <map-interpolated-geometry type=\"linestring\" >\n"
+                            + "       <map-coordinates>\n"
+                            + "      <#list attribute.rawValue.coordinates as coord>\n"
+                            + "        <#if coord?index == 3>\n"
+                            + "          <span class=\"desired\">${coord.x} ${coord.y}\n"
+                            + "        <#elseif coord?index == 4>\n"
+                            + "          ${coord.x} ${coord.y}</span>\n"
+                            + "        <#else>\n"
+                            + "          ${coord.x} ${coord.y}\n"
+                            + "        </#if>\n"
+                            + "      </#list>\n"
+                            + "      </map-coordinates>\n"
+                            + "      </map-interpolated-geometry>\n"
+                            + "    </#if>\n"
+                            + "  </#list>\n",
+                    "UTF-8");
+            Mapml mapmlFeatures =
+                    new MapMLWMSRequest()
+                            .name(MockData.ROAD_SEGMENTS.getLocalPart())
+                            .bbox("-180,-90,180,90")
+                            .srs("EPSG:4326")
+                            .feature(true)
+                            .getAsMapML();
+
+            String mapmlStyle = mapmlFeatures.getHead().getStyle();
+
+            Feature feature2 =
+                    mapmlFeatures
+                            .getBody()
+                            .getFeatures()
+                            .get(1); // get the second feature, which has a class
+            assertEquals("desired", feature2.getStyle());
+        } finally {
+            if (template != null) {
+                template.delete();
+            }
+        }
+    }
+
+    @Test
+    public void testMapMLFeaturePolygonHasClass() throws Exception {
         File template = null;
         try {
             Catalog cat = getCatalog();

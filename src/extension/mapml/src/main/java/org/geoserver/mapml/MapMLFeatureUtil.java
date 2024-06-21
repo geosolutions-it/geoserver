@@ -10,6 +10,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +21,8 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import freemarker.template.TemplateNotFoundException;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourceInfo;
@@ -30,6 +33,8 @@ import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.BodyContent;
 import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.HeadContent;
+import org.geoserver.mapml.xml.Interpolated;
+import org.geoserver.mapml.xml.InterpolatedGeometry;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.Meta;
@@ -53,6 +58,9 @@ import org.geotools.metadata.iso.citation.Citations;
 import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Unmarshaller;
 
 public class MapMLFeatureUtil {
     private static final Logger LOGGER = Logging.getLogger(MapMLFeatureUtil.class);
@@ -96,9 +104,13 @@ public class MapMLFeatureUtil {
         }
         SimpleFeatureCollection fc = (SimpleFeatureCollection) featureCollection;
         boolean hasTemplate = false;
-        if (!mapMLMapTemplate.isTemplateEmpty(
-                fc.getSchema(), MAPML_FEATURE_FTL, FeatureTemplate.class, "0\n")) {
-            hasTemplate = true;
+        try {
+            if (!mapMLMapTemplate.isTemplateEmpty(
+                    fc.getSchema(), MAPML_FEATURE_FTL, FeatureTemplate.class, "0\n")) {
+                hasTemplate = true;
+            }
+        } catch (TemplateNotFoundException e) {
+            LOGGER.log(Level.FINEST, MAPML_FEATURE_FTL + " Template not found", e);
         }
 
         ResourceInfo resourceInfo = layerInfo.getResource();
@@ -162,6 +174,15 @@ public class MapMLFeatureUtil {
                 SimpleFeature feature = iterator.next();
                 if (hasTemplate) {
                     String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
+                    StringReader reader = new StringReader(templateOutput);
+                    try {
+                        JAXBContext context = JAXBContext.newInstance(Interpolated.class);
+                        Unmarshaller unmarshaller = context.createUnmarshaller();
+                        Interpolated ig = (Interpolated) unmarshaller.unmarshal(reader);
+                        InterpolatedGeometry igg = ig.getMapInterpolatedGeometry();
+                    } catch (Exception e) {
+                        LOGGER.log(Level.WARNING, "Error unmarshalling template output", e);
+                    }
                 }
                 // convert feature to xml
                 if (styles != null) {

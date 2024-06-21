@@ -147,6 +147,14 @@ public class ObjectFactory {
         return new Mapml();
     }
 
+    public Interpolated createInterpolated() {
+        return new Interpolated();
+    }
+
+    public InterpolatedGeometry createInterpolatedGeometry() {
+        return new InterpolatedGeometry();
+    }
+
     /** Create an instance of {@link Tile } */
     public Tile createTile() {
         return new Tile();
