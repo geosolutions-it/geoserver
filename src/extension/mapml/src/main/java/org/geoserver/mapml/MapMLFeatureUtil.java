@@ -60,6 +60,7 @@ import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
 
 import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
 public class MapMLFeatureUtil {
@@ -68,6 +69,17 @@ public class MapMLFeatureUtil {
     public static final String STYLE_CLASS_DELIMITER = " ";
     public static final String BBOX_DISPLAY_NONE = ".bbox {display:none}";
     private static final MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
+    private static JAXBContext context;
+    private static Unmarshaller unmarshaller;
+
+    static {
+        try {
+            context = JAXBContext.newInstance(Interpolated.class);
+            unmarshaller = context.createUnmarshaller();
+        } catch (JAXBException e) {
+            LOGGER.log(Level.WARNING, "Error creating JAXB context", e);
+        }
+    }
 
     /**
      * Convert a feature collection to a MapML document
@@ -173,16 +185,7 @@ public class MapMLFeatureUtil {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
                 if (hasTemplate) {
-                    String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
-                    StringReader reader = new StringReader(templateOutput);
-                    try {
-                        JAXBContext context = JAXBContext.newInstance(Interpolated.class);
-                        Unmarshaller unmarshaller = context.createUnmarshaller();
-                        Interpolated ig = (Interpolated) unmarshaller.unmarshal(reader);
-                        InterpolatedGeometry igg = ig.getMapInterpolatedGeometry();
-                    } catch (Exception e) {
-                        LOGGER.log(Level.WARNING, "Error unmarshalling template output", e);
-                    }
+                    getInterpolatedFromTemplate(fc, feature);
                 }
                 // convert feature to xml
                 if (styles != null) {
@@ -201,6 +204,18 @@ public class MapMLFeatureUtil {
             }
         }
         return mapml;
+    }
+
+    private static void getInterpolatedFromTemplate(
+            SimpleFeatureCollection fc, SimpleFeature feature) throws IOException {
+        String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
+        StringReader reader = new StringReader(templateOutput);
+        try {
+            Interpolated ig = (Interpolated) unmarshaller.unmarshal(reader);
+            InterpolatedGeometry igg = ig.getMapInterpolatedGeometry();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error unmarshalling template output", e);
+        }
     }
 
     /**

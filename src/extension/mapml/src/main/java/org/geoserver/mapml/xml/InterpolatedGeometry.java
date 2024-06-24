@@ -47,6 +47,7 @@ public class InterpolatedGeometry {
                 type = MultiPolygon.class,
                 namespace = "http://www.w3.org/1999/xhtml")
     })
+    @XmlElement(name = "map-components", namespace = "http://www.w3.org/1999/xhtml")
     protected List<Object> components;
 
     public List<Object> getComponents() {
