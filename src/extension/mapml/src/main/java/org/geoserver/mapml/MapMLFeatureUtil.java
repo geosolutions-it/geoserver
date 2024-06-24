@@ -76,6 +76,8 @@ public class MapMLFeatureUtil {
         try {
             context = JAXBContext.newInstance(Interpolated.class);
             unmarshaller = context.createUnmarshaller();
+            unmarshaller.setEventHandler(
+                    new javax.xml.bind.helpers.DefaultValidationEventHandler());
         } catch (JAXBException e) {
             LOGGER.log(Level.WARNING, "Error creating JAXB context", e);
         }

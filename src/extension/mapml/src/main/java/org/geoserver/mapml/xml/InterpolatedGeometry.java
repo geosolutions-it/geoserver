@@ -4,6 +4,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
@@ -24,41 +25,30 @@ public class InterpolatedGeometry {
         this.type = value;
     }
 
-    @XmlElements({
-        @XmlElement(name = "point", type = Point.class, namespace = "http://www.w3.org/1999/xhtml"),
-        @XmlElement(
-                name = "map-linestring",
-                type = LineString.class,
-                namespace = "http://www.w3.org/1999/xhtml"),
-        @XmlElement(
-                name = "map-polygon",
-                type = Polygon.class,
-                namespace = "http://www.w3.org/1999/xhtml"),
-        @XmlElement(
-                name = "map-multipoint",
-                type = MultiPoint.class,
-                namespace = "http://www.w3.org/1999/xhtml"),
-        @XmlElement(
-                name = "map-multilinestring",
-                type = MultiLineString.class,
-                namespace = "http://www.w3.org/1999/xhtml"),
-        @XmlElement(
-                name = "map-multipolygon",
-                type = MultiPolygon.class,
-                namespace = "http://www.w3.org/1999/xhtml")
-    })
-    @XmlElement(name = "map-components", namespace = "http://www.w3.org/1999/xhtml")
-    protected List<Object> components;
+    @XmlElementWrapper(name = "map-components", namespace = "http://www.w3.org/1999/xhtml")
+    @XmlElement(
+            name = "map-interpolated-geometry",
+            type = InterpolatedGeometry.class,
+            namespace = "http://www.w3.org/1999/xhtml")
+    protected List<InterpolatedGeometry> components;
 
-    public List<Object> getComponents() {
+    public List<InterpolatedGeometry> getComponents() {
         if (components == null) {
             components = new ArrayList<>();
         }
         return components;
     }
 
+    public void setComponents(List<InterpolatedGeometry> components) {
+        this.components = components;
+    }
+
     @XmlElement(name = "map-coordinates", namespace = "http://www.w3.org/1999/xhtml")
     protected List<String> coordinates;
+
+    public void setCoordinates(List<String> coordinates) {
+        this.coordinates = coordinates;
+    }
 
     public List<String> getCoordinates() {
         if (coordinates == null) {
