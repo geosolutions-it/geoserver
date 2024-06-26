@@ -34,6 +34,7 @@ import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.LineString;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.MultiLineString;
+import org.geoserver.mapml.xml.Point;
 import org.geoserver.mapml.xml.Polygon;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.MapLayerInfo;
@@ -350,29 +351,28 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
             template = new File(parent, MAPML_FEATURE_FTL);
             FileUtils.write(
                     template,
-                    "<mapml-interpolated xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                    "<mapml- xmlns=\"http://www.w3.org/1999/xhtml\">\n"
                             + "<map-head>\n"
-                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
                             + "</map-head>\n"
+                            + "<map-body>\n"
+                            + "<map-feature>\n"
                             + "  <#list attributes as attribute>\n"
                             + "    <#if attribute.name == \"NAME\">\n"
-                            + "      <map-interpolated-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
+                            + "      <map-properties name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
                             + "  <#list attributes as gattribute>\n"
                             + "    <#if gattribute.isGeometry>\n"
-                            + "      <map-interpolated-geometry type=\"POINT\" >"
-                            + "       <map-coordinates>"
-                            + "      <#list gattribute.rawValue.coordinates as coord>"
-                            + "        <#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<![CDATA[</span>]]>"
-                            + "        <#else>${coord.x} ${coord.y}"
-                            + "        </#if>"
-                            + "      </#list>"
-                            + "</map-coordinates>"
-                            + "      </map-interpolated-geometry>"
+                            + "      <map-geometry>"
+                            + "       <map-point>"
+                            + "       <map-coordinates><#list gattribute.rawValue.coordinates as coord>"
+                            + "        <#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<![CDATA[</span>]]><#else>${coord.x} ${coord.y}</#if></#list></map-coordinates></map-point>"
+                            + "      </map-geometry>"
                             + "    </#if>\n"
                             + "  </#list>\n"
-                            + "</mapml-interpolated>\n",
+                            + "</map-feature>\n"
+                            + "</map-body>\n"
+                            + "</mapml->\n",
                     "UTF-8");
             Mapml mapmlFeatures =
                     new MapMLWMSRequest()
@@ -388,8 +388,10 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                     mapmlFeatures
                             .getBody()
                             .getFeatures()
-                            .get(1); // get the second feature, which has a class
-            assertEquals("desired", feature2.getStyle());
+                            .get(0); // get the second feature, which has a class
+            Point featurePoint = (Point) feature2.getGeometry().getGeometryContent().getValue();
+            String coords = featurePoint.getCoordinates().get(0).getCoordinates().get(0).toString();
+            assertTrue(coords.contains("<span class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();

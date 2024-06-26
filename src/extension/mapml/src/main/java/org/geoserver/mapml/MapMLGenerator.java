@@ -78,7 +78,7 @@ public class MapMLGenerator {
             SimpleFeature sf,
             String featureCaptionTemplate,
             List<MapMLStyle> mapMLStyles,
-            Optional<GeometryContent> templateOptional)
+            Optional<Mapml> templateOptional)
             throws IOException {
         if (mapMLStyles != null && mapMLStyles.isEmpty()) {
             // no applicable styles, probably because of scale
@@ -150,7 +150,7 @@ public class MapMLGenerator {
         // if there is an template geometry, use it instead of the original geometry
         GeometryContent geometryContent = null;
         if (templateOptional.isPresent()) {
-            geometryContent = templateOptional.get();
+            geometryContent = templateOptional.get().getBody().getFeatures().get(0).getGeometry();
         } else {
             geometryContent = buildGeometry(g);
         }
@@ -447,7 +447,11 @@ public class MapMLGenerator {
     private org.geoserver.mapml.xml.Point buildPoint(Point p) {
         org.geoserver.mapml.xml.Point point = new org.geoserver.mapml.xml.Point();
         point.getCoordinates()
-                .add(this.formatter.format(p.getX()) + SPACE + this.formatter.format(p.getY()));
+                .add(
+                        new Coordinates(
+                                this.formatter.format(p.getX())
+                                        + SPACE
+                                        + this.formatter.format(p.getY())));
         return point;
     }
 

@@ -120,6 +120,10 @@ public class MapMLFeatureUtil {
                     fc.getSchema(), MAPML_FEATURE_HEAD_FTL, FeatureTemplate.class, "0\n")) {
                 hasHeadTemplate = true;
             }
+        } catch (TemplateNotFoundException e) {
+            LOGGER.log(Level.FINEST, MAPML_FEATURE_FTL + " Template not found", e);
+        }
+        try {
             if (!mapMLMapTemplate.isTemplateEmpty(
                     fc.getSchema(), MAPML_FEATURE_FTL, FeatureTemplate.class, "0\n")) {
                 hasTemplate = true;
@@ -192,9 +196,9 @@ public class MapMLFeatureUtil {
         try (SimpleFeatureIterator iterator = fc.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
-                Optional<GeometryContent> interpolatedOptional = Optional.empty();
+                Optional<Mapml> interpolatedOptional = Optional.empty();
                 if (hasTemplate) {
-                    // interpolatedOptional = getInterpolatedFromTemplate(fc, feature);
+                    interpolatedOptional = getInterpolatedFromTemplate(fc, feature);
                     // appendTemplateCSSStyle(head, interpolatedOptional);
                 }
                 // convert feature to xml
@@ -218,6 +222,19 @@ public class MapMLFeatureUtil {
             }
         }
         return mapml;
+    }
+
+    private static Optional<Mapml> getInterpolatedFromTemplate(
+            SimpleFeatureCollection fc, SimpleFeature feature) {
+        try {
+            String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
+            return Optional.of(encoder.decode(new StringReader(templateOutput)));
+        } catch (IOException e) {
+            LOGGER.info(
+                    "Error unmarshalling template output for MapML features "
+                            + e.getLocalizedMessage());
+            return Optional.empty();
+        }
     }
 
     /**
