@@ -7,6 +7,7 @@ package org.geoserver.mapml;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_HEAD_FTL;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -295,6 +296,45 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
     }
 
     @Test
+    public void testTemplateHeaderStyle() throws Exception {
+        File template = null;
+        try {
+            Catalog cat = getCatalog();
+            LayerInfo li = cat.getLayerByName(MockData.BRIDGES.getLocalPart());
+            li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
+            li.getResource().getMetadata().put(MAPML_USE_TILES, false);
+            cat.save(li);
+            String layerId = getLayerId(MockData.BRIDGES);
+            FeatureTypeInfo resource =
+                    getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
+            File parent = getDataDirectory().get(resource).dir();
+            template = new File(parent, MAPML_FEATURE_HEAD_FTL);
+            FileUtils.write(
+                    template,
+                    "<mapml- xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                            + "<map-head>\n"
+                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
+                            + "</map-head>\n"
+                            + "</mapml->\n",
+                    "UTF-8");
+            Mapml mapmlFeatures =
+                    new MapMLWMSRequest()
+                            .name(MockData.BRIDGES.getLocalPart())
+                            .bbox("-180,-90,180,90")
+                            .srs("EPSG:4326")
+                            .feature(true)
+                            .getAsMapML();
+
+            String mapmlStyle = mapmlFeatures.getHead().getStyle();
+            assertTrue(mapmlStyle.contains(".desired {stroke-dashoffset:3}"));
+        } finally {
+            if (template != null) {
+                template.delete();
+            }
+        }
+    }
+
+    @Test
     public void testMapMLFeaturePointHasClass() throws Exception {
         File template = null;
         try {
@@ -451,7 +491,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "      <map-interpolated-property name=\"${attribute.name}\" value=\"${attribute.value}\"/>\n"
                             + "    </#if>\n"
                             + "    <#if attribute.isGeometry>\n"
-                            + "      <map-interpolated-geometry type=\"polygon\" >\n"
+                            + "      <map-interpolated-geometry type=\"POLYGON\" >\n"
                             + "       <map-components>"
                             + "       <#assign shell = attribute.rawValue.getExteriorRing()>"
                             + "        <map-interpolated-geometry type=\"linestring\">\n"

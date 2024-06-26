@@ -147,14 +147,6 @@ public class ObjectFactory {
         return new Mapml();
     }
 
-    public Interpolated createInterpolated() {
-        return new Interpolated();
-    }
-
-    public InterpolatedGeometry createInterpolatedGeometry() {
-        return new InterpolatedGeometry();
-    }
-
     /** Create an instance of {@link Tile } */
     public Tile createTile() {
         return new Tile();
@@ -347,12 +339,11 @@ public class ObjectFactory {
             namespace = "http://www.w3.org/1999/xhtml",
             name = "map-coordinates",
             scope = MultiLineString.class)
-    public JAXBElement<List<Coordinates>> createMultiLineStringCoordinates(
-            List<Coordinates> value) {
+    public JAXBElement<List<String>> createMultiLineStringCoordinates(List<String> value) {
         return new JAXBElement<>(
                 _MultiPointCoordinates_QNAME,
                 ((Class) List.class),
                 MultiLineString.class,
-                ((List<Coordinates>) value));
+                ((List<String>) value));
     }
 }

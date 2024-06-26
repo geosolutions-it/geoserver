@@ -55,6 +55,8 @@ public class MapMLMapTemplate {
     /** The template used to add to the head of the xml representation */
     public static final String MAPML_XML_HEAD_FTL = "mapml-head.ftl";
 
+    public static final String MAPML_FEATURE_HEAD_FTL = "mapml-feature-head.ftl";
+
     public static final String MAPML_FEATURE_FTL = "mapml-feature.ftl";
 
     /** Template cache used to avoid paying the cost of template lookup for each GetMap call */
@@ -118,6 +120,16 @@ public class MapMLMapTemplate {
         execute(model, featureType, writer, MAPML_XML_HEAD_FTL);
     }
 
+    public String featureHead(SimpleFeatureType featureType) throws IOException {
+        caw.reset();
+        featureHead(featureType, caw);
+        return caw.toString();
+    }
+
+    public void featureHead(SimpleFeatureType featureType, Writer writer) throws IOException {
+        execute(featureType, writer, MAPML_FEATURE_HEAD_FTL);
+    }
+
     /**
      * Generates the head content for the given feature type.
      *
@@ -167,6 +179,23 @@ public class MapMLMapTemplate {
 
         try {
             t.process(feature, writer);
+        } catch (TemplateException e) {
+            String msg = "Error occured processing template.";
+            throw (IOException) new IOException(msg).initCause(e);
+        }
+    }
+
+    /*
+     * Internal helper method to exceute the template against feature or
+     * feature collection.
+     */
+    private void execute(SimpleFeatureType featureType, Writer writer, String template)
+            throws IOException {
+
+        Template t = lookupTemplate(featureType, template, null);
+
+        try {
+            t.process(null, writer);
         } catch (TemplateException e) {
             String msg = "Error occured processing template.";
             throw (IOException) new IOException(msg).initCause(e);

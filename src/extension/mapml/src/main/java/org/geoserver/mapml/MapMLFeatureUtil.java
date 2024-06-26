@@ -8,6 +8,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_FEATURE_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_HEAD_FTL;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -32,9 +33,8 @@ import org.geoserver.mapml.tcrs.TiledCRSParams;
 import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.BodyContent;
 import org.geoserver.mapml.xml.Feature;
+import org.geoserver.mapml.xml.GeometryContent;
 import org.geoserver.mapml.xml.HeadContent;
-import org.geoserver.mapml.xml.Interpolated;
-import org.geoserver.mapml.xml.InterpolatedGeometry;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.Meta;
@@ -69,17 +69,13 @@ public class MapMLFeatureUtil {
     public static final String STYLE_CLASS_DELIMITER = " ";
     public static final String BBOX_DISPLAY_NONE = ".bbox {display:none}";
     private static final MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
-    private static JAXBContext context;
-    private static Unmarshaller unmarshaller;
+    private static final MapMLEncoder encoder;
 
     static {
         try {
-            context = JAXBContext.newInstance(Interpolated.class);
-            unmarshaller = context.createUnmarshaller();
-            unmarshaller.setEventHandler(
-                    new javax.xml.bind.helpers.DefaultValidationEventHandler());
+            encoder = new MapMLEncoder();
         } catch (JAXBException e) {
-            LOGGER.log(Level.WARNING, "Error creating JAXB context", e);
+            throw new ServiceException(e);
         }
     }
 
@@ -118,7 +114,12 @@ public class MapMLFeatureUtil {
         }
         SimpleFeatureCollection fc = (SimpleFeatureCollection) featureCollection;
         boolean hasTemplate = false;
+        boolean hasHeadTemplate = false;
         try {
+            if (!mapMLMapTemplate.isTemplateEmpty(
+                    fc.getSchema(), MAPML_FEATURE_HEAD_FTL, FeatureTemplate.class, "0\n")) {
+                hasHeadTemplate = true;
+            }
             if (!mapMLMapTemplate.isTemplateEmpty(
                     fc.getSchema(), MAPML_FEATURE_FTL, FeatureTemplate.class, "0\n")) {
                 hasTemplate = true;
@@ -167,7 +168,12 @@ public class MapMLFeatureUtil {
         if (!skipHeadStyles) {
             String style = getCSSStylesFull(styles);
             head.setStyle(style);
+            if (hasHeadTemplate) {
+                getInterpolatedStylesFromTemplate(fc)
+                        .ifPresent(interpolated -> appendTemplateCSSStyle(head, interpolated));
+            }
         }
+
         String fCaptionTemplate = layerMeta.get("mapml.featureCaption", String.class);
         mapml.setHead(head);
 
@@ -186,10 +192,10 @@ public class MapMLFeatureUtil {
         try (SimpleFeatureIterator iterator = fc.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
-                Optional<Interpolated> interpolatedOptional = Optional.empty();
+                Optional<GeometryContent> interpolatedOptional = Optional.empty();
                 if (hasTemplate) {
-                    interpolatedOptional = getInterpolatedFromTemplate(fc, feature);
-                    appendTemplateCSSStyle(head, interpolatedOptional);
+                    // interpolatedOptional = getInterpolatedFromTemplate(fc, feature);
+                    // appendTemplateCSSStyle(head, interpolatedOptional);
                 }
                 // convert feature to xml
                 if (styles != null) {
@@ -220,26 +226,25 @@ public class MapMLFeatureUtil {
      * @param head the head content
      * @param interpolatedOptional the interpolated object from the template
      */
-    private static void appendTemplateCSSStyle(
-            HeadContent head, Optional<Interpolated> interpolatedOptional) {
-        if (head != null && interpolatedOptional.isPresent()) {
-            Interpolated interpolated = interpolatedOptional.get();
+    private static void appendTemplateCSSStyle(HeadContent head, Mapml interpolated) {
+        if (head != null) {
             if (interpolated.getHead() != null && interpolated.getHead().getStyle() != null) {
                 String interpolatedCSSStyle = interpolated.getHead().getStyle();
-                if (head.getStyle().contains(interpolatedCSSStyle)) {
-                    return;
+                if (head.getStyle() == null) {
+                    head.setStyle(interpolatedCSSStyle);
+                } else {
+                    head.setStyle(head.getStyle() + " " + interpolatedCSSStyle);
                 }
-                head.setStyle(head.getStyle() + " " + interpolatedCSSStyle);
             }
         }
     }
 
-    private static Optional<Interpolated> getInterpolatedFromTemplate(
-            SimpleFeatureCollection fc, SimpleFeature feature) throws IOException {
-        String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
+    private static Optional<Mapml> getInterpolatedStylesFromTemplate(SimpleFeatureCollection fc)
+            throws IOException {
+        String templateOutput = mapMLMapTemplate.featureHead(fc.getSchema());
         StringReader reader = new StringReader(templateOutput);
         try {
-            return Optional.of((Interpolated) unmarshaller.unmarshal(reader));
+            return Optional.of(encoder.decode(reader));
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error unmarshalling template output", e);
             return Optional.empty();

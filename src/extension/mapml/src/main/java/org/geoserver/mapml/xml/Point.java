@@ -42,7 +42,7 @@ public class Point {
             required = true,
             name = "map-coordinates",
             namespace = "http://www.w3.org/1999/xhtml")
-    protected List<Coordinates> coordinates;
+    protected List<String> coordinates;
 
     /**
      * Gets the value of the coordinates property.
@@ -61,14 +61,10 @@ public class Point {
      *
      * @return list of coordinates strings
      */
-    public List<Coordinates> getCoordinates() {
+    public List<String> getCoordinates() {
         if (coordinates == null) {
             coordinates = new ArrayList<>();
         }
         return this.coordinates;
-    }
-
-    public void setCoordinates(List<Coordinates> coordinates) {
-        this.coordinates = coordinates;
     }
 }
