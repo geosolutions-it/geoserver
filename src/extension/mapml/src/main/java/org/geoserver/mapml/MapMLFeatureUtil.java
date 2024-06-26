@@ -186,21 +186,27 @@ public class MapMLFeatureUtil {
         try (SimpleFeatureIterator iterator = fc.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
+                Optional<Interpolated> interpolatedOptional = Optional.empty();
                 if (hasTemplate) {
-                    getInterpolatedFromTemplate(fc, feature);
+                    interpolatedOptional = getInterpolatedFromTemplate(fc, feature);
+                    appendTemplateCSSStyle(head, interpolatedOptional);
                 }
                 // convert feature to xml
                 if (styles != null) {
                     List<MapMLStyle> applicableStyles = getApplicableStyles(feature, styles);
                     Optional<Feature> f =
                             featureBuilder.buildFeature(
-                                    feature, fCaptionTemplate, applicableStyles);
+                                    feature,
+                                    fCaptionTemplate,
+                                    applicableStyles,
+                                    interpolatedOptional);
                     // feature will be skipped if geometry incompatible with style symbolizer
                     f.ifPresent(features::add);
                 } else {
                     // WFS GETFEATURE request with no styles
                     Optional<Feature> f =
-                            featureBuilder.buildFeature(feature, fCaptionTemplate, null);
+                            featureBuilder.buildFeature(
+                                    feature, fCaptionTemplate, null, interpolatedOptional);
                     f.ifPresent(features::add);
                 }
             }
@@ -208,15 +214,35 @@ public class MapMLFeatureUtil {
         return mapml;
     }
 
-    private static void getInterpolatedFromTemplate(
+    /**
+     * Append the CSS style from the template to the feature
+     *
+     * @param head the head content
+     * @param interpolatedOptional the interpolated object from the template
+     */
+    private static void appendTemplateCSSStyle(
+            HeadContent head, Optional<Interpolated> interpolatedOptional) {
+        if (head != null && interpolatedOptional.isPresent()) {
+            Interpolated interpolated = interpolatedOptional.get();
+            if (interpolated.getHead() != null && interpolated.getHead().getStyle() != null) {
+                String interpolatedCSSStyle = interpolated.getHead().getStyle();
+                if (head.getStyle().contains(interpolatedCSSStyle)) {
+                    return;
+                }
+                head.setStyle(head.getStyle() + " " + interpolatedCSSStyle);
+            }
+        }
+    }
+
+    private static Optional<Interpolated> getInterpolatedFromTemplate(
             SimpleFeatureCollection fc, SimpleFeature feature) throws IOException {
         String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
         StringReader reader = new StringReader(templateOutput);
         try {
-            Interpolated ig = (Interpolated) unmarshaller.unmarshal(reader);
-            InterpolatedGeometry igg = ig.getMapInterpolatedGeometry();
+            return Optional.of((Interpolated) unmarshaller.unmarshal(reader));
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error unmarshalling template output", e);
+            return Optional.empty();
         }
     }
 

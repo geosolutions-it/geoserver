@@ -61,4 +61,8 @@ public class Interpolated {
     public void setMapInterpolatedGeometry(InterpolatedGeometry mapInterpolatedGeometry) {
         this.mapInterpolatedGeometry = mapInterpolatedGeometry;
     }
+
+    public InterpolatedGeometry getInterpolatedGeometry() {
+        return mapInterpolatedGeometry;
+    }
 }

@@ -60,7 +60,9 @@ public class MapMLGetFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat 
 
     private WMS wms;
 
-    /** @param wms */
+    /**
+     * @param wms
+     */
     public MapMLGetFeatureInfoOutputFormat(WMS wms) {
         super(MapMLConstants.MAPML_MIME_TYPE);
         this.wms = wms;
@@ -150,7 +152,8 @@ public class MapMLGetFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat 
                                     featureBuilder.buildFeature(
                                             feature,
                                             captionTemplates.get(fc.getSchema().getName()),
-                                            null);
+                                            null,
+                                            Optional.empty());
                             // might be interesting to be able to put features
                             // from different layers into a layer-specific div
                             f.ifPresent(features::add);

@@ -4,8 +4,10 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlElements;
+import javax.xml.bind.annotation.XmlMixed;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,14 +45,18 @@ public class InterpolatedGeometry {
         this.components = components;
     }
 
-    @XmlElement(name = "map-coordinates", namespace = "http://www.w3.org/1999/xhtml")
-    protected List<String> coordinates;
+    @XmlMixed
+    @XmlElementRef(
+            name = "map-coordinates",
+            type = Coordinates.class,
+            namespace = "http://www.w3.org/1999/xhtml")
+    protected List<Coordinates> coordinates;
 
-    public void setCoordinates(List<String> coordinates) {
+    public void setCoordinates(List<Coordinates> coordinates) {
         this.coordinates = coordinates;
     }
 
-    public List<String> getCoordinates() {
+    public List<Coordinates> getCoordinates() {
         if (coordinates == null) {
             coordinates = new ArrayList<>();
         }

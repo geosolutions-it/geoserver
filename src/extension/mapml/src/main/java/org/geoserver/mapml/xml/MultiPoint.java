@@ -42,7 +42,7 @@ public class MultiPoint {
             required = true,
             name = "map-coordinates",
             namespace = "http://www.w3.org/1999/xhtml")
-    protected List<String> coordinates;
+    protected List<Coordinates> coordinates;
 
     /**
      * Gets the value of the map-coordinates property. Exception Description: The property or field
@@ -63,7 +63,7 @@ public class MultiPoint {
      *
      * @return list of coordinates strings
      */
-    public List<String> getCoordinates() {
+    public List<Coordinates> getCoordinates() {
         if (coordinates == null) {
             coordinates = new ArrayList<>();
         }
