@@ -1,7 +1,7 @@
 <dataStore>
   <id>DataStoreInfoImpl--713a8fca:18b46df8036:-8000</id>
   <name>eurostat_coastlines</name>
-  <type>Directory of spatial files (shapefiles)</type>
+  <type>Shapefile</type>
   <enabled>true</enabled>
   <workspace>
     <id>WorkspaceInfoImpl--26de0f0e:16002807cd8:-7ffe</id>
@@ -15,8 +15,11 @@
     <entry key="enable spatial index">true</entry>
     <entry key="namespace">http://www.naturalearthdata.com/</entry>
     <entry key="cache and reuse memory maps">true</entry>
-    <entry key="url">file:///var/geoserver/data/eumetsat/eurostat/CNTR_BN_01M_2020_4326_COASTL</entry>
+    <entry key="skipScan">true</entry>
+    <entry key="url">file:///var/geoserver/data/eumetsat/eurostat/CNTR_BN_01M_2020_4326_COASTL/CNTR_BN_01M_2020_4326_COASTL.shp</entry>
     <entry key="fstype">shape</entry>
   </connectionParameters>
   <__default>false</__default>
+  <dateModified>2024-05-22 13:48:00.367 UTC</dateModified>
+  <disableOnConnFailure>false</disableOnConnFailure>
 </dataStore>
