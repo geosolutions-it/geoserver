@@ -26,8 +26,6 @@ import org.geoserver.wms.featureinfo.FeatureTemplate;
 import org.geotools.api.feature.Feature;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
-import org.geotools.api.feature.type.FeatureType;
-import org.geotools.feature.FeatureCollection;
 
 /** A template engine for generating MapML content. */
 public class MapMLMapTemplate {

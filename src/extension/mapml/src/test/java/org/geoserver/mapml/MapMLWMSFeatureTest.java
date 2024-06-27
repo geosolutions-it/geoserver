@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import javax.xml.bind.JAXBElement;
-
 import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -34,6 +33,7 @@ import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.LineString;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.MultiLineString;
+import org.geoserver.mapml.xml.MultiPolygon;
 import org.geoserver.mapml.xml.Point;
 import org.geoserver.mapml.xml.Polygon;
 import org.geoserver.wms.GetMapRequest;
@@ -415,33 +415,19 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
             template = new File(parent, MAPML_FEATURE_FTL);
             FileUtils.write(
                     template,
-                    "<mapml-interpolated xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                    "<mapml- xmlns=\"http://www.w3.org/1999/xhtml\">\n"
                             + "<map-head>\n"
-                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
                             + "</map-head>\n"
+                            + "<map-body>\n"
+                            + "<map-feature>\n"
                             + "  <#list attributes as attribute>\n"
-                            + "    <#if attribute.name == \"NAME\">\n"
-                            + "      <map-interpolated-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
-                            + "      <#elseif !attribute.isGeometry>\n"
-                            + "      <map-interpolated-property name=\"${attribute.name}\" value=\"${attribute.value}\"/>\n"
-                            + "    </#if>\n"
                             + "    <#if attribute.isGeometry>\n"
-                            + "      <map-interpolated-geometry type=\"LINESTRING\" >\n"
-                            + "       <map-coordinates>"
-                            + "      <#list attribute.rawValue.coordinates as coord>"
-                            + "        <#if coord?index == 3>"
-                            + "          <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}"
-                            + "        <#elseif coord?index == 4>"
-                            + "          ${coord.x} ${coord.y}<![CDATA[</span>]]>"
-                            + "        <#else>"
-                            + "          ${coord.x} ${coord.y}"
-                            + "        </#if>"
-                            + "      </#list>"
-                            + "      </map-coordinates>\n"
-                            + "      </map-interpolated-geometry>\n"
+                            + "      <map-geometry><map-linestring><map-coordinates><#list attribute.rawValue.coordinates as coord><#if coord?index == 3> <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<#elseif coord?index == 4> ${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates></map-linestring></map-geometry>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
-                            + "</mapml-interpolated>\n",
+                            + "</map-feature>\n"
+                            + "</map-body>\n"
+                            + "</mapml->\n",
                     "UTF-8");
             Mapml mapmlFeatures =
                     new MapMLWMSRequest()
@@ -451,14 +437,15 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .feature(true)
                             .getAsMapML();
 
-            String mapmlStyle = mapmlFeatures.getHead().getStyle();
-
             Feature feature2 =
                     mapmlFeatures
                             .getBody()
                             .getFeatures()
-                            .get(1); // get the second feature, which has a class
-            assertEquals("desired", feature2.getStyle());
+                            .get(0); // get the second feature, which has a class
+            LineString featureLine =
+                    (LineString) feature2.getGeometry().getGeometryContent().getValue();
+            String coords = featureLine.getCoordinates().get(0).getCoordinates().get(0).toString();
+            assertTrue(coords.contains("<span class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();
@@ -482,54 +469,25 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
             template = new File(parent, MAPML_FEATURE_FTL);
             FileUtils.write(
                     template,
-                    "<mapml-interpolated xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                    "<mapml- xmlns=\"http://www.w3.org/1999/xhtml\">\n"
                             + "<map-head>\n"
-                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
                             + "</map-head>\n"
+                            + "<map-body>\n"
+                            + "<map-feature>\n"
                             + "  <#list attributes as attribute>\n"
-                            + "    <#if attribute.name == \"id\">\n"
-                            + "      <map-interpolated-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
-                            + "      <#elseif !attribute.isGeometry>\n"
-                            + "      <map-interpolated-property name=\"${attribute.name}\" value=\"${attribute.value}\"/>\n"
-                            + "    </#if>\n"
                             + "    <#if attribute.isGeometry>\n"
-                            + "      <map-interpolated-geometry type=\"POLYGON\" >\n"
-                            + "       <map-components>"
-                            + "       <#assign shell = attribute.rawValue.getExteriorRing()>"
-                            + "        <map-interpolated-geometry type=\"linestring\">\n"
-                            + "         <map-coordinates>"
-                            + "          <#list shell.coordinates as coord>"
-                            + "           <#if coord?index == 0>"
-                            + "            <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}"
-                            + "           <#elseif coord?index == 4>"
-                            + "            ${coord.x} ${coord.y}<![CDATA[</span>]]>"
-                            + "           <#else>"
-                            + "            ${coord.x} ${coord.y}"
-                            + "           </#if>"
-                            + "         </#list>"
-                            + "         </map-coordinates>"
-                            + "      </map-interpolated-geometry>"
+                            + "      <map-geometry>\n"
+                            + "       <map-polygon>"
+                            + "       <#assign shell = attribute.rawValue.getExteriorRing()><map-coordinates><#list shell.coordinates as coord><#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<#elseif coord?index == 4> ${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates>"
                             + "      <#list 0 ..< attribute.rawValue.getNumInteriorRing() as index>"
-                            + "        <#assign hole = attribute.rawValue.getInteriorRingN(index)>"
-                            + "        <map-interpolated-geometry type=\"linestring\" >\n"
-                            + "         <map-coordinates>"
-                            + "          <#list hole.coordinates as coord>"
-                            + "           <#if coord?index == 0>"
-                            + "            <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}"
-                            + "           <#elseif coord?index == 4>"
-                            + "            ${coord.x} ${coord.y}<![CDATA[</span>]]>"
-                            + "           <#else>"
-                            + "            ${coord.x} ${coord.y}"
-                            + "           </#if>"
-                            + "         </#list>"
-                            + "           </map-coordinates>"
-                            + "        </map-interpolated-geometry>"
-                            + "        </#list>"
-                            + "      </map-components>\n"
-                            + "      </map-interpolated-geometry>\n"
+                            + "        <#assign hole = attribute.rawValue.getInteriorRingN(index)><map-coordinates><#list hole.coordinates as coord><#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y} <#elseif coord?index == 4> ${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates></#list>"
+                            + "       </map-polygon>"
+                            + "      </map-geometry>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
-                            + "</mapml-interpolated>\n",
+                            + "</map-feature>\n"
+                            + "</map-body>\n"
+                            + "</mapml- >\n",
                     "UTF-8");
             Mapml mapmlFeatures =
                     new MapMLWMSRequest()
@@ -539,14 +497,21 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .feature(true)
                             .getAsMapML();
 
-            String mapmlStyle = mapmlFeatures.getHead().getStyle();
-
             Feature feature2 =
                     mapmlFeatures
                             .getBody()
                             .getFeatures()
-                            .get(1); // get the second feature, which has a class
-            assertEquals("desired", feature2.getStyle());
+                            .get(0); // get the second feature, which has a class
+            Polygon featurePolygon =
+                    (Polygon) feature2.getGeometry().getGeometryContent().getValue();
+            String coords =
+                    featurePolygon
+                            .getThreeOrMoreCoordinatePairs()
+                            .get(0)
+                            .getCoordinates()
+                            .get(0)
+                            .toString();
+            assertTrue(coords.contains("<span class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();
@@ -570,61 +535,30 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
             template = new File(parent, MAPML_FEATURE_FTL);
             FileUtils.write(
                     template,
-                    "<mapml-interpolated xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+                    "<mapml- xmlns=\"http://www.w3.org/1999/xhtml\">\n"
                             + "<map-head>\n"
-                            + "  <map-style>.desired {stroke-dashoffset:3}</map-style>\n"
                             + "</map-head>\n"
+                            + "<map-body>\n"
+                            + "<map-feature>\n"
                             + "  <#list attributes as attribute>\n"
-                            + "    <#if attribute.name == \"NAME\">\n"
-                            + "      <map-interpolated-property name=\"UPDATED ${attribute.name}\" value=\"CHANGED ${attribute.value}\"/>\n"
-                            + "      <#elseif !attribute.isGeometry>\n"
-                            + "      <map-interpolated-property name=\"${attribute.name}\" value=\"${attribute.value}\"/>\n"
-                            + "    </#if>\n"
                             + "    <#if attribute.isGeometry>\n"
-                            + "      <map-interpolated-geometry type=\"multipolygon\" >\n"
-                            + "        <map-components>"
+                            + "      <map-geometry>\n"
+                            + "        <map-multipolygon>"
                             + "      <#list 0 ..< attribute.rawValue.getNumGeometries() as index>"
                             + "        <#assign polygon = attribute.rawValue.getGeometryN(index)>"
-                            + "       <map-interpolated-geometry type=\"polygon\" >\n"
-                            + "       <map-components>"
-                            + "       <#assign shell = polygon.getExteriorRing()>"
-                            + "        <map-interpolated-geometry type=\"linestring\">\n"
-                            + "         <map-coordinates>"
-                            + "          <#list shell.coordinates as coord>"
-                            + "           <#if coord?index == 0>"
-                            + "            <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}"
-                            + "           <#elseif coord?index == 4>"
-                            + "            ${coord.x} ${coord.y}<![CDATA[</span>]]>"
-                            + "           <#else>"
-                            + "            ${coord.x} ${coord.y}"
-                            + "           </#if>"
-                            + "         </#list>"
-                            + "         </map-coordinates>"
-                            + "      </map-interpolated-geometry>"
+                            + "       <map-polygon>"
+                            + "       <#assign shell = polygon.getExteriorRing()><map-coordinates><#list shell.coordinates as coord><#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<#elseif coord?index == 4> ${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates>"
                             + "      <#list 0 ..< polygon.getNumInteriorRing() as index>"
-                            + "        <#assign hole = polygon.getInteriorRingN(index)>"
-                            + "        <map-interpolated-geometry type=\"linestring\" >\n"
-                            + "         <map-coordinates>"
-                            + "          <#list hole.coordinates as coord>"
-                            + "           <#if coord?index == 0>"
-                            + "            <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}"
-                            + "           <#elseif coord?index == 4>"
-                            + "            ${coord.x} ${coord.y}<![CDATA[</span>]]>"
-                            + "           <#else>"
-                            + "            ${coord.x} ${coord.y}"
-                            + "           </#if>"
-                            + "         </#list>"
-                            + "           </map-coordinates>"
-                            + "        </map-interpolated-geometry>"
+                            + "        <#assign hole = polygon.getInteriorRingN(index)><map-coordinates><#list hole.coordinates as coord><#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y} <#elseif coord?index == 4> ${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates></#list>"
+                            + "       </map-polygon>"
                             + "        </#list>"
-                            + "      </map-components>\n"
-                            + "      </map-interpolated-geometry>\n"
-                            + "        </#list>"
-                            + "       </map-components>"
-                            + "      </map-interpolated-geometry>\n"
+                            + "       </map-multipolygon>"
+                            + "      </map-geometry>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
-                            + "</mapml-interpolated>\n",
+                            + "</map-feature>\n"
+                            + "</map-body>\n"
+                            + "</mapml- >\n",
                     "UTF-8");
             Mapml mapmlFeatures =
                     new MapMLWMSRequest()
@@ -640,8 +574,19 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                     mapmlFeatures
                             .getBody()
                             .getFeatures()
-                            .get(1); // get the second feature, which has a class
-            assertEquals("desired", feature2.getStyle());
+                            .get(0); // get the first feature, which has a class
+            MultiPolygon featureMultiPolygon =
+                    (MultiPolygon) feature2.getGeometry().getGeometryContent().getValue();
+            String coords =
+                    featureMultiPolygon
+                            .getPolygon()
+                            .get(0)
+                            .getThreeOrMoreCoordinatePairs()
+                            .get(0)
+                            .getCoordinates()
+                            .get(0)
+                            .toString();
+            assertTrue(coords.contains("<span class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();

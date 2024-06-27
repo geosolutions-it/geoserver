@@ -10,6 +10,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_HEAD_FTL;
 
+import freemarker.template.TemplateNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -22,8 +23,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import freemarker.template.TemplateNotFoundException;
+import javax.xml.bind.JAXBException;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourceInfo;
@@ -33,7 +33,6 @@ import org.geoserver.mapml.tcrs.TiledCRSParams;
 import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.BodyContent;
 import org.geoserver.mapml.xml.Feature;
-import org.geoserver.mapml.xml.GeometryContent;
 import org.geoserver.mapml.xml.HeadContent;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
@@ -58,10 +57,6 @@ import org.geotools.metadata.iso.citation.Citations;
 import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
 import org.locationtech.jts.geom.Envelope;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 
 public class MapMLFeatureUtil {
     private static final Logger LOGGER = Logging.getLogger(MapMLFeatureUtil.class);

@@ -41,7 +41,7 @@ public class MultiLineString {
             name = "map-coordinates",
             type = JAXBElement.class,
             namespace = "http://www.w3.org/1999/xhtml")
-    protected List<JAXBElement<List<String>>> twoOrMoreCoordinatePairs;
+    protected List<JAXBElement<List<Coordinates>>> twoOrMoreCoordinatePairs;
 
     /**
      * Gets the value of the twoOrMoreCoordinatePairs property.
@@ -61,7 +61,7 @@ public class MultiLineString {
      *
      * @return two or more coordinate pairs
      */
-    public List<JAXBElement<List<String>>> getTwoOrMoreCoordinatePairs() {
+    public List<JAXBElement<List<Coordinates>>> getTwoOrMoreCoordinatePairs() {
         if (twoOrMoreCoordinatePairs == null) {
             twoOrMoreCoordinatePairs = new ArrayList<>();
         }

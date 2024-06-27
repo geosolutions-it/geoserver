@@ -407,7 +407,7 @@ public class MapMLGenerator {
     private org.geoserver.mapml.xml.MultiLineString buildMultiLineString(MultiLineString ml) {
         org.geoserver.mapml.xml.MultiLineString multiLine =
                 new org.geoserver.mapml.xml.MultiLineString();
-        List<JAXBElement<List<String>>> coordLists = multiLine.getTwoOrMoreCoordinatePairs();
+        List<JAXBElement<List<Coordinates>>> coordLists = multiLine.getTwoOrMoreCoordinatePairs();
         for (int i = 0; i < ml.getNumGeometries(); i++) {
             coordLists.add(
                     factory.createMultiLineStringCoordinates(
@@ -424,7 +424,7 @@ public class MapMLGenerator {
      */
     private org.geoserver.mapml.xml.LineString buildLineString(LineString l) {
         org.geoserver.mapml.xml.LineString lineString = new org.geoserver.mapml.xml.LineString();
-        List<String> lsCoords = lineString.getCoordinates();
+        List<Coordinates> lsCoords = lineString.getCoordinates();
         buildCoordinates(l.getCoordinateSequence(), lsCoords);
         return lineString;
     }
@@ -435,7 +435,7 @@ public class MapMLGenerator {
      */
     private org.geoserver.mapml.xml.MultiPoint buildMultiPoint(MultiPoint mp) {
         org.geoserver.mapml.xml.MultiPoint multiPoint = new org.geoserver.mapml.xml.MultiPoint();
-        List<String> mpCoords = multiPoint.getCoordinates();
+        List<Coordinates> mpCoords = multiPoint.getCoordinates();
         buildCoordinates(new CoordinateArraySequence(mp.getCoordinates()), mpCoords);
         return multiPoint;
     }
@@ -512,7 +512,7 @@ public class MapMLGenerator {
         } else {
             return new Span(
                     "bbox",
-                    buildCoordinates(
+                    buildCoordinatesFromStrings(
                             new CoordinateArraySequence(
                                     cs.getCoordinates().toArray(n -> new Coordinate[n])),
                             null));
@@ -524,13 +524,33 @@ public class MapMLGenerator {
      * @param coordList a list of coordinate strings to add to
      * @return
      */
-    private List<String> buildCoordinates(CoordinateSequence cs, List<String> coordList) {
+    private List<String> buildCoordinatesFromStrings(
+            CoordinateSequence cs, List<String> coordList) {
         if (coordList == null) {
             coordList = new ArrayList<>(cs.size());
         }
         for (int i = 0; i < cs.size(); i++) {
             coordList.add(
                     this.formatter.format(cs.getX(i)) + SPACE + this.formatter.format(cs.getY(i)));
+        }
+        return coordList;
+    }
+
+    /**
+     * @param cs a JTS CoordinateSequence
+     * @param coordList a list of coordinate strings to add to
+     * @return
+     */
+    private List<Coordinates> buildCoordinates(CoordinateSequence cs, List<Coordinates> coordList) {
+        if (coordList == null) {
+            coordList = new ArrayList<>(cs.size());
+        }
+        for (int i = 0; i < cs.size(); i++) {
+            coordList.add(
+                    new Coordinates(
+                            this.formatter.format(cs.getX(i))
+                                    + SPACE
+                                    + this.formatter.format(cs.getY(i))));
         }
         return coordList;
     }
@@ -563,9 +583,7 @@ public class MapMLGenerator {
         return joiner.toString();
     }
 
-    /**
-     * @param numDecimals
-     */
+    /** @param numDecimals */
     public void setNumDecimals(int numDecimals) {
         // make a copy of relevant object state
         boolean fd = this.formatter.isForcedDecimal();
@@ -577,16 +595,12 @@ public class MapMLGenerator {
         this.formatter.setPadWithZeros(pad);
     }
 
-    /**
-     * @param forcedDecimal
-     */
+    /** @param forcedDecimal */
     public void setForcedDecimal(boolean forcedDecimal) {
         this.formatter.setForcedDecimal(forcedDecimal);
     }
 
-    /**
-     * @param padWithZeros
-     */
+    /** @param padWithZeros */
     public void setPadWithZeros(boolean padWithZeros) {
         this.formatter.setPadWithZeros(padWithZeros);
     }

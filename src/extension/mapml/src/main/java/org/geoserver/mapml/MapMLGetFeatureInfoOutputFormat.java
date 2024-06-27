@@ -60,9 +60,7 @@ public class MapMLGetFeatureInfoOutputFormat extends GetFeatureInfoOutputFormat 
 
     private WMS wms;
 
-    /**
-     * @param wms
-     */
+    /** @param wms */
     public MapMLGetFeatureInfoOutputFormat(WMS wms) {
         super(MapMLConstants.MAPML_MIME_TYPE);
         this.wms = wms;
