@@ -345,7 +345,12 @@
         <configuration>
           <warName>geoserver</warName>
           <webappDirectory>${project.build.directory}/geoserver</webappDirectory>
-          <packagingExcludes>WEB-INF/lib/javax.servlet-api*.jar</packagingExcludes>
+          <packagingExcludes>
+            WEB-INF/lib/javax.servlet-api*.jar,
+            <!-- TODO: these two exclusions can be removed once we upgrade GeoServer-->
+            WEB-INF/lib/gt-complex*.jar,
+            WEB-INF/lib/commons-jxpath*.jar
+          </packagingExcludes>
           <archive>
             <manifest>
               <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
