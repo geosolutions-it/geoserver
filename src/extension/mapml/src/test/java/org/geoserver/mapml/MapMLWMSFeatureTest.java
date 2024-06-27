@@ -540,6 +540,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "</map-head>\n"
                             + "<map-body>\n"
                             + "<map-feature>\n"
+                            + "<#if attributes.FID.value == \"117\">\n"
                             + "  <#list attributes as attribute>\n"
                             + "    <#if attribute.isGeometry>\n"
                             + "      <map-geometry>\n"
@@ -556,6 +557,24 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "      </map-geometry>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
+                            + "<#else>\n"
+                            + "  <#list attributes as attribute>\n"
+                            + "    <#if attribute.isGeometry>\n"
+                            + "      <map-geometry>\n"
+                            + "        <map-multipolygon>"
+                            + "      <#list 0 ..< attribute.rawValue.getNumGeometries() as index>"
+                            + "        <#assign polygon = attribute.rawValue.getGeometryN(index)>"
+                            + "       <map-polygon>"
+                            + "       <#assign shell = polygon.getExteriorRing()><map-coordinates><#list shell.coordinates as coord> ${coord.x} ${coord.y} </#list></map-coordinates>"
+                            + "      <#list 0 ..< polygon.getNumInteriorRing() as index>"
+                            + "        <#assign hole = polygon.getInteriorRingN(index)><map-coordinates><#list hole.coordinates as coord> ${coord.x} ${coord.y} </#list></map-coordinates></#list>"
+                            + "       </map-polygon>"
+                            + "        </#list>"
+                            + "       </map-multipolygon>"
+                            + "      </map-geometry>\n"
+                            + "    </#if>\n"
+                            + "  </#list>\n"
+                            + "</#if>\n"
                             + "</map-feature>\n"
                             + "</map-body>\n"
                             + "</mapml- >\n",
@@ -567,8 +586,6 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .srs("EPSG:4326")
                             .feature(true)
                             .getAsMapML();
-
-            String mapmlStyle = mapmlFeatures.getHead().getStyle();
 
             Feature feature2 =
                     mapmlFeatures
