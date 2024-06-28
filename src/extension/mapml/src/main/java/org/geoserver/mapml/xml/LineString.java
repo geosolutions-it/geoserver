@@ -42,7 +42,7 @@ public class LineString {
             required = true,
             name = "map-coordinates",
             namespace = "http://www.w3.org/1999/xhtml")
-    protected List<Coordinates> coordinates;
+    protected List<String> coordinates;
 
     /**
      * Gets the value of the coordinates property.
@@ -61,7 +61,7 @@ public class LineString {
      *
      * @return list of coordinates elements
      */
-    public List<Coordinates> getCoordinates() {
+    public List<String> getCoordinates() {
         if (coordinates == null) {
             coordinates = new ArrayList<>();
         }

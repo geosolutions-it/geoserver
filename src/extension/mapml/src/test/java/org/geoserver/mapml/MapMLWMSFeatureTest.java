@@ -236,6 +236,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
         li.getResource().getMetadata().put(MAPML_USE_TILES, false);
         cat.save(li);
+        String layerId = getLayerId(MockData.ROAD_SEGMENTS);
 
         // test with a small bbox, that should still lead to a geometric simplification
         Mapml mapml =
@@ -366,7 +367,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "      <map-geometry>"
                             + "       <map-point>"
                             + "       <map-coordinates><#list gattribute.rawValue.coordinates as coord>"
-                            + "        <#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<![CDATA[</span>]]><#else>${coord.x} ${coord.y}</#if></#list></map-coordinates></map-point>"
+                            + "        <#if coord?index == 0><![CDATA[<span${space}class=\"desired\">]]>${coord.x}${space}${coord.y}<![CDATA[</span>]]><#else>${coord.x}${space}${coord.y}</#if></#list></map-coordinates></map-point>"
                             + "      </map-geometry>"
                             + "    </#if>\n"
                             + "  </#list>\n"
@@ -390,8 +391,8 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .getFeatures()
                             .get(0); // get the second feature, which has a class
             Point featurePoint = (Point) feature2.getGeometry().getGeometryContent().getValue();
-            String coords = featurePoint.getCoordinates().get(0).getCoordinates().get(0).toString();
-            assertTrue(coords.contains("<span class=\"desired\">"));
+            String coords = featurePoint.getCoordinates().get(1);
+            assertTrue(coords.contains("class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();
@@ -422,7 +423,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "<map-feature>\n"
                             + "  <#list attributes as attribute>\n"
                             + "    <#if attribute.isGeometry>\n"
-                            + "      <map-geometry><map-linestring><map-coordinates><#list attribute.rawValue.coordinates as coord><#if coord?index == 3> <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<#elseif coord?index == 4> ${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates></map-linestring></map-geometry>\n"
+                            + "      <map-geometry><map-linestring><map-coordinates><#list attribute.rawValue.coordinates as coord><#if coord?index == 3>${space}<![CDATA[<span${space}class=\"desired\">]]>${coord.x}${space}${coord.y}<#elseif coord?index == 4>${coord.x}${space}${coord.y}<![CDATA[</span>]]><#else>${space}${coord.x}${space}${coord.y}</#if></#list></map-coordinates></map-linestring></map-geometry>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
                             + "</map-feature>\n"
@@ -444,8 +445,9 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .get(0); // get the second feature, which has a class
             LineString featureLine =
                     (LineString) feature2.getGeometry().getGeometryContent().getValue();
-            String coords = featureLine.getCoordinates().get(0).getCoordinates().get(0).toString();
-            assertTrue(coords.contains("<span class=\"desired\">"));
+            String coords = featureLine.getCoordinates().get(7);
+            assertTrue(coords.contains("class=\"desired\">"));
+            template.delete();
         } finally {
             if (template != null) {
                 template.delete();

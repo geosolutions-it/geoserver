@@ -9,6 +9,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_HEAD_FTL;
+import static org.geoserver.mapml.template.MapMLMapTemplate.MapMLFeatureWrapper.COORDINATES_BLANK;
 
 import freemarker.template.TemplateNotFoundException;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.xml.bind.JAXBException;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
@@ -32,11 +34,14 @@ import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
 import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.BodyContent;
+import org.geoserver.mapml.xml.Coordinates;
 import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.HeadContent;
+import org.geoserver.mapml.xml.LineString;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.Meta;
+import org.geoserver.mapml.xml.Point;
 import org.geoserver.mapml.xml.ProjType;
 import org.geoserver.mapml.xml.RelType;
 import org.geoserver.ows.Request;
@@ -223,12 +228,51 @@ public class MapMLFeatureUtil {
             SimpleFeatureCollection fc, SimpleFeature feature) {
         try {
             String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
-            return Optional.of(encoder.decode(new StringReader(templateOutput)));
+            Mapml out = encoder.decode(new StringReader(templateOutput));
+            if (out != null) {
+                replaceSpacePlaceholder(out.getBody().getFeatures());
+            }
+            return Optional.of(out);
         } catch (IOException e) {
             LOGGER.info(
                     "Error unmarshalling template output for MapML features "
                             + e.getLocalizedMessage());
             return Optional.empty();
+        }
+    }
+
+    private static void replaceSpacePlaceholder(List<Feature> features) {
+        for (Feature feature : features) {
+            if (feature.getGeometry() != null) {
+                if (feature.getGeometry().getGeometryContent().getValue() instanceof Point) {
+                    Point point = (Point) feature.getGeometry().getGeometryContent().getValue();
+                    point.getCoordinates().replaceAll(c -> c.replace(COORDINATES_BLANK, " "));
+                } else if (feature.getGeometry().getGeometryContent().getValue()
+                        instanceof LineString) {
+                    LineString lineString =
+                            (LineString) feature.getGeometry().getGeometryContent().getValue();
+                    lineString.getCoordinates().replaceAll(c -> c.replace(COORDINATES_BLANK, " "));
+                } else if (feature.getGeometry().getGeometryContent().getValue()
+                        instanceof org.geoserver.mapml.xml.MultiLineString) {
+                    org.geoserver.mapml.xml.MultiLineString multiLineString =
+                            (org.geoserver.mapml.xml.MultiLineString)
+                                    feature.getGeometry().getGeometryContent().getValue();
+                    multiLineString
+                            .getTwoOrMoreCoordinatePairs()
+                            .replaceAll(
+                                    c -> {
+                                        c.getValue()
+                                                .replaceAll(f -> f.replace(COORDINATES_BLANK, " "));
+                                        return c;
+                                    });
+                } else if (feature.getGeometry().getGeometryContent().getValue()
+                        instanceof org.geoserver.mapml.xml.MultiPoint) {
+                    org.geoserver.mapml.xml.MultiPoint multiPoint =
+                            (org.geoserver.mapml.xml.MultiPoint)
+                                    feature.getGeometry().getGeometryContent().getValue();
+                    multiPoint.getCoordinates().replaceAll(c -> c.replace(COORDINATES_BLANK, " "));
+                }
+            }
         }
     }
 
