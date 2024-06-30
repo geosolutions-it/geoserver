@@ -9,7 +9,6 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_FEATURE_HEAD_FTL;
-import static org.geoserver.mapml.template.MapMLMapTemplate.MapMLFeatureWrapper.COORDINATES_BLANK;
 
 import freemarker.template.TemplateNotFoundException;
 import java.io.IOException;

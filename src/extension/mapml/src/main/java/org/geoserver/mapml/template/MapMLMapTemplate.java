@@ -43,7 +43,7 @@ public class MapMLMapTemplate {
 
         templateConfig.setLocale(Locale.US);
         templateConfig.setNumberFormat("0.###########");
-        templateConfig.setObjectWrapper(new MapMLFeatureWrapper(FC_FACTORY));
+        templateConfig.setObjectWrapper(new FeatureWrapper(FC_FACTORY));
 
         // encoding
         templateConfig.setDefaultEncoding("UTF-8");
@@ -290,21 +290,6 @@ public class MapMLMapTemplate {
                 if (other.type != null) return false;
             } else if (!type.equals(other.type)) return false;
             return true;
-        }
-    }
-
-    public static class MapMLFeatureWrapper extends FeatureWrapper {
-        public static final String COORDINATES_BLANK = "MAPML_COORDINATES_BLANK";
-
-        public MapMLFeatureWrapper(DirectTemplateFeatureCollectionFactory factory) {
-            super(factory);
-        }
-
-        @Override
-        protected SimpleHash buildComplex(ComplexAttribute att) {
-            SimpleHash hash = super.buildComplex(att);
-            hash.put("space", COORDINATES_BLANK);
-            return hash;
         }
     }
 }
