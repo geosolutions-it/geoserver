@@ -29,6 +29,7 @@ import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
+import org.geoserver.mapml.xml.Coordinates;
 import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.LineString;
 import org.geoserver.mapml.xml.Mapml;
@@ -253,12 +254,12 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
             // all lines are small enough that they are simplified to start/end
             if (geometry instanceof LineString) {
                 LineString ls = (LineString) geometry;
-                assertEquals(4, ls.getCoordinates().size());
+                assertEquals(1, ls.getCoordinates().get(0).getCoordinates().size());
+                assertEquals(1, ls.getCoordinates().get(1).getCoordinates().size());
             } else if (geometry instanceof MultiLineString) {
                 MultiLineString mls = (MultiLineString) geometry;
-                for (JAXBElement je : mls.getTwoOrMoreCoordinatePairs()) {
-                    List<String> coordinates = (List<String>) je.getValue();
-                    assertEquals(4, coordinates.size());
+                for (Coordinates je : mls.getTwoOrMoreCoordinatePairs()) {
+                    assertEquals(1, je.getCoordinates().size());
                 }
             }
         }
@@ -367,7 +368,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "      <map-geometry>"
                             + "       <map-point>"
                             + "       <map-coordinates><#list gattribute.rawValue.coordinates as coord>"
-                            + "        <#if coord?index == 0><![CDATA[<span${space}class=\"desired\">]]>${coord.x}${space}${coord.y}<![CDATA[</span>]]><#else>${coord.x}${space}${coord.y}</#if></#list></map-coordinates></map-point>"
+                            + "        <#if coord?index == 0><![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<![CDATA[</span>]]><#else>${coord.x} ${coord.y}</#if></#list></map-coordinates></map-point>"
                             + "      </map-geometry>"
                             + "    </#if>\n"
                             + "  </#list>\n"
@@ -391,8 +392,8 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .getFeatures()
                             .get(0); // get the second feature, which has a class
             Point featurePoint = (Point) feature2.getGeometry().getGeometryContent().getValue();
-            String coords = featurePoint.getCoordinates().get(1);
-            assertTrue(coords.contains("class=\"desired\">"));
+            String coords = featurePoint.getCoordinates().get(0).getCoordinates().get(0).toString();
+            assertTrue(coords.contains("<span class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();
@@ -405,11 +406,11 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         File template = null;
         try {
             Catalog cat = getCatalog();
-            LayerInfo li = cat.getLayerByName(MockData.ROAD_SEGMENTS.getLocalPart());
+            LayerInfo li = cat.getLayerByName(MockData.MLINES.getLocalPart());
             li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
             li.getResource().getMetadata().put(MAPML_USE_TILES, false);
             cat.save(li);
-            String layerId = getLayerId(MockData.ROAD_SEGMENTS);
+            String layerId = getLayerId(MockData.MLINES);
             FeatureTypeInfo resource =
                     getCatalog().getResourceByName(layerId, FeatureTypeInfo.class);
             File parent = getDataDirectory().get(resource).dir();
@@ -423,7 +424,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             + "<map-feature>\n"
                             + "  <#list attributes as attribute>\n"
                             + "    <#if attribute.isGeometry>\n"
-                            + "      <map-geometry><map-linestring><map-coordinates><#list attribute.rawValue.coordinates as coord><#if coord?index == 3>${space}<![CDATA[<span${space}class=\"desired\">]]>${coord.x}${space}${coord.y}<#elseif coord?index == 4>${coord.x}${space}${coord.y}<![CDATA[</span>]]><#else>${space}${coord.x}${space}${coord.y}</#if></#list></map-coordinates></map-linestring></map-geometry>\n"
+                            + "      <map-geometry><map-linestring><map-coordinates><#list attribute.rawValue.coordinates as coord><#if coord?index == 3> <![CDATA[<span class=\"desired\">]]>${coord.x} ${coord.y}<#elseif coord?index == 4>${coord.x} ${coord.y}<![CDATA[</span>]]><#else> ${coord.x} ${coord.y}</#if></#list></map-coordinates></map-linestring></map-geometry>\n"
                             + "    </#if>\n"
                             + "  </#list>\n"
                             + "</map-feature>\n"
@@ -432,9 +433,9 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                     "UTF-8");
             Mapml mapmlFeatures =
                     new MapMLWMSRequest()
-                            .name(MockData.ROAD_SEGMENTS.getLocalPart())
-                            .bbox("-180,-90,180,90")
-                            .srs("EPSG:4326")
+                            .name(MockData.MLINES.getLocalPart())
+                            .bbox("500000,500000,500999,500999")
+                            .srs("EPSG:32615")
                             .feature(true)
                             .getAsMapML();
 
@@ -445,9 +446,8 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .get(0); // get the second feature, which has a class
             LineString featureLine =
                     (LineString) feature2.getGeometry().getGeometryContent().getValue();
-            String coords = featureLine.getCoordinates().get(7);
-            assertTrue(coords.contains("class=\"desired\">"));
-            template.delete();
+            String coords = featureLine.getCoordinates().get(0).getCoordinates().get(0).toString();
+            assertTrue(coords.contains("<span class=\"desired\">"));
         } finally {
             if (template != null) {
                 template.delete();

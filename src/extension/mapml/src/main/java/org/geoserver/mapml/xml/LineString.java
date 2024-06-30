@@ -13,7 +13,9 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlList;
+import javax.xml.bind.annotation.XmlMixed;
 import javax.xml.bind.annotation.XmlType;
 
 /**
@@ -37,12 +39,12 @@ import javax.xml.bind.annotation.XmlType;
         propOrder = {"coordinates"})
 public class LineString {
 
-    @XmlList
-    @XmlElement(
-            required = true,
+    @XmlMixed
+    @XmlElementRef(
             name = "map-coordinates",
+            type = Coordinates.class,
             namespace = "http://www.w3.org/1999/xhtml")
-    protected List<String> coordinates;
+    protected List<Coordinates> coordinates;
 
     /**
      * Gets the value of the coordinates property.
@@ -61,7 +63,7 @@ public class LineString {
      *
      * @return list of coordinates elements
      */
-    public List<String> getCoordinates() {
+    public List<Coordinates> getCoordinates() {
         if (coordinates == null) {
             coordinates = new ArrayList<>();
         }

@@ -407,13 +407,11 @@ public class MapMLGenerator {
     private org.geoserver.mapml.xml.MultiLineString buildMultiLineString(MultiLineString ml) {
         org.geoserver.mapml.xml.MultiLineString multiLine =
                 new org.geoserver.mapml.xml.MultiLineString();
-        List<JAXBElement<List<String>>> coordLists = multiLine.getTwoOrMoreCoordinatePairs();
+        List<Coordinates> coordLists = multiLine.getTwoOrMoreCoordinatePairs();
         for (int i = 0; i < ml.getNumGeometries(); i++) {
-            coordLists.add(
-                    factory.createMultiLineStringCoordinates(
-                            buildCoordinates(
-                                    ((LineString) (ml.getGeometryN(i))).getCoordinateSequence(),
-                                    null)));
+            LineString ls = (LineString) ml.getGeometryN(i);
+            String coordList = buildCoordinates(ls.getCoordinateSequence());
+            coordLists.add(new Coordinates(coordList));
         }
         return multiLine;
     }
@@ -424,7 +422,7 @@ public class MapMLGenerator {
      */
     private org.geoserver.mapml.xml.LineString buildLineString(LineString l) {
         org.geoserver.mapml.xml.LineString lineString = new org.geoserver.mapml.xml.LineString();
-        List<String> lsCoords = lineString.getCoordinates();
+        List<Coordinates> lsCoords = lineString.getCoordinates();
         buildCoordinates(l.getCoordinateSequence(), lsCoords);
         return lineString;
     }
@@ -435,7 +433,7 @@ public class MapMLGenerator {
      */
     private org.geoserver.mapml.xml.MultiPoint buildMultiPoint(MultiPoint mp) {
         org.geoserver.mapml.xml.MultiPoint multiPoint = new org.geoserver.mapml.xml.MultiPoint();
-        List<String> mpCoords = multiPoint.getCoordinates();
+        List<Coordinates> mpCoords = multiPoint.getCoordinates();
         buildCoordinates(new CoordinateArraySequence(mp.getCoordinates()), mpCoords);
         return multiPoint;
     }
@@ -447,7 +445,11 @@ public class MapMLGenerator {
     private org.geoserver.mapml.xml.Point buildPoint(Point p) {
         org.geoserver.mapml.xml.Point point = new org.geoserver.mapml.xml.Point();
         point.getCoordinates()
-                .add(this.formatter.format(p.getX()) + SPACE + this.formatter.format(p.getY()));
+                .add(
+                        new Coordinates(
+                                this.formatter.format(p.getX())
+                                        + SPACE
+                                        + this.formatter.format(p.getY())));
         return point;
     }
 
@@ -508,7 +510,7 @@ public class MapMLGenerator {
         } else {
             return new Span(
                     "bbox",
-                    buildCoordinates(
+                    buildSpanCoordinates(
                             new CoordinateArraySequence(
                                     cs.getCoordinates().toArray(n -> new Coordinate[n])),
                             null));
@@ -520,13 +522,32 @@ public class MapMLGenerator {
      * @param coordList a list of coordinate strings to add to
      * @return
      */
-    private List<String> buildCoordinates(CoordinateSequence cs, List<String> coordList) {
+    private List<String> buildSpanCoordinates(CoordinateSequence cs, List<String> coordList) {
         if (coordList == null) {
             coordList = new ArrayList<>(cs.size());
         }
         for (int i = 0; i < cs.size(); i++) {
             coordList.add(
                     this.formatter.format(cs.getX(i)) + SPACE + this.formatter.format(cs.getY(i)));
+        }
+        return coordList;
+    }
+
+    /**
+     * @param cs a JTS CoordinateSequence
+     * @param coordList a list of coordinate strings to add to
+     * @return
+     */
+    private List<Coordinates> buildCoordinates(CoordinateSequence cs, List<Coordinates> coordList) {
+        if (coordList == null) {
+            coordList = new ArrayList<>(cs.size());
+        }
+        for (int i = 0; i < cs.size(); i++) {
+            coordList.add(
+                    new Coordinates(
+                            this.formatter.format(cs.getX(i))
+                                    + SPACE
+                                    + this.formatter.format(cs.getY(i))));
         }
         return coordList;
     }

@@ -229,50 +229,12 @@ public class MapMLFeatureUtil {
         try {
             String templateOutput = mapMLMapTemplate.features(fc.getSchema(), feature);
             Mapml out = encoder.decode(new StringReader(templateOutput));
-            if (out != null) {
-                replaceSpacePlaceholder(out.getBody().getFeatures());
-            }
             return Optional.of(out);
         } catch (IOException e) {
             LOGGER.info(
                     "Error unmarshalling template output for MapML features "
                             + e.getLocalizedMessage());
             return Optional.empty();
-        }
-    }
-
-    private static void replaceSpacePlaceholder(List<Feature> features) {
-        for (Feature feature : features) {
-            if (feature.getGeometry() != null) {
-                if (feature.getGeometry().getGeometryContent().getValue() instanceof Point) {
-                    Point point = (Point) feature.getGeometry().getGeometryContent().getValue();
-                    point.getCoordinates().replaceAll(c -> c.replace(COORDINATES_BLANK, " "));
-                } else if (feature.getGeometry().getGeometryContent().getValue()
-                        instanceof LineString) {
-                    LineString lineString =
-                            (LineString) feature.getGeometry().getGeometryContent().getValue();
-                    lineString.getCoordinates().replaceAll(c -> c.replace(COORDINATES_BLANK, " "));
-                } else if (feature.getGeometry().getGeometryContent().getValue()
-                        instanceof org.geoserver.mapml.xml.MultiLineString) {
-                    org.geoserver.mapml.xml.MultiLineString multiLineString =
-                            (org.geoserver.mapml.xml.MultiLineString)
-                                    feature.getGeometry().getGeometryContent().getValue();
-                    multiLineString
-                            .getTwoOrMoreCoordinatePairs()
-                            .replaceAll(
-                                    c -> {
-                                        c.getValue()
-                                                .replaceAll(f -> f.replace(COORDINATES_BLANK, " "));
-                                        return c;
-                                    });
-                } else if (feature.getGeometry().getGeometryContent().getValue()
-                        instanceof org.geoserver.mapml.xml.MultiPoint) {
-                    org.geoserver.mapml.xml.MultiPoint multiPoint =
-                            (org.geoserver.mapml.xml.MultiPoint)
-                                    feature.getGeometry().getGeometryContent().getValue();
-                    multiPoint.getCoordinates().replaceAll(c -> c.replace(COORDINATES_BLANK, " "));
-                }
-            }
         }
     }
 

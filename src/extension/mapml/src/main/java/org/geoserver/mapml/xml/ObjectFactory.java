@@ -339,11 +339,11 @@ public class ObjectFactory {
             namespace = "http://www.w3.org/1999/xhtml",
             name = "map-coordinates",
             scope = MultiLineString.class)
-    public JAXBElement<List<String>> createMultiLineStringCoordinates(List<String> value) {
+    public JAXBElement<List> createMultiLineStringCoordinates(List value) {
         return new JAXBElement<>(
                 _MultiPointCoordinates_QNAME,
                 ((Class) List.class),
                 MultiLineString.class,
-                ((List<String>) value));
+                ((List<Coordinates>) value));
     }
 }
