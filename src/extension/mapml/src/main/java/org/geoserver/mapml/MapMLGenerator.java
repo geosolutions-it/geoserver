@@ -146,9 +146,10 @@ public class MapMLGenerator {
         }
         if (g == null || g.isEmpty()) return Optional.empty();
 
-        // if there is an template geometry, use it instead of the original geometry
+        // if there is an template geometry and the original geometry is not tagged, use it instead
+        // of the original geometry
         GeometryContent geometryContent = null;
-        if (templateOptional.isPresent()) {
+        if (templateOptional.isPresent() && g.getUserData() == null) {
             geometryContent = templateOptional.get().getBody().getFeatures().get(0).getGeometry();
         } else {
             geometryContent = buildGeometry(g);
