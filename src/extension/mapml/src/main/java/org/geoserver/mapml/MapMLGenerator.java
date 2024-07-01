@@ -13,7 +13,6 @@ import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import javax.xml.bind.JAXBElement;
 import org.apache.commons.text.StringEscapeUtils;
 import org.geoserver.mapml.xml.Coordinates;
 import org.geoserver.mapml.xml.Feature;
@@ -542,13 +541,13 @@ public class MapMLGenerator {
         if (coordList == null) {
             coordList = new ArrayList<>(cs.size());
         }
+        StringJoiner joiner = new StringJoiner(" ");
         for (int i = 0; i < cs.size(); i++) {
-            coordList.add(
-                    new Coordinates(
-                            this.formatter.format(cs.getX(i))
-                                    + SPACE
-                                    + this.formatter.format(cs.getY(i))));
+            joiner.add(
+                    this.formatter.format(cs.getX(i)) + SPACE + this.formatter.format(cs.getY(i)));
         }
+        Coordinates coords = new Coordinates(joiner.toString());
+        coordList.add(coords);
         return coordList;
     }
 
@@ -580,9 +579,7 @@ public class MapMLGenerator {
         return joiner.toString();
     }
 
-    /**
-     * @param numDecimals
-     */
+    /** @param numDecimals */
     public void setNumDecimals(int numDecimals) {
         // make a copy of relevant object state
         boolean fd = this.formatter.isForcedDecimal();
@@ -594,16 +591,12 @@ public class MapMLGenerator {
         this.formatter.setPadWithZeros(pad);
     }
 
-    /**
-     * @param forcedDecimal
-     */
+    /** @param forcedDecimal */
     public void setForcedDecimal(boolean forcedDecimal) {
         this.formatter.setForcedDecimal(forcedDecimal);
     }
 
-    /**
-     * @param padWithZeros
-     */
+    /** @param padWithZeros */
     public void setPadWithZeros(boolean padWithZeros) {
         this.formatter.setPadWithZeros(padWithZeros);
     }

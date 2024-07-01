@@ -5,7 +5,6 @@
 package org.geoserver.mapml.template;
 
 import freemarker.template.Configuration;
-import freemarker.template.SimpleHash;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import java.io.CharArrayWriter;
@@ -24,7 +23,6 @@ import org.geoserver.template.FeatureWrapper;
 import org.geoserver.template.GeoServerTemplateLoader;
 import org.geoserver.template.TemplateUtils;
 import org.geoserver.wms.featureinfo.FeatureTemplate;
-import org.geotools.api.feature.ComplexAttribute;
 import org.geotools.api.feature.Feature;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;

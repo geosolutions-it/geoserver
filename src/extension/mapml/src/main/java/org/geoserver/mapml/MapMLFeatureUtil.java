@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javax.xml.bind.JAXBException;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
@@ -33,14 +32,11 @@ import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
 import org.geoserver.mapml.template.MapMLMapTemplate;
 import org.geoserver.mapml.xml.BodyContent;
-import org.geoserver.mapml.xml.Coordinates;
 import org.geoserver.mapml.xml.Feature;
 import org.geoserver.mapml.xml.HeadContent;
-import org.geoserver.mapml.xml.LineString;
 import org.geoserver.mapml.xml.Link;
 import org.geoserver.mapml.xml.Mapml;
 import org.geoserver.mapml.xml.Meta;
-import org.geoserver.mapml.xml.Point;
 import org.geoserver.mapml.xml.ProjType;
 import org.geoserver.mapml.xml.RelType;
 import org.geoserver.ows.Request;
@@ -241,7 +237,7 @@ public class MapMLFeatureUtil {
      * Append the CSS style from the template to the feature
      *
      * @param head the head content
-     * @param interpolatedOptional the interpolated object from the template
+     * @param interpolated the interpolated object from the template
      */
     private static void appendTemplateCSSStyle(HeadContent head, Mapml interpolated) {
         if (head != null) {

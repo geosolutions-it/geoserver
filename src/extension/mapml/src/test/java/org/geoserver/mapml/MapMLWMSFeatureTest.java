@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import javax.xml.bind.JAXBElement;
 import org.apache.commons.io.FileUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogBuilder;
@@ -237,7 +236,6 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         li.getResource().getMetadata().put(MAPML_USE_FEATURES, true);
         li.getResource().getMetadata().put(MAPML_USE_TILES, false);
         cat.save(li);
-        String layerId = getLayerId(MockData.ROAD_SEGMENTS);
 
         // test with a small bbox, that should still lead to a geometric simplification
         Mapml mapml =
@@ -254,12 +252,13 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
             // all lines are small enough that they are simplified to start/end
             if (geometry instanceof LineString) {
                 LineString ls = (LineString) geometry;
-                assertEquals(1, ls.getCoordinates().get(0).getCoordinates().size());
-                assertEquals(1, ls.getCoordinates().get(1).getCoordinates().size());
+                String lscoords = ls.getCoordinates().get(0).getCoordinates().get(0).toString();
+                assertEquals(4, lscoords.split(" ").length);
             } else if (geometry instanceof MultiLineString) {
                 MultiLineString mls = (MultiLineString) geometry;
                 for (Coordinates je : mls.getTwoOrMoreCoordinatePairs()) {
-                    assertEquals(1, je.getCoordinates().size());
+                    String mlscoords = je.getCoordinates().get(0).toString();
+                    assertEquals(2, mlscoords.split(" ").length);
                 }
             }
         }
@@ -383,8 +382,6 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
                             .srs("EPSG:4326")
                             .feature(true)
                             .getAsMapML();
-
-            String mapmlStyle = mapmlFeatures.getHead().getStyle();
 
             Feature feature2 =
                     mapmlFeatures
