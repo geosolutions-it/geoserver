@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.form.OnChangeAjaxBehavior;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.form.CheckBox;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.ListMultipleChoice;
@@ -38,6 +39,9 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.ResourcePool;
+import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.WMSStoreInfo;
+import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.gwc.layer.GeoServerTileLayerInfo;
@@ -109,6 +113,10 @@ public class MapMLLayerConfigurationPanel extends PublishedConfigurationPanel<La
                     }
                 });
         add(useTiles);
+
+        // Remote client requests
+        WebMarkupContainer remoteClientRequestContainer = setupRemoteClientRequestContainer(model);
+        add(remoteClientRequestContainer);
 
         // add the checkbox to select features or not
         MapModel<Boolean> useFeaturesModel =
@@ -184,6 +192,21 @@ public class MapMLLayerConfigurationPanel extends PublishedConfigurationPanel<La
         TextArea<String> featureCaptionTemplate =
                 new TextArea<>(MapMLConstants.FEATURE_CAPTION_TEMPLATE, featureCaptionModel);
         add(featureCaptionTemplate);
+    }
+
+    private WebMarkupContainer setupRemoteClientRequestContainer(IModel<LayerInfo> model) {
+        WebMarkupContainer remoteClientRequestContainer =
+                new WebMarkupContainer("RemoteClientRequestsConfiguration");
+        LayerInfo layerInfo = model.getObject();
+        MapModel<Boolean> useRemoteModel =
+                new MapModel<>(
+                        new PropertyModel<MetadataMap>(model, MapMLConstants.RESOURCE_METADATA),
+                        MapMLConstants.MAPML_USE_REMOTE);
+        CheckBox useRemote = new CheckBox(MapMLConstants.USE_REMOTE, useRemoteModel);
+        remoteClientRequestContainer.setOutputMarkupId(true);
+        remoteClientRequestContainer.setVisible(isWMSOrWMTSStore(layerInfo));
+        remoteClientRequestContainer.add(useRemote);
+        return remoteClientRequestContainer;
     }
 
     /**
@@ -297,5 +320,18 @@ public class MapMLLayerConfigurationPanel extends PublishedConfigurationPanel<La
             this.getPage().error(error);
             return Collections.emptyList();
         }
+    }
+
+    private boolean isWMSOrWMTSStore(LayerInfo layerInfo) {
+        if (layerInfo != null) {
+            ResourceInfo resourceInfo = layerInfo.getResource();
+            if (resourceInfo != null) {
+                StoreInfo storeInfo = resourceInfo.getStore();
+                if (storeInfo instanceof WMSStoreInfo || storeInfo instanceof WMTSStoreInfo) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

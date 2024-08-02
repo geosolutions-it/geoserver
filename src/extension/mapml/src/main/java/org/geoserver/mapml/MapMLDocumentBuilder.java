@@ -11,6 +11,7 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_MIME_TYPE;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_REMOTE;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
 import static org.geoserver.mapml.MapMLHTMLOutput.PREVIEW_TCRS_MAP;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
@@ -181,13 +182,6 @@ public class MapMLDocumentBuilder {
 
     private Boolean isMultiExtent = MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
     private MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
-
-    static {
-        PREVIEW_TCRS_MAP.put("OSMTILE", new TiledCRS("OSMTILE"));
-        PREVIEW_TCRS_MAP.put("CBMTILE", new TiledCRS("CBMTILE"));
-        PREVIEW_TCRS_MAP.put("APSTILE", new TiledCRS("APSTILE"));
-        PREVIEW_TCRS_MAP.put("WGS84", new TiledCRS("WGS84"));
-    }
 
     /**
      * Constructor
@@ -606,6 +600,7 @@ public class MapMLDocumentBuilder {
                                         .getGridSubset(projType.value())
                                 != null;
         boolean useTiles = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_TILES, Boolean.class));
+        boolean useRemote = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_REMOTE, Boolean.class));
         boolean useFeatures = useFeatures(layer, layerMeta);
 
         return new MapMLLayerMetadata(
@@ -623,6 +618,7 @@ public class MapMLDocumentBuilder {
                 styleName,
                 tileLayerExists,
                 useTiles,
+                useRemote,
                 useFeatures,
                 cqlFilter,
                 defaultMimeType);
@@ -1335,15 +1331,10 @@ public class MapMLDocumentBuilder {
         setElevationParam(mapMLLayerMetadata, params, gstl);
         setCustomDimensionParam(mapMLLayerMetadata, params, gstl);
         setCqlFilterParam(mapMLLayerMetadata, params);
-        String urlTemplate = "";
-        try {
-            urlTemplate =
-                    URLDecoder.decode(
-                            ResponseUtils.buildURL(
-                                    baseUrlPattern, path, params, URLMangler.URLType.SERVICE),
-                            "UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-        }
+        MapMLRequestMangler mangler =
+                new MapMLRequestMangler(
+                        mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
+        String urlTemplate = mangler.getUrlTemplate();
         tileLink.setTref(urlTemplate);
         extentList.add(tileLink);
     }
@@ -1473,15 +1464,10 @@ public class MapMLDocumentBuilder {
         params.put("transparent", Boolean.toString(mapMLLayerMetadata.isTransparent()));
         params.put("width", "256");
         params.put("height", "256");
-        String urlTemplate = "";
-        try {
-            urlTemplate =
-                    URLDecoder.decode(
-                            ResponseUtils.buildURL(
-                                    baseUrlPattern, path, params, URLMangler.URLType.SERVICE),
-                            "UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-        }
+        MapMLRequestMangler mangler =
+                new MapMLRequestMangler(
+                        mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
+        String urlTemplate = mangler.getUrlTemplate();
         tileLink.setTref(urlTemplate);
         extentList.add(tileLink);
     }
@@ -1611,15 +1597,10 @@ public class MapMLDocumentBuilder {
         params.put("language", this.request.getLocale().getLanguage());
         params.put("width", "{w}");
         params.put("height", "{h}");
-        String urlTemplate = "";
-        try {
-            urlTemplate =
-                    URLDecoder.decode(
-                            ResponseUtils.buildURL(
-                                    baseUrlPattern, path, params, URLMangler.URLType.SERVICE),
-                            "UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-        }
+        MapMLRequestMangler mangler =
+                new MapMLRequestMangler(
+                        mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
+        String urlTemplate = mangler.getUrlTemplate();
         imageLink.setTref(urlTemplate);
         extentList.add(imageLink);
     }
@@ -1695,15 +1676,10 @@ public class MapMLDocumentBuilder {
         params.put("infoformat", "text/mapml");
         params.put("i", "{i}");
         params.put("j", "{j}");
-        String urlTemplate = "";
-        try {
-            urlTemplate =
-                    URLDecoder.decode(
-                            ResponseUtils.buildURL(
-                                    baseUrlPattern, path, params, URLMangler.URLType.SERVICE),
-                            "UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-        }
+        MapMLRequestMangler mangler =
+                new MapMLRequestMangler(
+                        mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
+        String urlTemplate = mangler.getUrlTemplate();
         queryLink.setTref(urlTemplate);
         extentList.add(queryLink);
     }
@@ -1744,7 +1720,7 @@ public class MapMLDocumentBuilder {
         params.put("layers", mapMLLayerMetadata.getLayerName());
         params.put("query_layers", mapMLLayerMetadata.getLayerName());
         params.put("styles", mapMLLayerMetadata.getStyleName());
-        if (mapMLLayerMetadata.getCqlFilter() != null) {
+        if (StringUtils.isNotBlank(mapMLLayerMetadata.getCqlFilter())) {
             params.put("cql_filter", mapMLLayerMetadata.getCqlFilter());
         }
         setTimeParam(mapMLLayerMetadata, params, null);
@@ -1764,15 +1740,10 @@ public class MapMLDocumentBuilder {
         params.put("transparent", Boolean.toString(mapMLLayerMetadata.isTransparent()));
         params.put("x", "{i}");
         params.put("y", "{j}");
-        String urlTemplate = "";
-        try {
-            urlTemplate =
-                    URLDecoder.decode(
-                            ResponseUtils.buildURL(
-                                    baseUrlPattern, path, params, URLMangler.URLType.SERVICE),
-                            "UTF-8");
-        } catch (UnsupportedEncodingException uee) {
-        }
+        MapMLRequestMangler mangler =
+                new MapMLRequestMangler(
+                        mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
+        String urlTemplate = mangler.getUrlTemplate();
         queryLink.setTref(urlTemplate);
         extentList.add(queryLink);
     }
@@ -2333,6 +2304,7 @@ public class MapMLDocumentBuilder {
         private boolean tileLayerExists;
 
         private boolean useTiles;
+        private boolean useRemote;
 
         private boolean timeEnabled;
         private boolean elevationEnabled;
@@ -2395,6 +2367,7 @@ public class MapMLDocumentBuilder {
                 String styleName,
                 boolean tileLayerExists,
                 boolean useTiles,
+                boolean useRemote,
                 boolean useFeatures,
                 String cqFilter,
                 String defaultMimeType) {
@@ -2412,6 +2385,7 @@ public class MapMLDocumentBuilder {
             this.isTransparent = isTransparent;
             this.tileLayerExists = tileLayerExists;
             this.useTiles = useTiles;
+            this.useRemote = useRemote;
             this.useFeatures = useFeatures;
             this.cqlFilter = cqFilter;
             this.defaultMimeType = defaultMimeType;
@@ -2736,6 +2710,24 @@ public class MapMLDocumentBuilder {
          */
         public void setUseTiles(boolean useTiles) {
             this.useTiles = useTiles;
+        }
+
+        /**
+         * get if the layer uses remote
+         *
+         * @return boolean
+         */
+        public boolean isUseRemote() {
+            return useRemote;
+        }
+
+        /**
+         * set if the layer uses remote
+         *
+         * @param useRemote boolean
+         */
+        public void setUseRemote(boolean useRemote) {
+            this.useRemote = useRemote;
         }
 
         /**
