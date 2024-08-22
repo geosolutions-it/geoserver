@@ -316,7 +316,7 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         ArgumentCaptor<Shape> shape = ArgumentCaptor.forClass(Shape.class);
         Mockito.verify(graphics).draw(shape.capture());
         LiteShape2 drawnShape = (LiteShape2) shape.getValue();
-        assertEquals(64, drawnShape.getGeometry().getCoordinates().length);
+        assertEquals(127, drawnShape.getGeometry().getCoordinates().length);
     }
 
     @Test
@@ -360,7 +360,7 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
         ArgumentCaptor<Shape> shape = ArgumentCaptor.forClass(Shape.class);
         Mockito.verify(graphics).draw(shape.capture());
         LiteShape2 drawnShape = (LiteShape2) shape.getValue();
-        assertEquals(64, drawnShape.getGeometry().getCoordinates().length);
+        assertEquals(127, drawnShape.getGeometry().getCoordinates().length);
     }
 
     @Test
