@@ -25,5 +25,16 @@
     <constructor-arg index="0" value="3D-GeoVolumes"/>
     <constructor-arg index="1" value="1.0.0"/>
   </bean>
-  
+
+  <bean id="geovolumesClasspathPublisherMapping"
+        class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+    <property name="alwaysUseFullPath" value="true"/>
+    <property name="mappings">
+      <props>
+        <prop key="/webresources/**">classpathPublisher</prop>
+      </props>
+    </property>
+  </bean>
+
+
 </beans>
