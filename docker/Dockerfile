@@ -6,12 +6,6 @@ SHELL ["/bin/bash", "-c"]
 ARG DEBIAN_FRONTEND=noninteractive
 ARG CMAKE_BUILD_PARALLEL_LEVEL=8
 ARG APP_LOCATION="geoserver"
-RUN apt-get update && apt-get install -y unzip wget cmake nasm\
-    && wget https://sourceforge.net/projects/libjpeg-turbo/files/2.1.5.1/libjpeg-turbo-2.1.5.1.tar.gz \
-    && tar -zxf ./libjpeg-turbo-2.1.5.1.tar.gz \
-    && cd libjpeg-turbo-2.1.5.1 && cmake -G"Unix Makefiles" -DWITH_JAVA=1 -DCMAKE_INSTALL_PREFIX=/opt/libjpeg-turbo-geoserver \
-    && make deb \
-    && dpkg -i ./libjpeg*.deb && apt-get -f install
 
 # accepts local files and URLs. Tar(s) are automatically extracted
 #WORKDIR /output/datadir
@@ -59,6 +53,11 @@ ENV ADMIN_PASSWORD=""
 ENV APP_LOCATION="geoserver"
 
 ENV CATALINA_BASE "$CATALINA_HOME"
+
+# Enforce usage of distribution own Java (https://osgeo-org.atlassian.net/browse/GEOS-11417)
+ENV PATH="/usr/lib/jvm/java-11-openjdk-amd64/bin:$PATH"
+ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
+
 # set externalizations
 ENV GEOSERVER_HOME="/var/geoserver"
 ENV GEOSERVER_LOG_DIR="${GEOSERVER_HOME}/logs"
@@ -71,7 +70,6 @@ ENV FONTS_DIR=${JAVA_HOME}/lib/fonts
 # override at run time as needed JAVA_OPTS
 ENV INITIAL_MEMORY="2G"
 ENV MAXIMUM_MEMORY="4G"
-ENV LD_LIBRARY_PATH="${TOMCAT_NATIVE_LIBDIR}:/opt/libjpeg-turbo-geoserver/lib"
 ENV JAIEXT_ENABLED="true"
 ENV PLUGIN_DYNAMIC_URLS=""
 ENV OOM_DUMP_DIR="${GEOSERVER_HOME}/memory_dumps"
@@ -113,8 +111,16 @@ RUN mkdir -p \
     "${GEOWEBCACHE_CONFIG_DIR}" \
     "${GEOWEBCACHE_CACHE_DIR}"
 
+RUN apt-get update
+RUN apt-get install --yes git vim gdal-bin postgresql-client fontconfig libfreetype6 jq unzip apache2-utils openjdk-11-jdk-headless
+RUN apt-get clean \
+    && apt-get -y autoclean \
+    && apt-get -y autoremove \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/share/man/* \
+    && rm -rf /usr/share/doc/*
+
 # copy from mother
-COPY --from=mother "/opt/libjpeg-turbo-geoserver" "/opt/libjpeg-turbo-geoserver"
 #COPY --from=mother "/output/datadir" "${GEOSERVER_DATA_DIR}"
 #COPY --from=mother "/output/webapp/geoserver" "${CATALINA_BASE}/webapps/geoserver"
 #COPY --from=mother "/output/plugins" "${CATALINA_BASE}/webapps/geoserver/WEB-INF/lib"
@@ -132,16 +138,7 @@ RUN echo `ls -l "${CATALINA_BASE}/webapps"`
 
 #COPY geoserver-plugin-download.sh /usr/local/bin/geoserver-plugin-download.sh
 RUN mkdir ${JAVA_HOME}/lib/fonts
-ADD ${CUSTOM_FONTS} ${FONTS_DIR}
-
-RUN apt-get update
-RUN apt-get install --yes git vim gdal-bin postgresql-client fontconfig libfreetype6 jq
-RUN apt-get clean \
-    && apt-get -y autoclean \
-    && apt-get -y autoremove \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /usr/share/man/* \
-    && rm -rf /usr/share/doc/*
+#ADD ${CUSTOM_FONTS} ${FONTS_DIR}
 
 COPY geoserver-rest-config.sh /usr/local/bin/geoserver-rest-config.sh
 COPY geoserver-rest-reload.sh /usr/local/bin/geoserver-rest-reload.sh
