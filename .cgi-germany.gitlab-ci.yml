@@ -12,7 +12,7 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -Dproject.build.sourceEncoding=UTF-8 -Dproject.reporting.outputEncoding=UTF-8 -Djava.awt.headless=true -Dtest.maxHeapSize=512M -B -U -T2 -DskipTests=true"
-  MAVEN_ACTIVE_PROFILES: "-Pauthkey -Pcontrol-flow -Pcss -Pfeature-pregeneralized -Pimporter -Plibjpeg-turbo -Pmonitor -Pnetcdf -Pnetcdf-out -Pwps -Pimporter-jdbc -Pncwms -Pghrsst -Pwmts-multi-dimensional -Pwps-download -Pwps-jdbc -Pgrib -Pgraticule -Pflatgeobuf -Pvector-mosaic"
+  MAVEN_ACTIVE_PROFILES: "-Pauthkey -Pcontrol-flow -Pcss -Pfeature-pregeneralized -Pimporter -Pmonitor -Pnetcdf -Pnetcdf-out -Pwps -Pimporter-jdbc -Pncwms -Pghrsst -Pwmts-multi-dimensional -Pwps-download -Pwps-jdbc -Pgrib -Pgraticule -Pflatgeobuf -Pvector-mosaic"
   CI_ENVIRONMENT_NAME: "geosolutions"
   TAG_NAME: "2.16.x-eows_${CI_PIPELINE_ID}"
   TAG_LATEST: "gs-latest"
@@ -24,7 +24,7 @@ variables:
   GEOWEBCACHE_CACHE_DIR: "${GEOSERVER_HOME}/gwc_cache_dir"
   GEOSERVER_AUDIT_PATH: "${GEOSERVER_HOME}/audits/geoserver-$${DOCKER_HOST}-$${MASTER_SLAVE}-$${HOSTNAME}"
   JAI_EXT_ENABLED: "true"
-  JAVA_OPTS: JAVA_OPTS="-Xms2048m -Xmx2048m -Djava.awt.headless=true -server -XX:+UseParallelGC -XX:+UseParallelOldGC -DGEOSERVER_DATA_DIR=/var/geoserver/datadir -DGEOWEBCACHE_CACHE_DIR=/var/geoserver/gwc_cache_dir -DGEOWEBCACHE_CONFIG_DIR=/var/geoserver/datadir/gwc -DGEOSERVER_LOG_LOCATION=/var/geoserver/logs/${DOCKER_HOST}-${MASTER_SLAVE}.log -DGEOSERVER_AUDIT_PATH=/var/geoserver/audits/geoserver-${DOCKER_HOST}-${MASTER_SLAVE} -DPROXY_BASE_URL=${PROXY_BASE_URL} -DGEOSERVER_NODE_OPTS=id:${MASTER_SLAVE} -Dorg.geotools.coverage.jaiext.enabled=true -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/geoserver/memory_dumps/geoserver-${DOCKER_HOST}-${MASTER_SLAVE}.dump -Dorg.geoserver.wms.featureinfo.minBuffer=10 -Dorg.geoserver.wms.featureinfo.render.minBuffer=10 -Dorg.geotools.coverage.io.netcdf.enhance.ScaleMissing=true -DGEOSERVER_CSRF_WHITELIST=cgi-dev.de,eumetsat.int -DDOWNLOAD_MAP_TRANSPARENT=true -Dorg.geoserver.wms.nearestFail=EXCEPTION -Djava.library.path=/opt/libjpeg-turbo-geoserver/lib"
+  JAVA_OPTS: JAVA_OPTS="-Xms2048m -Xmx2048m -Djava.awt.headless=true -server -XX:+UseParallelGC -XX:+UseParallelOldGC -DGEOSERVER_DATA_DIR=/var/geoserver/datadir -DGEOWEBCACHE_CACHE_DIR=/var/geoserver/gwc_cache_dir -DGEOWEBCACHE_CONFIG_DIR=/var/geoserver/datadir/gwc -DGEOSERVER_LOG_LOCATION=/var/geoserver/logs/${DOCKER_HOST}-${MASTER_SLAVE}.log -DGEOSERVER_AUDIT_PATH=/var/geoserver/audits/geoserver-${DOCKER_HOST}-${MASTER_SLAVE} -DPROXY_BASE_URL=${PROXY_BASE_URL} -DGEOSERVER_NODE_OPTS=id:${MASTER_SLAVE} -Dorg.geotools.coverage.jaiext.enabled=true -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/geoserver/memory_dumps/geoserver-${DOCKER_HOST}-${MASTER_SLAVE}.dump -Dorg.geoserver.wms.featureinfo.minBuffer=10 -Dorg.geoserver.wms.featureinfo.render.minBuffer=10 -Dorg.geotools.coverage.io.netcdf.enhance.ScaleMissing=true -DGEOSERVER_CSRF_WHITELIST=cgi-dev.de,eumetsat.int -DDOWNLOAD_MAP_TRANSPARENT=true -Dorg.geoserver.wms.nearestFail=EXCEPTION"
   ADD_EXTRA_FONTS: "true"
   DOCKERFILE: "./Dockerfile"
 
