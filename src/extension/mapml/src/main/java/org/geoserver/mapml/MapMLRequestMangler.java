@@ -211,6 +211,7 @@ public class MapMLRequestMangler {
         String version = "1.3.0";
         String reason = null;
         boolean doCascade = false;
+        URLMangler.URLType urlType = URLMangler.URLType.SERVICE;
         if (layerInfo != null) {
             ResourceInfo resourceInfo = layerInfo.getResource();
             String layerName = resourceInfo.getNativeName();
@@ -288,7 +289,10 @@ public class MapMLRequestMangler {
                 }
                 if (doCascade) {
                     // Update the params
-                    baseUrl = getBaseUrl(capabilitiesURL);
+                    String[] baseUrlAndPath = getBaseUrlAndPath(capabilitiesURL);
+                    baseUrl = baseUrlAndPath[0];
+                    path = baseUrlAndPath[1];
+                    urlType = URLMangler.URLType.EXTERNAL;
                     refineRequestParams(params, layerName, version, requestedCRS, tileMatrixSet);
                 } else {
                     LOGGER.fine("Cascading won't be performed, due to: " + reason);
@@ -296,8 +300,6 @@ public class MapMLRequestMangler {
             }
         }
 
-        URLMangler.URLType urlType =
-                doCascade ? URLMangler.URLType.EXTERNAL : URLMangler.URLType.SERVICE;
         String urlTemplate =
                 URLDecoder.decode(ResponseUtils.buildURL(baseUrl, path, params, urlType), "UTF-8");
         return urlTemplate;
@@ -583,23 +585,26 @@ public class MapMLRequestMangler {
         return prefix;
     }
 
-    private String getBaseUrl(String capabilitiesURL) {
+    private String[] getBaseUrlAndPath(String capabilitiesURL) {
         try {
             URL url = new URL(capabilitiesURL);
             String protocol = url.getProtocol();
             String host = url.getHost();
             int port = url.getPort();
+            String path = "";
             String baseURL = protocol + "://" + host;
             if (port != -1) {
                 baseURL += ":" + port;
             }
             // Optionally, add the context path if needed
-            String path = url.getPath();
-            int contextPathEnd = path.indexOf("/", 1);
+            String urlPath = url.getPath();
+            int contextPathEnd = urlPath.lastIndexOf("/");
             if (contextPathEnd != -1) {
-                baseURL += path.substring(0, contextPathEnd + 1);
+                baseURL += urlPath.substring(0, contextPathEnd);
+                path = urlPath.substring(contextPathEnd + 1, urlPath.length());
             }
-            return baseURL;
+
+            return new String[] {baseURL, path};
         } catch (MalformedURLException e) {
             return null;
         }
