@@ -9,6 +9,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +40,7 @@ import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.WMSMapContent;
 import org.geotools.api.filter.Filter;
 import org.geotools.api.referencing.FactoryException;
+import org.geotools.data.ows.OperationType;
 import org.geotools.ows.wms.Layer;
 import org.geotools.ows.wms.WMSCapabilities;
 import org.geotools.ows.wmts.model.TileMatrix;
@@ -74,6 +77,9 @@ public class MapMLRequestMangler {
 
     private static final double ORIGIN_DELTA = 0.1;
     private static final double SCALE_DELTA = 1E-5;
+
+    private static final List<String> GET_FEATURE_INFO_FORMATS =
+            Arrays.asList("text/mapml", "text/html", "text/plain");
 
     static class CRSMapper {
 
@@ -162,7 +168,7 @@ public class MapMLRequestMangler {
                                         baseUrlPattern, path, params, URLMangler.URLType.SERVICE),
                                 "UTF-8");
             } else {
-                urlTemplate = tryCascading(path, params, layerInfo);
+                urlTemplate = generateURL(path, params, layerInfo);
             }
         } catch (UnsupportedEncodingException uee) {
         }
@@ -202,16 +208,20 @@ public class MapMLRequestMangler {
         return false;
     }
     /**
-     * Try cascading to the remote Server unless any condition is preventing that (i.e. CRS not
-     * supported on the remote server)
+     * Try cascading to the remote Server and generate the cascaded URL. If cascading cannot be
+     * performed (i.e. CRS not supported on the remote server) a local URL will be generated. If the
+     * URL should not be generated at all (i.e. requesting a GetFeatureInfo to a remote that is not
+     * supporting text/plain, text/html, mapml) null will be returned and the document builder won't
+     * add the URL (i.e. the query link).
      */
-    private String tryCascading(String path, HashMap<String, String> params, LayerInfo layerInfo)
+    private String generateURL(String path, HashMap<String, String> params, LayerInfo layerInfo)
             throws UnsupportedEncodingException {
         String baseUrl = baseUrlPattern;
         String version = "1.3.0";
         String reason = null;
         boolean doCascade = false;
         URLMangler.URLType urlType = URLMangler.URLType.SERVICE;
+        List<String> infoFormats = new ArrayList<>();
         if (layerInfo != null) {
             ResourceInfo resourceInfo = layerInfo.getResource();
             String layerName = resourceInfo.getNativeName();
@@ -239,20 +249,31 @@ public class MapMLRequestMangler {
                         WMSCapabilities capabilities =
                                 wmsStoreInfo.getWebMapServer(null).getCapabilities();
                         version = capabilities.getVersion();
-
-                        if (!WMS_1_3_0.equals(version)) {
-                            version = "1.1.1";
-                        }
-                        List<Layer> layerList = capabilities.getLayerList();
-                        boolean isSupportedCrs = false;
-                        for (Layer layer : layerList) {
-                            if (layerName.equals(layer.getName())) {
-                                isSupportedCrs = isSRSInLayerOrParents(layer, requestedCRS);
-                                break;
+                        if (checkLayers(
+                                capabilities.getRequest().getGetFeatureInfo(),
+                                params,
+                                infoFormats)) {
+                            if (!WMS_1_3_0.equals(version)) {
+                                version = "1.1.1";
+                            }
+                            List<Layer> layerList = capabilities.getLayerList();
+                            boolean isSupportedCrs = false;
+                            for (Layer layer : layerList) {
+                                if (layerName.equals(layer.getName())) {
+                                    isSupportedCrs = isSRSInLayerOrParents(layer, requestedCRS);
+                                    break;
+                                }
+                            }
+                            isSupportedCrs &= (outputCRS != null);
+                            doCascade = isSupportedCrs;
+                        } else {
+                            if ("GetFeatureInfo".equalsIgnoreCase(params.get("request"))
+                                    && infoFormats.isEmpty()) {
+                                LOGGER.fine(
+                                        "URL won't be generated due to Requesting a not supported GetFeatureInfo format");
+                                return null;
                             }
                         }
-                        isSupportedCrs &= (outputCRS != null);
-                        doCascade = isSupportedCrs;
                     } catch (IOException e) {
                         reason =
                                 "Unable to extract the WMS remote capabilities. Cascading won't be performed";
@@ -293,7 +314,8 @@ public class MapMLRequestMangler {
                     baseUrl = baseUrlAndPath[0];
                     path = baseUrlAndPath[1];
                     urlType = URLMangler.URLType.EXTERNAL;
-                    refineRequestParams(params, layerName, version, requestedCRS, tileMatrixSet);
+                    refineRequestParams(
+                            params, layerName, version, requestedCRS, tileMatrixSet, infoFormats);
                 } else {
                     LOGGER.fine("Cascading won't be performed, due to: " + reason);
                 }
@@ -303,6 +325,20 @@ public class MapMLRequestMangler {
         String urlTemplate =
                 URLDecoder.decode(ResponseUtils.buildURL(baseUrl, path, params, urlType), "UTF-8");
         return urlTemplate;
+    }
+
+    private boolean checkLayers(
+            OperationType getFeatureInfo,
+            HashMap<String, String> params,
+            List<String> featureInfoFormats) {
+        if ("GetFeatureInfo".equalsIgnoreCase(params.get("request"))) {
+            featureInfoFormats.addAll(getFeatureInfo.getFormats());
+            featureInfoFormats.retainAll(GET_FEATURE_INFO_FORMATS);
+            if (featureInfoFormats.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void cleanupCRS(HashMap<String, String> params, String version, String requestedCRS) {
@@ -320,7 +356,8 @@ public class MapMLRequestMangler {
             String layerName,
             String version,
             String requestedCRS,
-            String tileMatrixSetName) {
+            String tileMatrixSetName,
+            List<String> infoFormats) {
         String requestType = params.get(REQUEST);
         String service = params.get(SERVICE);
         if (params.containsKey(LAYER)) {
@@ -333,11 +370,7 @@ public class MapMLRequestMangler {
             if (params.containsKey("query_layers")) {
                 params.put("query_layers", layerName);
             }
-            if (params.containsKey("info_format")) {
-                params.put("info_format", "text/html");
-            } else if (params.containsKey("infoformat")) {
-                params.put("infoformat", "text/html");
-            }
+            refineInfoFormat(params, infoFormats);
             cleanupCRS(params, version, requestedCRS);
         }
         // Extra settings for WMTS
@@ -352,6 +385,34 @@ public class MapMLRequestMangler {
             }
             params.remove("style");
         }
+    }
+
+    private void refineInfoFormat(HashMap<String, String> params, List<String> infoFormats) {
+        // When entering this method, infoFormats cannot be empty.
+
+        String paramName = "info_format";
+        String infoFormat = params.get(paramName);
+        if (infoFormat == null) {
+            paramName = "infoformat";
+            infoFormat = params.get(paramName);
+        }
+        if (infoFormat != null) {
+            // replace the infoFormat with a supported one
+            infoFormat = updateInfoFormat(infoFormat, infoFormats);
+            params.put(paramName, infoFormat);
+        }
+    }
+
+    private String updateInfoFormat(String infoFormat, List<String> infoFormats) {
+        if (!infoFormats.contains(infoFormat)) {
+            // Fall back on text/html
+            if (infoFormats.contains("text/html") || infoFormats.isEmpty()) {
+                infoFormat = "text/html";
+            } else {
+                infoFormat = infoFormats.get(0);
+            }
+        }
+        return infoFormat;
     }
 
     @SuppressWarnings("PMD.UseCollectionIsEmpty")

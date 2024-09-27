@@ -1641,21 +1641,6 @@ public class MapMLDocumentBuilder {
      * Generate inputs and links that the client will use to generate WMTS GetFeatureInfo requests
      */
     private void generateWMTSQueryClientLinks(MapMLLayerMetadata mapMLLayerMetadata) {
-        // query i value (x)
-        Input input = new Input();
-        input.setName("i");
-        input.setType(InputType.LOCATION);
-        input.setUnits(UnitType.TILE);
-        input.setAxis(AxisType.I);
-        extentList.add(input);
-
-        // query j value (y)
-        input = new Input();
-        input.setName("j");
-        input.setType(InputType.LOCATION);
-        input.setUnits(UnitType.TILE);
-        input.setAxis(AxisType.J);
-        extentList.add(input);
 
         // query link
         Link queryLink = new Link();
@@ -1680,8 +1665,29 @@ public class MapMLDocumentBuilder {
                 new MapMLRequestMangler(
                         mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
         String urlTemplate = mangler.getUrlTemplate();
-        queryLink.setTref(urlTemplate);
-        extentList.add(queryLink);
+        // It may be that the mangler decided to not generate any query URL due
+        // to unsupported info formats from the remote layer. So we are not
+        // generating the query link.
+        if (urlTemplate != null) {
+            // query i value (x)
+            Input input = new Input();
+            input.setName("i");
+            input.setType(InputType.LOCATION);
+            input.setUnits(UnitType.TILE);
+            input.setAxis(AxisType.I);
+            extentList.add(input);
+
+            // query j value (y)
+            input = new Input();
+            input.setName("j");
+            input.setType(InputType.LOCATION);
+            input.setUnits(UnitType.TILE);
+            input.setAxis(AxisType.J);
+            extentList.add(input);
+
+            queryLink.setTref(urlTemplate);
+            extentList.add(queryLink);
+        }
     }
 
     /** Generate inputs and links the client will use to create WMS GetFeatureInfo requests */
@@ -1690,21 +1696,6 @@ public class MapMLDocumentBuilder {
         if (mapMLLayerMetadata.isUseTiles()) {
             units = UnitType.TILE;
         }
-        // query i value (x)
-        Input input = new Input();
-        input.setName("i");
-        input.setType(InputType.LOCATION);
-        input.setUnits(units);
-        input.setAxis(AxisType.I);
-        extentList.add(input);
-
-        // query j value (y)
-        input = new Input();
-        input.setName("j");
-        input.setType(InputType.LOCATION);
-        input.setUnits(units);
-        input.setAxis(AxisType.J);
-        extentList.add(input);
 
         // query link
         Link queryLink = new Link();
@@ -1744,8 +1735,29 @@ public class MapMLDocumentBuilder {
                 new MapMLRequestMangler(
                         mapContent, mapMLLayerMetadata, baseUrlPattern, path, params, proj);
         String urlTemplate = mangler.getUrlTemplate();
-        queryLink.setTref(urlTemplate);
-        extentList.add(queryLink);
+        // It may be that the mangler decided to not generate any query URL due
+        // to unsupported info formats from the remote layer. So we are not
+        // generating the query link.
+        if (urlTemplate != null) {
+            // query i value (x)
+            Input input = new Input();
+            input.setName("i");
+            input.setType(InputType.LOCATION);
+            input.setUnits(units);
+            input.setAxis(AxisType.I);
+            extentList.add(input);
+
+            // query j value (y)
+            input = new Input();
+            input.setName("j");
+            input.setType(InputType.LOCATION);
+            input.setUnits(units);
+            input.setAxis(AxisType.J);
+            extentList.add(input);
+
+            queryLink.setTref(urlTemplate);
+            extentList.add(queryLink);
+        }
     }
 
     private void setCqlFilterParam(
