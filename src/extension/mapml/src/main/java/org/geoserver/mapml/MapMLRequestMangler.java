@@ -332,8 +332,10 @@ public class MapMLRequestMangler {
             HashMap<String, String> params,
             List<String> featureInfoFormats) {
         if ("GetFeatureInfo".equalsIgnoreCase(params.get("request"))) {
-            featureInfoFormats.addAll(getFeatureInfo.getFormats());
-            featureInfoFormats.retainAll(GET_FEATURE_INFO_FORMATS);
+            if (getFeatureInfo != null) {
+                featureInfoFormats.addAll(getFeatureInfo.getFormats());
+                featureInfoFormats.retainAll(GET_FEATURE_INFO_FORMATS);
+            }
             if (featureInfoFormats.isEmpty()) {
                 return false;
             }
