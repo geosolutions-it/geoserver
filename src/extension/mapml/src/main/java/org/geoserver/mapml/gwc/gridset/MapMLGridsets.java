@@ -8,32 +8,84 @@ package org.geoserver.mapml.gwc.gridset;
 import static java.util.stream.Collectors.toSet;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.geoserver.gwc.GWC;
 import org.geoserver.mapml.tcrs.Bounds;
+import org.geoserver.mapml.tcrs.Point;
+import org.geoserver.mapml.tcrs.TiledCRS;
 import org.geoserver.mapml.tcrs.TiledCRSConstants;
+import org.geoserver.mapml.tcrs.TiledCRSParams;
+import org.geoserver.platform.GeoServerExtensions;
+import org.geotools.ows.wmts.model.TileMatrix;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.config.SimpleGridSetConfiguration;
 import org.geowebcache.grid.BoundingBox;
+import org.geowebcache.grid.Grid;
 import org.geowebcache.grid.GridSet;
+import org.geowebcache.grid.GridSetBroker;
 import org.geowebcache.grid.GridSetFactory;
 import org.geowebcache.grid.SRS;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /** @author prushforth */
 public class MapMLGridsets extends SimpleGridSetConfiguration {
+
+    private final GWC gwc;
+
+    public static class GridSetLevelType {
+        boolean numeric = true;
+
+        boolean prefixed;
+
+        String prefix;
+
+        public boolean isNumeric() {
+            return numeric;
+        }
+
+        public boolean isPrefixed() {
+            return prefixed;
+        }
+
+        public String getPrefix() {
+            return prefix;
+        }
+
+        @Override
+        public String toString() {
+            return "GridSetLevelType{"
+                    + "numeric="
+                    + numeric
+                    + ", prefixed="
+                    + prefixed
+                    + ", prefix='"
+                    + prefix
+                    + '\''
+                    + '}';
+        }
+    }
+
     private static final Logger log = Logging.getLogger(MapMLGridsets.class);
+
+    public static final List<String> FIXED_NAMES =
+            Arrays.asList("APSTILE", "CBMTILE", "OSMTILE", "WGS84");
 
     private final GridSet WGS84;
     private final GridSet OSMTILE;
     private final GridSet CBMTILE;
     private final GridSet APSTILE;
-    @Autowired private GWC gwc = GWC.get();
 
     /** */
     public MapMLGridsets() {
+        gwc = GeoServerExtensions.bean(GWC.class);
         log.fine("Adding MapML WGS84 gridset");
         WGS84 =
                 GridSetFactory.createGridSet(
@@ -153,10 +205,13 @@ public class MapMLGridsets extends SimpleGridSetConfiguration {
                         getGridSets().stream().map(g -> g.getName()).collect(toSet()));
         try {
             gwc.saveConfig(gwc.getConfig());
+            // Trigger the TCRS loading
+            TiledCRSConstants.reloadDefinitions();
         } catch (IOException ioe) {
             log.log(Level.INFO, "Error occured saving MapMLGridsets config.", ioe);
         }
     }
+
     /** @return array of resolutions m/px */
     private double[] CBMTILEResolutions() {
         double[] CBMTILEResolutions = {
@@ -280,5 +335,146 @@ public class MapMLGridsets extends SimpleGridSetConfiguration {
     @Override
     public String getLocation() {
         return "Default";
+    }
+
+    /**
+     * Returns a list of GridSet names that share a common prefix based on getPrefix method.
+     * Prioritized names are put at the top and others are sorted alphabetically.
+     *
+     * @param gridSets The collection of GridSets to process.
+     * @return A list of GridSet names filtered and sorted as required.
+     */
+    public List<String> getCandidateGridSets() {
+        // Filter GridSets by common prefix using getPrefix method
+
+        // We can consider the result being cached unless a GWC change occurred
+        List<String> filteredNames =
+                gwc.getGridSetBroker().getGridSets().stream()
+                        .filter(gridSet -> canBeSupportedAsTiledCRS(gridSet))
+                        .map(GridSet::getName) // Map to the name of the GridSet
+                        .collect(Collectors.toList());
+
+        Collections.sort(filteredNames);
+        return filteredNames;
+    }
+
+    public static boolean canBeSupportedAsTiledCRS(GridSet gridSet) {
+        String name = gridSet.getName();
+        if (FIXED_NAMES.contains(name) || name.contains(":")) {
+            return false;
+        }
+        GridSetLevelType levelType = MapMLGridsets.getLevelType(getLevelNamesFromGridSet(gridSet));
+        return levelType.isNumeric() || levelType.isPrefixed();
+    }
+
+    public static Map<String, TiledCRSParams> getTiledCRSs(GWC gwc, List<String> gridSetNames) {
+        GridSetBroker broker = gwc.getGridSetBroker();
+        Map<String, TiledCRSParams> map = new HashMap<>();
+        for (String gridsetName : gridSetNames) {
+            GridSet grid = broker.get(gridsetName);
+            if (grid != null) {
+                TiledCRS tiledCRS = getMapMLTiledCRS(grid);
+                map.put(tiledCRS.getName(), tiledCRS.getParams());
+            } else {
+                log.warning("Requested gridset doesn't exist. Skipping it: " + gridsetName);
+            }
+        }
+        return map;
+    }
+
+    public static TiledCRS getMapMLTiledCRS(GridSet gridSet) {
+        String crsName = gridSet.getName();
+        String projection = gridSet.getSrs().toString(); // CRS as a string (e.g., "EPSG:3857")
+        int tileWidth = gridSet.getTileWidth();
+        BoundingBox bbox = gridSet.getBounds();
+        Bounds bounds =
+                new Bounds(
+                        new Point(bbox.getMinX(), bbox.getMinY()),
+                        new Point(bbox.getMaxX(), bbox.getMaxY()));
+        Point origin = new Point(bounds.getMin().getX(), bounds.getMax().getY());
+
+        // Map resolutions to zoom levels
+        int levels = gridSet.getNumLevels();
+
+        double[] scales = new double[levels];
+
+        for (int i = 0; i < levels; i++) {
+            Grid grid = gridSet.getGrid(i);
+            scales[i] = 1d / grid.getResolution();
+        }
+        TiledCRSParams tiledCRSParams =
+                new TiledCRSParams(crsName, projection, bounds, tileWidth, origin, scales);
+        return new TiledCRS(crsName, tiledCRSParams);
+    }
+
+    public static List<String> getLevelNamesFromGridSet(GridSet gridSet) {
+        List<String> levelNames = new ArrayList<>();
+        for (int i = 0; i < gridSet.getNumLevels(); i++) {
+            Grid grid = gridSet.getGrid(i);
+            levelNames.add(grid.getName());
+        }
+
+        return levelNames;
+    }
+
+    public static List<String> getLevelNamesFromTileMatrixList(List<TileMatrix> tileMatrices) {
+        List<String> levelNames = new ArrayList<>();
+
+        // Iterate over each TileMatrix and add its identifier to the list
+        for (TileMatrix tileMatrix : tileMatrices) {
+            levelNames.add(tileMatrix.getIdentifier().toString());
+        }
+
+        return levelNames;
+    }
+
+    public static GridSetLevelType getLevelType(List<String> levels) {
+        if (levels == null || levels.isEmpty()) {
+            return null;
+        }
+        // First check: levels are simple numbers:
+        GridSetLevelType levelType = new GridSetLevelType();
+        String numericPattern = "-?\\d+(\\.\\d+)?";
+        for (String level : levels) {
+            // Check if the level name matches the numeric pattern
+            if (!level.matches(numericPattern)) {
+                levelType.numeric = false;
+                break;
+            }
+        }
+        if (levelType.numeric) {
+            return levelType;
+        }
+        // Second check: levels having a common prefix, e.g.:
+        // EPSG:4326:0
+        // EPSG:4326:1
+        // EPSG:4326:2
+        // EPSG:4326:3
+
+        // Since TileMatrix is a {z} level in MapML client, we will
+        // prefix the value with the common prefix if available
+
+        // Start with the first level as the prefix candidate
+        String prefix = levels.get(0);
+
+        // Iterate over the rest of the levels and trim the prefix
+        for (int i = 1; i < levels.size(); i++) {
+            while (levels.get(i).indexOf(prefix) != 0) {
+                // Trim the last character from the prefix until it matches
+                prefix = prefix.substring(0, prefix.length() - 1);
+                if (prefix.isEmpty()) {
+                    levelType.prefixed = false;
+                    return levelType; // No common prefix found
+                }
+            }
+        }
+
+        // Check if the remaining prefix is actually a valid common prefix (not just a number)
+        if (prefix.matches("\\d+")) {
+            return null; // A prefix consisting of only numbers is not valid
+        }
+        levelType.prefix = prefix;
+        levelType.prefixed = true;
+        return levelType;
     }
 }
