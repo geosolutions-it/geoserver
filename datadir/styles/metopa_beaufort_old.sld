@@ -74,7 +74,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -143,7 +143,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -214,7 +214,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -285,7 +285,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -358,7 +358,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -433,7 +433,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -510,7 +510,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -556,7 +556,7 @@
                   <ogc:Function name="if_then_else">
                     <ogc:Function name="greaterThan">
                       <ogc:Function name="getY">
-                        <ogc:PropertyName>geom</ogc:PropertyName>
+                        <ogc:PropertyName>the_geom</ogc:PropertyName>
                       </ogc:Function>
                       <ogc:Literal>0</ogc:Literal>
                     </ogc:Function>
@@ -620,7 +620,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>
@@ -666,7 +666,7 @@
                   <ogc:Function name="if_then_else">
                     <ogc:Function name="greaterThan">
                       <ogc:Function name="getY">
-                        <ogc:PropertyName>geom</ogc:PropertyName>
+                        <ogc:PropertyName>the_geom</ogc:PropertyName>
                       </ogc:Function>
                       <ogc:Literal>0</ogc:Literal>
                     </ogc:Function>
@@ -729,7 +729,7 @@
               <Rotation>
                 <ogc:Function name="northFix">
                   <ogc:Function name="env"><ogc:Literal>wms_srs</ogc:Literal></ogc:Function>
-                  <ogc:PropertyName>geom</ogc:PropertyName>
+                  <ogc:PropertyName>the_geom</ogc:PropertyName>
                   <ogc:PropertyName>wind_direc</ogc:PropertyName>
                 </ogc:Function>
               </Rotation>

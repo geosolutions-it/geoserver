@@ -11,6 +11,36 @@
   </mimeFormats>
   <gridSubsets>
     <gridSubset>
+      <gridSetName>EPSG:3976 - 256</gridSetName>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3995 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:4326</gridSetName>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-90.0</double>
+          <double>180.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3976 - 512</gridSetName>
+    </gridSubset>
+    <gridSubset>
       <gridSetName>EPSG:3857 - 512</gridSetName>
       <extent>
         <coords>
@@ -24,7 +54,20 @@
       <zoomStop>10</zoomStop>
     </gridSubset>
     <gridSubset>
-      <gridSetName>EPSG:3995 - 512</gridSetName>
+      <gridSetName>EPSG:4326 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-90.0</double>
+          <double>180.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:3995 - 256</gridSetName>
       <extent>
         <coords>
           <double>-1.27E7</double>
@@ -46,49 +89,6 @@
           <double>2.003750834E7</double>
         </coords>
       </extent>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:4326 - 512</gridSetName>
-      <extent>
-        <coords>
-          <double>-180.0</double>
-          <double>-90.0</double>
-          <double>180.0</double>
-          <double>90.0</double>
-        </coords>
-      </extent>
-      <zoomStart>0</zoomStart>
-      <zoomStop>10</zoomStop>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:4326</gridSetName>
-      <extent>
-        <coords>
-          <double>-180.0</double>
-          <double>-90.0</double>
-          <double>180.0</double>
-          <double>90.0</double>
-        </coords>
-      </extent>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:3995 - 256</gridSetName>
-      <extent>
-        <coords>
-          <double>-1.27E7</double>
-          <double>-1.27E7</double>
-          <double>1.27E7</double>
-          <double>1.27E7</double>
-        </coords>
-      </extent>
-      <zoomStart>0</zoomStart>
-      <zoomStop>10</zoomStop>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:3976 - 256</gridSetName>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:3976 - 512</gridSetName>
     </gridSubset>
   </gridSubsets>
   <metaWidthHeight>

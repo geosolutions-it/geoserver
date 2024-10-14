@@ -1,15 +1,15 @@
 <featureType>
-  <id>FeatureTypeInfoImpl--486032e7:170a6230328:-7f0b</id>
-  <name>m02_ascat_wind</name>
-  <nativeName>m02_ascat_wind</nativeName>
+  <id>FeatureTypeInfoImpl--486032e7:170a6230328:-7f05</id>
+  <name>m03_ascat_wind_old</name>
+  <nativeName>m03_ascat_wind</nativeName>
   <namespace>
     <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff4</id>
   </namespace>
-  <title>ASCAT Coastal Winds at 12.5 km Swath Grid - Metop A</title>
+  <title>ASCAT Coastal Winds at 12.5 km Swath Grid - Metop C</title>
   <abstract>Equivalent neutral 10m winds over the global oceans, with specific sampling to provide as many observations as possible near the coasts. Better than using this archived NRT product, please use the reprocessed ASCAT winds data records (EO:EUM:DAT:METOP:OSI-150-A, EO:EUM:DAT:METOP:OSI-150-B).</abstract>
   <keywords>
     <string>features</string>
-    <string>m02_ascat_wind</string>
+    <string>m03_ascat_wind</string>
   </keywords>
   <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
   DATUM[&quot;World Geodetic System 1984&quot;, 
@@ -36,7 +36,8 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>FORCE_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
+  <advertised>false</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>
@@ -44,7 +45,7 @@
       </dimensionInfo>
     </entry>
     <entry key="MD_DOMAIN_EXPAND_LIMIT">50</entry>
-    <entry key="wmtsMultidimSidecarType">m02_ascat_wind_histogram</entry>
+    <entry key="wmtsMultidimSidecarType">m03_ascat_wind_histogram</entry>
     <entry key="cacheAgeMax">604800</entry>
     <entry key="MD_DOMAIN_EXPAND_LIMIT_MAX">100</entry>
     <entry key="time">
@@ -58,7 +59,10 @@
           <strategy>MAXIMUM</strategy>
         </defaultValue>
         <nearestMatchEnabled>true</nearestMatchEnabled>
+        <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
         <acceptableInterval>PT98M/PT0H</acceptableInterval>
+        <startValue></startValue>
+        <endValue></endValue>
       </dimensionInfo>
     </entry>
     <entry key="cachingEnabled">true</entry>
@@ -67,6 +71,8 @@
     <id>DataStoreInfoImpl--486032e7:170a6230328:-7f15</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
+  <internationalTitle/>
+  <internationalAbstract/>
   <maxFeatures>0</maxFeatures>
   <numDecimals>0</numDecimals>
   <padWithZeros>false</padWithZeros>
