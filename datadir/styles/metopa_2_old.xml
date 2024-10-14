@@ -1,17 +1,16 @@
 <style>
-  <id>StyleInfoImpl-38d58483:19209953f6c:-7ff4</id>
-  <name>metopa_2</name>
+  <id>StyleInfoImpl-1e89fa0a:1607375c877:-7ff8</id>
+  <name>metopa_2_old</name>
   <format>sld</format>
   <languageVersion>
     <version>1.0.0</version>
   </languageVersion>
-  <filename>metopa_2.sld</filename>
+  <filename>metopa_2_old.sld</filename>
   <legend>
     <width>640</width>
     <height>80</height>
     <format>image/png</format>
     <onlineResource>eps_ascat_wind_eumetsat-640x80.png</onlineResource>
   </legend>
-  <dateCreated>2024-09-19 10:08:58.952 UTC</dateCreated>
-  <dateModified>2024-09-19 10:09:23.392 UTC</dateModified>
+  <dateModified>2024-09-19 10:07:27.507 UTC</dateModified>
 </style>

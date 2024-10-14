@@ -35,7 +35,7 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>FORCE_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
   <advertised>false</advertised>
   <store class="dataStore">
     <id>DataStoreInfoImpl-6b49e442:18de5b6be56:-7ffe</id>

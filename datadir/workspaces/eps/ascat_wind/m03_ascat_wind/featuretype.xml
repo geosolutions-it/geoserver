@@ -1,6 +1,6 @@
 <featureType>
   <id>FeatureTypeInfoImpl-6b49e442:18de5b6be56:-7feb</id>
-  <name>m03_ascat_wind_mosaic</name>
+  <name>m03_ascat_wind</name>
   <nativeName>m03_ascat_wind_new_mosaic</nativeName>
   <namespace>
     <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff4</id>
@@ -9,7 +9,6 @@
   <abstract>Equivalent neutral 10m winds over the global oceans, with specific sampling to provide as many observations as possible near the coasts. Better than using this archived NRT product, please use the reprocessed ASCAT winds data records (EO:EUM:DAT:METOP:OSI-150-A, EO:EUM:DAT:METOP:OSI-150-B).</abstract>
   <keywords>
     <string>features</string>
-    <string>m03_ascat_wind_new_mosaic</string>
     <string>m03_ascat_wind</string>
   </keywords>
   <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
@@ -38,7 +37,7 @@
   </latLonBoundingBox>
   <projectionPolicy>FORCE_DECLARED</projectionPolicy>
   <enabled>true</enabled>
-  <advertised>false</advertised>
+  <advertised>true</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>
@@ -51,7 +50,7 @@
         <enabled>true</enabled>
         <attribute>time</attribute>
         <presentation>DISCRETE_INTERVAL</presentation>
-        <resolution>0</resolution>
+        <resolution>6000000</resolution>
         <units>ISO8601</units>
         <defaultValue>
           <strategy>MAXIMUM</strategy>

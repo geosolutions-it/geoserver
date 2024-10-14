@@ -2,7 +2,7 @@
   <id>LayerInfoImpl--486032e7:170a6230328:-7f10</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>eps:m01_ascat_wind</name>
+  <name>eps:m01_ascat_wind_old</name>
   <mimeFormats>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
@@ -11,7 +11,7 @@
   </mimeFormats>
   <gridSubsets>
     <gridSubset>
-      <gridSetName>EPSG:3995 - 256</gridSetName>
+      <gridSetName>EPSG:3976 - 256</gridSetName>
       <extent>
         <coords>
           <double>-1.27E7</double>
@@ -20,8 +20,6 @@
           <double>1.27E7</double>
         </coords>
       </extent>
-      <zoomStart>0</zoomStart>
-      <zoomStop>10</zoomStop>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3995 - 512</gridSetName>
@@ -31,30 +29,6 @@
           <double>-1.27E7</double>
           <double>1.27E7</double>
           <double>1.27E7</double>
-        </coords>
-      </extent>
-      <zoomStart>0</zoomStart>
-      <zoomStop>10</zoomStop>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:900913</gridSetName>
-      <extent>
-        <coords>
-          <double>-2.003750834E7</double>
-          <double>-2.003750834E7</double>
-          <double>2.003750834E7</double>
-          <double>2.003750834E7</double>
-        </coords>
-      </extent>
-    </gridSubset>
-    <gridSubset>
-      <gridSetName>EPSG:4326 - 512</gridSetName>
-      <extent>
-        <coords>
-          <double>-180.0</double>
-          <double>-90.0</double>
-          <double>180.0</double>
-          <double>90.0</double>
         </coords>
       </extent>
       <zoomStart>0</zoomStart>
@@ -72,6 +46,17 @@
       </extent>
     </gridSubset>
     <gridSubset>
+      <gridSetName>EPSG:3976 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+    </gridSubset>
+    <gridSubset>
       <gridSetName>EPSG:3857 - 512</gridSetName>
       <extent>
         <coords>
@@ -85,10 +70,41 @@
       <zoomStop>10</zoomStop>
     </gridSubset>
     <gridSubset>
-      <gridSetName>EPSG:3976 - 256</gridSetName>
+      <gridSetName>EPSG:3995 - 256</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
     </gridSubset>
     <gridSubset>
-      <gridSetName>EPSG:3976 - 512</gridSetName>
+      <gridSetName>EPSG:4326 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-90.0</double>
+          <double>180.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
+      <zoomStart>0</zoomStart>
+      <zoomStop>10</zoomStop>
+    </gridSubset>
+    <gridSubset>
+      <gridSetName>EPSG:900913</gridSetName>
+      <extent>
+        <coords>
+          <double>-2.003750834E7</double>
+          <double>-2.003750834E7</double>
+          <double>2.003750834E7</double>
+          <double>2.003750834E7</double>
+        </coords>
+      </extent>
     </gridSubset>
   </gridSubsets>
   <metaWidthHeight>
@@ -108,11 +124,15 @@
     </regexParameterFilter>
     <styleParameterFilter>
       <key>STYLES</key>
-      <defaultValue></defaultValue>
+      <defaultValue>metopa_beaufort_old</defaultValue>
+      <allowedStyles class="sorted-set">
+        <string>metopa_2_old</string>
+        <string>metopa_beaufort_old</string>
+      </allowedStyles>
       <availableStyles class="sorted-set">
         <string>metopa_2</string>
       </availableStyles>
-      <defaultStyle>metopa_beaufort</defaultStyle>
+      <defaultStyle>metopa_beaufort_old</defaultStyle>
     </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>

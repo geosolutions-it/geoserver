@@ -35,7 +35,7 @@
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>FORCE_DECLARED</projectionPolicy>
-  <enabled>true</enabled>
+  <enabled>false</enabled>
   <advertised>false</advertised>
   <metadata>
     <entry key="elevation">
@@ -62,6 +62,8 @@
     <id>DataStoreInfoImpl--486032e7:170a6230328:-7f15</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
+  <internationalTitle/>
+  <internationalAbstract/>
   <maxFeatures>0</maxFeatures>
   <numDecimals>0</numDecimals>
   <padWithZeros>false</padWithZeros>

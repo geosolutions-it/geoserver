@@ -1,17 +1,16 @@
 <style>
-  <id>StyleInfoImpl-6b49e442:18de5b6be56:-7fff</id>
-  <name>metopa_beaufort</name>
+  <id>StyleInfoImpl-1e49fc7e:161e75f469f:-7ffe</id>
+  <name>metopa_beaufort_old</name>
   <format>sld</format>
   <languageVersion>
     <version>1.0.0</version>
   </languageVersion>
-  <filename>metopa_beaufort.sld</filename>
+  <filename>metopa_beaufort_old.sld</filename>
   <legend>
     <width>640</width>
     <height>80</height>
     <format>image/png</format>
     <onlineResource>eps_ascat_wind_beaufort-640x80.png</onlineResource>
   </legend>
-  <dateCreated>2024-02-26 14:09:19.153 UTC</dateCreated>
-  <dateModified>2024-09-19 10:07:14.562 UTC</dateModified>
+  <dateModified>2024-09-19 09:22:31.811 UTC</dateModified>
 </style>
