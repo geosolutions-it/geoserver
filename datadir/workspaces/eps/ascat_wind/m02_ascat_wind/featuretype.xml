@@ -1,15 +1,15 @@
 <featureType>
-  <id>FeatureTypeInfoImpl--486032e7:170a6230328:-7f11</id>
-  <name>m01_ascat_wind</name>
-  <nativeName>m01_ascat_wind</nativeName>
+  <id>FeatureTypeInfoImpl-6b49e442:18de5b6be56:-7ff3</id>
+  <name>m02_ascat_wind</name>
+  <nativeName>m02_ascat_wind_new_mosaic</nativeName>
   <namespace>
     <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff4</id>
   </namespace>
-  <title>ASCAT Coastal Winds at 12.5 km Swath Grid - Metop B</title>
+  <title>ASCAT Coastal Winds at 12.5 km Swath Grid - Metop A</title>
   <abstract>Equivalent neutral 10m winds over the global oceans, with specific sampling to provide as many observations as possible near the coasts. Better than using this archived NRT product, please use the reprocessed ASCAT winds data records (EO:EUM:DAT:METOP:OSI-150-A, EO:EUM:DAT:METOP:OSI-150-B).</abstract>
   <keywords>
     <string>features</string>
-    <string>m01_ascat_wind</string>
+    <string>m02_ascat_wind</string>
   </keywords>
   <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
   DATUM[&quot;World Geodetic System 1984&quot;, 
@@ -37,6 +37,7 @@
   </latLonBoundingBox>
   <projectionPolicy>FORCE_DECLARED</projectionPolicy>
   <enabled>true</enabled>
+  <advertised>true</advertised>
   <metadata>
     <entry key="elevation">
       <dimensionInfo>
@@ -44,7 +45,6 @@
       </dimensionInfo>
     </entry>
     <entry key="MD_DOMAIN_EXPAND_LIMIT">50</entry>
-    <entry key="wmtsMultidimSidecarType">m01_ascat_wind_histogram</entry>
     <entry key="cacheAgeMax">604800</entry>
     <entry key="MD_DOMAIN_EXPAND_LIMIT_MAX">100</entry>
     <entry key="time">
@@ -58,15 +58,21 @@
           <strategy>MAXIMUM</strategy>
         </defaultValue>
         <nearestMatchEnabled>true</nearestMatchEnabled>
+        <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
         <acceptableInterval>PT98M/PT0H</acceptableInterval>
+        <startValue></startValue>
+        <endValue></endValue>
       </dimensionInfo>
     </entry>
     <entry key="cachingEnabled">true</entry>
   </metadata>
   <store class="dataStore">
-    <id>DataStoreInfoImpl--486032e7:170a6230328:-7f15</id>
+    <id>DataStoreInfoImpl-6b49e442:18de5b6be56:-7ffd</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
+  <internationalTitle/>
+  <internationalAbstract/>
   <maxFeatures>0</maxFeatures>
   <numDecimals>0</numDecimals>
   <padWithZeros>false</padWithZeros>

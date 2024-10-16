@@ -1,10 +1,15 @@
 <layer>
-  <name>m02_ascat_wind_mosaic</name>
+  <name>m02_ascat_wind</name>
   <id>LayerInfoImpl-6b49e442:18de5b6be56:-7ff2</id>
   <type>VECTOR</type>
   <defaultStyle>
     <id>StyleInfoImpl-6b49e442:18de5b6be56:-7fff</id>
   </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-38d58483:19209953f6c:-7ff4</id>
+    </style>
+  </styles>
   <resource class="featureType">
     <id>FeatureTypeInfoImpl-6b49e442:18de5b6be56:-7ff3</id>
   </resource>
@@ -16,4 +21,5 @@
     <logoHeight>0</logoHeight>
   </attribution>
   <dateCreated>2024-02-26 14:53:43.838 UTC</dateCreated>
+  <dateModified>2024-09-19 10:13:05.819 UTC</dateModified>
 </layer>

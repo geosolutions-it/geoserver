@@ -2,76 +2,244 @@
   <id>LayerInfoImpl-6b49e442:18de5b6be56:-7ff9</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>eps:m01_ascat_wind_mosaic</name>
+  <name>eps:m01_ascat_wind</name>
   <mimeFormats>
+    <string>image/png8</string>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
     <string>image/jpeg</string>
-    <string>image/png8</string>
   </mimeFormats>
   <gridSubsets>
     <gridSubset>
       <gridSetName>EPSG:70201 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70211</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>2.52E7</double>
+          <double>1.26E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:4326 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-90.0</double>
+          <double>180.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70209 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.38E7</double>
+          <double>1.38E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70205</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70203</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.02E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3976 - 256</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70201</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3857 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-2.003750834E7</double>
+          <double>-2.003750834E7</double>
+          <double>2.003750834E7</double>
+          <double>2.003750834E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3976 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.27E7</double>
+          <double>1.27E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3995 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>2.20136E7</double>
+          <double>2.20136E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70203 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.02E7</double>
+          <double>1.02E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70209</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.38E7</double>
+          <double>1.38E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70205 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70211 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>2.52E7</double>
+          <double>1.26E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70207 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>8400000.0</double>
+          <double>8400000.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70213</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70213 - 512</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>1.2E7</double>
+          <double>1.2E7</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:4326</gridSetName>
+      <extent>
+        <coords>
+          <double>-180.0</double>
+          <double>-90.0</double>
+          <double>180.0</double>
+          <double>90.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:70207</gridSetName>
+      <extent>
+        <coords>
+          <double>0.0</double>
+          <double>0.0</double>
+          <double>8400000.0</double>
+          <double>8400000.0</double>
+        </coords>
+      </extent>
     </gridSubset>
     <gridSubset>
       <gridSetName>EPSG:3995 - 256</gridSetName>
+      <extent>
+        <coords>
+          <double>-1.27E7</double>
+          <double>-1.27E7</double>
+          <double>1.6228E7</double>
+          <double>1.6228E7</double>
+        </coords>
+      </extent>
     </gridSubset>
   </gridSubsets>
   <metaWidthHeight>
@@ -91,9 +259,15 @@
     </regexParameterFilter>
     <styleParameterFilter>
       <key>STYLES</key>
-      <defaultValue></defaultValue>
-      <availableStyles class="sorted-set"/>
-      <defaultStyle>eps:metopa_beaufort_new</defaultStyle>
+      <defaultValue>eps:metopa_beaufort</defaultValue>
+      <allowedStyles class="java.util.Collections$UnmodifiableSet">
+        <string>eps:metopa_beaufort</string>
+        <string>metopa_2_old</string>
+      </allowedStyles>
+      <availableStyles class="sorted-set">
+        <string>metopa_2</string>
+      </availableStyles>
+      <defaultStyle>eps:metopa_beaufort</defaultStyle>
     </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>

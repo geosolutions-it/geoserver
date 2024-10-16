@@ -1,5 +1,5 @@
 <layer>
-  <name>m03_ascat_wind</name>
+  <name>m03_ascat_wind_old</name>
   <id>LayerInfoImpl--486032e7:170a6230328:-7f04</id>
   <type>VECTOR</type>
   <defaultStyle>
@@ -20,4 +20,5 @@
     <logoWidth>0</logoWidth>
     <logoHeight>0</logoHeight>
   </attribution>
+  <dateModified>2024-09-19 10:15:20.446 UTC</dateModified>
 </layer>
