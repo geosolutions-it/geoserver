@@ -4,6 +4,8 @@
  */
 package org.geoserver.mapml;
 
+import static org.geoserver.mapml.gwc.gridset.MapMLGridsets.getLevelType;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -23,6 +25,7 @@ import org.geoserver.catalog.SLDHandler;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WMTSStoreInfo;
+import org.geoserver.mapml.gwc.gridset.MapMLGridsets;
 import org.geoserver.mapml.tcrs.Point;
 import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
@@ -570,7 +573,7 @@ public class MapMLURLBuilder {
 
     private String getSupportedWMTSGridSet(
             WMTSLayer layer, String srs, WMTSCapabilities capabilities) throws FactoryException {
-        TiledCRSParams inputCrs = TiledCRSConstants.lookupTCRS(srs);
+        TiledCRSParams inputCrs = TiledCRSConstants.lookupTCRSParams(srs);
         if (inputCrs == null) {
             return null;
         }
@@ -589,10 +592,10 @@ public class MapMLURLBuilder {
             }
 
             List<TileMatrix> tileMatrices = tileMatrixSet.getMatrices();
-            double[] tiledCRSScales = inputCrs.getScales();
+            double[] tiledCRSResolutions = inputCrs.getResolutions();
 
-            // check same number of levels
-            if (tileMatrices.size() != tiledCRSScales.length) {
+            // check compatible levels
+            if (tileMatrices.size() < tiledCRSResolutions.length) {
                 continue;
             }
             TileMatrix level0 = tileMatrices.get(0);
@@ -614,54 +617,25 @@ public class MapMLURLBuilder {
             }
 
             // check same scales
-            for (int i = 0; i < tileMatrices.size(); i++) {
-                if (Math.abs(tileMatrices.get(i).getDenominator() - tiledCRSScales[i])
+            boolean sameScale = true;
+            for (int i = 0; i < tiledCRSResolutions.length; i++) {
+                if (Math.abs(tileMatrices.get(i).getResolution() - tiledCRSResolutions[i])
                         > SCALE_DELTA) {
-                    continue;
+                    sameScale = false;
+                    break;
                 }
             }
-            String prefix = findCommonPrefix(tileMatrices);
-            if (prefix != null) {
-                tileMatrixSetName += (";" + prefix);
+            if (!sameScale) {
+                continue;
+            }
+            MapMLGridsets.GridSetLevelType levelType =
+                    getLevelType(MapMLGridsets.getLevelNamesFromTileMatrixList(tileMatrices));
+            if (levelType.isPrefixed()) {
+                tileMatrixSetName += (";" + levelType.getPrefix());
             }
             return tileMatrixSetName;
         }
         return null;
-    }
-
-    private String findCommonPrefix(List<TileMatrix> tileMatrixLevels) {
-        // Check for levels having a common prefix, e.g.:
-        // EPSG:4326:0
-        // EPSG:4326:1
-        // EPSG:4326:2
-        // EPSG:4326:3
-
-        // Since TileMatrix is a {z} level in MapML client, we will
-        // prefix the value with the common prefix if available
-        if (tileMatrixLevels == null || tileMatrixLevels.isEmpty()) {
-            return null;
-        }
-
-        // Start with the first level as the prefix candidate
-        String prefix = tileMatrixLevels.get(0).getIdentifier();
-
-        // Iterate over the rest of the levels and trim the prefix
-        for (int i = 1; i < tileMatrixLevels.size(); i++) {
-            while (tileMatrixLevels.get(i).getIdentifier().indexOf(prefix) != 0) {
-                // Trim the last character from the prefix until it matches
-                prefix = prefix.substring(0, prefix.length() - 1);
-                if (prefix.isEmpty()) {
-                    return null; // No common prefix found
-                }
-            }
-        }
-
-        // Check if the remaining prefix is actually a valid common prefix (not just a number)
-        if (prefix.matches("\\d+")) {
-            return null; // A prefix consisting of only numbers is not valid
-        }
-
-        return prefix;
     }
 
     private String[] getBaseUrlAndPath(String capabilitiesURL) {

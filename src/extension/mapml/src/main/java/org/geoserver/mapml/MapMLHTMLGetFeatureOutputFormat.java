@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.config.GeoServer;
-import org.geoserver.mapml.xml.ProjType;
+import org.geoserver.mapml.tcrs.WrappingProjType;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.URLMangler;
@@ -83,7 +83,7 @@ public class MapMLHTMLGetFeatureOutputFormat extends WFSGetFeatureOutputFormat {
         ReferencedEnvelope projectedBbox = extractBbox(fc);
         LayerInfo layerInfo = gs.getCatalog().getLayerByName(fc.getSchema().getTypeName());
         CoordinateReferenceSystem crs = projectedBbox.getCoordinateReferenceSystem();
-        ProjType projType = parseProjType(request);
+        WrappingProjType projType = parseProjType(request);
         double longitude;
         double latitude;
         ReferencedEnvelope geographicBox;
@@ -116,7 +116,7 @@ public class MapMLHTMLGetFeatureOutputFormat extends WFSGetFeatureOutputFormat {
         osw.flush();
     }
 
-    private ProjType parseProjType(Request request) throws ServiceException {
+    private WrappingProjType parseProjType(Request request) throws ServiceException {
         try {
             Map<String, Object> rawKvp = request.getRawKvp();
             String srs;
@@ -127,7 +127,7 @@ public class MapMLHTMLGetFeatureOutputFormat extends WFSGetFeatureOutputFormat {
             } else {
                 srs = "EPSG:4326";
             }
-            return ProjType.fromValue(srs.toUpperCase());
+            return new WrappingProjType(srs.toUpperCase());
         } catch (IllegalArgumentException | FactoryException iae) {
             // figure out the parameter name (version dependent) and the actual original
             // string value for the srs/crs parameter
