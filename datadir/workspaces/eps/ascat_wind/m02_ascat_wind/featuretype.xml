@@ -44,7 +44,9 @@
         <enabled>false</enabled>
       </dimensionInfo>
     </entry>
+    <entry key="wmtsMultidimSidecarStore">eps:vector_mosaic_index</entry>
     <entry key="MD_DOMAIN_EXPAND_LIMIT">50</entry>
+    <entry key="wmtsMultidimSidecarType">m02_ascat_wind_new</entry>
     <entry key="cacheAgeMax">604800</entry>
     <entry key="MD_DOMAIN_EXPAND_LIMIT_MAX">100</entry>
     <entry key="time">
