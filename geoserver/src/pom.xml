@@ -89,7 +89,7 @@
 
   <properties>
     <gs.version>2.23-SNAPSHOT</gs.version>
-    <gt.version>29-EOWS-p9</gt.version>
+    <gt.version>29-EOWS-p10</gt.version>
     <gwc.version>1.23-EOWS-p1</gwc.version>
     <jts.version>1.19.0</jts.version>
     <spring.version>5.3.27</spring.version>
