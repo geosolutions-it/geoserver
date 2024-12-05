@@ -89,8 +89,8 @@
 
   <properties>
     <gs.version>2.23-SNAPSHOT</gs.version>
-    <gt.version>29-EOWS-p10</gt.version>
-    <gwc.version>1.23-EOWS-p1</gwc.version>
+    <gt.version>29-EOWS-p11</gt.version>
+    <gwc.version>1.23-EOWS-p2</gwc.version>
     <jts.version>1.19.0</jts.version>
     <spring.version>5.3.27</spring.version>
     <spring.security.version>5.7.10</spring.security.version>
@@ -103,7 +103,7 @@
     <wicket.version>7.18.0</wicket.version>
     <ant.version>1.10.11</ant.version>
     <httpclient.version>4.5.14</httpclient.version>
-    <imageio-ext.version>1.4.7</imageio-ext.version>
+    <imageio-ext.version>1.4.7_p1</imageio-ext.version>
     <jaiext.version>1.1.24</jaiext.version>
     <java.awt.headless>true</java.awt.headless>
     <sun.java2d.d3d>true</sun.java2d.d3d>
