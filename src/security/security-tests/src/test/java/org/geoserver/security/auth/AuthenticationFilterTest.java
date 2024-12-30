@@ -1164,8 +1164,8 @@ public class AuthenticationFilterTest extends AbstractAuthenticationProviderTest
         modifyChain(pattern, false, true, null);
 
         prepareFilterChain(
-                ConstantFilterChain.class, "/j_spring_security_check_foo/", testFilterName6);
-        modifyChain("/j_spring_security_check_foo/", false, true, null);
+                ConstantFilterChain.class, "/j_spring_security_check_foo", testFilterName6);
+        modifyChain("/j_spring_security_check_foo", false, true, null);
 
         //        prepareFilterChain(LogoutFilterChain.class,"/j_spring_security_logout_foo",
         //                GeoServerSecurityFilterChain.SECURITY_CONTEXT_ASC_FILTER,
@@ -1393,8 +1393,8 @@ public class AuthenticationFilterTest extends AbstractAuthenticationProviderTest
                 GeoServerSecurityFilterChain.FORM_LOGIN_FILTER);
         modifyChain(pattern, false, true, null);
 
-        prepareFilterChain("/j_spring_security_check_foo/", testFilterName7);
-        modifyChain("/j_spring_security_check_foo/", false, true, null);
+        prepareFilterChain("/j_spring_security_check_foo", testFilterName7);
+        modifyChain("/j_spring_security_check_foo", false, true, null);
 
         SecurityContextHolder.getContext().setAuthentication(null);
 
