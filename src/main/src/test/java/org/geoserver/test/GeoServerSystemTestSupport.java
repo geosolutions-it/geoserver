@@ -914,8 +914,6 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
         request.setContextPath("/geoserver");
         request.setRequestURI(
                 ResponseUtils.stripQueryString(ResponseUtils.appendPath("/geoserver/", path)));
-        // request.setRequestURL(ResponseUtils.appendPath("http://localhost:8080/geoserver", path )
-        // );
         request.setQueryString(ResponseUtils.getQueryString(path));
         request.setRemoteAddr("127.0.0.1");
         request.setServletPath(
@@ -923,6 +921,10 @@ public class GeoServerSystemTestSupport extends GeoServerBaseTestSupport<SystemT
         request.setPathInfo(
                 ResponseUtils.makePathAbsolute(
                         ResponseUtils.stripBeginningPath(ResponseUtils.stripQueryString(path))));
+        if (request.getPathInfo().equals("/")) {
+            request.setPathInfo(request.getServletPath());
+            request.setServletPath("");
+        }
         request.addHeader("Host", "localhost:8080");
 
         // deal with authentication
