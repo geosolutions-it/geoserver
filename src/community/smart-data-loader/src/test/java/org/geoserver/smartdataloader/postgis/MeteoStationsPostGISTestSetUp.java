@@ -7,9 +7,15 @@ import org.junit.Before;
 
 public class MeteoStationsPostGISTestSetUp extends PostGISTestSetUp {
 
-    protected String METEOS_SQL_SCRIPT = "meteo_db.sql";
+    protected final String meteoSqlScriptFileName;
 
-    public MeteoStationsPostGISTestSetUp() {}
+    public MeteoStationsPostGISTestSetUp() {
+        this.meteoSqlScriptFileName = "meteo_db.sql";
+    }
+
+    public MeteoStationsPostGISTestSetUp(String sqlScriptFileName) {
+        this.meteoSqlScriptFileName = sqlScriptFileName;
+    }
 
     @Before
     @Override
@@ -22,10 +28,8 @@ public class MeteoStationsPostGISTestSetUp extends PostGISTestSetUp {
     protected void setUpData() throws Exception {
         super.setUpData();
 
-        String sql =
-                IOUtils.toString(
-                        getClass().getResourceAsStream("./mockdata/" + METEOS_SQL_SCRIPT),
-                        Charset.defaultCharset());
+        String sql = IOUtils.toString(
+                getClass().getResourceAsStream("./mockdata/" + meteoSqlScriptFileName), Charset.defaultCharset());
         run(sql);
     }
 

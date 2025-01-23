@@ -167,6 +167,7 @@ public final class DomainModelBuilder {
                 domainAttribute.setType(DomainAttributeType.INT);
                 break;
             case "bigint":
+            case "int8":
             case "bigserial":
                 domainAttribute.setType(DomainAttributeType.INTEGER);
             case "text":
