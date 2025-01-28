@@ -9,10 +9,15 @@ import static org.geotools.referencing.crs.DefaultGeographicCRS.WGS84;
 import java.util.Map;
 import org.apache.wicket.markup.html.link.ExternalLink;
 import org.apache.wicket.model.StringResourceModel;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.mapml.MapMLConstants;
 import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
+import org.geoserver.web.GeoServerApplication;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.WMS;
+import org.geoserver.wms.WMSInfo;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -32,6 +37,15 @@ public class MapMLFormatLink extends CommonFormatLink {
 
     /** Customize the request to use the MapML format and a native MapML CRS if possible */
     void customizeRequest(GetMapRequest request, Map<String, String> params) {
+        WMSInfo wmsInfo = GeoServerApplication.get().getGeoServer().getService(WMSInfo.class);
+        Object multiExtent = wmsInfo.getMetadata().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT);
+        WMS wms = WMS.get();
+        LayerInfo layerInfo = wms.getLayerByName(params.get("layers"));
+        MetadataMap metadata =
+                (layerInfo.getMetadata() != null && !layerInfo.getMetadata().isEmpty())
+                        ? layerInfo.getMetadata()
+                        : layerInfo.getResource().getMetadata();
+        Object useFeatures = metadata.get(MapMLConstants.MAPML_USE_FEATURES);
         // set the format
         params.put("format", MapMLConstants.MAPML_HTML_MIME_TYPE);
 

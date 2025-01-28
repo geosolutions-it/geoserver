@@ -138,8 +138,8 @@ public class MapMLWMSTest extends MapMLTestSupport {
         WMSInfo wms = geoServer.getService(WMSInfo.class);
         wms.getMetadata()
                 .put(
-                        MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT,
-                        MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT);
+                        MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT,
+                        MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT);
         // restore default max request memory
         wms.setMaxRequestMemory(0);
         geoServer.save(wms);
@@ -345,7 +345,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
     public void testMapMLDefaultMimeType() throws Exception {
         GeoServer geoServer = getGeoServer();
         WMSInfo wms = geoServer.getService(WMSInfo.class);
-        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
+        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
         geoServer.save(wms);
         Catalog cat = getCatalog();
         LayerInfo li = cat.getLayerByName(MockData.POLYGONS.getLocalPart());
@@ -391,7 +391,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
     public void testMapMLUseFeaturesLinks() throws Exception {
         GeoServer geoServer = getGeoServer();
         WMSInfo wms = geoServer.getService(WMSInfo.class);
-        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
+        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
         geoServer.save(wms);
 
         Catalog cat = getCatalog();
@@ -539,7 +539,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
         Catalog cat = getCatalog();
         GeoServer geoServer = getGeoServer();
         WMSInfo wms = geoServer.getService(WMSInfo.class);
-        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.FALSE);
+        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.FALSE);
         geoServer.save(wms);
 
         LayerInfo li = cat.getLayerByName(MockData.POLYGONS.getLocalPart());
@@ -617,7 +617,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 reader.toString().contains("hidden"));
 
         // Change To Return Multiple Extents for Multiple Layers
-        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
+        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
         geoServer.save(wms);
 
         Mapml mapmlMultiExtent = new MapMLWMSRequest()
@@ -763,7 +763,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
 
         GeoServer geoServer = getGeoServer();
         WMSInfo wms = geoServer.getService(WMSInfo.class);
-        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
+        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
         geoServer.save(wms);
         Mapml mapmlMultiExtentWithMultiStyles = new MapMLWMSRequest()
                 .name(MockData.POLYGONS.getLocalPart() + "," + "layerGroup")
@@ -785,7 +785,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 "10",
                 zoomInputsMultiExtent.get(0).getMax());
 
-        wms.getMetadata().put(MapMLDocumentBuilder.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.FALSE);
+        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.FALSE);
         geoServer.save(wms);
         Mapml mapmlSingleExtentWithMultiStyles = new MapMLWMSRequest()
                 .name(MockData.POLYGONS.getLocalPart() + "," + "layerGroup")

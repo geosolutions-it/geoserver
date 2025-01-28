@@ -11,8 +11,12 @@ import static org.geoserver.mapml.MapMLConstants.MAPML_MIME_TYPE;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_ATTRIBUTES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_SKIP_STYLES_FO;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES_REP;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES_REP_DEFAULT;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_REMOTE;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES_REP;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES_REP_DEFAULT;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_PREVIEW_HEAD_FTL;
 import static org.geoserver.mapml.template.MapMLMapTemplate.MAPML_XML_HEAD_FTL;
 import static org.geoserver.wms.capabilities.DimensionHelper.getDataType;
@@ -121,13 +125,6 @@ public class MapMLDocumentBuilder {
 
     private static final Pattern ALL_COMMAS = Pattern.compile("^,+$");
 
-    /**
-     * The key for the metadata entry that controls whether a multi-layer request is rendered as a single extent or
-     * multiple extents.
-     */
-    public static final String MAPML_MULTILAYER_AS_MULTIEXTENT = "mapmlMultiLayerAsMultiExtent";
-
-    protected static final Boolean MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT = Boolean.FALSE;
     public static final String MINIMUM_WIDTH_HEIGHT = "1";
     private static final int BYTES_PER_PIXEL_TRANSPARENT = 4;
     private static final int BYTES_PER_KILOBYTE = 1024;
@@ -183,7 +180,7 @@ public class MapMLDocumentBuilder {
 
     private Mapml mapml;
 
-    private Boolean isMultiExtent = MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
+    private Boolean isMultiExtent = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
     private MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
     private boolean forceYX = false;
 
@@ -291,6 +288,11 @@ public class MapMLDocumentBuilder {
         return Optional.ofNullable(getMapRequest.getFormatOptions().get(MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION));
     }
 
+    private Optional<Boolean> getMultiExtent(GetMapRequest getMapRequest) {
+        return Optional.ofNullable(Boolean.parseBoolean(
+                (String) getMapRequest.getFormatOptions().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT)));
+    }
+
     /**
      * Initialize fields, generate and return MapML document
      *
@@ -309,10 +311,8 @@ public class MapMLDocumentBuilder {
      * @throws ServiceException In the event of a service error.
      */
     public void initialize() throws ServiceException {
-        WMSInfo wmsInfo = geoServer.getService(WMSInfo.class);
-        isMultiExtent = wmsInfo.getMetadata().get(MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.class) != null
-                ? wmsInfo.getMetadata().get(MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.class)
-                : MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
+        isMultiExtent = Boolean.TRUE.equals((Boolean)
+                getMultiExtent(mapContent.getRequest()).orElse(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT));
         if (isMultiExtent || layers.size() == 1) {
             for (int i = 0; i < layers.size(); i++) {
                 RawLayer layer = layers.get(i);
@@ -411,8 +411,7 @@ public class MapMLDocumentBuilder {
         mapMLLayerMetadata.setUseTiles(false);
         boolean useFeatures = false;
         if (layers.size() == 1) {
-            useFeatures =
-                    useFeatures(layers.get(0), layers.get(0).getPublishedInfo().getMetadata());
+            useFeatures = useFeatures(layers.get(0), mapContent.getRequest());
         }
         mapMLLayerMetadata.setUseFeatures(useFeatures);
         mapMLLayerMetadata.setLayerName(layersCommaDelimited);
@@ -594,9 +593,9 @@ public class MapMLDocumentBuilder {
         cqlFilter = cql != null ? cql : "";
         tileLayerExists = gwc.hasTileLayer(isLayerGroup ? layerGroupInfo : layerInfo)
                 && gwc.getTileLayer(isLayerGroup ? layerGroupInfo : layerInfo).getGridSubset(projType.value()) != null;
-        boolean useTiles = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_TILES, Boolean.class));
+        boolean useTiles = useTiles(layer, mapContent.getRequest());
         boolean useRemote = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_REMOTE, Boolean.class));
-        boolean useFeatures = useFeatures(layer, layerMeta);
+        boolean useFeatures = useFeatures(layer, mapContent.getRequest());
 
         return new MapMLLayerMetadata(
                 layerInfo,
@@ -623,12 +622,27 @@ public class MapMLDocumentBuilder {
      * Check if layer should be represented as a feature
      *
      * @param layer RawLayer
-     * @param layerMeta MetadataMap for layer
-     * @return boolean
+     * @param getMapRequest GetMapRequest
+     * @return boolean true if layer should be represented as a feature
      */
-    private static boolean useFeatures(RawLayer layer, MetadataMap layerMeta) {
-        return (Boolean.TRUE.equals(layerMeta.get(MAPML_USE_FEATURES, Boolean.class)))
+    private static boolean useFeatures(RawLayer layer, GetMapRequest getMapRequest) {
+        Optional useFeaturesOptional =
+                Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_FEATURES_REP));
+        return (Boolean.parseBoolean((String) useFeaturesOptional.orElse(MAPML_USE_FEATURES_REP_DEFAULT)))
                 && (PublishedType.VECTOR == layer.getPublishedInfo().getType());
+    }
+
+    /**
+     * Check if layer should be represented with tiles
+     *
+     * @param layer RawLayer
+     * @param getMapRequest GetMapRequest
+     * @return boolean useTiles
+     */
+    private static boolean useTiles(RawLayer layer, GetMapRequest getMapRequest) {
+        Optional useTilesOptional =
+                Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_TILES_REP));
+        return Boolean.TRUE.equals(useTilesOptional.orElse(MAPML_USE_TILES_REP_DEFAULT));
     }
 
     /**
