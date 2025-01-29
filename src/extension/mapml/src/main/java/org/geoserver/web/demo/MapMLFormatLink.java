@@ -25,6 +25,12 @@ import org.geotools.referencing.CRS;
 
 public class MapMLFormatLink extends CommonFormatLink {
 
+    public static final String FORMAT_OPTIONS = "format_options";
+    public static final String FORMAT_OPTION_TRUE = "=true";
+    public static final String FORMAT_OPTION_FALSE = "=false";
+    public static final String LAYERINFO_LAYERS = "layers";
+    public static final String FORMAT_OPTION_DEFAULT = "false";
+
     @Override
     public ExternalLink getFormatLink(PreviewLayer layer) {
         String link = layer.getWmsLink(this::customizeRequest);
@@ -37,18 +43,40 @@ public class MapMLFormatLink extends CommonFormatLink {
 
     /** Customize the request to use the MapML format and a native MapML CRS if possible */
     void customizeRequest(GetMapRequest request, Map<String, String> params) {
+        // Get the WMSInfo and check if the multiExtent and useFeatures options are set in the configuration
         WMSInfo wmsInfo = GeoServerApplication.get().getGeoServer().getService(WMSInfo.class);
-        Object multiExtent = wmsInfo.getMetadata().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT);
+        boolean multiExtent = Boolean.parseBoolean(
+                wmsInfo.getMetadata().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT) != null
+                        ? wmsInfo.getMetadata()
+                                .get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT)
+                                .toString()
+                        : FORMAT_OPTION_DEFAULT);
         WMS wms = WMS.get();
-        LayerInfo layerInfo = wms.getLayerByName(params.get("layers"));
+        LayerInfo layerInfo = wms.getLayerByName(params.get(LAYERINFO_LAYERS));
         MetadataMap metadata =
                 (layerInfo.getMetadata() != null && !layerInfo.getMetadata().isEmpty())
                         ? layerInfo.getMetadata()
                         : layerInfo.getResource().getMetadata();
-        Object useFeatures = metadata.get(MapMLConstants.MAPML_USE_FEATURES);
+        boolean useFeatures = Boolean.parseBoolean(
+                metadata.get(MapMLConstants.MAPML_USE_FEATURES) != null
+                        ? metadata.get(MapMLConstants.MAPML_USE_FEATURES).toString()
+                        : FORMAT_OPTION_DEFAULT);
         // set the format
         params.put("format", MapMLConstants.MAPML_HTML_MIME_TYPE);
-
+        // set the format_options
+        StringBuilder formatOptions = new StringBuilder();
+        if (multiExtent) {
+            formatOptions.append(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT).append(FORMAT_OPTION_TRUE);
+        } else {
+            formatOptions.append(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT).append(FORMAT_OPTION_FALSE);
+        }
+        formatOptions.append(";");
+        if (useFeatures) {
+            formatOptions.append(MapMLConstants.MAPML_FEATURE_FO).append(FORMAT_OPTION_TRUE);
+        } else {
+            formatOptions.append(MapMLConstants.MAPML_FEATURE_FO).append(FORMAT_OPTION_FALSE);
+        }
+        params.put(FORMAT_OPTIONS, formatOptions.toString());
         // check if we can use a native MapML CRS, otherwise fall back to WGS84 to
         // have something that can display anyways
         TiledCRSConstants.tiledCRSDefinitions.values().stream()

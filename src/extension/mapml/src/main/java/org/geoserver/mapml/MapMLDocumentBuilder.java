@@ -628,7 +628,7 @@ public class MapMLDocumentBuilder {
     private static boolean useFeatures(RawLayer layer, GetMapRequest getMapRequest) {
         Optional useFeaturesOptional =
                 Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_FEATURES_REP));
-        return (Boolean.parseBoolean((String) useFeaturesOptional.orElse(MAPML_USE_FEATURES_REP_DEFAULT)))
+        return (Boolean.parseBoolean((String) useFeaturesOptional.orElse(MAPML_USE_FEATURES_REP_DEFAULT.toString())))
                 && (PublishedType.VECTOR == layer.getPublishedInfo().getType());
     }
 
@@ -642,7 +642,8 @@ public class MapMLDocumentBuilder {
     private static boolean useTiles(RawLayer layer, GetMapRequest getMapRequest) {
         Optional useTilesOptional =
                 Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_TILES_REP));
-        return Boolean.TRUE.equals(useTilesOptional.orElse(MAPML_USE_TILES_REP_DEFAULT));
+        return Boolean.TRUE.equals(
+                Boolean.parseBoolean((String) useTilesOptional.orElse(MAPML_USE_TILES_REP_DEFAULT.toString())));
     }
 
     /**

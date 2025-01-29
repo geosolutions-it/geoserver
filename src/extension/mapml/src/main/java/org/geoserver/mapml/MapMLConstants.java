@@ -32,7 +32,7 @@ public final class MapMLConstants {
     /** Multilayer represented as multi-extent */
     public static final String MAPML_MULTILAYER_AS_MULTIEXTENT = "mapmlMultiLayerAsMultiExtent";
 
-    public static final String MAPML_USE_FEATURES_REP = "mapmlfeatures";
+    public static final String MAPML_USE_FEATURES_REP = "mapmlusefeatures";
 
     public static final Boolean MAPML_USE_FEATURES_REP_DEFAULT = Boolean.FALSE;
 
