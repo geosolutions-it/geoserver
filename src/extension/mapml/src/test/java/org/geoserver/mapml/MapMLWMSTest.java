@@ -642,14 +642,12 @@ public class MapMLWMSTest extends MapMLTestSupport {
         li.getStyles().add(cat.getStyleByName("scaleRange"));
         li.setDefaultStyle(cat.getStyleByName("scaleRange"));
         cat.save(li);
-        ResourceInfo layerMeta = li.getResource();
-        layerMeta.getMetadata().put("mapml.useTiles", true);
-        cat.save(layerMeta);
 
         Mapml mapmlSingleLayer = new MapMLWMSRequest()
                 .name(MockData.POLYGONS.getLocalPart())
                 .srs("EPSG:4326")
                 .styles("scaleRange")
+                .tile(true)
                 .getAsMapML();
 
         List<Input> inputs = getTypeFromInputOrDataListOrLink(
@@ -672,6 +670,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 .name(MockData.POLYGONS.getLocalPart())
                 .srs("EPSG:4326")
                 .styles("scaleRangeNoMax")
+                .tile(true)
                 .getAsMapML();
 
         List<Input> inputsNoMax = getTypeFromInputOrDataListOrLink(
@@ -693,6 +692,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 .name(MockData.POLYGONS.getLocalPart())
                 .srs("EPSG:4326")
                 .styles("scaleRangeExtremes")
+                .tile(true)
                 .getAsMapML();
 
         List<Input> inputsExtremes = getTypeFromInputOrDataListOrLink(
@@ -712,14 +712,12 @@ public class MapMLWMSTest extends MapMLTestSupport {
         li.setDefaultStyle(cat.getStyleByName("scaleRange"));
         cat.save(li);
 
-        GeoServer geoServer = getGeoServer();
-        WMSInfo wms = geoServer.getService(WMSInfo.class);
-        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.TRUE);
-        geoServer.save(wms);
         Mapml mapmlMultiExtentWithMultiStyles = new MapMLWMSRequest()
                 .name(MockData.POLYGONS.getLocalPart() + "," + "layerGroup")
                 .srs("EPSG:4326")
                 .styles("scaleRange,")
+                .multiExtent(true)
+                .tile(true)
                 .getAsMapML();
 
         List<Input> inputsMultiExtent = getTypeFromInputOrDataListOrLink(
@@ -736,12 +734,12 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 "10",
                 zoomInputsMultiExtent.get(0).getMax());
 
-        wms.getMetadata().put(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT, Boolean.FALSE);
-        geoServer.save(wms);
         Mapml mapmlSingleExtentWithMultiStyles = new MapMLWMSRequest()
                 .name(MockData.POLYGONS.getLocalPart() + "," + "layerGroup")
                 .srs("EPSG:4326")
                 .styles("scaleRange,")
+                .tile(true)
+                .multiExtent(false)
                 .getAsMapML();
 
         List<Input> inputsSingleExtent = getTypeFromInputOrDataListOrLink(
@@ -936,15 +934,11 @@ public class MapMLWMSTest extends MapMLTestSupport {
 
         // set up mapml layer to useTiles
         Catalog catalog = getCatalog();
-        ResourceInfo layerMeta =
-                catalog.getLayerByName(MockData.ROAD_SEGMENTS.getLocalPart()).getResource();
-        layerMeta.getMetadata().put(MAPML_USE_TILES, true);
-        catalog.save(layerMeta);
         enableTileCaching(MockData.ROAD_SEGMENTS, catalog);
 
         // request again
         MockRequestResponse requestResponseJapanese =
-                getMockRequestResponse(layerId, null, Locale.JAPANESE, "EPSG:4326", null);
+                getMockRequestResponse(layerId, null, Locale.JAPANESE, "EPSG:4326", null, false, true);
         doc = dom(new ByteArrayInputStream(requestResponseJapanese.response.getContentAsByteArray()), true);
 
         String wmtsLayerName = layerId;
@@ -1000,7 +994,9 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 null,
                 Locale.JAPANESE,
                 "EPSG:3857",
-                null);
+                null,
+                false,
+                true);
 
         org.w3c.dom.Document docOsmTile = dom(
                 new ByteArrayInputStream(

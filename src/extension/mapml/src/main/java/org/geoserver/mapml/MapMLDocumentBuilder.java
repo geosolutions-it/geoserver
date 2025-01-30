@@ -45,6 +45,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.catalog.Catalog;
@@ -2028,9 +2029,23 @@ public class MapMLDocumentBuilder {
         Request request = Dispatcher.REQUEST.get();
         String baseURL = ResponseUtils.baseURL(request.getHttpRequest());
         String kvp = request.getKvp().entrySet().stream()
-                .map(p -> URLEncoder.encode(p.getKey(), StandardCharsets.UTF_8)
-                        + "="
-                        + URLEncoder.encode(p.getValue().toString(), StandardCharsets.UTF_8))
+                .map(entry -> {
+                    if (entry.getValue() instanceof Map) {
+                        Map<?, ?> internalMap = (Map<?, ?>) entry.getValue();
+                        String internalKvp = internalMap.entrySet().stream()
+                                .filter(e -> !e.getKey().toString().isEmpty())
+                                .map(e -> URLEncoder.encode(e.getKey().toString(), StandardCharsets.UTF_8)
+                                        + "="
+                                        + URLEncoder.encode(e.getValue().toString(), StandardCharsets.UTF_8))
+                                .reduce((p1, p2) -> p1 + "&" + p2)
+                                .orElse("");
+                        return URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8) + "={" + internalKvp + "}";
+                    } else {
+                        return URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)
+                                + "="
+                                + URLEncoder.encode(entry.getValue().toString(), StandardCharsets.UTF_8);
+                    }
+                })
                 .reduce((p1, p2) -> p1 + "&" + p2)
                 .orElse("");
         String path = request.getPath();

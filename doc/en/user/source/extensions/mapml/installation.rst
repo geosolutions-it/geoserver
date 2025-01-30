@@ -43,7 +43,7 @@ There is also a MapML-specific global WMS setting in the *MapML Extension* secti
 
 .. figure:: images/mapml_config_wms.png
 
-If the ``Represent multi-layer requests as multiple elements`` is checked (and the configuration is saved), an individually accessible <map-extent> element will be generated for each requested layer.  The default is to represent the layers as a single (hidden) <map-extent>.
+If the ``Represent multi-layer requests as multiple elements`` is checked (and the configuration is saved), in the Layer Preview an individually accessible <map-extent> element will be generated for each requested layer.  When making a WMS request directly include the `mapmlmultiextent:true` parameter within FORMAT_OPTIONS.  The default is to represent the layers as a single (hidden) <map-extent>.
 
 .. figure:: images/mapml_wms_multi_extent.png
 
@@ -109,7 +109,7 @@ Tile Settings
 Using tiles to access the layer can increase the performance of your web map. This is especially true if there is a tile cache mechanism in use between GeoServer and the browser client.
 
 **Use Tiles**
-  If the "Use Tiles" checkbox is checked, selecting the MapML format on the Layer Preview page will output MapML using tile-based references to the WMS server. Otherwise, an image-based reference will be used.  If one or more of the MapML-defined GridSets is referenced by the layer or layer group in its "Tile Caching" profile, GeoServer will generate tile references instead of generating WMS GetMap URLs in the MapML document body.
+  If the "Use Tiles" checkbox is checked, selecting the MapML format on the Layer Preview page will output MapML using tile-based references to the WMS server.  When making WMS request add `mapmltiles:true` to the FORMAT_OPTIONS parameter. Otherwise, an image-based reference will be used.  If one or more of the MapML-defined GridSets is referenced by the layer or layer group in its "Tile Caching" profile, GeoServer will generate tile references instead of generating WMS GetMap URLs in the MapML document body.
 
 Client Requests
 ^^^^^^^^^^^^^^^
@@ -131,7 +131,7 @@ Vector Settings
 MapML supports the serving of vector feature representations of the data.  This results in a smoother user navigation experience, smaller bandwidth requirements, and more options for dynamic styling on the client-side.
 
 **Use Features**
-  If the "Use Features" checkbox is checked, the output MapML on the Layer Preview page will define a feature-based reference to the WMS server. Otherwise, an image-based reference will be used.  Note that this option is only available for vector source data.  MapML <map-extent> element with a feature link:
+  If the "Use Features" checkbox is checked, the output MapML on the Layer Preview page will define a feature-based reference to the WMS server. When making WMS request add `mapmlusefeatures:true` to the FORMAT_OPTIONS parameter.  Otherwise, an image-based reference will be used.  Note that this option is only available for vector source data.  MapML <map-extent> element with a feature link:
 
 .. code-block:: html
 
@@ -146,7 +146,7 @@ MapML supports the serving of vector feature representations of the data.  This 
       <map-link tref="http://localhost:8080/geoserver/tiger/wms?format_options=mapmlfeatures:true&amp;request=GetMap&amp;crs=MapML:WGS84&amp;bbox={xmin},{ymin},{xmax},{ymax}&amp;format=text/mapml&amp;language=en&amp;version=1.3.0&amp;transparent=true&amp;service=WMS&amp;layers=poi&amp;width={w}&amp;styles=&amp;height={h}" rel="features"/>
     </map-extent>
 
-When both "Use Tiles" and "Use Features" are checked, the MapML extension will request tiled maps in ``text/mapml`` format.
+When both "Use Tiles" and "Use Features" are set in the FORMAT_OPTIONS parameter (`mapmlusefeatures:true;mapmltiles:true`), the MapML extension will request tiled maps in ``text/mapml`` format.
 The contents of the tiles will be clipped to the requested area, and feature attributes will be skiipped, as the MapML client cannot leverage them for the moment.
 
 
