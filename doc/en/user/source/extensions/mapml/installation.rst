@@ -109,7 +109,7 @@ Tile Settings
 Using tiles to access the layer can increase the performance of your web map. This is especially true if there is a tile cache mechanism in use between GeoServer and the browser client.
 
 **Use Tiles**
-  If the "Use Tiles" checkbox is checked, by default the output MapML will define a tile-based reference to the WMS server. Otherwise, an image-based reference will be used.  If one or more of the MapML-defined GridSets is referenced by the layer or layer group in its "Tile Caching" profile, GeoServer will generate tile references instead of generating WMS GetMap URLs in the MapML document body.
+  If the "Use Tiles" checkbox is checked, selecting the MapML format on the Layer Preview page will output MapML using tile-based references to the WMS server. Otherwise, an image-based reference will be used.  If one or more of the MapML-defined GridSets is referenced by the layer or layer group in its "Tile Caching" profile, GeoServer will generate tile references instead of generating WMS GetMap URLs in the MapML document body.
 
 Client Requests
 ^^^^^^^^^^^^^^^
@@ -131,7 +131,7 @@ Vector Settings
 MapML supports the serving of vector feature representations of the data.  This results in a smoother user navigation experience, smaller bandwidth requirements, and more options for dynamic styling on the client-side.
 
 **Use Features**
-  If the "Use Features" checkbox is checked, by default the output MapML will define a feature-based reference to the WMS server. Otherwise, an image-based reference will be used.  Note that this option is only available for vector source data.  MapML <map-extent> element with a feature link:
+  If the "Use Features" checkbox is checked, the output MapML on the Layer Preview page will define a feature-based reference to the WMS server. Otherwise, an image-based reference will be used.  Note that this option is only available for vector source data.  MapML <map-extent> element with a feature link:
 
 .. code-block:: html
 
@@ -245,11 +245,11 @@ WMS GetMap considerations
 
 By default, each layer/style pair that is requested via the GetMap parameters is composed into a single <map-extent>...<map-link tref="...">...</map-extent> structure as exemplified above.  
 
-If the 'Represent multi-layer requests as multiple elements' checkbox from the global WMS Settings page is checked as described above, a request for multiple layers or layer groups in MapML format will result in the serialization of a MapML document containing multiple <map-extent> elements. Each layer/style pair is represented by a <map-extent> element in the response.  The <map-extent> elements are represented in the client viewer layer control settings as sub-layers, which turn on and off independently of each other, but which are controlled by the parent <map-layer> element's state (checked / unchecked, opacity etc) (right-click or Shift+F10 to obtain context menus):
+If the FORMAT_OPTION parameter of the WMS request is configured with `mapmlmultiextent:true`, a request for multiple layers or layer groups in MapML format on the Layer Preview page will result in the serialization of a MapML document containing multiple <map-extent> elements.  Each layer/style pair is represented by a <map-extent> element in the response.  The <map-extent> elements are represented in the client viewer layer control settings as sub-layers, which turn on and off independently of each other, but which are controlled by the parent <map-layer> element's state (checked / unchecked, opacity etc) (right-click or Shift+F10 to obtain context menus):
 
 .. figure:: images/mapml_wms_multi_extent.png
 
-With 'Represent multi-layer requests as multiple elements' checked, if two or more layers are requested in MapML format via the GetMap 'layers' parameter, the MapML extension serialize each layer's <map-extent> according to its "Use Features" and "Use Tiles" settings.  Note that there is currently no "Use Features" setting available for layer groups.
+With the FORMAT_OPTION parameter of the WMS request is configured with `mapmlmultiextent:true`, if two or more layers are requested in MapML format via the GetMap 'layers' parameter, the MapML extension serialize each layer's <map-extent> according to its "Use Features" and "Use Tiles" settings.  Note that there is currently no "Use Features" setting available for layer groups.
 
 Tile Caching
 ^^^^^^^^^^^^
@@ -264,6 +264,18 @@ it will try to use tiles in ``text/mapml`` format, which should be configured as
 in order to enable WMTS requests.
 
 .. figure:: images/mapml_tile_caching_panel_ui.png
+
+In order to properly pass the proper multi-extent, tiling, and feature parameters to the tiling WMS requests used to populate the cache, a FORMAT_OPTIONS parameter filter (see :ref:`gwc_webadmin_layers`) must be created with appropriate default values and a regular expression that matches the MapML requests.  
+
+The Default Value entry should look like this::
+
+    mapmlmultiextent:true; mapmlusefeatures:false;mapmltiles:true
+
+Here is an example regular expression that matches the MapML FORMAT_OPTIONS parameters in any order::
+
+    (?i)\\b(mapmlmultiextent|mapmlusefeatures|mapmltiles):\\s*(true|false)\\b(?:\\s*;\\s*(?i)\\b(mapmlmultiextent|mapmlusefeatures|mapmltiles):\\s*(true|false)\\b)*(?:\\s*;\\s*(?i)\\b(mapmlmultiextent|mapmlusefeatures|mapmltiles):\\s*(true|false)\\b)*
+
+.. figure:: images/mapml_tile_filter.png
 
 Starting with version 2.26.x of GeoServer, Sharding support and related configuration has been removed
 
