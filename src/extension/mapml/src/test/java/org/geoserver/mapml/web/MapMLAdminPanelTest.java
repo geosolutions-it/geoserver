@@ -9,7 +9,6 @@ import static org.junit.Assert.assertTrue;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.util.tester.FormTester;
 import org.geoserver.mapml.MapMLConstants;
-import org.geoserver.mapml.MapMLDocumentBuilder;
 import org.geoserver.web.ComponentBuilder;
 import org.geoserver.web.FormTestPage;
 import org.geoserver.web.GeoServerWicketTestSupport;

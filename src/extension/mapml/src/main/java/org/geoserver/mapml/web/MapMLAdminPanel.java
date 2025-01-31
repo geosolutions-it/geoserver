@@ -8,7 +8,6 @@ import org.apache.wicket.Component;
 import org.apache.wicket.markup.html.form.CheckBox;
 import org.apache.wicket.model.IModel;
 import org.geoserver.mapml.MapMLConstants;
-import org.geoserver.mapml.MapMLDocumentBuilder;
 import org.geoserver.web.services.AdminPagePanel;
 import org.geoserver.web.util.MapModel;
 import org.geoserver.wms.WMSInfo;
