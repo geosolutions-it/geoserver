@@ -62,7 +62,6 @@ import org.geoserver.catalog.WMSStoreInfo;
 import org.geoserver.catalog.WMTSStoreInfo;
 import org.geoserver.catalog.impl.LayerGroupStyle;
 import org.geoserver.catalog.util.ReaderDimensionsAccessor;
-import org.geoserver.config.GeoServer;
 import org.geoserver.gwc.GWC;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.mapml.tcrs.Bounds;
@@ -130,7 +129,6 @@ public class MapMLDocumentBuilder {
     private final WMS wms;
     private static final String BBOX_PARAMS = "{xmin},{ymin},{xmax},{ymax}";
     private static final String BBOX_PARAMS_YX = "{ymin},{xmin},{ymax},{xmax}";
-    private final GeoServer geoServer;
 
     private final WMSMapContent mapContent;
     private final HttpServletRequest request;
@@ -188,9 +186,8 @@ public class MapMLDocumentBuilder {
      * @param wms WMS object
      * @param request HttpServletRequest object
      */
-    public MapMLDocumentBuilder(WMSMapContent mapContent, WMS wms, GeoServer geoServer, HttpServletRequest request) {
+    public MapMLDocumentBuilder(WMSMapContent mapContent, WMS wms, HttpServletRequest request) {
         this.wms = wms;
-        this.geoServer = geoServer;
         this.request = request;
         this.mapContent = mapContent;
         GetMapRequest getMapRequest = mapContent.getRequest();
@@ -308,7 +305,7 @@ public class MapMLDocumentBuilder {
      * @throws ServiceException In the event of a service error.
      */
     public void initialize() throws ServiceException {
-        isMultiExtent = Boolean.TRUE.equals((Boolean)
+        isMultiExtent = Boolean.TRUE.equals(
                 getMultiExtent(mapContent.getRequest()).orElse(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT));
         if (isMultiExtent || layers.size() == 1) {
             for (int i = 0; i < layers.size(); i++) {
@@ -622,6 +619,7 @@ public class MapMLDocumentBuilder {
      * @param getMapRequest GetMapRequest
      * @return boolean true if layer should be represented as a feature
      */
+    @SuppressWarnings("unchecked")
     private static boolean useFeatures(RawLayer layer, GetMapRequest getMapRequest) {
         Optional useFeaturesOptional =
                 Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_FEATURES_REP));
@@ -636,6 +634,7 @@ public class MapMLDocumentBuilder {
      * @param getMapRequest GetMapRequest
      * @return boolean useTiles
      */
+    @SuppressWarnings("unchecked")
     private static boolean useTiles(RawLayer layer, GetMapRequest getMapRequest) {
         Optional useTilesOptional =
                 Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_TILES_REP));
