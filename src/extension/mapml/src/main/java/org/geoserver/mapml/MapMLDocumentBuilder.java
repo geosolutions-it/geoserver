@@ -621,8 +621,11 @@ public class MapMLDocumentBuilder {
      */
     @SuppressWarnings("unchecked")
     private static boolean useFeatures(RawLayer layer, GetMapRequest getMapRequest) {
-        Optional useFeaturesOptional =
-                Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_FEATURES_REP));
+        Optional useFeaturesOptional = Optional.ofNullable(getMapRequest
+                .getFormatOptions()
+                .getOrDefault(
+                        MAPML_USE_FEATURES_REP.toUpperCase(),
+                        getMapRequest.getFormatOptions().get(MAPML_USE_FEATURES_REP.toLowerCase())));
         return (Boolean.parseBoolean((String) useFeaturesOptional.orElse(MAPML_USE_FEATURES_REP_DEFAULT.toString())))
                 && (PublishedType.VECTOR == layer.getPublishedInfo().getType());
     }
@@ -636,8 +639,11 @@ public class MapMLDocumentBuilder {
      */
     @SuppressWarnings("unchecked")
     private static boolean useTiles(RawLayer layer, GetMapRequest getMapRequest) {
-        Optional useTilesOptional =
-                Optional.ofNullable(getMapRequest.getFormatOptions().get(MAPML_USE_TILES_REP));
+        Optional useTilesOptional = Optional.ofNullable(getMapRequest
+                .getFormatOptions()
+                .getOrDefault(
+                        MAPML_USE_TILES_REP.toUpperCase(),
+                        getMapRequest.getFormatOptions().get(MAPML_USE_TILES_REP.toLowerCase())));
         return Boolean.TRUE.equals(
                 Boolean.parseBoolean((String) useTilesOptional.orElse(MAPML_USE_TILES_REP_DEFAULT.toString())));
     }
@@ -1766,6 +1772,8 @@ public class MapMLDocumentBuilder {
         String cqlFilter = "";
         Double latitude = 0.0;
         Double longitude = 0.0;
+        boolean useTiles = false;
+        boolean useFeatures = false;
         ReferencedEnvelope projectedBbox = this.projectedBox;
         ReferencedEnvelope geographicBox = new ReferencedEnvelope(DefaultGeographicCRS.WGS84);
         List<String> headerContent = getPreviewTemplates(MAPML_PREVIEW_HEAD_FTL, getFeatureTypes());
@@ -1795,6 +1803,8 @@ public class MapMLDocumentBuilder {
             } catch (TransformException | FactoryException e) {
                 throw new ServiceException("Unable to transform bbox to WGS84", e);
             }
+            useTiles = mapMLLayerMetadata.isUseTiles();
+            useFeatures = mapMLLayerMetadata.isUseFeatures();
         }
         // remove trailing commas
         layerLabel = layerLabel.replaceAll(",$", "");
@@ -1810,7 +1820,16 @@ public class MapMLDocumentBuilder {
         }
         MapMLHTMLOutput htmlOutput = new MapMLHTMLOutput.HTMLOutputBuilder()
                 .setSourceUrL(buildGetMap(
-                        layer, projectedBbox, width, height, escapeHtml4(proj), styleName, format, cqlFilter))
+                        layer,
+                        projectedBbox,
+                        width,
+                        height,
+                        escapeHtml4(proj),
+                        styleName,
+                        format,
+                        cqlFilter,
+                        useTiles,
+                        useFeatures))
                 .setProjType(projType)
                 .setLatitude(latitude)
                 .setLongitude(longitude)
@@ -1903,7 +1922,9 @@ public class MapMLDocumentBuilder {
             String proj,
             String styleName,
             Optional<Object> format,
-            String cqlFilter) {
+            String cqlFilter,
+            boolean useTiles,
+            boolean useFeatures) {
         Map<String, String> kvp = new LinkedHashMap<>();
         kvp.put("LAYERS", escapeHtml4(layer));
         kvp.put("BBOX", toCommaDelimitedBbox(projectedBbox));
@@ -1916,7 +1937,9 @@ public class MapMLDocumentBuilder {
         }
         kvp.put("FORMAT", MAPML_MIME_TYPE);
         String formatOptions =
-                MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION + ":" + escapeHtml4((String) format.orElse(imageFormat));
+                MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION + ":" + escapeHtml4((String) format.orElse(imageFormat)) + ";"
+                        + MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + isMultiExtent + ";"
+                        + MAPML_USE_TILES_REP + ":" + useTiles + ";" + MAPML_USE_FEATURES_REP + ":" + useFeatures;
         kvp.put("format_options", formatOptions);
         kvp.put("SERVICE", "WMS");
         kvp.put("REQUEST", "GetMap");

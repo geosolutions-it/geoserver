@@ -26,8 +26,8 @@ import org.geotools.referencing.CRS;
 public class MapMLFormatLink extends CommonFormatLink {
 
     public static final String FORMAT_OPTIONS = "format_options";
-    public static final String FORMAT_OPTION_TRUE = "=true";
-    public static final String FORMAT_OPTION_FALSE = "=false";
+    public static final String FORMAT_OPTION_TRUE = ":true";
+    public static final String FORMAT_OPTION_FALSE = ":false";
     public static final String LAYERINFO_LAYERS = "layers";
     public static final String FORMAT_OPTION_DEFAULT = "false";
 
@@ -61,6 +61,10 @@ public class MapMLFormatLink extends CommonFormatLink {
                 metadata.get(MapMLConstants.MAPML_USE_FEATURES) != null
                         ? metadata.get(MapMLConstants.MAPML_USE_FEATURES).toString()
                         : FORMAT_OPTION_DEFAULT);
+        boolean useTiles = Boolean.parseBoolean(
+                metadata.get(MapMLConstants.MAPML_USE_TILES) != null
+                        ? metadata.get(MapMLConstants.MAPML_USE_TILES).toString()
+                        : FORMAT_OPTION_DEFAULT);
         // set the format
         params.put("format", MapMLConstants.MAPML_HTML_MIME_TYPE);
         // set the format_options
@@ -72,9 +76,15 @@ public class MapMLFormatLink extends CommonFormatLink {
         }
         formatOptions.append(";");
         if (useFeatures) {
-            formatOptions.append(MapMLConstants.MAPML_FEATURE_FO).append(FORMAT_OPTION_TRUE);
+            formatOptions.append(MapMLConstants.MAPML_USE_FEATURES_REP).append(FORMAT_OPTION_TRUE);
         } else {
-            formatOptions.append(MapMLConstants.MAPML_FEATURE_FO).append(FORMAT_OPTION_FALSE);
+            formatOptions.append(MapMLConstants.MAPML_USE_FEATURES_REP).append(FORMAT_OPTION_FALSE);
+        }
+        formatOptions.append(";");
+        if (useTiles) {
+            formatOptions.append(MapMLConstants.MAPML_USE_TILES_REP).append(FORMAT_OPTION_TRUE);
+        } else {
+            formatOptions.append(MapMLConstants.MAPML_USE_TILES_REP).append(FORMAT_OPTION_FALSE);
         }
         params.put(FORMAT_OPTIONS, formatOptions.toString());
         // check if we can use a native MapML CRS, otherwise fall back to WGS84 to
