@@ -6,6 +6,8 @@ package org.geoserver.mapml.web.demo;
 
 import static org.geoserver.mapml.MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES_REP;
+import static org.geoserver.mapml.MapMLConstants.MAPML_USE_TILES_REP;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -50,7 +52,9 @@ public class MapMLMapPreviewTest extends GeoServerWicketTestSupport {
                 "http://localhost/context/cgf/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=cgf%3ALines&amp;"
                         + "bbox=-97.4903565027649%2C-8.117456282619509E-4%2C-97.4871312635105%2C8.117456282619509E-4&amp;"
                         + "width=768&amp;height=384&amp;srs=MapML%3AWGS84&amp;styles=&amp;format=text%2Fhtml%3B%20subtype%3Dmapml&amp;"
-                        + "format_options=mapmlmultiextent%3Afalse%3Bmapmlusefeatures%3Afalse%3Bmapmltiles%3Afalse");
+                        + "format_options="
+                        + MAPML_MULTILAYER_AS_MULTIEXTENT + "%3Afalse%3B" + MAPML_USE_FEATURES_REP + "%3Afalse%3B"
+                        + MAPML_USE_TILES_REP + "%3Afalse");
     }
 
     @Test
@@ -63,7 +67,9 @@ public class MapMLMapPreviewTest extends GeoServerWicketTestSupport {
                 "http://localhost/context/cgf/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=cgf%3ALines&amp;"
                         + "bbox=-97.4903565027649%2C-8.117456282619509E-4%2C-97.4871312635105%2C8.117456282619509E-4&amp;"
                         + "width=768&amp;height=384&amp;srs=MapML%3AWGS84&amp;styles=&amp;format=text%2Fhtml%3B%20subtype%3Dmapml&amp;"
-                        + "format_options=mapmlmultiextent%3Afalse%3Bmapmlusefeatures%3Atrue%3Bmapmltiles%3Afalse");
+                        + "format_options="
+                        + MAPML_MULTILAYER_AS_MULTIEXTENT + "%3Afalse%3B" + MAPML_USE_FEATURES_REP + "%3Atrue%3B"
+                        + MAPML_USE_TILES_REP + "%3Afalse");
     }
 
     @Test
@@ -75,7 +81,9 @@ public class MapMLMapPreviewTest extends GeoServerWicketTestSupport {
                 "http://localhost/context/cgf/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=cgf%3ALines&amp;"
                         + "bbox=-97.4903565027649%2C-8.117456282619509E-4%2C-97.4871312635105%2C8.117456282619509E-4&amp;"
                         + "width=768&amp;height=384&amp;srs=MapML%3AWGS84&amp;styles=&amp;format=text%2Fhtml%3B%20subtype%3Dmapml&amp;"
-                        + "format_options=mapmlmultiextent%3Atrue%3Bmapmlusefeatures%3Afalse%3Bmapmltiles%3Afalse");
+                        + "format_options="
+                        + MAPML_MULTILAYER_AS_MULTIEXTENT + "%3Atrue%3B" + MAPML_USE_FEATURES_REP + "%3Afalse%3B"
+                        + MAPML_USE_TILES_REP + "%3Afalse");
     }
 
     private static void assertLink(String link) {

@@ -30,13 +30,13 @@ public final class MapMLConstants {
     public static final MediaType MAPML_MEDIA_TYPE = new MediaType("text", "mapml", StandardCharsets.UTF_8);
 
     /** Multilayer represented as multi-extent */
-    public static final String MAPML_MULTILAYER_AS_MULTIEXTENT = "mapmlmultiextent";
+    public static final String MAPML_MULTILAYER_AS_MULTIEXTENT = "mapmlusemultiextents";
 
     public static final String MAPML_USE_FEATURES_REP = "mapmlusefeatures";
 
     public static final Boolean MAPML_USE_FEATURES_REP_DEFAULT = Boolean.FALSE;
 
-    public static final String MAPML_USE_TILES_REP = "mapmltiles";
+    public static final String MAPML_USE_TILES_REP = "mapmlusetiles";
 
     public static final Boolean MAPML_USE_TILES_REP_DEFAULT = Boolean.FALSE;
 

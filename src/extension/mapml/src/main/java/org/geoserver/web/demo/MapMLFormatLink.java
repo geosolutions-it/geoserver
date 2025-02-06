@@ -9,8 +9,10 @@ import static org.geotools.referencing.crs.DefaultGeographicCRS.WGS84;
 import java.util.Map;
 import org.apache.wicket.markup.html.link.ExternalLink;
 import org.apache.wicket.model.StringResourceModel;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
+import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.mapml.MapMLConstants;
 import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
@@ -52,11 +54,15 @@ public class MapMLFormatLink extends CommonFormatLink {
                                 .toString()
                         : FORMAT_OPTION_DEFAULT);
         WMS wms = WMS.get();
-        LayerInfo layerInfo = wms.getLayerByName(params.get(LAYERINFO_LAYERS));
-        MetadataMap metadata =
-                (layerInfo.getMetadata() != null && !layerInfo.getMetadata().isEmpty())
-                        ? layerInfo.getMetadata()
-                        : layerInfo.getResource().getMetadata();
+        PublishedInfo layerInfo;
+        MetadataMap metadata;
+        layerInfo = wms.getLayerByName(params.get(LAYERINFO_LAYERS));
+        if (layerInfo == null) {
+            layerInfo = wms.getLayerGroupByName(params.get(LAYERINFO_LAYERS));
+            metadata = layerInfo.getMetadata();
+        } else {
+            metadata = ((LayerInfo) layerInfo).getResource().getMetadata();
+        }
         boolean useFeatures = Boolean.parseBoolean(
                 metadata.get(MapMLConstants.MAPML_USE_FEATURES) != null
                         ? metadata.get(MapMLConstants.MAPML_USE_FEATURES).toString()
