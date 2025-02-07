@@ -5,25 +5,14 @@
  */
 package org.geoserver.wms.decoration;
 
-import static org.geoserver.template.TemplateUtils.FM_VERSION;
+import static freemarker.ext.beans.BeansWrapper.EXPOSE_NOTHING;
 import static org.geoserver.wms.decoration.MapDecorationLayout.FF;
 import static org.geoserver.wms.decoration.MapDecorationLayout.getOption;
 
 import freemarker.ext.beans.BeansWrapper;
 import freemarker.ext.beans.StringModel;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
-import freemarker.template.TemplateHashModel;
-import freemarker.template.TemplateModel;
-import freemarker.template.TemplateModelException;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.Rectangle;
-import java.awt.Shape;
-import java.awt.Stroke;
+import freemarker.template.*;
+import java.awt.*;
 import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
@@ -55,6 +44,9 @@ public class TextDecoration implements MapDecoration {
             org.geotools.util.logging.Logging.getLogger("org.geoserver.wms.responses");
 
     private static Font DEFAULT_FONT = new java.awt.Font("Serif", java.awt.Font.PLAIN, 12);
+
+    private static final Configuration templateConfig =
+            TemplateUtils.getSafeConfiguration(null, null, EXPOSE_NOTHING);
 
     String fontFamily;
 
@@ -163,10 +155,8 @@ public class TextDecoration implements MapDecoration {
     private String evaluateAsTemplate(WMSMapContent content, String message)
             throws IOException, TemplateException {
         final Map env = content.getRequest().getEnv();
-        Template t =
-                new Template(
-                        "name", new StringReader(message), TemplateUtils.getSafeConfiguration());
-        final BeansWrapper bw = new BeansWrapper(FM_VERSION);
+        Template t = new Template("name", new StringReader(message), templateConfig);
+        final BeansWrapper bw = (BeansWrapper) templateConfig.getObjectWrapper();
         return FreeMarkerTemplateUtils.processTemplateIntoString(
                 t,
                 new TemplateHashModel() {

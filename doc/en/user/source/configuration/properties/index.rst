@@ -137,6 +137,96 @@ GeoServer Property Reference
      - x
      - x
      - x
+   * - geoserver.xContentType.shouldSetPolicy
+       
+       :doc:`/production/config`, default true
+     - x
+     - x
+     - x
+   * - geoserver.xXssProtection.shouldSetPolicy
+       
+       :doc:`/production/config`, default false
+     - x
+     - x
+     - x
+   * - geoserver.xXssProtection.policy
+       
+       :doc:`/production/config`, default 0
+     - x
+     - x
+     - x
+   * - geoserver.hsts.shouldSetPolicy
+       
+       :doc:`/production/config`, default false
+     - x
+     - x
+     - x
+   * - geoserver.hsts.policy
+       
+       :doc:`/production/config`, default max-age=31536000 ; includeSubDomains
+     - x
+     - x
+     - x
+   * - geoserver.csp.remoteResources
+       
+       :doc:`/security/csp`
+     - x
+     - x
+     - x
+   * - geoserver.csp.frameAncestors
+       
+       :doc:`/security/csp`
+     - x
+     - x
+     - x
+   * - geoserver.csp.fallbackDirectives
+       
+       :doc:`/security/csp`, default base-uri 'none'; form-action 'none'; default-src 'none'; frame-ancestors 'none';
+     - x
+     - x
+     - x
+   * - GEOSERVER_DISABLE_STATIC_WEB_FILES
+       
+       :ref:`production_config_static_files`, default false
+     - x
+     - x
+     - x
+   * - GEOSERVER_STATIC_WEB_FILES_SCRIPT
+       
+       :doc:`/tutorials/staticfiles`, default UNSAFE
+     - x
+     - x
+     - x
+   * - GEOSERVER_FEATUREINFO_HTML_SCRIPT
+       
+       :ref:`security_csp_featureinfo_html_script`, default SELF
+     - x
+     - x
+     - x
+   * - GEOSERVER_FORCE_FREEMARKER_ESCAPING
+
+       :doc:`/production/config`, default true
+     - x
+     - x
+     - x
+   * - GEOSERVER_FREEMARKER_ALLOW_LIST
+
+       :doc:`/tutorials/GetFeatureInfo/html`
+     - x
+     - x
+     - x
+   * - GEOSERVER_FREEMARKER_BLOCK_LIST
+
+       :doc:`/tutorials/GetFeatureInfo/html`
+     - x
+     - x
+     - x
+   * - GEOSERVER_FREEMARKER_API_EXPOSED
+
+       :doc:`/tutorials/GetFeatureInfo/html`, default false
+     - x
+     - x
+     - x
    * - ows10.exception.xml.responsetype
        
        :doc:`/production/config`

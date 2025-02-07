@@ -77,9 +77,8 @@ public class FeatureWrapperTest {
                             gf.createPoint(new Coordinate(3, 3))
                         },
                         "fid.3"));
-        cfg = TemplateUtils.getSafeConfiguration();
+        cfg = TemplateUtils.getSafeConfiguration(createWrapper(), null, null);
         cfg.setClassForTemplateLoading(getClass(), "");
-        cfg.setObjectWrapper(createWrapper());
     }
 
     public FeatureWrapper createWrapper() {
