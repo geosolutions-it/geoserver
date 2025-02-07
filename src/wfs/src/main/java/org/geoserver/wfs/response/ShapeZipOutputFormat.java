@@ -5,6 +5,8 @@
  */
 package org.geoserver.wfs.response;
 
+import static freemarker.ext.beans.BeansWrapper.EXPOSE_NOTHING;
+
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import java.io.BufferedWriter;
@@ -89,7 +91,8 @@ public class ShapeZipOutputFormat extends WFSGetFeatureOutputFormat
     public static final String GS_SHAPEFILE_CHARSET = "GS-SHAPEFILE-CHARSET";
     public static final String SHAPE_ZIP_DEFAULT_PRJ_IS_ESRI = "SHAPE-ZIP_DEFAULT_PRJ_IS_ESRI";
 
-    private static final Configuration templateConfig = TemplateUtils.getSafeConfiguration();
+    private static final Configuration templateConfig =
+            TemplateUtils.getSafeConfiguration(null, null, EXPOSE_NOTHING);
 
     private ApplicationContext applicationContext;
     private Catalog catalog;

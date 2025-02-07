@@ -4,14 +4,15 @@
  */
 package org.geoserver.rest;
 
-import static org.geoserver.template.TemplateUtils.FM_VERSION;
+import static org.geoserver.template.GeoServerMemberAccessPolicy.FULL_ACCESS;
 
-import freemarker.template.DefaultObjectWrapper;
+import freemarker.ext.beans.BeansWrapper;
 import freemarker.template.SimpleHash;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.geoserver.rest.wrapper.RestWrapper;
+import org.geoserver.template.TemplateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,8 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
         })
 public class IndexController extends RestBaseController {
 
+    private final BeansWrapper wrapper = TemplateUtils.getSafeWrapper(null, FULL_ACCESS, null);
+
     @Autowired private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
     @GetMapping(
@@ -45,7 +48,7 @@ public class IndexController extends RestBaseController {
             produces = {MediaType.TEXT_HTML_VALUE})
     public RestWrapper get() {
 
-        SimpleHash model = new SimpleHash(new DefaultObjectWrapper(FM_VERSION));
+        SimpleHash model = new SimpleHash(this.wrapper);
         model.put("links", getLinks());
         model.put("page", RequestInfo.get());
 
