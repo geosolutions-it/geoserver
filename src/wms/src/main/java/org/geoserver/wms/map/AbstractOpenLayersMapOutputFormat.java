@@ -5,9 +5,9 @@
  */
 package org.geoserver.wms.map;
 
-import static org.geoserver.template.TemplateUtils.FM_VERSION;
+import static freemarker.ext.beans.BeansWrapper.EXPOSE_PROPERTIES_ONLY;
 
-import freemarker.ext.beans.BeansWrapper;
+import freemarker.core.HTMLOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -94,14 +94,12 @@ public abstract class AbstractOpenLayersMapOutputFormat implements GetMapOutputF
     }
 
     /** static freemaker configuration */
-    private static Configuration cfg;
+    static final Configuration templateConfig =
+            TemplateUtils.getSafeConfiguration(null, null, EXPOSE_PROPERTIES_ONLY);
 
     static {
-        cfg = TemplateUtils.getSafeConfiguration();
-        cfg.setClassForTemplateLoading(AbstractOpenLayersMapOutputFormat.class, "");
-        BeansWrapper bw = new BeansWrapper(FM_VERSION);
-        bw.setExposureLevel(BeansWrapper.EXPOSE_PROPERTIES_ONLY);
-        cfg.setObjectWrapper(bw);
+        templateConfig.setClassForTemplateLoading(AbstractOpenLayersMapOutputFormat.class, "");
+        templateConfig.setOutputFormat(HTMLOutputFormat.INSTANCE);
     }
 
     /** wms configuration */
@@ -116,7 +114,7 @@ public abstract class AbstractOpenLayersMapOutputFormat implements GetMapOutputF
         try {
             // create the template
             String templateName = getTemplateName(mapContent);
-            Template template = cfg.getTemplate(templateName);
+            Template template = templateConfig.getTemplate(templateName);
             HashMap<String, Object> map = new HashMap<>();
             map.put("context", mapContent);
             boolean hasOnlyCoverages = hasOnlyCoverages(mapContent);

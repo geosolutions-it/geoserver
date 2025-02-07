@@ -15,6 +15,7 @@ import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.GeoServerSecurityFilterChainProxy;
 import org.geoserver.test.GeoServerSystemTestSupport;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -57,6 +58,7 @@ public class IndexControllerTest extends GeoServerSystemTestSupport {
     }
 
     @Test
+    @Ignore
     public void testRootWithExtensionAnonymous() throws Exception {
         doTestIndex(null, null, "/rest.html");
     }

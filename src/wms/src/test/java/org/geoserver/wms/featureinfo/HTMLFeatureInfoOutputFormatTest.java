@@ -6,9 +6,11 @@
 
 package org.geoserver.wms.featureinfo;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -40,6 +42,7 @@ import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.Request;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.template.GeoServerMemberAccessPolicy;
 import org.geoserver.template.GeoServerTemplateLoader;
 import org.geoserver.wms.GetFeatureInfoRequest;
 import org.geoserver.wms.MapLayerInfo;
@@ -47,7 +50,6 @@ import org.geoserver.wms.WMSTestSupport;
 import org.geotools.data.DataUtilities;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -227,8 +229,7 @@ public class HTMLFeatureInfoOutputFormatTest extends WMSTestSupport {
                         });
         assertThat(
                 e.getMessage(),
-                CoreMatchers.containsString(
-                        "Error occurred processing content template content.ftl"));
+                containsString("Error occurred processing content template content.ftl"));
     }
 
     /**
@@ -381,7 +382,7 @@ public class HTMLFeatureInfoOutputFormatTest extends WMSTestSupport {
     }
 
     /** Verifies calls to static methods for are enabled for specified classes. */
-    @Test(expected = IOException.class)
+    @Test
     public void testSpecifiedStaticMethodsInTemplateAvailable() throws IOException {
         activateStaticsAccessRules(java.util.Locale.class.getName() + "," + Locale.class.getName());
         currentTemplate = "test_custom_static_content_specified.ftl";
@@ -411,5 +412,56 @@ public class HTMLFeatureInfoOutputFormatTest extends WMSTestSupport {
             System.setProperty(FreeMarkerTemplateManager.KEY_STATIC_MEMBER_ACCESS, aPattern);
         }
         FreeMarkerTemplateManager.initStaticsAccessRule();
+    }
+
+    @Test
+    public void testBlockSensitive1() throws IOException {
+        doTestSensitive("test_block_sensitive_1.ftl", true);
+    }
+
+    @Test
+    public void testBlockSensitive2() throws IOException {
+        doTestSensitive("test_block_sensitive_2.ftl", true);
+    }
+
+    @Test
+    public void testBlockSensitive3() throws IOException {
+        doTestSensitive("test_block_sensitive_3.ftl", true);
+    }
+
+    @Test
+    public void testCustomBlockList() throws IOException {
+        // access to the namespace is allowed by default
+        doTestSensitive("test_block_custom.ftl", false);
+        // set the property to block access to the namespace
+        System.setProperty(
+                GeoServerMemberAccessPolicy.FREEMARKER_BLOCK_LIST, NamespaceInfo.class.getName());
+        doTestSensitive("test_block_custom.ftl", true);
+    }
+
+    @Test
+    public void testBlockApi() throws IOException {
+        // access to non-getter methods is blocked by default
+        doTestSensitive("test_block_api.ftl", true);
+        // set the property to allow access to non-getter methods
+        System.setProperty(GeoServerMemberAccessPolicy.FREEMARKER_API_EXPOSED, "true");
+        doTestSensitive("test_block_api.ftl", false);
+    }
+
+    private void doTestSensitive(String template, boolean exception) throws IOException {
+        FreeMarkerTemplateManager.clearClassIntrospectionCache();
+        currentTemplate = template;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        if (exception) {
+            IOException e =
+                    assertThrows(
+                            IOException.class,
+                            () -> outputFormat.write(fcType, getFeatureInfoRequest, out));
+            assertThat(
+                    e.getMessage(),
+                    containsString("Error occurred processing content template content.ftl"));
+        } else {
+            outputFormat.write(fcType, getFeatureInfoRequest, out);
+        }
     }
 }

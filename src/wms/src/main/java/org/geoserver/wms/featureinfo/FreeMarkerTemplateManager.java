@@ -4,6 +4,7 @@
  */
 package org.geoserver.wms.featureinfo;
 
+import static org.geoserver.template.GeoServerMemberAccessPolicy.DEFAULT_ACCESS;
 import static org.geoserver.wms.featureinfo.FreemarkerStaticsAccessRule.fromPattern;
 
 import freemarker.cache.NullCacheStorage;
@@ -20,8 +21,10 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.opengis.wfs.FeatureCollectionType;
-import org.apache.log4j.Logger;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.platform.GeoServerExtensions;
@@ -29,12 +32,14 @@ import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.template.DirectTemplateFeatureCollectionFactory;
 import org.geoserver.template.FeatureWrapper;
+import org.geoserver.template.GeoServerMemberAccessPolicy;
 import org.geoserver.template.GeoServerTemplateLoader;
 import org.geoserver.template.TemplateUtils;
 import org.geoserver.wms.GetFeatureInfoRequest;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.featureinfo.FreemarkerStaticsAccessRule.RuleItem;
 import org.geotools.feature.FeatureCollection;
+import org.geotools.util.logging.Logging;
 import org.opengis.feature.simple.SimpleFeatureType;
 
 /**
@@ -61,29 +66,29 @@ public abstract class FreeMarkerTemplateManager {
         }
     }
 
-    private static Configuration templateConfig;
+    private static final Configuration templateConfig;
 
     private static DirectTemplateFeatureCollectionFactory tfcFactory =
             new DirectTemplateFeatureCollectionFactory();
 
-    private static Logger logger = Logger.getLogger(FreeMarkerTemplateManager.class);
+    private static Logger logger = Logging.getLogger(FreeMarkerTemplateManager.class);
     private static FreemarkerStaticsAccessRule staticsAccessRule;
 
     /** Initializes the {@link #staticsAccessRule}. */
     static void initStaticsAccessRule() {
         String tmpAccessPattern = GeoServerExtensions.getProperty(KEY_STATIC_MEMBER_ACCESS);
         FreemarkerStaticsAccessRule tmpRule = fromPattern(tmpAccessPattern);
-        logger.debug("Initializing with " + tmpRule);
+        logger.fine("Initializing with " + tmpRule);
         for (RuleItem tmpItem : tmpRule.getAllowedItems()) {
             if (tmpItem.isNumberedAlias()) {
-                logger.warn(
+                logger.warning(
                         "Granting access to static members of "
                                 + tmpItem.getClassName()
                                 + " using the variable name "
                                 + tmpItem.getAlias()
                                 + " to keep names unique.");
-            } else if (logger.isDebugEnabled()) {
-                logger.debug(
+            } else if (logger.isLoggable(Level.WARNING)) {
+                logger.warning(
                         "Granting access to static members of "
                                 + tmpItem.getClassName()
                                 + " using the variable name "
@@ -98,8 +103,7 @@ public abstract class FreeMarkerTemplateManager {
         // initialize the template engine, this is static to maintain a cache
         // over instantiations of kml writer
         initStaticsAccessRule();
-        templateConfig = TemplateUtils.getSafeConfiguration();
-        templateConfig.setObjectWrapper(
+        FeatureWrapper wrapper =
                 new FeatureWrapper(tfcFactory) {
 
                     @Override
@@ -123,9 +127,10 @@ public abstract class FreeMarkerTemplateManager {
                             throws TemplateModelException {
                         if (staticsAccessRule.isUnrestricted()) {
                             aMap.put("statics", getStaticModels());
-                        } else if (staticsAccessRule.getAllowedItems().isEmpty()) {
+                        } else {
                             for (RuleItem tmpItem : staticsAccessRule.getAllowedItems()) {
-                                aMap.put(tmpItem.getAlias(), tmpItem.getClassName());
+                                aMap.put(
+                                        tmpItem.getAlias(), getStaticModel(tmpItem.getClassName()));
                             }
                         }
                     }
@@ -134,15 +139,26 @@ public abstract class FreeMarkerTemplateManager {
                             throws TemplateModelException {
                         return (TemplateHashModel) getStaticModels().get(path);
                     }
-                });
-        // as we want to look up different templates for each resource, the templates cannot
+                };
+        Predicate<Class<?>> staticAccess =
+                clazz -> {
+                    String name = clazz.getName();
+                    return name.equals("java.lang.Math")
+                            || name.equals("org.geoserver.wms.featureinfo.GeoJSONTemplateManager")
+                            || staticsAccessRule.isUnrestricted()
+                            || staticsAccessRule
+                                    .getAllowedItems()
+                                    .stream()
+                                    .anyMatch(r -> r.getClassName().equals(name));
+                };
+        GeoServerMemberAccessPolicy policy = DEFAULT_ACCESS.withStaticAccess(staticAccess);
+        templateConfig = TemplateUtils.getSafeConfiguration(wrapper, policy, null);
+        // As we want to look up different templates for each resource, the templates cannot
         // be cached by name. Freemarker used to clear the cache when setting the loader,
         // but does not do that anymore since
         // https://github.com/apache/freemarker/commit/fc9eba51492c3cd4da3547ba15b95c7db9b3d237
         // because we use the same loader, we just re-configure it to point to a different resource
         templateConfig.setCacheStorage(new NullCacheStorage());
-
-        templateConfig.setDefaultEncoding("UTF-8");
     }
 
     private GeoServerResourceLoader resourceLoader;
@@ -290,5 +306,13 @@ public abstract class FreeMarkerTemplateManager {
 
     public void setTemplateLoader(GeoServerTemplateLoader templateLoader) {
         this.templateLoader = templateLoader;
+    }
+
+    /**
+     * Resets FreeMarker's class introspection cache which is the cache of what methods and fields
+     * are exposed from each class. This is intended for unit tests only.
+     */
+    public static void clearClassIntrospectionCache() {
+        ((FeatureWrapper) templateConfig.getObjectWrapper()).clearClassIntrospectionCache();
     }
 }
