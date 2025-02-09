@@ -176,6 +176,8 @@ public class MapMLDocumentBuilder {
     private Mapml mapml;
 
     private Boolean isMultiExtent = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT_DEFAULT;
+    private Boolean useFeatures = MapMLConstants.MAPML_USE_FEATURES_REP_DEFAULT;
+    private Boolean useTiles = MapMLConstants.MAPML_USE_TILES_REP_DEFAULT;
     private MapMLMapTemplate mapMLMapTemplate = new MapMLMapTemplate();
     private boolean forceYX = false;
 
@@ -348,6 +350,8 @@ public class MapMLDocumentBuilder {
             baseUrl = ResponseUtils.baseURL(request);
             baseUrlPattern = baseUrl;
             forceYX = isYX();
+            useFeatures = mapMLLayerMetadata.isUseFeatures();
+            useTiles = mapMLLayerMetadata.isUseTiles();
         }
     }
 
@@ -403,7 +407,6 @@ public class MapMLDocumentBuilder {
         MapMLLayerMetadata mapMLLayerMetadata = new MapMLLayerMetadata();
         mapMLLayerMetadata.setLayerMeta(new MetadataMap());
         mapMLLayerMetadata.setUseTiles(false);
-        boolean useFeatures = false;
         if (layers.size() == 1) {
             useFeatures = useFeatures(layers.get(0), mapContent.getRequest());
         }
@@ -587,9 +590,9 @@ public class MapMLDocumentBuilder {
         cqlFilter = cql != null ? cql : "";
         tileLayerExists = gwc.hasTileLayer(isLayerGroup ? layerGroupInfo : layerInfo)
                 && gwc.getTileLayer(isLayerGroup ? layerGroupInfo : layerInfo).getGridSubset(projType.value()) != null;
-        boolean useTiles = useTiles(layer, mapContent.getRequest());
+        useTiles = useTiles(layer, mapContent.getRequest());
         boolean useRemote = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_REMOTE, Boolean.class));
-        boolean useFeatures = useFeatures(layer, mapContent.getRequest());
+        useFeatures = useFeatures(layer, mapContent.getRequest());
 
         return new MapMLLayerMetadata(
                 layerInfo,
@@ -858,6 +861,11 @@ public class MapMLDocumentBuilder {
                 projParams.put("width", Integer.toString(width));
                 projParams.put("height", Integer.toString(height));
                 projParams.put("bbox", toCommaDelimitedBbox(reprojectedBounds));
+                String formatOptions = MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION + ":"
+                        + escapeHtml4((String) format.orElse(imageFormat)) + ";"
+                        + MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + isMultiExtent + ";"
+                        + MAPML_USE_TILES_REP + ":" + useTiles + ";" + MAPML_USE_FEATURES_REP + ":" + useFeatures;
+                projParams.put("format_options", formatOptions);
                 String projURL = ResponseUtils.buildURL(baseUrl, "wms", projParams, URLMangler.URLType.SERVICE);
                 projectionLink.setHref(projURL);
                 links.add(projectionLink);
@@ -2753,5 +2761,39 @@ public class MapMLDocumentBuilder {
             }
         }
         return false;
+    }
+
+    public static double calculateBestScaleDenominator(
+            double minx,
+            double miny,
+            double maxx,
+            double maxy,
+            List<Double> scaleDenominators,
+            double imageWidth,
+            double metersPerUnit,
+            double pixelSize) {
+
+        // Calculate bounding box width
+        double boundingBoxWidth = maxx - minx;
+
+        // Calculate resolution
+        double resolution = boundingBoxWidth / imageWidth;
+
+        // Convert resolution to scale denominator
+        double scaleDenominator = resolution / pixelSize;
+
+        // Find the closest matching scale denominator
+        double bestMatch = scaleDenominators.get(0);
+        double minDifference = Math.abs(scaleDenominator - bestMatch);
+
+        for (double sd : scaleDenominators) {
+            double difference = Math.abs(scaleDenominator - sd);
+            if (difference < minDifference) {
+                minDifference = difference;
+                bestMatch = sd;
+            }
+        }
+
+        return bestMatch;
     }
 }
