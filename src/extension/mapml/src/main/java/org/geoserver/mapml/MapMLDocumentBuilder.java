@@ -732,7 +732,11 @@ public class MapMLDocumentBuilder {
         Base base = new Base();
         Map<String, String> wmsParams = new HashMap<>();
         wmsParams.put("format", MapMLConstants.MAPML_MIME_TYPE);
-        wmsParams.put("format_options", MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION + ":" + imageFormat);
+        String formatOptions =
+                MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION + ":" + escapeHtml4((String) format.orElse(imageFormat)) + ";"
+                        + MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + isMultiExtent + ";"
+                        + MAPML_USE_TILES_REP + ":" + useTiles + ";" + MAPML_USE_FEATURES_REP + ":" + useFeatures;
+        wmsParams.put("format_options", formatOptions);
         wmsParams.put("layers", layersCommaDelimited);
         wmsParams.put("crs", projType.getCRSCode());
         wmsParams.put("version", "1.3.0");
@@ -795,6 +799,7 @@ public class MapMLDocumentBuilder {
                     styleParams.put("width", Integer.toString(width));
                     styleParams.put("height", Integer.toString(height));
                     styleParams.put("bbox", bbox);
+
                     String url = ResponseUtils.buildURL(baseUrl, "wms", styleParams, URLMangler.URLType.SERVICE);
                     styleLink.setHref(url);
                     links.add(styleLink);
@@ -861,11 +866,6 @@ public class MapMLDocumentBuilder {
                 projParams.put("width", Integer.toString(width));
                 projParams.put("height", Integer.toString(height));
                 projParams.put("bbox", toCommaDelimitedBbox(reprojectedBounds));
-                String formatOptions = MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION + ":"
-                        + escapeHtml4((String) format.orElse(imageFormat)) + ";"
-                        + MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + isMultiExtent + ";"
-                        + MAPML_USE_TILES_REP + ":" + useTiles + ";" + MAPML_USE_FEATURES_REP + ":" + useFeatures;
-                projParams.put("format_options", formatOptions);
                 String projURL = ResponseUtils.buildURL(baseUrl, "wms", projParams, URLMangler.URLType.SERVICE);
                 projectionLink.setHref(projURL);
                 links.add(projectionLink);
