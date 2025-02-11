@@ -85,12 +85,6 @@
     <bean id="mapMLHTMLProducer" class="org.geoserver.mapml.MapMLHTMLOutputFormat">
         <constructor-arg index="0" ref="wms"/>
     </bean>
-    <bean id="mapMLAdminPanel" class="org.geoserver.web.services.AdminPagePanelInfo">
-        <property name="id" value="mapMLAdminPanel"/>
-        <property name="titleKey" value="mapml"/>
-        <property name="componentClass" value="org.geoserver.mapml.web.MapMLAdminPanel"/>
-        <property name="serviceClass" value="org.geoserver.wms.WMSInfo"/>
-    </bean>
 
     <bean id="mapMLTCRSSettingsPage" class="org.geoserver.web.MenuPageInfo">
         <property name="id" value="mapMLTCRSSettings"/>

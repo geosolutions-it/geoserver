@@ -15,10 +15,8 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.mapml.MapMLConstants;
 import org.geoserver.mapml.tcrs.TiledCRSConstants;
 import org.geoserver.mapml.tcrs.TiledCRSParams;
-import org.geoserver.web.GeoServerApplication;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.WMS;
-import org.geoserver.wms.WMSInfo;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -44,14 +42,6 @@ public class MapMLFormatLink extends CommonFormatLink {
 
     /** Customize the request to use the MapML format and a native MapML CRS if possible */
     void customizeRequest(GetMapRequest request, Map<String, String> params) {
-        // Get the WMSInfo and check if the multiExtent and useFeatures options are set in the configuration
-        WMSInfo wmsInfo = GeoServerApplication.get().getGeoServer().getService(WMSInfo.class);
-        boolean multiExtent = Boolean.parseBoolean(
-                wmsInfo.getMetadata().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT) != null
-                        ? wmsInfo.getMetadata()
-                                .get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT)
-                                .toString()
-                        : FORMAT_OPTION_DEFAULT);
         WMS wms = WMS.get();
         PublishedInfo layerInfo;
         MetadataMap metadata;
@@ -69,6 +59,10 @@ public class MapMLFormatLink extends CommonFormatLink {
         boolean useTiles = Boolean.parseBoolean(
                 metadata.get(MapMLConstants.MAPML_USE_TILES) != null
                         ? metadata.get(MapMLConstants.MAPML_USE_TILES).toString()
+                        : FORMAT_OPTION_DEFAULT);
+        boolean multiExtent = Boolean.parseBoolean(
+                metadata.get(MapMLConstants.MAPML_MULTIEXTENT) != null
+                        ? metadata.get(MapMLConstants.MAPML_MULTIEXTENT).toString()
                         : FORMAT_OPTION_DEFAULT);
         // set the format
         params.put("format", MapMLConstants.MAPML_HTML_MIME_TYPE);

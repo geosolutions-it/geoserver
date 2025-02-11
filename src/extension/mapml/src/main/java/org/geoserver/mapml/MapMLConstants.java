@@ -66,6 +66,9 @@ public final class MapMLConstants {
     /** MapML layer metadata use tiles */
     public static final String MAPML_USE_TILES = "mapml.useTiles";
 
+    /** MapML layer metadata use multiextent */
+    public static final String MAPML_MULTIEXTENT = "mapml.multiextent";
+
     /** MapML layer metadata remote client request */
     public static final String MAPML_USE_REMOTE = "mapml.useRemote";
 
