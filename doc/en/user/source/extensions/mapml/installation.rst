@@ -1,3 +1,5 @@
+.. _mapml_installation:
+
 Installation
 --------------------
 
