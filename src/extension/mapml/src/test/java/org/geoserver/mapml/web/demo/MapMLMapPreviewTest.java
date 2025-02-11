@@ -4,6 +4,7 @@
  */
 package org.geoserver.mapml.web.demo;
 
+import static org.geoserver.mapml.MapMLConstants.MAPML_MULTIEXTENT;
 import static org.geoserver.mapml.MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES;
 import static org.geoserver.mapml.MapMLConstants.MAPML_USE_FEATURES_REP;
@@ -74,9 +75,10 @@ public class MapMLMapPreviewTest extends GeoServerWicketTestSupport {
 
     @Test
     public void testURLFormatMulti() throws Exception {
-        ServiceInfo serviceInfo = getGeoServer().getService(WMSInfo.class);
-        serviceInfo.getMetadata().put(MAPML_MULTILAYER_AS_MULTIEXTENT, true);
-        getGeoServer().save(serviceInfo);
+        Catalog cat = getCatalog();
+        LayerInfo li = cat.getLayerByName(MockData.LINES.getLocalPart());
+        li.getResource().getMetadata().put(MAPML_MULTIEXTENT, true);
+        cat.save(li);
         assertLink(
                 "http://localhost/context/cgf/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=cgf%3ALines&amp;"
                         + "bbox=-97.4903565027649%2C-8.117456282619509E-4%2C-97.4871312635105%2C8.117456282619509E-4&amp;"

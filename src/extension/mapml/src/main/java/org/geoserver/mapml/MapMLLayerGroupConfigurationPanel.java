@@ -81,7 +81,7 @@ public class MapMLLayerGroupConfigurationPanel extends PublishedConfigurationPan
                                     .get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT)
                                     .toString()
                             : FORMAT_OPTION_DEFAULT);
-            LayerGroupInfo layerGroupInfo = (LayerGroupInfo) model.getObject();
+            LayerGroupInfo layerGroupInfo = model.getObject();
             layerGroupInfo.getMetadata().put(MAPML_MULTIEXTENT, multiExtent);
             GeoServerApplication.get().getGeoServer().getCatalog().save(layerGroupInfo);
             multiextentModel.setObject(multiExtent);
