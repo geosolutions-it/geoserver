@@ -269,7 +269,7 @@ In order to properly pass the proper multi-extent, tiling, and feature parameter
 
 The Default Value entry should look like this::
 
-    mapmlusemultiextents:true; mapmlusefeatures:false;mapmlusetiles:true
+    mapmlusemultiextents:true;mapmlusefeatures:false;mapmlusetiles:true
 
 Here is an example regular expression that matches the MapML FORMAT_OPTIONS parameters in any order::
 
