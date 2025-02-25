@@ -33,6 +33,8 @@ import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.resource.Resource;
 import org.geoserver.smartdataloader.data.store.ExclusionsDomainModelVisitor;
+import org.geoserver.smartdataloader.data.store.ExpressionOverridesDomainModelVisitor;
+import org.geoserver.smartdataloader.data.store.SmartOverrideRulesParser;
 import org.geoserver.smartdataloader.domain.DomainModelBuilder;
 import org.geoserver.smartdataloader.domain.DomainModelConfig;
 import org.geoserver.smartdataloader.domain.entities.DomainModel;
@@ -89,11 +91,9 @@ public class SmartDataLoaderDataAccessFactory implements DataAccessFactory {
     public static final Param DATASTORE_METADATA =
             new Param("datastore", String.class, "JDBC related DataStore", true);
     public static final Param DOMAIN_MODEL_EXCLUSIONS =
-            new Param(
-                    "excluded objects",
-                    String.class,
-                    "Excluded comma separated domainmodel object list",
-                    false);
+           new Param("excluded objects", String.class, "Excluded comma separated domainmodel object list", false);
+    public static final Param SMART_OVERRIDE_PARAM =
+            new Param("smart-override", String.class, "Smart override rules", false);
 
     @Override
     public String getDisplayName() {
@@ -145,6 +145,7 @@ public class SmartDataLoaderDataAccessFactory implements DataAccessFactory {
         parameters.put(DATASTORE_METADATA.key, DATASTORE_METADATA);
         parameters.put(ROOT_ENTITY.key, ROOT_ENTITY);
         parameters.put(DOMAIN_MODEL_EXCLUSIONS.key, DOMAIN_MODEL_EXCLUSIONS);
+        parameters.put(SMART_OVERRIDE_PARAM.key, SMART_OVERRIDE_PARAM);
     }
 
     private String getFilenamePrefix(Map<String, Serializable> params) throws IOException {
@@ -267,20 +268,33 @@ public class SmartDataLoaderDataAccessFactory implements DataAccessFactory {
             throw new RuntimeException("Cannot connect to DB with defined parameters.");
         }
         DomainModelConfig dmc = new DomainModelConfig();
+        // add the override expressions from connection parameters map
+        dmc.setOverrideExpressions(getOverrideExpressionsMap(params));
         dmc.setRootEntityName(rootEntity);
         DomainModelBuilder dmb = new DomainModelBuilder(dsm, dmc);
         DomainModel dm = dmb.buildDomainModel();
         // apply exclusions to original model
         DomainModel newDomainModel = ExclusionsDomainModelVisitor.buildDomainModel(dm, exclusions);
+        // apply the expressions override to current model
+        ExpressionOverridesDomainModelVisitor expressionOverridesDomainModelVisitor =
+                new ExpressionOverridesDomainModelVisitor(getOverrideExpressionsMap(params));
+        newDomainModel.accept(expressionOverridesDomainModelVisitor);
         // release datastore before returning model
         jdbcDataStore.dispose();
         return newDomainModel;
     }
 
-    /**
-     * Helper method that allows to save an xml document representing a mapping in smart-appschema
-     * folder.
-     */
+   private Map<String, String> getOverrideExpressionsMap(Map<String, Serializable> params) {
+        try {
+            String encodedOVerrideRules = lookup(SMART_OVERRIDE_PARAM, params, String.class);
+            Map<String, String> rulesMap = SmartOverrideRulesParser.INSTANCE.parse(encodedOVerrideRules);
+            return rulesMap;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /** Helper method that allows to save an xml document representing a mapping in smart-appschema folder. */
     private File saveMappingDocument(String pathname, String filename, Document mapping) {
         // create smart-appschema folder in workspace folder if it does not exists
         File directory = new File(pathname);
