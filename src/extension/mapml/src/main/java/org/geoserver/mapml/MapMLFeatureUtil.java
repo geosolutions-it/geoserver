@@ -213,13 +213,6 @@ public class MapMLFeatureUtil {
             }
             boolean useTileLinks = false;
             if (featureCollectionInfoSimplifier.getLayerInfo() != null) {
-                if (useTiles(getMapRequest)) {
-                    String crs = extractCRS(getMapRequest.getRawKvp());
-                    useTileLinks = gwc.hasTileLayer(featureCollectionInfoSimplifier.getLayerInfo())
-                            && gwc.getTileLayer(featureCollectionInfoSimplifier.getLayerInfo())
-                                            .getGridSubset(crs)
-                                    != null;
-                }
                 MapMLGenerator featureBuilder = new MapMLGenerator();
                 featureBuilder.setNumDecimals(featureCollectionInfoSimplifier.getNumDecimals());
                 featureBuilder.setForcedDecimal(featureCollectionInfoSimplifier.isForcedDecimal());
@@ -250,7 +243,7 @@ public class MapMLFeatureUtil {
                     }
                 }
             } else if (featureCollectionInfoSimplifier.getCoverageInfo() != null && request != null) {
-                if (useTiles(getMapRequest)) {
+                if (getMapRequest != null && useTiles(getMapRequest)) {
                     String crs = extractCRS(getMapRequest.getRawKvp());
                     useTileLinks = gwc.hasTileLayer(featureCollectionInfoSimplifier.getCoverageInfo())
                             && gwc.getTileLayer(featureCollectionInfoSimplifier.getCoverageInfo())

@@ -1224,7 +1224,7 @@ public class MapMLWMSTest extends MapMLTestSupport {
                         requestResponse.response.getContentAsString().getBytes()),
                 true);
         // check that each of the layers in the group is represented as a feature
-        assertXpathEvaluatesTo("3", "count(//html:map-feature)", doc);
+        assertXpathEvaluatesTo("2", "count(//html:map-feature)", doc);
     }
 
     private static HashMap<String, String> getRequestVars(String world, String bbox, String srs) {

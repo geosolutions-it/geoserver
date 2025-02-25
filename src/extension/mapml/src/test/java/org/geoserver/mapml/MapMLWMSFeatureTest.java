@@ -95,7 +95,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         catalog.add(lg);
 
         LayerGroupInfo lgWithRaster = catalog.getFactory().createLayerGroup();
-        lgWithRaster.setName("layerGroupWithRaster");
+        lgWithRaster.setName("layerGroupWithRaster2");
         lgWithRaster.getLayers().add(catalog.getLayerByName(basicPolygons));
         lgWithRaster.getLayers().add(catalog.getLayerByName(world));
         builder.calculateLayerGroupBounds(lgWithRaster, DefaultGeographicCRS.WGS84);
@@ -157,7 +157,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
     public void testMapMLUseFeaturesLayerGroupRaster() throws Exception {
 
         Mapml mapmlFeatures = new MapMLWMSRequest()
-                .name("layerGroupWithRaster")
+                .name("layerGroupWithRaster2")
                 .bbox("-180,-90,180,90")
                 .srs("EPSG:4326")
                 .feature(true)
@@ -170,7 +170,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         assertEquals("0.0,-90.0,180.0,90.0", request2.getParameter("BBOX"));
 
         Mapml mapmlFeatures2 = new MapMLWMSRequest()
-                .name("layerGroupWithRaster")
+                .name("layerGroupWithRaster2")
                 .bbox("-89,-44,-87,-42")
                 .srs("EPSG:4326")
                 .feature(true)
@@ -192,7 +192,7 @@ public class MapMLWMSFeatureTest extends MapMLTestSupport {
         Catalog cat = getCatalog();
         enableTileCaching(MockData.WORLD, cat);
         Mapml mapmlFeatures3 = new MapMLWMSRequest()
-                .name("layerGroupWithRaster")
+                .name("layerGroupWithRaster2")
                 .bbox("-89,-44,-87,-42")
                 .srs("EPSG:4326")
                 .feature(true)
