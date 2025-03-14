@@ -86,7 +86,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @PostMapping(
             value = {
                 "/featurestemplates",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates",
                 "/workspaces/{ws}/featurestemplates"
             },
             consumes = {
@@ -163,7 +163,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @PostMapping(
             value = {
                 "/featurestemplates",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates",
                 "/workspaces/{ws}/featurestemplates"
             },
             consumes = {MediaTypeExtensions.APPLICATION_ZIP_VALUE})
@@ -223,7 +223,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @PutMapping(
             value = {
                 "/featurestemplates/{templateName}",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates/{templateName}",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}",
                 "/workspaces/{ws}/featurestemplates/{templateName}"
             },
             consumes = {
@@ -267,7 +267,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @PutMapping(
             value = {
                 "/featurestemplates/{templateName}",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates/{templateName}",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}",
                 "/workspaces/{ws}/featurestemplates/{templateName}"
             },
             consumes = {MediaTypeExtensions.APPLICATION_ZIP_VALUE})
@@ -326,10 +326,8 @@ public class TemplateRestController extends AbstractCatalogController {
         UriComponents uriComponents;
         builder = builder.cloneBuilder();
         if (featureType != null) {
-            uriComponents =
-                    builder.path(
-                                    "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates/{templateName}")
-                            .buildAndExpand(workspace, featureType, name);
+           uriComponents = builder.path("/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}")
+                    .buildAndExpand(workspace, featureType, name);
         } else if (workspace != null) {
             uriComponents =
                     builder.path("/workspaces/{ws}/featurestemplates/{templateName}")
@@ -354,7 +352,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @DeleteMapping(
             value = {
                 "/featurestemplates/{templateName}",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates/{templateName}",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}",
                 "/workspaces/{ws}/featurestemplates/{templateName}"
             },
             produces = MediaType.TEXT_PLAIN_VALUE)
@@ -384,7 +382,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @GetMapping(
             value = {
                 "/featurestemplates/{templateName}",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates/{templateName}",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}",
                 "/workspaces/{ws}/featurestemplates/{templateName}"
             },
             produces = {
@@ -412,8 +410,8 @@ public class TemplateRestController extends AbstractCatalogController {
         TemplateInfo info = TemplateInfoDAO.get().findByFullName(fullName);
         Resource resource = TemplateFileManager.get().getTemplateResource(info);
         if (resource.getType() != Resource.Type.RESOURCE) {
-            throw new ResourceNotFoundException(
-                    "Template with fullName " + info.getFullName() + "not found");
+           throw new RestException(
+                    "Template with fullName " + info.getFullName() + " not found", HttpStatus.NOT_FOUND);
         }
         byte[] bytes;
         try {
@@ -433,7 +431,7 @@ public class TemplateRestController extends AbstractCatalogController {
     @GetMapping(
             value = {
                 "/featurestemplates",
-                "/workspaces/{workspace}/featuretypes/{featuretype}/featurestemplates",
+                "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates",
                 "/workspaces/{ws}/featurestemplates"
             },
             produces = {
