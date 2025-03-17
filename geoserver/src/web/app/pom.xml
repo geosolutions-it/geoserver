@@ -197,6 +197,10 @@
       <artifactId>gt-image</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.geoserver.eumetsat</groupId>
+      <artifactId>pinning</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
       <scope>test</scope>
