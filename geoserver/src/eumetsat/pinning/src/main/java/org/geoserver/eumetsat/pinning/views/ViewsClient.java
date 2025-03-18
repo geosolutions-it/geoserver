@@ -65,14 +65,4 @@ public class ViewsClient {
 
         return new ParsedView(viewId, layers, lockedTime);
     }
-
-    public String getTemporalAttribute(String layerId) {
-        LayerInfo layerInfo = catalog.getLayerByName(layerId);
-        if (layerInfo != null) {
-            return Optional.ofNullable(layerInfo.getResource().getMetadata().get("time"))
-                    .map(Object::toString)
-                    .orElse(null);
-        }
-        return null;
-    }
 }

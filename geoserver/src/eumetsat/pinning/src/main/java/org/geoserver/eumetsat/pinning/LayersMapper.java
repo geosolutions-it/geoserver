@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,21 +13,20 @@ import java.util.logging.Logger;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
-import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.catalog.MetadataMap;
+import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.config.impl.GeoServerLifecycleHandler;
-import org.geoserver.eumetsat.pinning.rest.PinningServiceController;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
-import org.geotools.gce.imagemosaic.catalog.GranuleCatalogSource;
 import org.geotools.util.logging.Logging;
 import org.opengis.coverage.grid.GridCoverageReader;
 import org.opengis.feature.simple.SimpleFeatureType;
@@ -47,13 +47,13 @@ public class LayersMapper implements GeoServerLifecycleHandler {
     @Autowired
     private Catalog catalog;
 
-    private Map<String, MappedLayer> layerMapping;
+    private Map<String, List<MappedLayer>> layerMapping;
 
     public LayersMapper() {
         this.layerMapping = new HashMap<>();
     }
 
-    public Map<String, MappedLayer> getLayers() {
+    public Map<String, List<MappedLayer>> getLayers() {
         return layerMapping;
     }
 
@@ -66,7 +66,6 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
         String dataDirPath = loader.getBaseDirectory().getPath();
 
-        // Set the folder where your CSV file is located
         File csvFile = new File(dataDirPath, CSV_FILE_NAME);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
@@ -77,17 +76,16 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     continue;
                 }
 
-                // Split line by comma
                 String[] parts = line.split(",");
                 if (parts.length == 3) {
                     String layerId = parts[0].trim();
-                    String workspace = parts[1].trim(); // Workspace, like ws1
+                    String workspace = parts[1].trim();
                     String layerName = parts[2].trim(); // Layer Name, like layer11
-                    MappedLayer layer = new MappedLayer(layerId, workspace, layerName);
-                    initializeLayer(layer);
+                    List<MappedLayer> layers = new ArrayList<>();
+                    parseLayer(workspace, layerName, layers);
 
                     // Store the mapping
-                    layerMapping.put(layerId, layer);
+                    layerMapping.put(layerId, layers);
                 }
             }
         } catch (IOException e) {
@@ -95,25 +93,40 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         }
     }
 
-    private void initializeLayer(MappedLayer layer) throws IOException {
+    private void parseLayer(String workspace, String layerName, List<MappedLayer> layers) throws IOException {
+        MappedLayer layer = new MappedLayer(workspace, layerName);
         String gsLayerId = layer.getGeoServerLayerIdentifier();
         LayerInfo gsLayer = catalog.getLayerByName(gsLayerId);
         if (gsLayer == null) {
-            LOGGER.warning("The specified layer doesn't have any associated GeoServer layer in the catalog: " + layer);
+            // Fallback on LayerGroup search.
+            LayerGroupInfo gsLayerGroup = catalog.getLayerGroupByName(gsLayerId);
+            if (gsLayerGroup == null) {
+                throw new IOException("The specified layer doesn't have any associated GeoServer layer in the catalog: " + layer);
+            }
+            List<PublishedInfo> composingLayers = gsLayerGroup.getLayers();
+            for (PublishedInfo info: composingLayers) {
+                parseLayer(workspace, info.getName(), layers);
+            }
             return;
         }
+
         ResourceInfo resourceInfo = gsLayer.getResource();
+        // Do not add layers that have no time dimension
         if (resourceInfo instanceof FeatureTypeInfo) {
             FeatureTypeInfo featureTypeInfo = (FeatureTypeInfo) resourceInfo;
-            setVectorLayer(layer, featureTypeInfo);
+            if (setVectorLayer(layer, featureTypeInfo)) {
+                layers.add(layer);
+            }
 
         } else if (resourceInfo instanceof CoverageInfo) {
             CoverageInfo cvInfo = (CoverageInfo) resourceInfo;
-            setMosaicLayer(layer, cvInfo);
+            if(setMosaicLayer(layer, cvInfo)) {
+                layers.add(layer);
+            }
         }
     }
 
-    private void setMosaicLayer(MappedLayer layer, CoverageInfo cvInfo) throws IOException {
+    private boolean setMosaicLayer(MappedLayer layer, CoverageInfo cvInfo) throws IOException {
         MetadataMap metadataMap = cvInfo.getMetadata();
         DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
         if (timeDimension != null) {
@@ -133,14 +146,15 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     if ("TIME".equalsIgnoreCase(desc.getName())) {
                         String timeAttribute = desc.getStartAttribute();
                         layer.setTemporalAttribute(timeAttribute);
+                        return true;
                     }
                 }
-
             }
         }
+        return false;
     }
 
-    private void setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo) {
+    private boolean setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo) {
         MetadataMap metadataMap = featureTypeInfo.getMetadata();
         DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
         if (timeDimension != null) {
@@ -163,9 +177,14 @@ public class LayersMapper implements GeoServerLifecycleHandler {
 
             String schema = (String) params.get("schema");
             layer.setTableName(schema + "." + tableName);
+            return true;
         }
+        return false;
     }
 
+    public List<MappedLayer> getLayersById(String id) {
+        return layerMapping.get(id);
+    }
 
     @Override
     public void onReset() {

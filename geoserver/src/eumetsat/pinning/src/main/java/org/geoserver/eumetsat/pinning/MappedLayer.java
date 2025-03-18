@@ -1,24 +1,16 @@
 package org.geoserver.eumetsat.pinning;
 
-import org.geoserver.catalog.Catalog;
-
 public class MappedLayer {
 
-        private String layerId;
         private String workspace;
         private String layerName;
         private String temporalAttribute;
         private String tableName;
 
-    public MappedLayer(String layerId, String workspace, String layerName) {
-        this.layerId = layerId;
+    public MappedLayer(String workspace, String layerName) {
         this.workspace = workspace;
         this.layerName = layerName;
 
-    }
-
-    public String getLayerId() {
-        return layerId;
     }
 
     public String getWorkspace() {
@@ -36,14 +28,13 @@ public class MappedLayer {
     public String getTableName() { return tableName;}
 
     public String getGeoServerLayerIdentifier() {
-        return workspace + ":" + layerName;
+        return (workspace == null || workspace.isEmpty()) ? layerName : workspace + ":" + layerName;
     }
 
     @Override
     public String toString() {
         return "MappedLayer{" +
-                "layerId ='" + layerId + '\'' +
-                ", workspace='" + workspace + '\'' +
+                "workspace='" + workspace + '\'' +
                 ", layerName='" + layerName + '\'' +
                 ", tableName='" + tableName + '\'' +
                 ", temporalAttribute='" + temporalAttribute + '\'' +

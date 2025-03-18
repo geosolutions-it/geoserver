@@ -10,6 +10,12 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 @Configuration
 public class PinningServiceConfig implements Serializable, Cloneable {
 
+    @Value("${batch.size}")
+    private String batchSize;
+
+    @Value("${pinning.minutes}")
+    private String pinningMinutes;
+
     @Value("${api.url}")
     private String apiUrl;
 
@@ -29,9 +35,21 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     }
 
     @Bean
+    public String batchSize() {
+        // return batchSize
+        return "50";
+    }
+
+    @Bean
+    public String pinningMinutes() {
+        // return pinningMinutes;
+        return "300";
+    }
+
+    @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
-
+        //TODO: NEED to parse these props
         dataSource.setDriverClassName("org.postgresql.Driver");
         /*dataSource.setUrl(jdbcUrl);
         dataSource.setUsername(jdbcUsername);
