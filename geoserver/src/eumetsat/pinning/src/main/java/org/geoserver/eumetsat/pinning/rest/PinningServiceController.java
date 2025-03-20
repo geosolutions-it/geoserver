@@ -1,5 +1,6 @@
 package org.geoserver.eumetsat.pinning.rest;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -8,6 +9,7 @@ import org.geoserver.eumetsat.pinning.PinningService;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.rest.catalog.AbstractCatalogController;
 import org.geotools.util.logging.Logging;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -56,6 +58,12 @@ public class PinningServiceController extends AbstractCatalogController {
     @GetMapping("/status/{uuid}")
     public ResponseEntity<String> getStatus(@PathVariable UUID uuid) {
         String status = pinningService.getStatus(uuid);
-        return ResponseEntity.ok(status);
+        if ("FAIlED".equalsIgnoreCase(status)) {
+            return ResponseEntity.status(HttpStatus.OK).body("Pinning Service operation failed. Please check the logs");
+        } else {
+            return ResponseEntity.ok(status);
+        }
+
+
     }
 }

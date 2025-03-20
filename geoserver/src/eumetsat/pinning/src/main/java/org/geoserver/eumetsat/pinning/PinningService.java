@@ -85,7 +85,7 @@ public class PinningService {
                                 }
                             }
                             throw new RuntimeException(
-                                    "Exception occurred while resetting the views", e);
+                                    "Exception occurred while resetting the pinning", e);
                         } finally {
                             releaseLock(conn);
                             try {
@@ -135,6 +135,9 @@ public class PinningService {
                 for (String layer : layers) {
                     // TODO CHECK NPE HERE
                     List<MappedLayer> mappedLayers = layersMapper.getLayersById(layer);
+                    if (mappedLayers == null || mappedLayers.isEmpty()) {
+                        throw new IllegalArgumentException("The following layer has no associated mapping. Aborting pinning " + layer);
+                    }
                     for (MappedLayer mappedLayer : mappedLayers) {
                         log(Level.FINER, String.format("Pinning layer %s:", mappedLayer));
                         pinLayer(statement, time, mappedLayer);

@@ -1,0 +1,158 @@
+{
+  "_embedded": {
+    "preferences": [
+      {
+        "id": 942,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[7.132732718875737,43.46934426365009],\"zoom\":6},\"layers\":[{\"id\":\"EO:EUM:DAT:0156\",\"name\":\"High Rate SEVIRI IR10.8 μm Image - MSG - 0 degree \",\"state\":{\"visible\":true,\"opacity\":\"1\",\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0156\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T18:30:00.000Z\"}}",
+        "type": "mapView",
+        "shared": true,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/942"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/942"
+          }
+        }
+      },
+      {
+        "id": 994,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View546",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-14.327785968780557,15.789574682712583],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0336\",\"name\":\"Geostationary Ring Natural Colour RGB - Multimission\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0336\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-19T03:00:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/994"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/994"
+          }
+        }
+      },
+      {
+        "id": 888,
+        "ownerId": "licensed_user_e",
+        "name": "rdt1111",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[36.22034056375008,-6.397936074062525],\"zoom\":3.008575098669386},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2025-03-12T10:55:54.678Z\"}}",
+        "type": "mapView",
+        "shared": true,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/888"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/888"
+          }
+        }
+      },
+      {
+        "id": 889,
+        "ownerId": "licensed_user_e",
+        "name": "rdt4444",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[36.22034056375008,-6.397936074062525],\"zoom\":3.008575098669386},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2025-03-12T23:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/889"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/889"
+          }
+        }
+      },
+      {
+        "id": 916,
+        "ownerId": "licensed_user_e",
+        "name": "default",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2025-03-12T10:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/916"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/916"
+          }
+        }
+      },
+      {
+        "id": 1042,
+        "ownerId": "licensed_user_e",
+        "name": "ascat",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0202\",\"name\":\"ASCAT Coastal Winds at 12.5 km Swath Grid - Metop-C\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0192\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2025-03-12T10:42:25.588Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          }
+        }
+      },
+	  {
+        "id": 1045,
+        "ownerId": "licensed_user_e",
+        "name": "layergroup",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0201\",\"name\":\"LayerGroup\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0201\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2025-03-12T10:42:25.588Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          }
+        }
+      }]
+  },
+  "_links": {
+    "first": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "self": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "next": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    },
+    "last": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 22,
+    "totalPages": 2,
+    "number": 0
+  }
+}
