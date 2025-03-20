@@ -42,10 +42,10 @@ public class ViewsClient {
         if (lastUpdatedFilter != null) {
             request += LAST_UPDATE_FILTER.replace("?", lastUpdatedFilter);
         }
-        if (LOGGER.isLoggable(Level.INFO)) {
+        if (LOGGER.isLoggable(Level.FINE)) {
             String optional =
-                    lastUpdatedFilter == null ? "" : "with last update on " + lastUpdatedFilter;
-            LOGGER.info("Fetching views from remote endpoint" + optional);
+                    lastUpdatedFilter == null ? "" : " with last update on " + lastUpdatedFilter;
+            LOGGER.fine("Fetching views from remote endpoint" + optional);
         }
 
         String response = restTemplate.getForObject(request, String.class);
@@ -61,8 +61,10 @@ public class ViewsClient {
         String viewId = String.valueOf(view.getViewId());
         List<String> layers =
                 preference.getLayers().stream().map(Layer::getId).collect(Collectors.toList());
-        String lockedTime = preference.getTime().getValue();
+        TimeInfo timeInfo = preference.getTime();
+        String time = timeInfo.getValue();
+        String timeMode = timeInfo.getMode();
 
-        return new ParsedView(viewId, layers, lockedTime);
+        return new ParsedView(viewId, layers, time, timeMode);
     }
 }
