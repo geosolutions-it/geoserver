@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -51,7 +52,7 @@ public class PinningServiceController extends AbstractCatalogController {
     @PostMapping(
             path = "/incremental",
             produces = {MediaType.TEXT_PLAIN_VALUE})
-    public ResponseEntity<String> incremental(@RequestBody(required = false) String testTime) throws Exception {
+    public ResponseEntity<String> incremental(@RequestParam(required = false) String testTime) throws Exception {
         // TODO: Remove the testTime RequestBody once done. this is only for testing
         if (testTime != null) {
             TestContext.setUpdateTime(testTime);

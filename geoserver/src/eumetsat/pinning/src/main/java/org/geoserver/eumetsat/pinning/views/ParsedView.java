@@ -3,19 +3,21 @@ package org.geoserver.eumetsat.pinning.views;
 import java.util.List;
 
 public class ParsedView {
-    private String viewId;
+    private boolean disabled;
+    private Long viewId;
     private List<String> layers;
     private String time;
     private String timeMode;
 
-    public ParsedView(String viewId, List<String> layers, String time, String timeMode) {
+    public ParsedView(Long viewId, List<String> layers, String time, String timeMode, Boolean disabled) {
         this.viewId = viewId;
         this.layers = layers;
         this.time = time;
         this.timeMode = timeMode;
+        this.disabled = disabled;
     }
 
-    public String getViewId() {
+    public Long getViewId() {
         return viewId;
     }
 
@@ -30,4 +32,6 @@ public class ParsedView {
     public String getTimeMode() {
         return timeMode;
     }
+
+    public Boolean getDisabled() { return disabled; }
 }

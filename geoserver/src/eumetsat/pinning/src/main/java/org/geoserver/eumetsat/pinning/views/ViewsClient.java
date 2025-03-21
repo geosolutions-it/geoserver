@@ -58,13 +58,12 @@ public class ViewsClient {
         Preference preference = objectMapper.readValue(view.getPreferenceJson(), Preference.class);
 
         // Extract time and layers
-        String viewId = String.valueOf(view.getViewId());
         List<String> layers =
                 preference.getLayers().stream().map(Layer::getId).collect(Collectors.toList());
         TimeInfo timeInfo = preference.getTime();
         String time = timeInfo.getValue();
         String timeMode = timeInfo.getMode();
 
-        return new ParsedView(viewId, layers, time, timeMode);
+        return new ParsedView(view.getViewId(), layers, time, timeMode, view.getDisabled());
     }
 }

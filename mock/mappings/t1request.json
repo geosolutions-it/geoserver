@@ -1,14 +1,13 @@
 {
     "request": {
       "method": "GET",
-      "url": "/userPreferences/preferences/search/findByType?type=mapView"
+      "url": "/userPreferences/preferences/search/findByType?type=mapView&lastUpdate=t1"
     },
     "response": {
       "status": 200,
-      "bodyFileName": "allviews.json",
+      "bodyFileName": "t1.json",
       "headers": {
         "Content-Type": "application/json"
       }
     }
   }
-  

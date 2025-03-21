@@ -189,7 +189,7 @@ public class PinningService {
         try (Statement statement = conn.createStatement()) {
             for (View view: views) {
                 ParsedView parsed = viewsClient.parseView(view);
-                String viewId = parsed.getViewId();
+                Long viewId = parsed.getViewId();
                 String mode = parsed.getTimeMode();
                 if (!"absolute".equalsIgnoreCase(mode)) {
                     // Only event views are pinned.
@@ -242,7 +242,7 @@ public class PinningService {
         try (Statement statement = conn.createStatement()) {
             for (View view: views) {
                 ParsedView parsed = viewsClient.parseView(view);
-                String viewId = parsed.getViewId();
+                Long viewId = parsed.getViewId();
                 String mode = parsed.getTimeMode();
                 if (!"absolute".equalsIgnoreCase(mode)) {
                     // Only event views are pinned.
@@ -288,14 +288,14 @@ public class PinningService {
         statement.addBatch(updateQuery);
     }
 
-    private void addView(Connection conn, String viewId, String time, List<String> layers) throws Exception {
+    private void addView(Connection conn, Long viewId, String time, List<String> layers) throws Exception {
             try (PreparedStatement pstmt = conn.prepareStatement(ADD_VIEW_SQL)){
                 Instant instant = Instant.parse(time);
                 Instant now = Instant.now();
                 Timestamp timestamp = Timestamp.from(instant);
                 pstmt.setTimestamp(1, timestamp);
                 pstmt.setTimestamp(2, timestamp);
-                pstmt.setString(3, viewId);
+                pstmt.setLong(3, viewId);
                 pstmt.setArray(4, conn.createArrayOf("text", layers.toArray()));
                 pstmt.setTimestamp(5, Timestamp.from(now));
                 pstmt.executeUpdate();
