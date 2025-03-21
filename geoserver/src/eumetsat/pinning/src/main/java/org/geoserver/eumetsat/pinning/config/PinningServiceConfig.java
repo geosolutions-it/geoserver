@@ -49,7 +49,7 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        //TODO: NEED to parse these props
+        // TODO: NEED to parse these props
         dataSource.setDriverClassName("org.postgresql.Driver");
         /*dataSource.setUrl(jdbcUrl);
         dataSource.setUsername(jdbcUsername);

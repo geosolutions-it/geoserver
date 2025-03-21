@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
+import javax.annotation.PostConstruct;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
@@ -34,18 +34,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
-
 @Component
 @DependsOn("catalog")
 public class LayersMapper implements GeoServerLifecycleHandler {
 
-    private static final String CSV_FILE_NAME = "pinning/layers_mapping.csv"; // The name of the CSV file
+    private static final String CSV_FILE_NAME =
+            "pinning/layers_mapping.csv"; // The name of the CSV file
 
     private static final Logger LOGGER = Logging.getLogger(LayersMapper.class);
 
-    @Autowired
-    private Catalog catalog;
+    @Autowired private Catalog catalog;
 
     private Map<String, List<MappedLayer>> layerMapping;
 
@@ -93,7 +91,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         }
     }
 
-    private void parseLayer(String workspace, String layerName, List<MappedLayer> layers) throws IOException {
+    private void parseLayer(String workspace, String layerName, List<MappedLayer> layers)
+            throws IOException {
         MappedLayer layer = new MappedLayer(workspace, layerName);
         String gsLayerId = layer.getGeoServerLayerIdentifier();
         LayerInfo gsLayer = catalog.getLayerByName(gsLayerId);
@@ -101,10 +100,12 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             // Fallback on LayerGroup search.
             LayerGroupInfo gsLayerGroup = catalog.getLayerGroupByName(gsLayerId);
             if (gsLayerGroup == null) {
-                throw new IOException("The specified layer doesn't have any associated GeoServer layer in the catalog: " + layer);
+                throw new IOException(
+                        "The specified layer doesn't have any associated GeoServer layer in the catalog: "
+                                + layer);
             }
             List<PublishedInfo> composingLayers = gsLayerGroup.getLayers();
-            for (PublishedInfo info: composingLayers) {
+            for (PublishedInfo info : composingLayers) {
                 parseLayer(workspace, info.getName(), layers);
             }
             return;
@@ -120,7 +121,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
 
         } else if (resourceInfo instanceof CoverageInfo) {
             CoverageInfo cvInfo = (CoverageInfo) resourceInfo;
-            if(setMosaicLayer(layer, cvInfo)) {
+            if (setMosaicLayer(layer, cvInfo)) {
                 layers.add(layer);
             }
         }
@@ -132,7 +133,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         if (timeDimension != null) {
             GridCoverageReader reader = cvInfo.getGridCoverageReader(null, null);
             if (reader instanceof StructuredGridCoverage2DReader) {
-                StructuredGridCoverage2DReader structuredReader = (StructuredGridCoverage2DReader) reader;
+                StructuredGridCoverage2DReader structuredReader =
+                        (StructuredGridCoverage2DReader) reader;
                 String nativeCoverageName = cvInfo.getNativeCoverageName();
                 if (nativeCoverageName == null) {
                     nativeCoverageName = reader.getGridCoverageNames()[0];
@@ -141,8 +143,9 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                 SimpleFeatureType schema = source.getSchema();
                 String tableName = schema.getTypeName();
                 layer.setTableName(tableName);
-                List<DimensionDescriptor> descriptors = structuredReader.getDimensionDescriptors(nativeCoverageName);
-                for (DimensionDescriptor desc: descriptors) {
+                List<DimensionDescriptor> descriptors =
+                        structuredReader.getDimensionDescriptors(nativeCoverageName);
+                for (DimensionDescriptor desc : descriptors) {
                     if ("TIME".equalsIgnoreCase(desc.getName())) {
                         String timeAttribute = desc.getStartAttribute();
                         layer.setTemporalAttribute(timeAttribute);
@@ -166,11 +169,13 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             String tableName = featureTypeInfo.getNativeName();
             Map<String, Serializable> params = store.getConnectionParameters();
             if ("Vector Mosaic Data Store".equalsIgnoreCase(store.getType())) {
-                tableName = tableName.substring(0, tableName.length() - 7); // Get rid of the _mosaic suffix
+                tableName =
+                        tableName.substring(
+                                0, tableName.length() - 7); // Get rid of the _mosaic suffix
                 String delegateStoreName = (String) params.get("delegateStoreName");
                 if (delegateStoreName != null) {
                     String[] storeName = delegateStoreName.split(":");
-                    store = catalog.getDataStoreByName(storeName[0],storeName[1]);
+                    store = catalog.getDataStoreByName(storeName[0], storeName[1]);
                     params = store.getConnectionParameters();
                 }
             }
@@ -192,9 +197,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
     }
 
     @Override
-    public void onDispose() {
-
-    }
+    public void onDispose() {}
 
     @Override
     public void beforeReload() {
@@ -202,7 +205,5 @@ public class LayersMapper implements GeoServerLifecycleHandler {
     }
 
     @Override
-    public void onReload() {
-
-    }
+    public void onReload() {}
 }

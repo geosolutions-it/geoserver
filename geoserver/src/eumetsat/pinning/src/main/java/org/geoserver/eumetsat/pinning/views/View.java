@@ -31,7 +31,11 @@ public class View {
         this.preferenceJson = preferenceJson;
     }
 
-    public Boolean getDisabled() { return disabled; }
+    public Boolean getDisabled() {
+        return disabled;
+    }
 
-    public void setDisabled(Boolean disabled) { this.disabled = disabled; }
+    public void setDisabled(Boolean disabled) {
+        this.disabled = disabled;
+    }
 }

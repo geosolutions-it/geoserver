@@ -9,7 +9,8 @@ public class ParsedView {
     private String time;
     private String timeMode;
 
-    public ParsedView(Long viewId, List<String> layers, String time, String timeMode, Boolean disabled) {
+    public ParsedView(
+            Long viewId, List<String> layers, String time, String timeMode, Boolean disabled) {
         this.viewId = viewId;
         this.layers = layers;
         this.time = time;
@@ -33,5 +34,7 @@ public class ParsedView {
         return timeMode;
     }
 
-    public Boolean getDisabled() { return disabled; }
+    public Boolean getDisabled() {
+        return disabled;
+    }
 }

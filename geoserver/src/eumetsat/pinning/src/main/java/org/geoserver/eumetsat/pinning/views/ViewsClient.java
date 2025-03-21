@@ -2,12 +2,10 @@ package org.geoserver.eumetsat.pinning.views;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.geoserver.catalog.Catalog;
-import org.geoserver.catalog.LayerInfo;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
 import org.geotools.util.logging.Logging;
 import org.springframework.beans.factory.annotation.Autowired;

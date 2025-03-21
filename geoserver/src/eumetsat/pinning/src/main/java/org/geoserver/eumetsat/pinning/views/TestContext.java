@@ -13,6 +13,7 @@ public class TestContext {
     }
 
     public static void clear() {
-        UPDATE_TIME = null;;
+        UPDATE_TIME = null;
+        ;
     }
 }

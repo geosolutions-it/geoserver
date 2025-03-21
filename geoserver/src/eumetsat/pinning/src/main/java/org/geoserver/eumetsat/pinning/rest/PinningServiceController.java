@@ -1,6 +1,5 @@
 package org.geoserver.eumetsat.pinning.rest;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,7 +50,8 @@ public class PinningServiceController extends AbstractCatalogController {
     @PostMapping(
             path = "/incremental",
             produces = {MediaType.TEXT_PLAIN_VALUE})
-    public ResponseEntity<String> incremental(@RequestParam(required = false) String testTime) throws Exception {
+    public ResponseEntity<String> incremental(@RequestParam(required = false) String testTime)
+            throws Exception {
         // TODO: Remove the testTime RequestBody once done. this is only for testing
         if (testTime != null) {
             TestContext.setUpdateTime(testTime);
@@ -66,17 +65,15 @@ public class PinningServiceController extends AbstractCatalogController {
         }
     }
 
-
     // Check the status of the running maintenance job
     @GetMapping("/status/{uuid}")
     public ResponseEntity<String> getStatus(@PathVariable UUID uuid) {
         String status = pinningService.getStatus(uuid);
         if ("FAIlED".equalsIgnoreCase(status)) {
-            return ResponseEntity.status(HttpStatus.OK).body("Pinning Service operation failed. Please check the logs");
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body("Pinning Service operation failed. Please check the logs");
         } else {
             return ResponseEntity.ok(status);
         }
-
-
     }
 }
