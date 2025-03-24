@@ -41,9 +41,7 @@ public class ViewsClient {
             request += LAST_UPDATE_FILTER.replace("?", lastUpdatedFilter);
         }
         if (LOGGER.isLoggable(Level.FINE)) {
-            String optional =
-                    lastUpdatedFilter == null ? "" : " with last update on " + lastUpdatedFilter;
-            LOGGER.fine("Fetching views from remote endpoint" + optional);
+            LOGGER.fine("Fetching views from the preferences endpoint: " + request);
         }
 
         String response = restTemplate.getForObject(request, String.class);

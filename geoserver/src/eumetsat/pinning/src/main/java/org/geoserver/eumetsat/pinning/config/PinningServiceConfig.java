@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Configuration;
 public class PinningServiceConfig implements Serializable, Cloneable {
 
     @Value("${batch.size}")
-    private String batchSize;
+    private Integer batchSize;
 
     @Value("${pinning.minutes}")
-    private String pinningMinutes;
+    private Integer pinningMinutes;
 
     @Value("${api.url}")
     private String apiUrl;
@@ -28,11 +28,11 @@ public class PinningServiceConfig implements Serializable, Cloneable {
         return apiUrl;
     }
 
-    public String batchSize() {
+    public Integer batchSize() {
         return batchSize;
     }
 
-    public String pinningMinutes() {
+    public Integer pinningMinutes() {
         return pinningMinutes;
     }
 
@@ -40,7 +40,8 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     public DataSource dataSource() throws NamingException {
         Context ctx = new InitialContext();
         // Search for the eumetsat datasource configured using JNDI
-        DataSource dataSource = (DataSource) ctx.lookup("java:/comp/env/jdbc/" + jndiDatasourceName);
+        DataSource dataSource =
+                (DataSource) ctx.lookup("java:/comp/env/jdbc/" + jndiDatasourceName);
         return dataSource;
     }
 }

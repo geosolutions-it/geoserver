@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import org.geoserver.catalog.Catalog;
@@ -67,6 +68,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         File csvFile = new File(dataDirPath, CSV_FILE_NAME);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
+            LOGGER.fine("Loading mapping from file: " + csvFile);
             String line;
             while ((line = reader.readLine()) != null) {
 
@@ -117,12 +119,22 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             FeatureTypeInfo featureTypeInfo = (FeatureTypeInfo) resourceInfo;
             if (setVectorLayer(layer, featureTypeInfo)) {
                 layers.add(layer);
+            } else {
+                LOGGER.log(
+                        Level.INFO,
+                        "The following layer won't be handled by the Pinning Service since it hasn't any time dimension associated: "
+                                + gsLayerId);
             }
 
         } else if (resourceInfo instanceof CoverageInfo) {
             CoverageInfo cvInfo = (CoverageInfo) resourceInfo;
             if (setMosaicLayer(layer, cvInfo)) {
                 layers.add(layer);
+            } else {
+                LOGGER.log(
+                        Level.INFO,
+                        "The following layer won't be handled by the Pinning Service since it hasn't any time dimension associated: "
+                                + gsLayerId);
             }
         }
     }
