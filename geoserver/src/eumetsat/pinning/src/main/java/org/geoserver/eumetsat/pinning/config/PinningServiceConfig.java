@@ -1,11 +1,13 @@
 package org.geoserver.eumetsat.pinning.config;
 
 import java.io.Serializable;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 @Configuration
 public class PinningServiceConfig implements Serializable, Cloneable {
@@ -19,44 +21,26 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     @Value("${api.url}")
     private String apiUrl;
 
-    @Value("${jdbc.url}")
-    private String jdbcUrl;
+    @Value("${jndi.datasource.name}")
+    private String jndiDatasourceName
 
-    @Value("${jdbc.username}")
-    private String jdbcUsername;
-
-    @Value("${jdbc.password}")
-    private String jdbcPassword;
-
-    @Bean
     public String apiUrl() {
-        return "http://localhost:8080/userPreferences/preferences/";
-        // return apiUrl; // Injected into Services
+        return apiUrl;
     }
 
-    @Bean
     public String batchSize() {
-        // return batchSize
-        return "50";
+        return batchSize;
     }
 
-    @Bean
     public String pinningMinutes() {
-        // return pinningMinutes;
-        return "300";
+        return pinningMinutes;
     }
 
     @Bean
-    public DataSource dataSource() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        // TODO: NEED to parse these props
-        dataSource.setDriverClassName("org.postgresql.Driver");
-        /*dataSource.setUrl(jdbcUrl);
-        dataSource.setUsername(jdbcUsername);
-        dataSource.setPassword(jdbcPassword);*/
-        dataSource.setUrl("jdbc:postgresql://localhost:5432/pinning");
-        dataSource.setUsername("postgres");
-        dataSource.setPassword("postgres");
+    public DataSource dataSource() throws NamingException {
+        Context ctx = new InitialContext();
+        // Search for the eumetsat datasource configured using JNDI
+        DataSource dataSource = (DataSource) ctx.lookup("java:/comp/env/jndi/" + jndiDatasourceName);
         return dataSource;
     }
 }

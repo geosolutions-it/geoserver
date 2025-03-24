@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.naming.NamingException;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
 import org.geoserver.eumetsat.pinning.rest.PinningServiceController;
@@ -67,7 +68,7 @@ public class PinningService {
 
     @Autowired private ViewEvaluator evaluator;
 
-    public Optional<UUID> reset() throws SQLException {
+    public Optional<UUID> reset() throws SQLException, NamingException {
         UUID taskId = null;
         Connection conn = config.dataSource().getConnection();
         conn.setAutoCommit(false);
@@ -103,7 +104,7 @@ public class PinningService {
         return Optional.of(taskId);
     }
 
-    public Optional<UUID> incremental() throws SQLException {
+    public Optional<UUID> incremental() throws SQLException, NamingException {
         UUID taskId = null;
         Connection conn = config.dataSource().getConnection();
         conn.setAutoCommit(false);
