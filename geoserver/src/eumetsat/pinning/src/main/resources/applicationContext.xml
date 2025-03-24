@@ -13,7 +13,7 @@
     directory.
   -->
 
-    <context:property-placeholder location="file:${GEOSERVER_DATA_DIR}/application.properties"
+    <context:property-placeholder location="file:${GEOSERVER_DATA_DIR}/pinning/service.properties"
                                   ignore-unresolvable="true" ignore-resource-not-found="true" />
 
 	<context:component-scan base-package="org.geoserver.eumetsat.pinning.rest,org.geoserver.eumetsat.pinning,org.geoserver.eumetsat.pinning.views"/>

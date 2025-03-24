@@ -22,7 +22,7 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     private String apiUrl;
 
     @Value("${jndi.datasource.name}")
-    private String jndiDatasourceName
+    private String jndiDatasourceName;
 
     public String apiUrl() {
         return apiUrl;
@@ -40,7 +40,7 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     public DataSource dataSource() throws NamingException {
         Context ctx = new InitialContext();
         // Search for the eumetsat datasource configured using JNDI
-        DataSource dataSource = (DataSource) ctx.lookup("java:/comp/env/jndi/" + jndiDatasourceName);
+        DataSource dataSource = (DataSource) ctx.lookup("java:/comp/env/jdbc/" + jndiDatasourceName);
         return dataSource;
     }
 }

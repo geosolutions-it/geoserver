@@ -66,8 +66,6 @@ public class PinningService {
 
     @Autowired private LayersMapper layersMapper;
 
-    @Autowired private ViewEvaluator evaluator;
-
     public Optional<UUID> reset() throws SQLException, NamingException {
         UUID taskId = null;
         Connection conn = config.dataSource().getConnection();
@@ -252,6 +250,7 @@ public class PinningService {
 
     private void disableAndUnpin(Connection conn, Long viewId, List<String> layers) throws Exception {
         log(Level.FINER, "deleting view" + viewId);
+        
         deleteView(conn, viewId);
 
 
