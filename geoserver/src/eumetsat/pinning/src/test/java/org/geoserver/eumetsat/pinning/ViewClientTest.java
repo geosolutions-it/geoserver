@@ -15,7 +15,6 @@ import org.geoserver.test.GeoServerSystemTestSupport;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
-import org.junit.Test;
 
 public class ViewClientTest extends GeoServerSystemTestSupport {
 

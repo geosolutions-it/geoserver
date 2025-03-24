@@ -26,6 +26,7 @@ import org.geoserver.eumetsat.pinning.rest.PinningServiceController;
 import org.geoserver.eumetsat.pinning.views.ParsedView;
 import org.geoserver.eumetsat.pinning.views.TestContext;
 import org.geoserver.eumetsat.pinning.views.View;
+import org.geoserver.eumetsat.pinning.views.ViewEvaluator;
 import org.geoserver.eumetsat.pinning.views.ViewsClient;
 import org.geotools.util.logging.Logging;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,16 +37,18 @@ public class PinningService {
 
     private static final String VIEWS_TABLE = "pinning.views";
     private static final String TRUNCATE_TABLE_VIEWS = "TRUNCATE table " + VIEWS_TABLE;
-    private static final String RESET_PINS_SQL = "UPDATE %s SET pin=0 WHERE pin > 0;";
-    private static final String UPDATE_PINS_SQL =
+    private static final String RESET_PINS_QUERY = "UPDATE %s SET pin=0 WHERE pin > 0;";
+    private static final String UPDATE_PINS_QUERY =
             "UPDATE %s SET pin = pin %s 1 WHERE %s between '%s' and '%s';";
 
-    private static final String GET_LAST_UPDATE = "SELECT max(last_updated) from " + VIEWS_TABLE;
+    private static final String GET_LAST_UPDATE_QUERY = "SELECT max(last_updated) from " + VIEWS_TABLE;
     // TODO: get schema/table from configuration
-    private static final String ADD_VIEW_SQL =
+    private static final String ADD_VIEW_QUERY =
             "INSERT INTO "
                     + VIEWS_TABLE
                     + " (time_original, time_main, view_id, layers_list, last_updated) VALUES (?, ?, ?, ?, ?)";
+    private static final String DELETE_VIEW_QUERY =
+            "DELETE FROM " + VIEWS_TABLE + " WHERE view_id = ?";
 
     private final ExecutorService executorService =
             Executors.newSingleThreadExecutor(); // Only 1 task at a time
@@ -62,13 +65,16 @@ public class PinningService {
 
     @Autowired private LayersMapper layersMapper;
 
+    @Autowired private ViewEvaluator evaluator;
+
     public Optional<UUID> reset() throws SQLException {
         UUID taskId = null;
         Connection conn = config.dataSource().getConnection();
         conn.setAutoCommit(false);
         try {
             if (!acquireLock(conn)) {
-                LOGGER.warning("Another process is holding the lock");
+                taskId = currentTaskId.get();
+                LOGGER.warning("Another process is holding the lock: " + taskId);
                 return Optional.empty();
             }
             taskId = UUID.randomUUID();
@@ -103,7 +109,8 @@ public class PinningService {
         conn.setAutoCommit(false);
         try {
             if (!acquireLock(conn)) {
-                LOGGER.warning("Another process is holding the lock");
+                taskId = currentTaskId.get();
+                LOGGER.warning("Another process is holding the lock: " + taskId);
                 return Optional.empty();
             }
             taskId = UUID.randomUUID();
@@ -170,7 +177,7 @@ public class PinningService {
 
         } else {
             try (Statement statement = conn.createStatement();
-                    ResultSet rs = statement.executeQuery(GET_LAST_UPDATE)) {
+                    ResultSet rs = statement.executeQuery(GET_LAST_UPDATE_QUERY)) {
                 if (rs.next()) {
                     timestamp = rs.getTimestamp(1);
                 } else {
@@ -208,6 +215,12 @@ public class PinningService {
                 }
                 String time = parsed.getTime();
                 List<String> layers = parsed.getLayers();
+                boolean disabled = parsed.getDisabled();
+                if (disabled) {
+                    disableAndUnpin(conn, viewId, layers);
+                } else {
+
+                }
                 log(Level.FINER, "Inserting view" + viewId);
                 addView(conn, viewId, time, layers);
 
@@ -220,7 +233,7 @@ public class PinningService {
                     }
                     for (MappedLayer mappedLayer : mappedLayers) {
                         log(Level.FINER, String.format("Pinning layer %s:", mappedLayer));
-                        pinLayer(statement, time, mappedLayer);
+                        setPinLayer(statement, time, mappedLayer, true);
                         count++;
                         // TODO: configure batchsize
                         if (count == 10) {
@@ -234,6 +247,13 @@ public class PinningService {
                 statement.executeBatch();
             }
         }
+    }
+
+    private void disableAndUnpin(Connection conn, Long viewId, List<String> layers) throws Exception {
+        log(Level.FINER, "deleting view" + viewId);
+        deleteView(conn, viewId);
+
+
     }
 
     private void resetPinning(Connection conn) throws Exception {
@@ -279,7 +299,7 @@ public class PinningService {
                     }
                     for (MappedLayer mappedLayer : mappedLayers) {
                         log(Level.FINER, String.format("Pinning layer %s:", mappedLayer));
-                        pinLayer(statement, time, mappedLayer);
+                        setPinLayer(statement, time, mappedLayer, true);
                         count++;
                         // TODO: configure batchsize
                         if (count == 10) {
@@ -295,30 +315,30 @@ public class PinningService {
         }
     }
 
-    private void pinLayer(Statement statement, String time, MappedLayer layer) throws SQLException {
+    private void setPinLayer(Statement statement, String time, MappedLayer layer, boolean add) throws SQLException {
         Instant instant = Instant.parse(time);
         // TODO: check config returning numbers
         Instant end = instant.plus(300, ChronoUnit.MINUTES);
         Instant start = instant.minus(300, ChronoUnit.MINUTES);
         String updateQuery =
                 String.format(
-                        UPDATE_PINS_SQL,
+                        UPDATE_PINS_QUERY,
                         layer.getTableName(),
-                        "+",
+                        add ? "+" : "-",
                         layer.getTemporalAttribute(),
                         start,
                         end);
         log(
                 Level.FINE,
                 String.format(
-                        "Pinning layer %s in range (%s,%s)",
+                        "%spinning layer %s in range (%s,%s)", add ? "" : "un",
                         layer.getGeoServerLayerIdentifier(), start, end));
         statement.addBatch(updateQuery);
     }
 
     private void addView(Connection conn, Long viewId, String time, List<String> layers)
             throws Exception {
-        try (PreparedStatement pstmt = conn.prepareStatement(ADD_VIEW_SQL)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(ADD_VIEW_QUERY)) {
             Instant instant = Instant.parse(time);
             Instant now = Instant.now();
             Timestamp timestamp = Timestamp.from(instant);
@@ -331,6 +351,15 @@ public class PinningService {
         }
     }
 
+    private void deleteView(Connection conn, Long viewId)
+            throws Exception {
+        try (PreparedStatement pstmt = conn.prepareStatement(DELETE_VIEW_QUERY)) {
+            pstmt.setLong(1, viewId);
+            pstmt.executeUpdate();
+        }
+    }
+
+
     private void resetPins(Connection conn) throws SQLException {
         Map<String, List<MappedLayer>> layers = layersMapper.getLayers();
         for (List<MappedLayer> mappedLayers : layers.values()) {
@@ -342,7 +371,7 @@ public class PinningService {
 
     private void resetPin(MappedLayer layer, Connection conn) throws SQLException {
         String tableName = layer.getTableName();
-        String resetSql = RESET_PINS_SQL.replace("%s", tableName);
+        String resetSql = RESET_PINS_QUERY.replace("%s", tableName);
         try (PreparedStatement pstmt = conn.prepareStatement(resetSql)) {
             log(Level.FINE, String.format("Resetting pin for table %s", tableName));
             int result = pstmt.executeUpdate();
