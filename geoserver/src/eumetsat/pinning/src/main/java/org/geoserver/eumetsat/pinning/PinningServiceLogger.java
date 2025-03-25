@@ -23,4 +23,5 @@ public class PinningServiceLogger {
             LOGGER.log(loggingLevel, logMessage);
         }
     }
+
 }

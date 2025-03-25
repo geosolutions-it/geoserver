@@ -8,20 +8,19 @@ public class ViewRecord {
     private Instant timeMain;
     private long viewId;
     private List<String> layers;
-
-    private Instant lastUpdated;
+    private Instant lastUpdate;
 
     public ViewRecord(
+            long viewId,
             Instant timeOriginal,
             Instant timeMain,
-            long viewId,
             List<String> layers,
-            Instant lastUpdated) {
+            Instant lastUpdate) {
         this.timeOriginal = timeOriginal;
         this.timeMain = timeMain;
         this.viewId = viewId;
         this.layers = layers;
-        this.lastUpdated = lastUpdated;
+        this.lastUpdate = lastUpdate;
     }
 
     public Instant getTimeOriginal() {
@@ -40,9 +39,22 @@ public class ViewRecord {
         return layers;
     }
 
-    public Instant getLastUpdated() {
-        return lastUpdated;
+    public Instant getLastUpdate() {
+        return lastUpdate;
     }
+
+    public void setTimeOriginal(Instant timeOriginal) {
+        this.timeOriginal = timeOriginal;
+    }
+
+    public void setTimeMain(Instant timeMain) {
+        this.timeMain = timeMain;
+    }
+
+    public void setLastUpdate(Instant lastUpdate) {
+        this.lastUpdate = lastUpdate;
+    }
+
 
     @Override
     public String toString() {
@@ -55,8 +67,8 @@ public class ViewRecord {
                 + viewId
                 + ", layersList="
                 + layers
-                + ", lastUpdated="
-                + lastUpdated
+                + ", lastUpdate="
+                + lastUpdate
                 + '}';
     }
 }

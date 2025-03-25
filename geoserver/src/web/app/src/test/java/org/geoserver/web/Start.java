@@ -75,6 +75,8 @@ public class Start {
             jettyServer.setConnectors(
                     https != null ? new Connector[] {http, https} : new Connector[] {http});
 
+            addJNDIDataSource();
+
             /*Constraint constraint = new Constraint();
             constraint.setName(Constraint.__BASIC_AUTH);;
             constraint.setRoles(new String[]{"user","admin","moderator"});
@@ -162,6 +164,29 @@ public class Start {
             }
         }
     }
+
+    /**
+     * Adds a JNDI data source to the Jetty server. Uncomment call in the main method, and customize the pool parameters
+     * and name as needed.
+     */
+    @SuppressWarnings("PMD.UnusedPrivateMethod")
+    private static void addJNDIDataSource() throws NamingException {
+        // Create the JNDI data source
+        BasicDataSource dataSource = new BasicDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver");
+        dataSource.setUrl("jdbc:postgresql://localhost:5432/pinning");
+        dataSource.setUsername("postgres");
+        dataSource.setPassword("postgres");
+        dataSource.setMaxActive(20);
+        dataSource.setMaxIdle(5);
+        dataSource.setMinIdle(2);
+        dataSource.setInitialSize(5);
+        dataSource.setAccessToUnderlyingConnectionAllowed(true);
+
+        // Bind the data source to JNDI
+        new Resource("java:comp/env/jdbc/eumetsat", dataSource);
+    }
+
 
     private static ServerConnector getHTTPSConnector(
             Server jettyServer, HttpConfiguration httpConfig) {

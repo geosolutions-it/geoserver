@@ -6,14 +6,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 import javax.naming.NamingException;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
@@ -141,8 +144,8 @@ public class PinningService {
     }
 
     private void incrementalPinning(Connection conn) throws Exception {
-        logger.log(Level.FINE, "Retrieved last updated time");
-        viewsEvaluator.reset(conn);
+        logger.log(Level.FINE, "Retrieve last updated time");
+        viewsEvaluator.init(conn);
         Timestamp timestamp = null;
         // TODO: This section is only for testing.
         String timestampString = TestContext.getUpdateTime();
@@ -150,24 +153,32 @@ public class PinningService {
             TestContext.clear();
         } else {
             timestamp = viewsEvaluator.retrieveLastUpdate();
-            timestampString =
+            if (timestamp != null) {
+                timestampString =
                     timestamp
                             .toInstant()
                             .atOffset(ZoneOffset.UTC)
                             .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                }
         }
-        logger.log(Level.FINE, "Fetching views with lastUpdated > " + timestampString);
+        if (timestampString != null) {
+            logger.log(Level.FINE, "Fetching views with lastUpdated > " + timestampString);
+        } else {
+            logger.log(Level.FINE, "Fetching views ");
+        }
+
+        Instant lastUpdate = Instant.now();
         List<View> remoteViews = viewsClient.fetchViews(timestampString);
         logger.log(
                 Level.INFO,
                 String.format(
                         "Retrieved %d views from the preferences endpoint", remoteViews.size()));
 
-        viewsEvaluator.reset(conn);
+        viewsEvaluator.init(conn);
 
+        List<ParsedView> sortedParsedViews = parseAndSort(remoteViews);
         try (Statement statement = conn.createStatement()) {
-            for (View remoteView : remoteViews) {
-                ParsedView view = viewsClient.parseView(remoteView);
+            for (ParsedView view : sortedParsedViews) {
                 if (isLiveView(view)) {
                     continue;
                 }
@@ -179,14 +190,15 @@ public class PinningService {
                             "The following view has been disabled since last update: " + viewId);
                     viewsEvaluator.disableAndUnpin(viewId, statement);
                 } else {
-                    ViewRecord viewRecord = viewsEvaluator.getView(viewId);
+                    ViewRecord viewRecord = viewsEvaluator.fetchView(viewId);
                     if (viewRecord == null) {
                         // That's a new view. Add it.
                         logger.log(
                                 Level.INFO,
                                 "A new view has been added since last update: " + viewId);
-                        viewRecord = viewsEvaluator.addView(view);
-                        viewsEvaluator.addPins(viewRecord, statement);
+
+                        viewRecord = viewsEvaluator.buildView(view);
+                        viewsEvaluator.addViewAndPin(viewRecord, statement);
                     } else {
                         // Need to proceed with the diffs.
                         logger.log(
@@ -197,18 +209,27 @@ public class PinningService {
                     }
                 }
             }
-            viewsEvaluator.finalizeBatch(statement);
+            viewsEvaluator.flushBatch(statement);
+            viewsEvaluator.updateLastUpdate(lastUpdate);
         }
+    }
+
+    private List<ParsedView> parseAndSort(List<View> remoteViews) throws IllegalArgumentException{
+        return remoteViews.stream()
+                .map(viewsClient::parseView) // Convert View -> ParsedView
+                .sorted(Comparator.comparing(ParsedView::getLastUpdate)) // Sort by lastUpdate
+                .collect(Collectors.toList());
     }
 
     private void resetPinning(Connection conn) throws Exception {
         logger.log(Level.INFO, "Resetting the pins");
-        viewsEvaluator.reset(conn);
+        viewsEvaluator.init(conn);
         viewsEvaluator.resetPins();
 
         logger.log(Level.INFO, "Resetting the views");
-        viewsEvaluator.resetViews();
+        viewsEvaluator.truncateViews();
 
+        Instant lastUpdate = Instant.now();
         List<View> remoteViews = viewsClient.fetchViews(null);
         logger.log(
                 Level.INFO,
@@ -223,10 +244,12 @@ public class PinningService {
                 if (isLiveView(view)) {
                     continue;
                 }
-                ViewRecord viewRecord = viewsEvaluator.addView(view);
-                viewsEvaluator.addPins(viewRecord, statement);
+
+                ViewRecord viewRecord = viewsEvaluator.buildView(view);
+                viewsEvaluator.addViewAndPin(viewRecord, statement);
             }
-            viewsEvaluator.finalizeBatch(statement);
+            viewsEvaluator.flushBatch(statement);
+            viewsEvaluator.updateLastUpdate(lastUpdate);
         }
     }
 

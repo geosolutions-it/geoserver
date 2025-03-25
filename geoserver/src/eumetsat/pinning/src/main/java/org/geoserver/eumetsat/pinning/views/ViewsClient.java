@@ -1,6 +1,9 @@
 package org.geoserver.eumetsat.pinning.views;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.time.Instant;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,17 +52,26 @@ public class ViewsClient {
         return viewsResponse.getEmbedded().getPreferences();
     }
 
-    public ParsedView parseView(View view) throws Exception {
+    public ParsedView parseView(View view) throws IllegalArgumentException {
         // Convert preference JSON string to Preference object
-        Preference preference = objectMapper.readValue(view.getPreferenceJson(), Preference.class);
+        Preference preference = null;
+        try {
+            preference = objectMapper.readValue(view.getPreferenceJson(), Preference.class);
 
-        // Extract time and layers
-        List<String> layers =
-                preference.getLayers().stream().map(Layer::getId).collect(Collectors.toList());
-        TimeInfo timeInfo = preference.getTime();
-        String time = timeInfo.getValue();
-        String timeMode = timeInfo.getMode();
+            // Extract time and layers
+            List<String> layers =
+                    preference.getLayers().stream().map(Layer::getId).collect(Collectors.toList());
+            TimeInfo timeInfo = preference.getTime();
+            String time = timeInfo.getValue();
+            String timeMode = timeInfo.getMode();
+            String lastUpdate = view.getLastUpdate();
+            if (!lastUpdate.endsWith("Z")) {
+                lastUpdate+="Z";
+            }
 
-        return new ParsedView(view.getViewId(), layers, time, timeMode, view.getDisabled());
+            return new ParsedView(view.getViewId(), layers, Instant.parse(time), timeMode, Instant.parse(lastUpdate), view.getDisabled());
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Exception occurred while parsing the JSON", e);
+        }
     }
 }

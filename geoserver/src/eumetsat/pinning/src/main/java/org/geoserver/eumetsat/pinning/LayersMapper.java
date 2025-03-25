@@ -25,6 +25,7 @@ import org.geoserver.catalog.StoreInfo;
 import org.geoserver.config.impl.GeoServerLifecycleHandler;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.util.NearestMatchFinder;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
@@ -89,7 +90,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Exception occurred while parsing the layersMapping file" , e);
         }
     }
 
@@ -161,6 +162,10 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     if ("TIME".equalsIgnoreCase(desc.getName())) {
                         String timeAttribute = desc.getStartAttribute();
                         layer.setTemporalAttribute(timeAttribute);
+                        NearestMatchFinder finder = NearestMatchFinder.get(cvInfo, timeDimension, "time");
+                        if (finder != null) {
+                            layer.setNearestTimeFinder(finder);
+                        }
                         return true;
                     }
                 }
@@ -169,7 +174,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         return false;
     }
 
-    private boolean setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo) {
+    private boolean setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo) throws IOException {
         MetadataMap metadataMap = featureTypeInfo.getMetadata();
         DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
         if (timeDimension != null) {
@@ -194,13 +199,22 @@ public class LayersMapper implements GeoServerLifecycleHandler {
 
             String schema = (String) params.get("schema");
             layer.setTableName(schema + "." + tableName);
+            NearestMatchFinder finder = NearestMatchFinder.get(featureTypeInfo, timeDimension, "time");
+            if (finder != null) {
+                layer.setNearestTimeFinder(finder);
+            }
             return true;
         }
         return false;
     }
 
     public List<MappedLayer> getLayersById(String id) {
-        return layerMapping.get(id);
+        List<MappedLayer> mappedLayers = layerMapping.get(id);
+        if (mappedLayers == null || mappedLayers.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "The following layer has no associated mapping. Aborting pinning " + id);
+        }
+        return mappedLayers;
     }
 
     @Override

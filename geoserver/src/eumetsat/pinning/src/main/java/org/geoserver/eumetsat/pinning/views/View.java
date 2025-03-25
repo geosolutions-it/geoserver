@@ -12,6 +12,9 @@ public class View {
     @JsonProperty("disabled")
     private Boolean disabled;
 
+    @JsonProperty("lastUpdate")
+    private String lastUpdate;;
+
     @JsonProperty("preference")
     private String preferenceJson; // JSON string to be parsed
 
@@ -23,9 +26,7 @@ public class View {
         this.viewId = viewId;
     }
 
-    public String getPreferenceJson() {
-        return preferenceJson;
-    }
+    public String getPreferenceJson() { return preferenceJson; }
 
     public void setPreferenceJson(String preferenceJson) {
         this.preferenceJson = preferenceJson;
@@ -38,4 +39,8 @@ public class View {
     public void setDisabled(Boolean disabled) {
         this.disabled = disabled;
     }
+
+    public String getLastUpdate() { return lastUpdate; }
+
+    public void setLastUpdate(String lastUpdate) { this.lastUpdate = lastUpdate; }
 }

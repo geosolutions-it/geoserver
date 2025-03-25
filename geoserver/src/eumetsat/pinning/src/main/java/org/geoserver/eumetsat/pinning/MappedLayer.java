@@ -1,11 +1,18 @@
 package org.geoserver.eumetsat.pinning;
 
+import org.geoserver.util.NearestMatchFinder;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Date;
+
 public class MappedLayer {
 
     private String workspace;
     private String layerName;
     private String temporalAttribute;
     private String tableName;
+    private NearestMatchFinder nearestTimeFinder;
 
     public MappedLayer(String workspace, String layerName) {
         this.workspace = workspace;
@@ -19,6 +26,8 @@ public class MappedLayer {
     public String getLayerName() {
         return layerName;
     }
+
+    public NearestMatchFinder getNearestTimeFinder(){ return nearestTimeFinder; }
 
     public String getTemporalAttribute() {
         return temporalAttribute;
@@ -56,5 +65,11 @@ public class MappedLayer {
 
     public void setTableName(String tableName) {
         this.tableName = tableName;
+    }
+
+    public void setNearestTimeFinder (NearestMatchFinder nearestTimeFinder) { this.nearestTimeFinder = nearestTimeFinder;}
+
+    public Instant getNearest(Instant time) throws IOException {
+        return ((Date) nearestTimeFinder.getNearest(Date.from(time))).toInstant();
     }
 }
