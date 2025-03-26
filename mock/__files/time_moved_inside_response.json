@@ -1,0 +1,44 @@
+{
+  "_embedded": {
+    "preferences": [
+     {
+        "id": 1042,
+        "ownerId": "licensed_user_e",
+        "name": "ascat",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0197\",\"name\":\"ASCAT Coastal Winds at 12.5 km Swath Grid - Metop-C\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0197\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-20T19:00:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-03-20T19:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          }
+        }
+      }]
+  },
+  "_links": {
+    "first": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "self": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "next": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    },
+    "last": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 22,
+    "totalPages": 2,
+    "number": 0
+  }
+}
