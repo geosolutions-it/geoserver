@@ -1,20 +1,22 @@
 {
-    "priority": 10,
+    "priority": 1,
     "request": {
       "method": "GET",
       "urlPath": "/userPreferences/preferences/search/findByType",
       "queryParameters": {
         "type": {
           "equalTo": "mapView"
+        },
+        "lastUpdate": {
+          "equalTo": "2025-03-20T16:01:00.000"
         }
       }
     },
     "response": {
       "status": 200,
-      "bodyFileName": "allviews.json",
+      "bodyFileName": "layer_change_response.json",
       "headers": {
         "Content-Type": "application/json"
       }
     }
   }
-  
