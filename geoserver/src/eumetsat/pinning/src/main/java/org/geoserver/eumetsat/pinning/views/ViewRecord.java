@@ -58,12 +58,12 @@ public class ViewRecord {
     @Override
     public String toString() {
         return "ViewRecord{"
-                + "timeOriginal="
+                + "viewId="
+                + viewId
+                + ", timeOriginal="
                 + timeOriginal
                 + ", timeMain="
                 + timeMain
-                + ", viewId="
-                + viewId
                 + ", layersList="
                 + layers
                 + ", lastUpdate="

@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
@@ -22,6 +24,7 @@ import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.impl.GeoServerLifecycleHandler;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -69,7 +72,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         File csvFile = new File(dataDirPath, CSV_FILE_NAME);
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            LOGGER.fine("Loading mapping from file: " + csvFile);
+            LOGGER.config("Loading mapping from file: " + csvFile);
             String line;
             while ((line = reader.readLine()) != null) {
 
@@ -91,12 +94,13 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             }
         } catch (IOException e) {
             throw new RuntimeException(
-                    "Exception occurred while parsing the layersMapping file", e);
+                    "Exception occurred while mapping the layers", e);
         }
     }
 
     private void parseLayer(String workspace, String layerName, List<MappedLayer> layers)
             throws IOException {
+        LOGGER.fine("Parsing mapped layer: " + layerName);
         MappedLayer layer = new MappedLayer(workspace, layerName);
         String gsLayerId = layer.getGeoServerLayerIdentifier();
         LayerInfo gsLayer = catalog.getLayerByName(gsLayerId);
@@ -110,7 +114,17 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             }
             List<PublishedInfo> composingLayers = gsLayerGroup.getLayers();
             for (PublishedInfo info : composingLayers) {
-                parseLayer(workspace, info.getName(), layers);
+                String lws = workspace;
+                if (StringUtils.isEmpty(lws)) {
+                    ResourceInfo resource = ((LayerInfo) info).getResource();
+                    StoreInfo store = resource.getStore();
+                    WorkspaceInfo ws = store.getWorkspace();
+                    if (ws != null) {
+                        lws = ws.getName();
+                    }
+
+                }
+                parseLayer(lws, info.getName(), layers);
             }
             return;
         }

@@ -18,14 +18,14 @@ public class PinningServiceConfig implements Serializable, Cloneable {
     @Value("${pinning.minutes}")
     private Integer pinningMinutes;
 
-    @Value("${api.url}")
-    private String apiUrl;
+    @Value("${preferences.url}")
+    private String preferencesUrl;
 
     @Value("${jndi.datasource.name}")
     private String jndiDatasourceName;
 
-    public String apiUrl() {
-        return apiUrl;
+    public String preferencesUrl() {
+        return preferencesUrl;
     }
 
     public Integer batchSize() {

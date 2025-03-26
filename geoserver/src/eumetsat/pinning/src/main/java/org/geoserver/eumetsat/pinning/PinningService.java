@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,6 +32,24 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PinningService {
+
+    public static class PinningStatus {
+        String uuid;
+        String status;
+
+        public PinningStatus(String uuid, String status) {
+            this.uuid = uuid;
+            this.status = status;
+        }
+
+        public String getUuid() {
+            return uuid;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+    }
 
     private final AtomicReference<UUID> currentTaskId = new AtomicReference<>(null);
     private final AtomicReference<String> taskStatus = new AtomicReference<>("IDLE");
@@ -60,6 +79,7 @@ public class PinningService {
                     () -> {
                         try {
                             logger.log(Level.INFO, "Global RESET Started");
+                            viewsEvaluator.init(conn);
                             resetPinning(conn);
                             conn.commit();
                             taskStatus.set("COMPLETED");
@@ -90,6 +110,7 @@ public class PinningService {
                     () -> {
                         try {
                             logger.log(Level.INFO, "Incremental pinning Started");
+                            viewsEvaluator.init(conn);
                             incrementalPinning(conn);
                             conn.commit();
                             taskStatus.set("COMPLETED");
@@ -140,12 +161,10 @@ public class PinningService {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        currentTaskId.set(null);
     }
 
     private void incrementalPinning(Connection conn) throws Exception {
         logger.log(Level.FINE, "Retrieve last updated time");
-        viewsEvaluator.init(conn);
         Timestamp timestamp = null;
         // TODO: This section is only for testing.
         String timestampString = TestContext.getUpdateTime();
@@ -173,8 +192,6 @@ public class PinningService {
                 Level.INFO,
                 String.format(
                         "Retrieved %d views from the preferences endpoint", remoteViews.size()));
-
-        viewsEvaluator.init(conn);
 
         List<ParsedView> sortedParsedViews = parseAndSort(remoteViews);
         try (Statement statement = conn.createStatement()) {
@@ -222,9 +239,6 @@ public class PinningService {
     }
 
     private void resetPinning(Connection conn) throws Exception {
-        logger.log(Level.INFO, "Resetting the pins");
-        viewsEvaluator.init(conn);
-        viewsEvaluator.resetPins();
 
         logger.log(Level.INFO, "Resetting the views");
         viewsEvaluator.truncateViews();
@@ -235,10 +249,11 @@ public class PinningService {
                 Level.INFO,
                 String.format(
                         "Retrieved %d views from the preferences endpoint", remoteViews.size()));
-
-        logger.log(Level.INFO, "Inserting views");
-
         try (Statement statement = conn.createStatement()) {
+            logger.log(Level.INFO, "Resetting the pins");
+            viewsEvaluator.resetPins(statement);
+            logger.log(Level.INFO, "Inserting views");
+
             for (View remoteView : remoteViews) {
                 ParsedView view = viewsClient.parseView(remoteView);
                 if (isLiveView(view)) {
@@ -254,14 +269,10 @@ public class PinningService {
     }
 
     // Get the status of the current maintenance task
-    public String getStatus(UUID uuid) {
+    public PinningStatus getStatus() {
         UUID currentId = currentTaskId.get();
-        if (!uuid.equals(currentId)) {
-            logger.log(
-                    Level.WARNING,
-                    String.format("Requested id %s doesn't match current id %s ", currentId, uuid));
-        }
-        return taskStatus.get();
+        String status = taskStatus.get();
+        return new PinningStatus(currentId != null ? currentId.toString() : "No taskID available since last restart", status);
     }
 
     private boolean acquireLock(Connection conn) throws SQLException {

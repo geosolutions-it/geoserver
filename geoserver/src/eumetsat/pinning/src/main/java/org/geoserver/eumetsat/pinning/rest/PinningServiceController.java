@@ -1,5 +1,7 @@
 package org.geoserver.eumetsat.pinning.rest;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -38,7 +40,7 @@ public class PinningServiceController extends AbstractCatalogController {
             path = "/reset",
             produces = {MediaType.TEXT_PLAIN_VALUE})
     public ResponseEntity<String> reset() throws Exception {
-        LOGGER.info("PinningService: Global RESET");
+        LOGGER.info("PinningService: Global RESET invoked");
         Optional<UUID> taskId = pinningService.reset();
         if (taskId.isPresent()) {
             return ResponseEntity.ok(taskId.get().toString());
@@ -52,11 +54,11 @@ public class PinningServiceController extends AbstractCatalogController {
             produces = {MediaType.TEXT_PLAIN_VALUE})
     public ResponseEntity<String> incremental(@RequestParam(required = false) String testTime)
             throws Exception {
-        // TODO: Remove the testTime RequestBody once done. this is only for testing
+
         if (testTime != null) {
             TestContext.setUpdateTime(testTime);
         }
-        LOGGER.info("PinningService: INCREMENTAL pinning");
+        LOGGER.info("PinningService: INCREMENTAL pinning invoked");
         Optional<UUID> taskId = pinningService.incremental();
         if (taskId.isPresent()) {
             return ResponseEntity.ok(taskId.get().toString());
@@ -66,14 +68,21 @@ public class PinningServiceController extends AbstractCatalogController {
     }
 
     // Check the status of the running maintenance job
-    @GetMapping("/status/{uuid}")
-    public ResponseEntity<String> getStatus(@PathVariable UUID uuid) {
-        String status = pinningService.getStatus(uuid);
-        if ("FAIlED".equalsIgnoreCase(status)) {
-            return ResponseEntity.status(HttpStatus.OK)
-                    .body("Pinning Service operation failed. Please check the logs");
-        } else {
-            return ResponseEntity.ok(status);
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getStatus() {
+        PinningService.PinningStatus pinningStatus = pinningService.getStatus();
+        Map<String, Object> response = new HashMap<>();
+        response.put("Identifier", pinningStatus.getUuid());
+        response.put("Status", pinningStatus.getStatus());
+
+        switch (pinningStatus.getStatus()) {
+            case "FAIlED":
+                response.put("Result", "failure. Please check the logs for further details");
+                break;
+            case "COMPLETED":
+                response.put("Result", "success");
+                break;
         }
+        return ResponseEntity.ok(response);
     }
 }

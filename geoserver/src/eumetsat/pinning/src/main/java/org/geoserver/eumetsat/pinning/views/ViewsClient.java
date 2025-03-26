@@ -32,7 +32,7 @@ public class ViewsClient {
     public ViewsClient(Catalog catalog, PinningServiceConfig config) {
         this.catalog = catalog;
         this.config = config;
-        this.baseApiUrl = config.apiUrl();
+        this.baseApiUrl = config.preferencesUrl();
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
     }
