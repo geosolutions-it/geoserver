@@ -55,7 +55,6 @@ public class ViewRecord {
         this.lastUpdate = lastUpdate;
     }
 
-
     @Override
     public String toString() {
         return "ViewRecord{"

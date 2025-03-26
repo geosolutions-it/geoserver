@@ -90,7 +90,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Exception occurred while parsing the layersMapping file" , e);
+            throw new RuntimeException(
+                    "Exception occurred while parsing the layersMapping file", e);
         }
     }
 
@@ -162,7 +163,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     if ("TIME".equalsIgnoreCase(desc.getName())) {
                         String timeAttribute = desc.getStartAttribute();
                         layer.setTemporalAttribute(timeAttribute);
-                        NearestMatchFinder finder = NearestMatchFinder.get(cvInfo, timeDimension, "time");
+                        NearestMatchFinder finder =
+                                NearestMatchFinder.get(cvInfo, timeDimension, "time");
                         if (finder != null) {
                             layer.setNearestTimeFinder(finder);
                         }
@@ -174,7 +176,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         return false;
     }
 
-    private boolean setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo) throws IOException {
+    private boolean setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo)
+            throws IOException {
         MetadataMap metadataMap = featureTypeInfo.getMetadata();
         DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
         if (timeDimension != null) {
@@ -199,7 +202,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
 
             String schema = (String) params.get("schema");
             layer.setTableName(schema + "." + tableName);
-            NearestMatchFinder finder = NearestMatchFinder.get(featureTypeInfo, timeDimension, "time");
+            NearestMatchFinder finder =
+                    NearestMatchFinder.get(featureTypeInfo, timeDimension, "time");
             if (finder != null) {
                 layer.setNearestTimeFinder(finder);
             }

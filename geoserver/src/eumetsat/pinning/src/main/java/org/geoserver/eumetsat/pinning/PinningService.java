@@ -155,11 +155,11 @@ public class PinningService {
             timestamp = viewsEvaluator.retrieveLastUpdate();
             if (timestamp != null) {
                 timestampString =
-                    timestamp
-                            .toInstant()
-                            .atOffset(ZoneOffset.UTC)
-                            .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-                }
+                        timestamp
+                                .toInstant()
+                                .atOffset(ZoneOffset.UTC)
+                                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            }
         }
         if (timestampString != null) {
             logger.log(Level.FINE, "Fetching views with lastUpdated > " + timestampString);
@@ -205,7 +205,7 @@ public class PinningService {
                                 Level.INFO,
                                 "The following view has been modified since last update: "
                                         + viewId);
-                        viewsEvaluator.updateView(viewRecord, view, statement);
+                        viewsEvaluator.syncView(viewRecord, view, statement);
                     }
                 }
             }
@@ -214,7 +214,7 @@ public class PinningService {
         }
     }
 
-    private List<ParsedView> parseAndSort(List<View> remoteViews) throws IllegalArgumentException{
+    private List<ParsedView> parseAndSort(List<View> remoteViews) throws IllegalArgumentException {
         return remoteViews.stream()
                 .map(viewsClient::parseView) // Convert View -> ParsedView
                 .sorted(Comparator.comparing(ParsedView::getLastUpdate)) // Sort by lastUpdate

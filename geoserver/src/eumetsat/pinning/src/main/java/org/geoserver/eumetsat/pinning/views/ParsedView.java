@@ -12,7 +12,12 @@ public class ParsedView {
     private Instant lastUpdate;
 
     public ParsedView(
-            Long viewId, List<String> layers, Instant time, String timeMode, Instant lastUpdate, Boolean disabled) {
+            Long viewId,
+            List<String> layers,
+            Instant time,
+            String timeMode,
+            Instant lastUpdate,
+            Boolean disabled) {
         this.viewId = viewId;
         this.layers = layers;
         this.time = time;
@@ -41,5 +46,7 @@ public class ParsedView {
         return timeMode;
     }
 
-    public Boolean getDisabled() { return disabled; }
+    public Boolean getDisabled() {
+        return disabled;
+    }
 }

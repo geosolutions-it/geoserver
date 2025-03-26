@@ -2,7 +2,6 @@ package org.geoserver.eumetsat.pinning.views;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.logging.Level;
@@ -66,10 +65,16 @@ public class ViewsClient {
             String timeMode = timeInfo.getMode();
             String lastUpdate = view.getLastUpdate();
             if (!lastUpdate.endsWith("Z")) {
-                lastUpdate+="Z";
+                lastUpdate += "Z";
             }
 
-            return new ParsedView(view.getViewId(), layers, Instant.parse(time), timeMode, Instant.parse(lastUpdate), view.getDisabled());
+            return new ParsedView(
+                    view.getViewId(),
+                    layers,
+                    Instant.parse(time),
+                    timeMode,
+                    Instant.parse(lastUpdate),
+                    view.getDisabled());
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Exception occurred while parsing the JSON", e);
         }

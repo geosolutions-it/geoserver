@@ -29,7 +29,6 @@ public class Preference {
     public void setTime(TimeInfo time) {
         this.time = time;
     }
-
 }
 
 class Layer {

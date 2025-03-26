@@ -13,24 +13,19 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.logging.Level;
+import javax.annotation.PostConstruct;
 import org.geoserver.eumetsat.pinning.LayersMapper;
 import org.geoserver.eumetsat.pinning.MappedLayer;
 import org.geoserver.eumetsat.pinning.PinningServiceLogger;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
-import org.geoserver.util.NearestMatchFinder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
-
-import static tech.uom.lib.common.function.QuantityFunctions.isGreaterThan;
 
 @Component
 public class ViewsEvaluator {
@@ -87,8 +82,9 @@ public class ViewsEvaluator {
                     + " (time_original, time_main, view_id, layers_list, last_update) VALUES (?, ?, ?, ?, ?)";
 
     private static final String UPDATE_VIEW_QUERY =
-            "UPDATE " + VIEWS_TABLE
-                    + " (time_main, layers_list, last_update) SET VALUES (?, ?, ?) WHERE view_id = ?";
+            "UPDATE "
+                    + VIEWS_TABLE
+                    + " SET time_main = ?, layers_list = ?, last_update = ? WHERE view_id = ?";
 
     private static final String DELETE_VIEW_QUERY =
             "DELETE FROM " + VIEWS_TABLE + " WHERE view_id = ?";
@@ -99,20 +95,17 @@ public class ViewsEvaluator {
     private static final String UPDATE_PINS_QUERY =
             "UPDATE %s SET pin = pin %s 1 WHERE %s >= '%s' and %s <= '%s';";
 
-    /*private static final String GET_LAST_UPDATE_QUERY =
-            "SELECT max(last_update) from " + VIEWS_TABLE;*/
-
-    private static final String GET_LAST_UPDATE_QUERY =
-            "SELECT last_run from " + RUNS_TABLE;
+    private static final String GET_LAST_RUN_QUERY = "SELECT last_run from " + RUNS_TABLE;
 
     private static final String UPDATE_LAST_RUN_QUERY =
-            "INSERT INTO " + RUNS_TABLE + "(id, last_run)\n" +
-                    "VALUES (1, ?)\n" +
-                    "ON CONFLICT (id)\n" +
-                    "DO UPDATE SET last_run = EXCLUDED.last_run;";
+            "INSERT INTO "
+                    + RUNS_TABLE
+                    + "(id, last_run)\n"
+                    + "VALUES (1, ?)\n"
+                    + "ON CONFLICT (id)\n"
+                    + "DO UPDATE SET last_run = EXCLUDED.last_run;";
 
     private Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-
 
     @Autowired private LayersMapper layersMapper;
 
@@ -155,12 +148,13 @@ public class ViewsEvaluator {
     public void addViewAndPin(ViewRecord view, Statement stmt) throws Exception {
         insertView(view);
         logger.log(Level.FINE, "Pinning layers for view: " + view.getId());
-        updateLayersPins(stmt, view.getLayers(), view.getTimeOriginal(), view.getLastUpdate(), true);
+        updateLayersPins(stmt, view.getLayers(), view.getTimeOriginal(), view.getTimeMain(), true);
     }
 
     public void disableAndUnpin(Long viewId, Statement statement) throws Exception {
         ViewRecord view = fetchView(viewId);
-        updateLayersPins(statement, view.getLayers(), view.getTimeOriginal(), view.getTimeMain(), false);
+        updateLayersPins(
+                statement, view.getLayers(), view.getTimeOriginal(), view.getTimeMain(), false);
         deleteView(viewId);
     }
 
@@ -173,12 +167,18 @@ public class ViewsEvaluator {
     }
 
     public ViewRecord buildView(ParsedView view) {
-        ViewRecord viewRecord = new ViewRecord(view.getViewId(),view.getTime(), view.getTime(), view.getLayers(), view.getLastUpdate());
+        ViewRecord viewRecord =
+                new ViewRecord(
+                        view.getViewId(),
+                        view.getTime(),
+                        view.getTime(),
+                        view.getLayers(),
+                        view.getLastUpdate());
         return viewRecord;
     }
 
     public void updateLastUpdate(Instant lastUpdate) throws SQLException {
-        try (PreparedStatement prepStmt = connection.prepareStatement(UPDATE_LAST_RUN_QUERY)){
+        try (PreparedStatement prepStmt = connection.prepareStatement(UPDATE_LAST_RUN_QUERY)) {
             prepStmt.setTimestamp(1, Timestamp.from(lastUpdate), utcCalendar);
             prepStmt.executeUpdate();
         }
@@ -186,7 +186,7 @@ public class ViewsEvaluator {
 
     public Timestamp retrieveLastUpdate() throws SQLException {
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(GET_LAST_UPDATE_QUERY)) {
+                ResultSet rs = stmt.executeQuery(GET_LAST_RUN_QUERY)) {
             if (rs.next()) {
                 return rs.getTimestamp(1);
             } else {
@@ -195,19 +195,24 @@ public class ViewsEvaluator {
         }
     }
 
-    private void updateLayersPins(Statement statement, Collection<String> layers, Instant originalTime, Instant mainTime, boolean addPin) throws SQLException, IOException {
+    private void updateLayersPins(
+            Statement statement,
+            Collection<String> layers,
+            Instant originalTime,
+            Instant mainTime,
+            boolean addPin)
+            throws SQLException, IOException {
         for (String layer : layers) {
             pinGeoserverLayer(statement, layer, originalTime, mainTime, addPin);
         }
     }
 
-
-    public void updateView(ViewRecord view, ParsedView parsed, Statement statement)
+    public void syncView(ViewRecord view, ParsedView parsed, Statement statement)
             throws SQLException, IOException {
         Instant originalTime = view.getTimeOriginal();
         Instant viewTime = parsed.getTime();
         if (viewTime.equals(originalTime) || !isExtendingWindow(originalTime, viewTime)) {
-            moveView(view, parsed, statement);
+            redoView(view, parsed, statement);
         } else {
             extendView(view, parsed, statement);
         }
@@ -218,15 +223,13 @@ public class ViewsEvaluator {
     private void updateViewQuery(ViewRecord view) throws SQLException {
         logger.log(Level.FINE, "Updating view: " + view.getId());
         try (PreparedStatement prepStmt = connection.prepareStatement(UPDATE_VIEW_QUERY)) {
-            prepStmt.setTimestamp(1, Timestamp.from(view.getTimeMain()),utcCalendar);
+            prepStmt.setTimestamp(1, Timestamp.from(view.getTimeMain()), utcCalendar);
             prepStmt.setArray(2, connection.createArrayOf("text", view.getLayers().toArray()));
-            prepStmt.setTimestamp(3, Timestamp.from(view.getLastUpdate()),utcCalendar);
+            prepStmt.setTimestamp(3, Timestamp.from(view.getLastUpdate()), utcCalendar);
             prepStmt.setLong(4, view.getId());
             prepStmt.executeUpdate();
         }
-
     }
-
 
     public ViewRecord fetchView(Long viewId) throws Exception {
         logger.log(Level.FINE, "Retrieving view: " + viewId);
@@ -260,7 +263,6 @@ public class ViewsEvaluator {
         }
     }
 
-
     private void setPinLayer(
             Statement statement,
             Instant originalTime,
@@ -277,7 +279,9 @@ public class ViewsEvaluator {
         setPinLayerRange(statement, start, end, layer, add);
     }
 
-    private void setPinLayerRange(Statement statement, Instant start, Instant end, MappedLayer layer, boolean add) throws SQLException {
+    private void setPinLayerRange(
+            Statement statement, Instant start, Instant end, MappedLayer layer, boolean add)
+            throws SQLException {
         String updateQuery =
                 String.format(
                         UPDATE_PINS_QUERY,
@@ -311,15 +315,14 @@ public class ViewsEvaluator {
         return time.plus(duration);
     }
 
-
     private void insertView(ViewRecord view) throws SQLException {
         logger.log(Level.FINE, "Inserting view: " + view.getId());
         try (PreparedStatement prepStmt = connection.prepareStatement(ADD_VIEW_QUERY)) {
-            prepStmt.setTimestamp(1, Timestamp.from(view.getTimeOriginal()),utcCalendar);
-            prepStmt.setTimestamp(2, Timestamp.from(view.getTimeMain()),utcCalendar);
+            prepStmt.setTimestamp(1, Timestamp.from(view.getTimeOriginal()), utcCalendar);
+            prepStmt.setTimestamp(2, Timestamp.from(view.getTimeMain()), utcCalendar);
             prepStmt.setLong(3, view.getId());
             prepStmt.setArray(4, connection.createArrayOf("text", view.getLayers().toArray()));
-            prepStmt.setTimestamp(5, Timestamp.from(view.getLastUpdate()),utcCalendar);
+            prepStmt.setTimestamp(5, Timestamp.from(view.getLastUpdate()), utcCalendar);
             prepStmt.executeUpdate();
         }
     }
@@ -339,43 +342,73 @@ public class ViewsEvaluator {
         }
     }
 
-
-
-    private void pinGeoserverLayer(Statement statement, String layer, Instant originalTime, Instant mainTime, boolean addPin)
+    private void pinGeoserverLayer(
+            Statement statement,
+            String layer,
+            Instant originalTime,
+            Instant mainTime,
+            boolean addPin)
             throws SQLException, IOException {
         List<MappedLayer> mappedLayers = layersMapper.getLayersById(layer);
         for (MappedLayer mappedLayer : mappedLayers) {
             logger.log(Level.FINER, String.format("Pinning layer %s:", mappedLayer));
-            setPinLayer(statement, originalTime ,mainTime, mappedLayer, addPin);
+            setPinLayer(statement, originalTime, mainTime, mappedLayer, addPin);
         }
     }
 
-    private void moveView(ViewRecord view, ParsedView parsed, Statement statement) throws SQLException, IOException {
-        LayersUpdate layersUpdate = new LayersUpdate(view.getLayers(),parsed.getLayers());
-
-        // Unpin removed layers
-        updateLayersPins(statement, layersUpdate.getRemoved(), view.getTimeOriginal(), view.getTimeMain(), false);
-
-        // Pin newly added layers
-        ViewRecord updatedView = buildView(parsed);
-        updateLayersPins(statement, layersUpdate.getAdded(), parsed.getTime(), parsed.getTime(), false);
-
-        // recompute pinning for existing layers, note that
-        updateLayersPins(statement, layersUpdate.getUnchanged(), view.getTimeOriginal(), view.getTimeMain(), false);
-        updateLayersPins(statement, layersUpdate.getUnchanged(), updatedView.getTimeOriginal(), updatedView.getTimeMain(), true);
-    }
-
-    private void extendView(ViewRecord view, ParsedView parsed, Statement statement) throws SQLException, IOException {
+    private void redoView(ViewRecord view, ParsedView parsed, Statement statement)
+            throws SQLException, IOException {
         LayersUpdate layersUpdate = new LayersUpdate(view.getLayers(), parsed.getLayers());
 
         // Unpin removed layers
-        updateLayersPins(statement, layersUpdate.getRemoved(), view.getTimeOriginal(), view.getTimeMain(), false);
+        updateLayersPins(
+                statement,
+                layersUpdate.getRemoved(),
+                view.getTimeOriginal(),
+                view.getTimeMain(),
+                false);
 
         // Pin newly added layers
-        updateLayersPins(statement, layersUpdate.getAdded(), view.getTimeOriginal(), parsed.getTime(), false);
+        ViewRecord updatedView = buildView(parsed);
+        updateLayersPins(
+                statement, layersUpdate.getAdded(), parsed.getTime(), parsed.getTime(), false);
 
+        // recompute pinning for existing layers, note that
+        updateLayersPins(
+                statement,
+                layersUpdate.getUnchanged(),
+                view.getTimeOriginal(),
+                view.getTimeMain(),
+                false);
+        updateLayersPins(
+                statement,
+                layersUpdate.getUnchanged(),
+                updatedView.getTimeOriginal(),
+                updatedView.getTimeMain(),
+                true);
+    }
 
-        for (String layer: layersUpdate.getUnchanged()){
+    private void extendView(ViewRecord view, ParsedView parsed, Statement statement)
+            throws SQLException, IOException {
+        LayersUpdate layersUpdate = new LayersUpdate(view.getLayers(), parsed.getLayers());
+
+        // Unpin removed layers
+        updateLayersPins(
+                statement,
+                layersUpdate.getRemoved(),
+                view.getTimeOriginal(),
+                view.getTimeMain(),
+                false);
+
+        // Pin newly added layers
+        updateLayersPins(
+                statement,
+                layersUpdate.getAdded(),
+                view.getTimeOriginal(),
+                parsed.getTime(),
+                false);
+
+        for (String layer : layersUpdate.getUnchanged()) {
             List<MappedLayer> mappedLayers = layersMapper.getLayersById(layer);
             for (MappedLayer mappedLayer : mappedLayers) {
                 Instant previousOriginalTime = view.getTimeOriginal();
@@ -388,24 +421,55 @@ public class ViewsEvaluator {
                 Instant newRight = mappedLayer.getNearest(getRight(parsed.getTime()));
 
                 // extend to right
-                if (isGreaterThan(newRight,  previousOrigRight) && isGreaterThan(previousOrigRight, newLeft )) {
+                if (isGreaterThan(newRight, previousOrigRight)
+                        && isGreaterThan(previousOrigRight, newLeft)) {
                     if (isGreaterThan(newRight, previousMainRight)) {
-                        setPinLayerRange(statement, previousMainRight.plus(Duration.ofSeconds(1)), newRight, mappedLayer, true);
+                        setPinLayerRange(
+                                statement,
+                                previousMainRight.plus(Duration.ofSeconds(1)),
+                                newRight,
+                                mappedLayer,
+                                true);
                     } else if (isGreaterThan(newLeft, previousMainRight)) {
-                        setPinLayerRange(statement, previousOrigRight.plus(Duration.ofSeconds(1)), newRight, mappedLayer, true);
-                        setPinLayerRange(statement, previousMainLeft, previousOrigLeft.minus(Duration.ofSeconds(1)), mappedLayer, false);
+                        setPinLayerRange(
+                                statement,
+                                previousOrigRight.plus(Duration.ofSeconds(1)),
+                                newRight,
+                                mappedLayer,
+                                true);
+                        setPinLayerRange(
+                                statement,
+                                previousMainLeft,
+                                previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                mappedLayer,
+                                false);
                     } else {
                         System.out.println("WHAT TO DO HERE");
                     }
 
-
-                } else if (isGreaterThan(previousOrigLeft,  newLeft) && isGreaterThan(newRight, previousOrigLeft )) {
+                } else if (isGreaterThan(previousOrigLeft, newLeft)
+                        && isGreaterThan(newRight, previousOrigLeft)) {
                     if (isGreaterThan(previousMainLeft, newRight)) {
-                        setPinLayerRange(statement, newLeft, previousOrigLeft.minus(Duration.ofSeconds(1)), mappedLayer, true);
-                        setPinLayerRange(statement, previousMainRight.plus(Duration.ofSeconds(1)), previousMainRight, mappedLayer, false);
+                        setPinLayerRange(
+                                statement,
+                                newLeft,
+                                previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                mappedLayer,
+                                true);
+                        setPinLayerRange(
+                                statement,
+                                previousMainRight.plus(Duration.ofSeconds(1)),
+                                previousMainRight,
+                                mappedLayer,
+                                false);
 
                     } else if (isGreaterThan(newRight, previousMainLeft)) {
-                        setPinLayerRange(statement, newLeft, previousMainLeft.minus(Duration.ofSeconds(1)), mappedLayer, true);
+                        setPinLayerRange(
+                                statement,
+                                newLeft,
+                                previousMainLeft.minus(Duration.ofSeconds(1)),
+                                mappedLayer,
+                                true);
                     } else {
                         System.out.println("WHAT TO DO HERE");
                     }
@@ -424,7 +488,5 @@ public class ViewsEvaluator {
         Instant viewEnd = viewTime.plus(duration);
 
         return originalStart.isBefore(viewEnd) && viewStart.isBefore(originalEnd);
-
     }
-
 }

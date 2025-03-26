@@ -26,7 +26,9 @@ public class View {
         this.viewId = viewId;
     }
 
-    public String getPreferenceJson() { return preferenceJson; }
+    public String getPreferenceJson() {
+        return preferenceJson;
+    }
 
     public void setPreferenceJson(String preferenceJson) {
         this.preferenceJson = preferenceJson;
@@ -40,7 +42,11 @@ public class View {
         this.disabled = disabled;
     }
 
-    public String getLastUpdate() { return lastUpdate; }
+    public String getLastUpdate() {
+        return lastUpdate;
+    }
 
-    public void setLastUpdate(String lastUpdate) { this.lastUpdate = lastUpdate; }
+    public void setLastUpdate(String lastUpdate) {
+        this.lastUpdate = lastUpdate;
+    }
 }
