@@ -15,6 +15,15 @@
             </Policies>
             <DefaultRolloverStrategy max="3" fileIndex="min"/>
         </RollingFile>
+        <RollingFile name="eumetsatlogfile">
+            <filename>logs/eumetsat.log</filename>
+            <filePattern>logs/eumetsat-%i.log</filePattern>
+            <PatternLayout pattern="%date{dd MMM HH:mm:ss} %-6level [%logger{2}] - %msg%n%throwable{filters(org.junit,org.apache.maven,sun.reflect,java.lang.reflect)}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="20 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="3" fileIndex="min"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Logger name="org.geotools" level="warn" additivity="false">
@@ -46,6 +55,10 @@
         <Logger name="org.geowebcache.seed" level="warn" additivity="false">
             <AppenderRef ref="stdout"/>
             <AppenderRef ref="geoserverlogfile"/>
+        </Logger>
+        <Logger name="org.geoserver.eumetsat" level="warn" additivity="false">
+            <AppenderRef ref="stdout"/>
+            <AppenderRef ref="eumetsatlogfile"/>
         </Logger>
         <Root level="warn">
             <AppenderRef ref="stdout"/>

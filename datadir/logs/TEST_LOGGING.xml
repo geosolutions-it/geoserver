@@ -30,6 +30,10 @@
             <AppenderRef ref="stdout"/>
         </Logger>
 
+        <Logger name="org.geoserver.eumetsat" level="error" additivity="false">
+            <AppenderRef ref="stdout"/>
+        </Logger>
+
         <Root level="off">
             <AppenderRef ref="stdout"/>
         </Root>
