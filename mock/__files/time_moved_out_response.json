@@ -1,6 +1,26 @@
 {
   "_embedded": {
-    "preferences": []
+    "preferences": [
+      {
+        "id": 1045,
+        "ownerId": "licensed_user_e",
+        "name": "layergroup",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0201\",\"name\":\"LayerGroup\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0201\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-20T20:42:25.588Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-03-20T20:42:25.588",
+        "lastUpdate": "2025-03-20T20:42:25.588",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          }
+        }
+      }
+    ]
   },
   "_links": {
     "first": {
@@ -17,9 +37,9 @@
     }
   },
   "page": {
-    "size": 0,
-    "totalElements": 0,
-    "totalPages": 0,
-    "number": 0
+    "size": 1,
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 1
   }
 }
