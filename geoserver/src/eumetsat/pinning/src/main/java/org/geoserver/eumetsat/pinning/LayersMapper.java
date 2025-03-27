@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
-
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
@@ -93,8 +92,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException(
-                    "Exception occurred while mapping the layers", e);
+            throw new RuntimeException("Exception occurred while mapping the layers", e);
         }
     }
 
@@ -122,7 +120,6 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     if (ws != null) {
                         lws = ws.getName();
                     }
-
                 }
                 parseLayer(lws, info.getName(), layers);
             }

@@ -4,14 +4,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -26,7 +24,6 @@ import org.geoserver.eumetsat.pinning.views.TestContext;
 import org.geoserver.eumetsat.pinning.views.View;
 import org.geoserver.eumetsat.pinning.views.ViewRecord;
 import org.geoserver.eumetsat.pinning.views.ViewsClient;
-import org.geoserver.eumetsat.pinning.views.ViewsEvaluator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -54,7 +51,6 @@ public class PinningService {
     private final AtomicReference<UUID> currentTaskId = new AtomicReference<>(null);
     private final AtomicReference<String> taskStatus = new AtomicReference<>("IDLE");
     private static final int PINNING_LOCK_ID = 9111119;
-    // private static final Logger LOGGER = Logging.getLogger(PinningService.class);
 
     @Autowired private PinningServiceLogger logger;
 
@@ -118,6 +114,7 @@ public class PinningService {
                         } catch (Exception e) {
                             processFailure("Incremental Pinning", conn, e);
                         } finally {
+                            viewsEvaluator.release();
                             releaseResources(conn);
                         }
                     });
@@ -194,39 +191,35 @@ public class PinningService {
                         "Retrieved %d views from the preferences endpoint", remoteViews.size()));
 
         List<ParsedView> sortedParsedViews = parseAndSort(remoteViews);
-        try (Statement statement = conn.createStatement()) {
-            for (ParsedView view : sortedParsedViews) {
-                if (isLiveView(view)) {
-                    continue;
-                }
-                Long viewId = view.getViewId();
-                boolean disabled = view.getDisabled();
-                if (disabled) {
+        for (ParsedView view : sortedParsedViews) {
+            if (isLiveView(view)) {
+                continue;
+            }
+            Long viewId = view.getViewId();
+            boolean disabled = view.getDisabled();
+            if (disabled) {
+                logger.log(
+                        Level.INFO,
+                        "The following view has been disabled since last update: " + viewId);
+                viewsEvaluator.disableAndUnpin(viewId);
+            } else {
+                ViewRecord viewRecord = viewsEvaluator.fetchView(viewId);
+                if (viewRecord == null) {
+                    // That's a new view. Add it.
+                    logger.log(
+                            Level.INFO, "A new view has been added since last update: " + viewId);
+
+                    viewRecord = viewsEvaluator.buildView(view);
+                    viewsEvaluator.addViewAndPin(viewRecord);
+                } else {
+                    // Need to proceed with the diffs.
                     logger.log(
                             Level.INFO,
-                            "The following view has been disabled since last update: " + viewId);
-                    viewsEvaluator.disableAndUnpin(viewId, statement);
-                } else {
-                    ViewRecord viewRecord = viewsEvaluator.fetchView(viewId);
-                    if (viewRecord == null) {
-                        // That's a new view. Add it.
-                        logger.log(
-                                Level.INFO,
-                                "A new view has been added since last update: " + viewId);
-
-                        viewRecord = viewsEvaluator.buildView(view);
-                        viewsEvaluator.addViewAndPin(viewRecord, statement);
-                    } else {
-                        // Need to proceed with the diffs.
-                        logger.log(
-                                Level.INFO,
-                                "The following view has been modified since last update: "
-                                        + viewId);
-                        viewsEvaluator.syncView(viewRecord, view, statement);
-                    }
+                            "The following view has been modified since last update: " + viewId);
+                    viewsEvaluator.syncView(viewRecord, view);
                 }
             }
-            viewsEvaluator.flushBatch(statement);
+            viewsEvaluator.flushBatches();
             viewsEvaluator.updateLastUpdate(lastUpdate);
         }
     }
@@ -249,30 +242,31 @@ public class PinningService {
                 Level.INFO,
                 String.format(
                         "Retrieved %d views from the preferences endpoint", remoteViews.size()));
-        try (Statement statement = conn.createStatement()) {
-            logger.log(Level.INFO, "Resetting the pins");
-            viewsEvaluator.resetPins(statement);
-            logger.log(Level.INFO, "Inserting views");
 
-            for (View remoteView : remoteViews) {
-                ParsedView view = viewsClient.parseView(remoteView);
-                if (isLiveView(view)) {
-                    continue;
-                }
+        logger.log(Level.INFO, "Resetting the pins");
+        viewsEvaluator.resetPins();
+        logger.log(Level.INFO, "Inserting views");
 
-                ViewRecord viewRecord = viewsEvaluator.buildView(view);
-                viewsEvaluator.addViewAndPin(viewRecord, statement);
+        for (View remoteView : remoteViews) {
+            ParsedView view = viewsClient.parseView(remoteView);
+            if (isLiveView(view)) {
+                continue;
             }
-            viewsEvaluator.flushBatch(statement);
-            viewsEvaluator.updateLastUpdate(lastUpdate);
+
+            ViewRecord viewRecord = viewsEvaluator.buildView(view);
+            viewsEvaluator.addViewAndPin(viewRecord);
         }
+        viewsEvaluator.flushBatches();
+        viewsEvaluator.updateLastUpdate(lastUpdate);
     }
 
     // Get the status of the current maintenance task
     public PinningStatus getStatus() {
         UUID currentId = currentTaskId.get();
         String status = taskStatus.get();
-        return new PinningStatus(currentId != null ? currentId.toString() : "No taskID available since last restart", status);
+        return new PinningStatus(
+                currentId != null ? currentId.toString() : "No taskID available since last restart",
+                status);
     }
 
     private boolean acquireLock(Connection conn) throws SQLException {
