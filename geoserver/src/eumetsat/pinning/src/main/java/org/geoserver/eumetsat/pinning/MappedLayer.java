@@ -73,6 +73,11 @@ public class MappedLayer {
     }
 
     public Instant getNearest(Instant time) throws IOException {
-        return ((Date) nearestTimeFinder.getNearest(Date.from(time))).toInstant();
+        Date nearest = (Date) nearestTimeFinder.getNearest(Date.from(time));
+        Instant result = time;
+        if (nearest != null) {
+            result = nearest.toInstant();
+        }
+        return result;
     }
 }

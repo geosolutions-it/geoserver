@@ -165,10 +165,10 @@ public class ViewsEvaluator {
     }
 
     public void addViewAndPin(ViewRecord view) throws Exception {
-        insertView(view);
         logger.log(Level.FINE, "Pinning layers for view: " + view.getId());
         logger.log(Level.FINER, view);
         updateLayersPins(view.getLayers(), view.getTimeOriginal(), view.getTimeMain(), true);
+        insertView(view);
     }
 
     public void disableAndUnpin(Long viewId) throws Exception {
@@ -207,7 +207,7 @@ public class ViewsEvaluator {
         try (Statement stmt = connection.createStatement();
                 ResultSet rs = stmt.executeQuery(GET_LAST_RUN_QUERY)) {
             if (rs.next()) {
-                return rs.getTimestamp(1);
+                return rs.getTimestamp(1, utcCalendar);
             } else {
                 return null;
             }
@@ -225,9 +225,14 @@ public class ViewsEvaluator {
     public void syncView(ViewRecord view, ParsedView parsed) throws SQLException, IOException {
         Instant originalTime = view.getTimeOriginal();
         Instant viewTime = parsed.getTime();
-        if (viewTime.equals(view.getTimeMain()) || !isExtendingWindow(originalTime, viewTime)) {
+        if (viewTime.equals(view.getTimeMain())) {
+            logger.log(Level.FINE, "View time has not been modified");
+            redoView(view, parsed);
+        } else if (!isExtendingWindow(originalTime, viewTime)) {
+            logger.log(Level.FINE, "View time has been updated outside the pinning window");
             redoView(view, parsed);
         } else {
+            logger.log(Level.FINE, "View time has been updated within the pinning window");
             extendView(view, parsed);
         }
         ViewRecord record = buildView(parsed);
@@ -278,8 +283,8 @@ public class ViewsEvaluator {
         logger.log(
                 Level.FINE,
                 String.format(
-                        "%spinning layer %s in range (%s,%s)",
-                        add ? "" : "un", layer.getGeoServerLayerIdentifier(), start, end));
+                        "%sinning layer %s in range (%s,%s)",
+                        add ? "P" : "Unp", layer.getGeoServerLayerIdentifier(), start, end));
         String updateQuery =
                 pinBatcher.update(
                         layer.getTableName(), layer.getTemporalAttribute(), start, end, add);
@@ -287,7 +292,7 @@ public class ViewsEvaluator {
     }
 
     private boolean isGreaterThan(Instant mainTime, Instant originalTime) {
-        return originalTime.getEpochSecond() < mainTime.getEpochSecond();
+        return originalTime.getEpochSecond() <= mainTime.getEpochSecond();
     }
 
     private Instant getLeft(Instant time) {
@@ -299,19 +304,19 @@ public class ViewsEvaluator {
     }
 
     private void insertView(ViewRecord view) throws SQLException {
-        logger.log(Level.FINE, "Inserting view: " + view.getId());
+        logger.log(Level.FINE, "Inserting the view in the views table: " + view.getId());
         String insertQuery = viewsBatcher.insertView(view);
         logger.log(Level.FINEST, "Inserting view query: " + insertQuery);
     }
 
     private void updateView(ViewRecord view) throws SQLException {
-        logger.log(Level.FINE, "Updating view: " + view.getId());
+        logger.log(Level.FINE, "Updating the view in the views table: " + view.getId());
         String updateQuery = viewsBatcher.updateView(view);
         logger.log(Level.FINEST, "Updating view query: " + updateQuery);
     }
 
     private void deleteView(Long viewId) throws Exception {
-        logger.log(Level.FINE, "Deleting view: " + viewId);
+        logger.log(Level.FINE, "Deleting the view from the views table: " + viewId);
         String deleteQuery = viewsBatcher.deleteView(viewId);
         logger.log(Level.FINEST, "Deleting view query: " + deleteQuery);
     }
@@ -334,7 +339,11 @@ public class ViewsEvaluator {
     }
 
     private void redoView(ViewRecord view, ParsedView parsed) throws SQLException, IOException {
-        logger.log(Level.FINE, "Updating the view: " + view.getId());
+        logger.log(
+                Level.FINE,
+                String.format(
+                        "Updating the view %d: stored view originalTime: %s, updating view time: %s",
+                        view.getId(), view.getTimeOriginal(), parsed.getTime()));
         LayersUpdate layersUpdate = new LayersUpdate(view.getLayers(), parsed.getLayers());
 
         // Unpin removed layers
@@ -359,6 +368,11 @@ public class ViewsEvaluator {
     }
 
     private void extendView(ViewRecord view, ParsedView parsed) throws SQLException, IOException {
+        logger.log(
+                Level.FINE,
+                String.format(
+                        "Updating the view %d: stored view originalTime: %s, updating view time: %s",
+                        view.getId(), view.getTimeOriginal(), parsed.getTime()));
         LayersUpdate layersUpdate = new LayersUpdate(view.getLayers(), parsed.getLayers());
 
         // Unpin removed layers
@@ -381,6 +395,13 @@ public class ViewsEvaluator {
                 Instant newRight = mappedLayer.getNearest(getRight(parsed.getTime()));
 
                 // extend to right
+                if (newLeft.equals(previousMainLeft) && newRight.equals(previousMainRight)) {
+                    logger.log(
+                            Level.FINE,
+                            "The extended view covers same records as before. No action needed on layer: "
+                                    + mappedLayer.getLayerName());
+                    continue;
+                }
                 if (isGreaterThan(newRight, previousOrigRight)
                         && isGreaterThan(previousOrigRight, newLeft)) {
                     if (isGreaterThan(newRight, previousMainRight)) {

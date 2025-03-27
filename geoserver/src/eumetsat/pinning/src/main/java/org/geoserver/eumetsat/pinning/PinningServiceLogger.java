@@ -33,6 +33,6 @@ public class PinningServiceLogger {
     }
 
     private String format(String message) {
-        return String.format("Pinning run: %s: %s", taskId, message);
+        return String.format("Pinning[%s]: %s", taskId, message);
     }
 }

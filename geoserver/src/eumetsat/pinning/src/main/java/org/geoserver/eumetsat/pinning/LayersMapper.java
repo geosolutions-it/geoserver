@@ -92,7 +92,12 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Exception occurred while mapping the layers", e);
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Exception occurred while mapping the layers. "
+                            + "The pinning service operations will potentially fail. Check the logs for more details: "
+                            + e.getLocalizedMessage(),
+                    e);
         }
     }
 
