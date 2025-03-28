@@ -1,0 +1,56 @@
+/* (c) 2025 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
+package org.geoserver.eumetsat.pinning.views;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class View {
+
+    @JsonProperty("id")
+    private Long viewId;
+
+    @JsonProperty("disabled")
+    private Boolean disabled;
+
+    @JsonProperty("lastUpdate")
+    private String lastUpdate;;
+
+    @JsonProperty("preference")
+    private String preferenceJson; // JSON string to be parsed
+
+    public Long getViewId() {
+        return viewId;
+    }
+
+    public void setViewId(Long viewId) {
+        this.viewId = viewId;
+    }
+
+    public String getPreferenceJson() {
+        return preferenceJson;
+    }
+
+    public void setPreferenceJson(String preferenceJson) {
+        this.preferenceJson = preferenceJson;
+    }
+
+    public Boolean getDisabled() {
+        return disabled;
+    }
+
+    public void setDisabled(Boolean disabled) {
+        this.disabled = disabled;
+    }
+
+    public String getLastUpdate() {
+        return lastUpdate;
+    }
+
+    public void setLastUpdate(String lastUpdate) {
+        this.lastUpdate = lastUpdate;
+    }
+}

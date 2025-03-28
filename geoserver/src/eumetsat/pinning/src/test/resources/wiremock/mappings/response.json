@@ -1,0 +1,20 @@
+{
+    "priority": 10,
+    "request": {
+      "method": "GET",
+      "urlPath": "/userPreferences/preferences/search/findByType",
+      "queryParameters": {
+        "type": {
+          "equalTo": "mapView"
+        }
+      }
+    },
+    "response": {
+      "status": 200,
+      "bodyFileName": "allviews.json",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+  

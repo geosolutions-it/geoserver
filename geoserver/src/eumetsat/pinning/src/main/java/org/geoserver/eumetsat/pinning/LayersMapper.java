@@ -1,0 +1,282 @@
+/* (c) 2025 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
+package org.geoserver.eumetsat.pinning;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.annotation.PostConstruct;
+import org.apache.commons.lang3.StringUtils;
+import org.geoserver.catalog.Catalog;
+import org.geoserver.catalog.CoverageInfo;
+import org.geoserver.catalog.DimensionInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
+import org.geoserver.catalog.LayerGroupInfo;
+import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.MetadataMap;
+import org.geoserver.catalog.PublishedInfo;
+import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.StoreInfo;
+import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.config.GeoServerDataDirectory;
+import org.geoserver.config.impl.GeoServerLifecycleHandler;
+import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Resource;
+import org.geoserver.util.NearestMatchFinder;
+import org.geotools.coverage.grid.io.DimensionDescriptor;
+import org.geotools.coverage.grid.io.GranuleSource;
+import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
+import org.geotools.util.logging.Logging;
+import org.opengis.coverage.grid.GridCoverageReader;
+import org.opengis.feature.simple.SimpleFeatureType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.stereotype.Component;
+
+@Component
+@DependsOn("catalog")
+public class LayersMapper implements GeoServerLifecycleHandler {
+
+    private static final String CSV_FILE_NAME =
+            "pinning/layers_mapping.csv"; // The name of the CSV file
+
+    private static final Logger LOGGER = Logging.getLogger(LayersMapper.class);
+
+    @Autowired private Catalog catalog;
+
+    private Map<String, List<MappedLayer>> layerMapping;
+
+    public LayersMapper() {
+        this.layerMapping = new HashMap<>();
+    }
+
+    public Map<String, List<MappedLayer>> getLayers() {
+        return layerMapping;
+    }
+
+    @PostConstruct
+    private void loadMappings() {
+        LOGGER.info("Loading layers mapping");
+        layerMapping.clear();
+
+        GeoServerResourceLoader loader = catalog.getResourceLoader();
+        GeoServerDataDirectory directory = new GeoServerDataDirectory(loader);
+        Resource resource = directory.get(CSV_FILE_NAME);
+        Resource.Type resourceType = resource.getType();
+        if (resourceType.equals(Resource.Type.UNDEFINED)) {
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Layers Mapping initialization failed due to no Resource found for "
+                            + resource.path()
+                            + "\nThe pinning service operations will potentially fail");
+            return;
+        }
+        try (InputStream stream = resource.in();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+            LOGGER.config("Loading mapping from: " + resource.path());
+            String line;
+            while ((line = reader.readLine()) != null) {
+
+                if (line.trim().isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\s*,\\s*");
+                if (parts.length == 3) {
+                    String layerId = parts[0].trim();
+                    String workspace = parts[1].trim();
+                    String layerName = parts[2].trim();
+                    List<MappedLayer> layers = new ArrayList<>();
+                    parseLayer(workspace, layerName, layers);
+
+                    // Store the mapping
+                    layerMapping.put(layerId, layers);
+                }
+            }
+        } catch (IOException | IllegalStateException e) {
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Exception occurred while mapping the layers. "
+                            + "The pinning service operations will potentially fail. Check the logs for more details: "
+                            + e.getLocalizedMessage(),
+                    e);
+        }
+    }
+
+    private void parseLayer(String workspace, String layerName, List<MappedLayer> layers)
+            throws IOException {
+        LOGGER.fine("Parsing mapped layer: " + layerName);
+        MappedLayer layer = new MappedLayer(workspace, layerName);
+        String gsLayerId = layer.getGeoServerLayerIdentifier();
+        LayerInfo gsLayer = catalog.getLayerByName(gsLayerId);
+        if (gsLayer == null) {
+            // Fallback on LayerGroup search.
+            LayerGroupInfo gsLayerGroup = catalog.getLayerGroupByName(gsLayerId);
+            if (gsLayerGroup == null) {
+                throw new IOException(
+                        "The specified layer doesn't have any associated GeoServer layer in the catalog: "
+                                + layer);
+            }
+            List<PublishedInfo> composingLayers = gsLayerGroup.getLayers();
+            for (PublishedInfo info : composingLayers) {
+                String lws = workspace;
+                if (StringUtils.isEmpty(lws)) {
+                    ResourceInfo resource = ((LayerInfo) info).getResource();
+                    StoreInfo store = resource.getStore();
+                    WorkspaceInfo ws = store.getWorkspace();
+                    if (ws != null) {
+                        lws = ws.getName();
+                    }
+                }
+                parseLayer(lws, info.getName(), layers);
+            }
+            return;
+        }
+
+        ResourceInfo resourceInfo = gsLayer.getResource();
+        // Do not add layers that have no time dimension
+        if (resourceInfo instanceof FeatureTypeInfo) {
+            FeatureTypeInfo featureTypeInfo = (FeatureTypeInfo) resourceInfo;
+            if (configureFromVector(layer, featureTypeInfo)) {
+                layers.add(layer);
+            } else {
+                LOGGER.log(
+                        Level.INFO,
+                        "The following layer won't be handled by the Pinning Service since it hasn't any time dimension associated: "
+                                + gsLayerId);
+            }
+
+        } else if (resourceInfo instanceof CoverageInfo) {
+            CoverageInfo cvInfo = (CoverageInfo) resourceInfo;
+            if (configureFromMosaic(layer, cvInfo)) {
+                layers.add(layer);
+            } else {
+                LOGGER.log(
+                        Level.INFO,
+                        "The following layer won't be handled by the Pinning Service since it hasn't any time dimension associated: "
+                                + gsLayerId);
+            }
+        }
+    }
+
+    private boolean configureFromMosaic(MappedLayer layer, CoverageInfo cvInfo) throws IOException {
+        MetadataMap metadataMap = cvInfo.getMetadata();
+        DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
+        if (timeDimension != null) {
+            GridCoverageReader reader = cvInfo.getGridCoverageReader(null, null);
+            if (reader instanceof StructuredGridCoverage2DReader) {
+                StructuredGridCoverage2DReader structuredReader =
+                        (StructuredGridCoverage2DReader) reader;
+                String nativeCoverageName = cvInfo.getNativeCoverageName();
+                if (nativeCoverageName == null) {
+                    nativeCoverageName = reader.getGridCoverageNames()[0];
+                }
+                GranuleSource source = structuredReader.getGranules(nativeCoverageName, true);
+                SimpleFeatureType schema = source.getSchema();
+                String tableName = schema.getTypeName();
+                layer.setFullTableName(escapeTableName(tableName));
+                List<DimensionDescriptor> descriptors =
+                        structuredReader.getDimensionDescriptors(nativeCoverageName);
+                for (DimensionDescriptor desc : descriptors) {
+                    if ("TIME".equalsIgnoreCase(desc.getName())) {
+                        String timeAttribute = desc.getStartAttribute();
+                        layer.setTemporalAttribute(timeAttribute);
+                        NearestMatchFinder finder =
+                                NearestMatchFinder.get(cvInfo, timeDimension, "time");
+                        if (finder != null) {
+                            layer.setNearestTimeFinder(finder);
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean configureFromVector(MappedLayer layer, FeatureTypeInfo featureTypeInfo)
+            throws IOException {
+        MetadataMap metadataMap = featureTypeInfo.getMetadata();
+        DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
+        if (timeDimension != null) {
+            String timeAttribute = timeDimension.getAttribute();
+            if (timeAttribute != null) {
+                layer.setTemporalAttribute(timeAttribute);
+            }
+            StoreInfo store = featureTypeInfo.getStore();
+            String tableName = featureTypeInfo.getNativeName();
+            Map<String, Serializable> params = store.getConnectionParameters();
+            if ("Vector Mosaic Data Store".equalsIgnoreCase(store.getType())) {
+                tableName =
+                        tableName.substring(
+                                0, tableName.length() - 7); // Get rid of the _mosaic suffix
+                String delegateStoreName = (String) params.get("delegateStoreName");
+                if (delegateStoreName != null) {
+                    String[] storeName = delegateStoreName.split(":");
+                    store = catalog.getDataStoreByName(storeName[0], storeName[1]);
+                    params = store.getConnectionParameters();
+                }
+            }
+
+            String schema = (String) params.get("schema");
+            layer.setFullTableName(buildFullTableName(schema, tableName));
+            NearestMatchFinder finder =
+                    NearestMatchFinder.get(featureTypeInfo, timeDimension, "time");
+            if (finder != null) {
+                layer.setNearestTimeFinder(finder);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private String buildFullTableName(String schema, String tableName) {
+        String escapedTableName = escapeTableName(tableName);
+        return (schema != null && !schema.isBlank())
+                ? schema + "." + escapedTableName
+                : escapedTableName;
+    }
+
+    private String escapeTableName(String tableName) {
+        if (!tableName.equals(tableName.toLowerCase())) {
+            return "\"" + tableName + "\"";
+        } else {
+            return tableName;
+        }
+    }
+
+    public List<MappedLayer> getLayersById(String id) {
+        List<MappedLayer> mappedLayers = layerMapping.get(id);
+        if (mappedLayers == null || mappedLayers.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "The following layer has no associated mapping. Aborting pinning " + id);
+        }
+        return mappedLayers;
+    }
+
+    @Override
+    public void onReset() {
+        loadMappings();
+    }
+
+    @Override
+    public void onDispose() {}
+
+    @Override
+    public void beforeReload() {
+        loadMappings();
+    }
+
+    @Override
+    public void onReload() {}
+}
