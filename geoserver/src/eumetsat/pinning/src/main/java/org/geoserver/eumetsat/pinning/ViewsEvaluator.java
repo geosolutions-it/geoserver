@@ -270,7 +270,7 @@ public class ViewsEvaluator {
     private void setPinLayer(Instant originalTime, Instant mainTime, MappedLayer layer, boolean add)
             throws SQLException, IOException {
 
-        boolean mainGreaterThanOriginal = isGreaterThan(mainTime, originalTime);
+        boolean mainGreaterThanOriginal = mainTime.isAfter(originalTime);
         Instant minTime = mainGreaterThanOriginal ? originalTime : mainTime;
         Instant maxTime = mainGreaterThanOriginal ? mainTime : originalTime;
         Instant start = layer.getNearest(getLeft(minTime));
@@ -289,10 +289,6 @@ public class ViewsEvaluator {
                 pinBatcher.update(
                         layer.getTableName(), layer.getTemporalAttribute(), start, end, add);
         logger.log(Level.FINEST, "pinning query:" + updateQuery);
-    }
-
-    private boolean isGreaterThan(Instant mainTime, Instant originalTime) {
-        return originalTime.getEpochSecond() <= mainTime.getEpochSecond();
     }
 
     private Instant getLeft(Instant time) {
@@ -393,8 +389,7 @@ public class ViewsEvaluator {
                 Instant previousMainRight = mappedLayer.getNearest(getRight(previousMainTime));
                 Instant newLeft = mappedLayer.getNearest(getLeft(parsed.getTime()));
                 Instant newRight = mappedLayer.getNearest(getRight(parsed.getTime()));
-
-                // extend to right
+                boolean timeUnchanged = (previousMainLeft.equals(previousOrigLeft) && previousMainRight.equals(previousOrigRight));
                 if (newLeft.equals(previousMainLeft) && newRight.equals(previousMainRight)) {
                     logger.log(
                             Level.FINE,
@@ -402,51 +397,61 @@ public class ViewsEvaluator {
                                     + mappedLayer.getLayerName());
                     continue;
                 }
-                if (isGreaterThan(newRight, previousOrigRight)
-                        && isGreaterThan(previousOrigRight, newLeft)) {
-                    if (isGreaterThan(newRight, previousMainRight)) {
+                if (newRight.isAfter(previousOrigRight)) {
+                    if (newRight.isAfter(previousMainRight)){
+                        if (previousMainLeft.isAfter(previousOrigLeft) || timeUnchanged) {
                         setPinLayerRange(
                                 previousMainRight.plus(Duration.ofSeconds(1)),
                                 newRight,
                                 mappedLayer,
                                 true);
-                    } else if (isGreaterThan(newLeft, previousMainRight)) {
-                        setPinLayerRange(
-                                previousOrigRight.plus(Duration.ofSeconds(1)),
-                                newRight,
-                                mappedLayer,
-                                true);
-                        setPinLayerRange(
-                                previousMainLeft,
-                                previousOrigLeft.minus(Duration.ofSeconds(1)),
-                                mappedLayer,
-                                false);
+                        } else {
+                            setPinLayerRange(
+                                    previousMainLeft,
+                                    previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                    mappedLayer,
+                                    false);
+                            setPinLayerRange(
+                                    previousOrigRight.plus(Duration.ofSeconds(1)),
+                                    newRight,
+                                    mappedLayer,
+                                    true);
+                        }
                     } else {
-                        System.out.println("WHAT TO DO HERE");
-                    }
-
-                } else if (isGreaterThan(previousOrigLeft, newLeft)
-                        && isGreaterThan(newRight, previousOrigLeft)) {
-                    if (isGreaterThan(previousMainLeft, newRight)) {
                         setPinLayerRange(
-                                newLeft,
-                                previousOrigLeft.minus(Duration.ofSeconds(1)),
-                                mappedLayer,
-                                true);
-                        setPinLayerRange(
-                                previousMainRight.plus(Duration.ofSeconds(1)),
+                                newLeft.plus(Duration.ofSeconds(1)),
                                 previousMainRight,
                                 mappedLayer,
                                 false);
+                    }
 
-                    } else if (isGreaterThan(newRight, previousMainLeft)) {
-                        setPinLayerRange(
-                                newLeft,
-                                previousMainLeft.minus(Duration.ofSeconds(1)),
-                                mappedLayer,
-                                true);
+                } else {
+                    if (newLeft.isBefore(previousMainLeft)) {
+                        if (previousMainRight.isBefore(previousOrigRight) || timeUnchanged) {
+                            setPinLayerRange(
+                                    newLeft,
+                                    previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                    mappedLayer,
+                                    true);
+                        } else {
+                            setPinLayerRange(
+                                    previousOrigRight.plus(Duration.ofSeconds(1)),
+                                    previousMainRight,
+                                    mappedLayer,
+                                    false);
+                            setPinLayerRange(
+                                    newLeft,
+                                    previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                    mappedLayer,
+                                    true);
+
+                        }
                     } else {
-                        System.out.println("WHAT TO DO HERE");
+                        setPinLayerRange(
+                                previousMainLeft,
+                                newLeft.minus(Duration.ofSeconds(1)),
+                                mappedLayer,
+                                false);
                     }
                 }
             }

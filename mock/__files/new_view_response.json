@@ -5,7 +5,7 @@
         "id": 1048,
         "ownerId": "licensed_user_e",
         "name": "newlayer",
-        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0201\",\"name\":\"LayerGroup\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0201\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T18:30:42.343Z\"}}",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:MSG:AIRMASS\",\"name\":\"Airmass RGB - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:MSG:AIRMASS\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T18:30:42.343Z\"}}",
         "type": "mapView",
         "shared": false,
         "creationTime": "2025-02-13T15:30:42.343",
