@@ -49,6 +49,7 @@
     <module>web</module>
     <module>community</module>
     <module>extension</module>
+    <module>eumetsat/pinning</module>
   </modules>
 
   <scm>
@@ -265,6 +266,16 @@
       <dependency>
         <groupId>org.geoserver</groupId>
         <artifactId>gs-kml</artifactId>
+        <version>${gs.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.geoserver</groupId>
+        <artifactId>gs-restconfig</artifactId>
+        <version>${gs.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.geoserver.eumetsat</groupId>
+        <artifactId>pinning</artifactId>
         <version>${gs.version}</version>
       </dependency>
 

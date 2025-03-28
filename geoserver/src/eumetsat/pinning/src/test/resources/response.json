@@ -1,0 +1,406 @@
+{
+  "_embedded": {
+    "preferences": [
+      {
+        "id": 1052,
+        "ownerId": "licensed_user_e",
+        "name": "EO:EUM:DAT:0871 test",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[12.20550537109375,41.725921630859375],\"zoom\":9},\"layers\":[{\"id\":\"EO:EUM:DAT:0871\",\"name\":\"FCI HRFI IR10.5 μm Image - MTG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"mtg_fd_ir105_hrfi_style_01\"}}],\"drivingLayer\":\"EO:EUM:DAT:0871\",\"overlays\":{\"coastline\":false,\"borders\":false,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2023-11-26T15:10:00.000Z\"},\"description\":\"EO:EUM:DAT:0871 test\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-13T13:45:56.552",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1052"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1052"
+          }
+        }
+      },
+      {
+        "id": 942,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[7.132732718875737,43.46934426365009],\"zoom\":6},\"layers\":[{\"id\":\"EO:EUM:DAT:0156\",\"name\":\"High Rate SEVIRI IR10.8 μm Image - MSG - 0 degree \",\"state\":{\"visible\":true,\"opacity\":\"1\",\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0156\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T18:30:00.000Z\"}}",
+        "type": "mapView",
+        "shared": true,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/942"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/942"
+          }
+        }
+      },
+      {
+        "id": 993,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View34",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0171\",\"name\":\"Rapid Scan High Rate SEVIRI IR 3.9 - MSG\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0171\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-20T11:55:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/993"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/993"
+          }
+        }
+      },
+      {
+        "id": 950,
+        "ownerId": "licensed_user_e",
+        "name": "sdfsd",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}},{\"id\":\"EO:EUM:DAT:0620\",\"name\":\"Blended SEVIRI / LEO MW precipitation and morphologic information - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}},{\"id\":\"EO:EUM:DAT:0156\",\"name\":\"High Rate SEVIRI IR10.8 μm Image - MSG - 0 degree \",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0156\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T18:30:00.000Z\"},\"description\":\"sdfsd\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/950"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/950"
+          }
+        }
+      },
+      {
+        "id": 994,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View546",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-14.327785968780557,15.789574682712583],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0336\",\"name\":\"Geostationary Ring Natural Colour RGB - Multimission\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0336\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-19T03:00:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/994"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/994"
+          }
+        }
+      },
+      {
+        "id": 879,
+        "ownerId": "licensed_user_e",
+        "name": "Unsaved session1",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[29.44169055437507,-5.303152153004346],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0164\",\"name\":\"High Rate SEVIRI IR10.8 μm Image - MSG - Indian Ocean\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0164\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-20T23:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/879"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/879"
+          }
+        }
+      },
+      {
+        "id": 888,
+        "ownerId": "licensed_user_e",
+        "name": "rdt1111",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[36.22034056375008,-6.397936074062525],\"zoom\":3.008575098669386},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2023-10-18T10:55:54.678Z\"}}",
+        "type": "mapView",
+        "shared": true,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/888"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/888"
+          }
+        }
+      },
+      {
+        "id": 889,
+        "ownerId": "licensed_user_e",
+        "name": "rdt4444",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[36.22034056375008,-6.397936074062525],\"zoom\":3.008575098669386},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2023-04-12T23:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/889"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/889"
+          }
+        }
+      },
+      {
+        "id": 890,
+        "ownerId": "licensed_user_e",
+        "name": "High Rate SEVIRI WV6.2 μm Image - MSG - Indian Ocean 41.5 degrees E",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[36.22034056375008,-6.397936074062525],\"zoom\":3.008575098669386},\"layers\":[{\"id\":\"EO:EUM:DAT:0168\",\"name\":\"High Rate SEVIRI WV6.2 μm Image - MSG - Indian Ocean 41.5 degrees E\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0168\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":true,\"labels_light\":true},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-20T17:30:00.000Z\"}}",
+        "type": "mapView",
+        "shared": true,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/890"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/890"
+          }
+        }
+      },
+      {
+        "id": 973,
+        "ownerId": "licensed_user_e",
+        "name": "fgd",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[10,50],\"zoom\":5},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":false,\"borders\":false,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-04-10T14:45:00.000Z\"},\"description\":\"dg\"}",
+        "type": "mapView",
+        "shared": true,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/973"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/973"
+          }
+        }
+      },
+      {
+        "id": 1039,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View12222",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-42.29203933343792,17.012409878796806],\"zoom\":2},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":false,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T09:15:00.000Z\"},\"description\":\"MTG GeoColour RGB with MSG IR10.8 in the background\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1039"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1039"
+          }
+        }
+      },
+      {
+        "id": 976,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View1",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}},{\"id\":\"EO:EUM:DAT:0620\",\"name\":\"Blended SEVIRI / LEO MW precipitation and morphologic information - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}},{\"id\":\"EO:EUM:DAT:0156\",\"name\":\"High Rate SEVIRI IR10.8 μm Image - MSG - 0 degree \",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0156\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T18:30:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/976"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/976"
+          }
+        }
+      },
+      {
+        "id": 1041,
+        "ownerId": "licensed_user_e",
+        "name": "Rapidly Developing Thunderstorms - MSG - 0 degree",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-1.598679958437879,33.7555739412968],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T09:15:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1041"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1041"
+          }
+        }
+      },
+      {
+        "id": 916,
+        "ownerId": "licensed_user_e",
+        "name": "default",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-20T10:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/916"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/916"
+          }
+        }
+      },
+      {
+        "id": 937,
+        "ownerId": "licensed_user_e",
+        "name": "sdf",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[10,50],\"zoom\":5},\"layers\":[],\"drivingLayer\":null,\"overlays\":{\"coastline\":false,\"borders\":false,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-03T18:30:00.000Z\"},\"description\":\"sdfd\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/937"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/937"
+          }
+        }
+      },
+      {
+        "id": 940,
+        "ownerId": "licensed_user_e",
+        "name": "xcv",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[10,50],\"zoom\":5},\"layers\":[],\"drivingLayer\":null,\"overlays\":{\"coastline\":false,\"borders\":false,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2022-02-20T10:45:00.000Z\"},\"description\":\"xcv\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/940"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/940"
+          }
+        }
+      },
+      {
+        "id": 1042,
+        "ownerId": "licensed_user_e",
+        "name": "ascat",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0202\",\"name\":\"ASCAT Coastal Winds at 12.5 km Swath Grid - Metop-C\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}},{\"id\":\"EO:EUM:DAT:0192\",\"name\":\"ASCAT Coastal Winds at 12.5 km Swath Grid - Metop-B\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0192\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-10-14T10:42:25.588Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+          }
+        }
+      },
+      {
+        "id": 1051,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat view test",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[10,50],\"zoom\":5},\"layers\":[{\"id\":\"EO:EUM:DAT:METOP:GLB-SST-NC\",\"name\":\"Global L3C AVHRR Sea Surface Temperature (GHRSST) - Metop\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"sst_medspiration_single_band\"}}],\"drivingLayer\":\"EO:EUM:DAT:METOP:GLB-SST-NC\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2024-03-04T00:00:00.000Z\"},\"description\":\"Eumetsat view test\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1051"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1051"
+          }
+        }
+      },
+      {
+        "id": 985,
+        "ownerId": "licensed_user_e",
+        "name": "s",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2023-04-11T23:45:00.000Z\"},\"description\":\"ds\"}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/985"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/985"
+          }
+        }
+      },
+      {
+        "id": 983,
+        "ownerId": "licensed_user_e",
+        "name": "Eumetsat View11",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"msg_fes:rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"latest\",\"value\":\"2023-04-11T23:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-02-12T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/983"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/983"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "first": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "self": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "next": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    },
+    "last": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 22,
+    "totalPages": 2,
+    "number": 0
+  }
+}
