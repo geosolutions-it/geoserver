@@ -171,6 +171,7 @@ class ViewsBatcher {
      */
     public String deleteView(Long viewId) throws SQLException {
         deleteStatement.setLong(1, viewId);
+        deleteStatement.addBatch();
         if (deleteCount++ == batchSize) {
             deleteStatement.executeBatch();
             deleteCount = 0;
