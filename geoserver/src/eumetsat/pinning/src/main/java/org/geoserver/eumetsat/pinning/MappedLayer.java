@@ -21,7 +21,7 @@ public class MappedLayer {
     private String workspace;
     private String layerName;
     private String temporalAttribute;
-    private String tableName;
+    private String fullTableName;
     private NearestMatchFinder nearestTimeFinder;
 
     public MappedLayer(String workspace, String layerName) {
@@ -45,8 +45,8 @@ public class MappedLayer {
         return temporalAttribute;
     }
 
-    public String getTableName() {
-        return tableName;
+    public String getFullTableName() {
+        return fullTableName;
     }
 
     public String getGeoServerLayerIdentifier() {
@@ -62,8 +62,8 @@ public class MappedLayer {
                 + ", layerName='"
                 + layerName
                 + '\''
-                + ", tableName='"
-                + tableName
+                + ", fullTableName='"
+                + fullTableName
                 + '\''
                 + ", temporalAttribute='"
                 + temporalAttribute
@@ -75,8 +75,8 @@ public class MappedLayer {
         this.temporalAttribute = temporalAttribute;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public void setFullTableName(String fullTableName) {
+        this.fullTableName = fullTableName;
     }
 
     public void setNearestTimeFinder(NearestMatchFinder nearestTimeFinder) {

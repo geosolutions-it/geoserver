@@ -23,14 +23,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.logging.Level;
-import javax.annotation.PostConstruct;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
 import org.geoserver.eumetsat.pinning.views.ParsedView;
 import org.geoserver.eumetsat.pinning.views.ViewRecord;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-@Component
 /**
  * Evaluates views and operate on the views (insert, update, delete), performing the necessary
  * pinning operations on the involved records
@@ -43,8 +39,6 @@ public class ViewsEvaluator {
      */
     public class LayersUpdate {
 
-        private Set<String> layersBefore;
-        private Set<String> layersAfter;
         private Set<String> removed;
         private Set<String> added;
         private Set<String> unchanged;
@@ -52,12 +46,12 @@ public class ViewsEvaluator {
         /**
          * Constructs a LayersUpdate instance to track layer changes between two sets of layers.
          *
-         * @param layersBefore The list of layer names before the update
-         * @param layersAfter The list of layer names after the update
+         * @param layersListBefore The list of layer names before the update
+         * @param layersListAfter The list of layer names after the update
          */
-        public LayersUpdate(List<String> layersBefore, List<String> layersAfter) {
-            this.layersBefore = new HashSet<>(layersBefore);
-            this.layersAfter = new HashSet<>(layersAfter);
+        public LayersUpdate(List<String> layersListBefore, List<String> layersListAfter) {
+            HashSet<String> layersBefore = new HashSet<>(layersListBefore);
+            HashSet<String> layersAfter = new HashSet<>(layersListAfter);
 
             // removed layers (present in layersBefore but not in layersAfter)
             removed = new HashSet<>(layersBefore);
@@ -118,11 +112,9 @@ public class ViewsEvaluator {
 
     private Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
-    @Autowired private LayersMapper layersMapper;
+    private LayersMapper layersMapper;
 
-    @Autowired private PinningServiceConfig config;
-
-    @Autowired private PinningServiceLogger logger;
+    private PinningServiceLogger logger;
 
     private Connection connection;
 
@@ -132,15 +124,16 @@ public class ViewsEvaluator {
 
     private ViewsBatcher viewsBatcher;
 
-    @PostConstruct
-    private void initDuration() {
-        // Splitting the provided pinning minutes in half (which means multiplying minutes by 30
-        // seconds)
-        duration = Duration.ofSeconds(config.pinningMinutes() * 30);
-    }
-
-    public void init(Connection connection) throws SQLException {
+    public ViewsEvaluator(
+            Connection connection,
+            PinningServiceConfig config,
+            PinningServiceLogger logger,
+            LayersMapper mapper)
+            throws SQLException {
+        this.logger = logger;
+        this.layersMapper = mapper;
         this.connection = connection;
+        this.duration = Duration.ofSeconds(config.pinningMinutes() * 30);
         this.pinBatcher = new PinBatcher(connection, config.batchSize());
         this.viewsBatcher = new ViewsBatcher(connection, config.batchSize());
     }
@@ -151,16 +144,16 @@ public class ViewsEvaluator {
      * @throws RuntimeException
      */
     public void release() throws RuntimeException {
-        SQLException firstException = null;
+        IOException firstException = null;
         try {
-            this.pinBatcher.release();
-        } catch (SQLException e) {
+            this.pinBatcher.close();
+        } catch (IOException e) {
             firstException = e;
         }
 
         try {
-            this.viewsBatcher.release();
-        } catch (SQLException e) {
+            this.viewsBatcher.close();
+        } catch (IOException e) {
             if (firstException != null) {
                 firstException.addSuppressed(e);
             } else {
@@ -206,7 +199,7 @@ public class ViewsEvaluator {
     public void addViewAndPin(ViewRecord view) throws Exception {
         logger.log(Level.FINE, "Pinning layers for view: " + view.getId());
         logger.log(Level.FINER, view);
-        updateLayersPins(view.getLayers(), view.getTimeOriginal(), view.getTimeMain(), true);
+        updateLayersPins(view.getLayers(), view.getTimeOriginal(), view.getTimeOriginal(), true);
         insertView(view);
     }
 
@@ -236,12 +229,14 @@ public class ViewsEvaluator {
     }
 
     public ViewRecord buildView(ParsedView view) {
+        // For a newly created view, originalTime and mainTime are the same
         ViewRecord viewRecord =
                 new ViewRecord(
                         view.getViewId(),
                         view.getTime(),
                         view.getTime(),
                         view.getLayers(),
+                        view.getDrivingLayer(),
                         view.getLastUpdate());
         return viewRecord;
     }
@@ -268,7 +263,7 @@ public class ViewsEvaluator {
             Collection<String> layers, Instant originalTime, Instant mainTime, boolean addPin)
             throws SQLException, IOException {
         for (String layer : layers) {
-            pinGeoserverLayer(layer, originalTime, mainTime, addPin);
+            updateLayersPin(layer, originalTime, mainTime, addPin);
         }
     }
 
@@ -283,17 +278,20 @@ public class ViewsEvaluator {
     public void syncView(ViewRecord view, ParsedView parsed) throws SQLException, IOException {
         Instant originalTime = view.getTimeOriginal();
         Instant viewTime = parsed.getTime();
+        ViewRecord record = buildView(parsed);
         if (viewTime.equals(view.getTimeMain())) {
             logger.log(Level.FINE, "View time has not been modified");
+            // Redo the view since the layers may have been changed.
+            // Note that a redo may also result into a no-op
             redoView(view, parsed);
-        } else if (!isExtendingWindow(originalTime, viewTime)) {
+        } else if (!isExtendingWindow(view, originalTime, viewTime)) {
             logger.log(Level.FINE, "View time has been updated outside the pinning window");
             redoView(view, parsed);
         } else {
             logger.log(Level.FINE, "View time has been updated within the pinning window");
             extendView(view, parsed);
+            record.setTimeOriginal(originalTime);
         }
-        ViewRecord record = buildView(parsed);
         updateView(record);
     }
 
@@ -320,10 +318,17 @@ public class ViewsEvaluator {
                     String[] layers = (String[]) layersArray.getArray();
                     List<String> layersList = Arrays.asList(layers);
 
+                    String drivingLayer = rs.getString("driving_layer");
                     Instant lastUpdated = rs.getTimestamp("last_update", utcCalendar).toInstant();
 
                     ViewRecord record =
-                            new ViewRecord(id, timeOriginal, timeMain, layersList, lastUpdated);
+                            new ViewRecord(
+                                    id,
+                                    timeOriginal,
+                                    timeMain,
+                                    layersList,
+                                    drivingLayer,
+                                    lastUpdated);
                     logger.log(Level.FINER, record);
                     return record;
                 }
@@ -334,12 +339,13 @@ public class ViewsEvaluator {
 
     private void setPinLayer(Instant originalTime, Instant mainTime, MappedLayer layer, boolean add)
             throws SQLException, IOException {
-
-        boolean mainGreaterThanOriginal = mainTime.isAfter(originalTime);
-        Instant minTime = mainGreaterThanOriginal ? originalTime : mainTime;
-        Instant maxTime = mainGreaterThanOriginal ? mainTime : originalTime;
-        Instant start = layer.getNearest(getLeft(minTime));
-        Instant end = layer.getNearest(getRight(maxTime));
+        Instant nearestOrig = layer.getNearest(originalTime);
+        Instant nearestMain = layer.getNearest(mainTime);
+        boolean mainGreaterThanOriginal = nearestMain.isAfter(nearestOrig);
+        Instant minTime = mainGreaterThanOriginal ? nearestOrig : nearestMain;
+        Instant maxTime = mainGreaterThanOriginal ? nearestMain : nearestOrig;
+        Instant start = getLeft(minTime);
+        Instant end = getRight(maxTime);
         setPinLayerRange(start, end, layer, add);
     }
 
@@ -352,7 +358,7 @@ public class ViewsEvaluator {
                         add ? "P" : "Unp", layer.getGeoServerLayerIdentifier(), start, end));
         String updateQuery =
                 pinBatcher.update(
-                        layer.getTableName(), layer.getTemporalAttribute(), start, end, add);
+                        layer.getFullTableName(), layer.getTemporalAttribute(), start, end, add);
         logger.log(Level.FINEST, "pinning query:" + updateQuery);
     }
 
@@ -383,13 +389,13 @@ public class ViewsEvaluator {
     }
 
     private void resetPin(MappedLayer layer) throws SQLException {
-        String tableName = layer.getTableName();
+        String tableName = layer.getFullTableName();
         logger.log(Level.FINE, String.format("Resetting pin for table %s", tableName));
         String resetQuery = pinBatcher.resetPins(tableName);
         logger.log(Level.FINEST, "Resetting pin query: " + resetQuery);
     }
 
-    private void pinGeoserverLayer(
+    private void updateLayersPin(
             String layer, Instant originalTime, Instant mainTime, boolean addPin)
             throws SQLException, IOException {
         List<MappedLayer> mappedLayers = layersMapper.getLayersById(layer);
@@ -417,7 +423,7 @@ public class ViewsEvaluator {
 
         // Pin newly added layers
         ViewRecord updatedView = buildView(parsed);
-        updateLayersPins(layersUpdate.getAdded(), parsed.getTime(), parsed.getTime(), false);
+        updateLayersPins(layersUpdate.getAdded(), parsed.getTime(), parsed.getTime(), true);
 
         // recompute pinning for existing layers
         if (!updatedView.getTimeMain().equals(view.getTimeMain())
@@ -446,22 +452,22 @@ public class ViewsEvaluator {
                 layersUpdate.getRemoved(), view.getTimeOriginal(), view.getTimeMain(), false);
 
         // Pin newly added layers
-        updateLayersPins(layersUpdate.getAdded(), view.getTimeOriginal(), parsed.getTime(), false);
+        updateLayersPins(layersUpdate.getAdded(), view.getTimeOriginal(), parsed.getTime(), true);
 
         for (String layer : layersUpdate.getUnchanged()) {
             List<MappedLayer> mappedLayers = layersMapper.getLayersById(layer);
             for (MappedLayer mappedLayer : mappedLayers) {
-                Instant previousOriginalTime = view.getTimeOriginal();
-                Instant previousMainTime = view.getTimeMain();
-                Instant previousOrigLeft = mappedLayer.getNearest(getLeft(previousOriginalTime));
-                Instant previousOrigRight = mappedLayer.getNearest(getRight(previousOriginalTime));
-                Instant previousMainLeft = mappedLayer.getNearest(getLeft(previousMainTime));
-                Instant previousMainRight = mappedLayer.getNearest(getRight(previousMainTime));
-                Instant newLeft = mappedLayer.getNearest(getLeft(parsed.getTime()));
-                Instant newRight = mappedLayer.getNearest(getRight(parsed.getTime()));
+                Instant origTime = mappedLayer.getNearest(view.getTimeOriginal());
+                Instant previousMainTime = mappedLayer.getNearest(view.getTimeMain());
+                Instant origLeft = getLeft(origTime);
+                Instant origRight = getRight(origTime);
+                Instant previousMainLeft = getLeft(previousMainTime);
+                Instant previousMainRight = getRight(previousMainTime);
+                Instant parsedTime = mappedLayer.getNearest(parsed.getTime());
+                Instant newLeft = getLeft(parsedTime);
+                Instant newRight = getRight(parsedTime);
                 boolean timeUnchanged =
-                        (previousMainLeft.equals(previousOrigLeft)
-                                && previousMainRight.equals(previousOrigRight));
+                        (previousMainLeft.equals(origLeft) && previousMainRight.equals(origRight));
                 if (newLeft.equals(previousMainLeft) && newRight.equals(previousMainRight)) {
                     logger.log(
                             Level.FINE,
@@ -469,27 +475,42 @@ public class ViewsEvaluator {
                                     + mappedLayer.getLayerName());
                     continue;
                 }
-                if (newRight.isAfter(previousOrigRight)) {
+                // Here we are checking the "positioning" of the original, main and incoming window
+                // so that we can pin [++] and unpin [--] records accordingly.
+                // https://docs.google.com/drawings/d/15iXiTLEmja1vHudcBUv7VIangH--rqZ6L_2eTYDVCjw/edit?usp=sharing
+                if (newRight.isAfter(origRight)) {
                     if (newRight.isAfter(previousMainRight)) {
-                        if (previousMainLeft.isAfter(previousOrigLeft) || timeUnchanged) {
+                        if (previousMainLeft.isAfter(origLeft) || timeUnchanged) {
+                            // [original]
+                            //       [ main ]
+                            //           [  new  ]
+                            //              [ ++ ]
                             setPinLayerRange(
                                     previousMainRight.plus(Duration.ofSeconds(1)),
                                     newRight,
                                     mappedLayer,
                                     true);
                         } else {
+                            //     [original]
+                            //  [ main ]
+                            //           [  new  ]
+                            //  [--]        [ ++ ]
                             setPinLayerRange(
                                     previousMainLeft,
-                                    previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                    origLeft.minus(Duration.ofSeconds(1)),
                                     mappedLayer,
                                     false);
                             setPinLayerRange(
-                                    previousOrigRight.plus(Duration.ofSeconds(1)),
+                                    origRight.plus(Duration.ofSeconds(1)),
                                     newRight,
                                     mappedLayer,
                                     true);
                         }
                     } else {
+                        //     [original]
+                        //             [ main  ]
+                        //        [  new  ]
+                        //                [ -- ]
                         setPinLayerRange(
                                 newLeft.plus(Duration.ofSeconds(1)),
                                 previousMainRight,
@@ -499,25 +520,37 @@ public class ViewsEvaluator {
 
                 } else {
                     if (newLeft.isBefore(previousMainLeft)) {
-                        if (previousMainRight.isBefore(previousOrigRight) || timeUnchanged) {
+                        if (previousMainRight.isBefore(origRight) || timeUnchanged) {
+                            //       [original]
+                            //    [  main  ]
+                            // [  new  ]
+                            // [++]
                             setPinLayerRange(
                                     newLeft,
-                                    previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                    origLeft.minus(Duration.ofSeconds(1)),
                                     mappedLayer,
                                     true);
                         } else {
+                            //      [original]
+                            //             [  main  ]
+                            // [  new  ]
+                            // [ ++ ]        [  --  ]
                             setPinLayerRange(
-                                    previousOrigRight.plus(Duration.ofSeconds(1)),
+                                    origRight.plus(Duration.ofSeconds(1)),
                                     previousMainRight,
                                     mappedLayer,
                                     false);
                             setPinLayerRange(
                                     newLeft,
-                                    previousOrigLeft.minus(Duration.ofSeconds(1)),
+                                    origLeft.minus(Duration.ofSeconds(1)),
                                     mappedLayer,
                                     true);
                         }
                     } else {
+                        //           [original]
+                        //    [  main  ]
+                        //         [  new  ]
+                        //    [ -- ]
                         setPinLayerRange(
                                 previousMainLeft,
                                 newLeft.minus(Duration.ofSeconds(1)),
@@ -529,15 +562,12 @@ public class ViewsEvaluator {
         }
     }
 
-    private boolean isExtendingWindow(Instant originalTime, Instant viewTime) {
-
-        Instant originalStart = originalTime.minus(duration);
-        Instant originalEnd = originalTime.plus(duration);
-
-        // Expand viewTime window
-        Instant viewStart = viewTime.minus(duration);
-        Instant viewEnd = viewTime.plus(duration);
-
-        return originalStart.isBefore(viewEnd) && viewStart.isBefore(originalEnd);
+    private boolean isExtendingWindow(ViewRecord view, Instant originalTime, Instant viewTime)
+            throws IOException {
+        MappedLayer layer = layersMapper.getLayersById(view.getDrivingLayer()).get(0);
+        Instant nearestOrig = layer.getNearest(originalTime);
+        Instant nearestMain = layer.getNearest(viewTime);
+        Duration distance = Duration.between(nearestOrig, nearestMain).abs();
+        return distance.minus(duration.multipliedBy(2)).isNegative();
     }
 }

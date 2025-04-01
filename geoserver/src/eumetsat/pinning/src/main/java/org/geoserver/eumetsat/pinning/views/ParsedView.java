@@ -14,15 +14,18 @@ public class ParsedView {
     private Instant time;
     private String timeMode;
     private Instant lastUpdate;
+    private String drivingLayer;
 
     public ParsedView(
             Long viewId,
+            String drivingLayer,
             List<String> layers,
             Instant time,
             String timeMode,
             Instant lastUpdate,
             Boolean disabled) {
         this.viewId = viewId;
+        this.drivingLayer = drivingLayer;
         this.layers = layers;
         this.time = time;
         this.timeMode = timeMode;
@@ -48,6 +51,10 @@ public class ParsedView {
 
     public String getTimeMode() {
         return timeMode;
+    }
+
+    public String getDrivingLayer() {
+        return drivingLayer;
     }
 
     public Boolean getDisabled() {

@@ -12,6 +12,7 @@ public class ViewRecord {
     private Instant timeMain;
     private long viewId;
     private List<String> layers;
+    private String drivingLayer;
     private Instant lastUpdate;
 
     public ViewRecord(
@@ -19,7 +20,9 @@ public class ViewRecord {
             Instant timeOriginal,
             Instant timeMain,
             List<String> layers,
+            String drivingLayer,
             Instant lastUpdate) {
+        this.drivingLayer = drivingLayer;
         this.timeOriginal = timeOriginal;
         this.timeMain = timeMain;
         this.viewId = viewId;
@@ -43,8 +46,16 @@ public class ViewRecord {
         return layers;
     }
 
+    public String getDrivingLayer() {
+        return drivingLayer;
+    }
+
     public Instant getLastUpdate() {
         return lastUpdate;
+    }
+
+    public void setDrivingLayer(String drivingLayer) {
+        this.drivingLayer = drivingLayer;
     }
 
     public void setTimeOriginal(Instant timeOriginal) {
@@ -70,6 +81,8 @@ public class ViewRecord {
                 + timeMain
                 + ", layersList="
                 + layers
+                + ", drivingLayer="
+                + drivingLayer
                 + ", lastUpdate="
                 + lastUpdate
                 + '}';

@@ -7,13 +7,15 @@ package org.geoserver.eumetsat.pinning.views;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.geoserver.catalog.Catalog;
+import org.geoserver.eumetsat.pinning.PinningServiceLogger;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
-import org.geotools.util.logging.Logging;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -27,14 +29,14 @@ import org.springframework.web.client.RestTemplate;
  */
 public class ViewsClient {
 
-    private static final Logger LOGGER = Logging.getLogger(ViewsClient.class);
-
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final Catalog catalog;
     private final String baseApiUrl;
 
     @Autowired private final PinningServiceConfig config;
+
+    @Autowired private PinningServiceLogger logger;
 
     private static final String SEARCH_PATH = "search/findByType?type=mapView";
     private static final String LAST_UPDATE_FILTER = "&lastUpdate=?";
@@ -54,20 +56,34 @@ public class ViewsClient {
      * @return A list of View objects retrieved from the preferences endpoint
      * @throws Exception If there are issues with REST request or JSON parsing
      */
-    public List<View> fetchViews(String lastUpdatedFilter) throws Exception {
+    public List<ParsedView> fetchViews(Instant lastUpdatedFilter) throws Exception {
         String request = baseApiUrl + SEARCH_PATH;
         if (lastUpdatedFilter != null) {
-            request += LAST_UPDATE_FILTER.replace("?", lastUpdatedFilter);
+            logger.log(Level.FINE, "Filtering views by last update time: " + lastUpdatedFilter);
+            String lastUpdatedFilterStr =
+                    lastUpdatedFilter
+                            .atOffset(ZoneOffset.UTC)
+                            .format(DateTimeFormatter.ISO_DATE_TIME);
+            request += LAST_UPDATE_FILTER.replace("?", lastUpdatedFilterStr);
         }
-        if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine("Fetching views from the preferences endpoint: " + request);
-        }
+        logger.log(Level.FINE, "Fetching views from the preferences endpoint: " + request);
 
         String response = restTemplate.getForObject(request, String.class);
         ViewsResponse viewsResponse = objectMapper.readValue(response, ViewsResponse.class);
-        return viewsResponse.getEmbedded().getPreferences();
+        List<View> views = viewsResponse.getEmbedded().getPreferences();
+        logger.log(
+                Level.INFO,
+                String.format("Retrieved %d views from the preferences endpoint", views.size()));
+        return parseAndSort(views);
     }
 
+    private List<ParsedView> parseAndSort(List<View> remoteViews) throws IllegalArgumentException {
+        return remoteViews.stream()
+                .map(this::parseView)
+                .filter(this::isEventView)
+                .sorted(Comparator.comparing(ParsedView::getLastUpdate)) // Sort by lastUpdate
+                .collect(Collectors.toList());
+    }
     /**
      * Parses a View object into a ParsedView by extracting and transforming view preferences.
      *
@@ -87,6 +103,7 @@ public class ViewsClient {
             TimeInfo timeInfo = preference.getTime();
             String time = timeInfo.getValue();
             String timeMode = timeInfo.getMode();
+            String drivingLayer = preference.getDrivingLayer();
             String lastUpdate = view.getLastUpdate();
             if (!lastUpdate.endsWith("Z")) {
                 lastUpdate += "Z";
@@ -94,6 +111,7 @@ public class ViewsClient {
 
             return new ParsedView(
                     view.getViewId(),
+                    drivingLayer,
                     layers,
                     Instant.parse(time),
                     timeMode,
@@ -102,5 +120,28 @@ public class ViewsClient {
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Exception occurred while parsing the JSON", e);
         }
+    }
+
+    private boolean isEventView(ParsedView parsed) {
+        String timeMode = parsed.getTimeMode();
+        boolean isEventView = "absolute".equalsIgnoreCase(timeMode);
+        if (!isEventView) {
+            // Only event views are pinned.
+            // Live views (with mode=latest) don't need that
+            if ("latest".equalsIgnoreCase(timeMode)) {
+                logger.log(
+                        Level.FINE,
+                        String.format(
+                                "View with id=%s will be skipped since it's a live view",
+                                parsed.getViewId()));
+            } else {
+                logger.log(
+                        Level.WARNING,
+                        String.format(
+                                "View with id=%s will be skipped since %s mode wasn't recognized",
+                                parsed.getViewId(), timeMode));
+            }
+        }
+        return isEventView;
     }
 }

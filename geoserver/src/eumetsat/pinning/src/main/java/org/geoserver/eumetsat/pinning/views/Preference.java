@@ -18,6 +18,9 @@ public class Preference {
     @JsonProperty("time")
     private TimeInfo time;
 
+    @JsonProperty("drivingLayer")
+    private String drivingLayer;
+
     public List<Layer> getLayers() {
         return layers;
     }
@@ -32,6 +35,14 @@ public class Preference {
 
     public void setTime(TimeInfo time) {
         this.time = time;
+    }
+
+    public String getDrivingLayer() {
+        return drivingLayer;
+    }
+
+    public void setDrivingLayer(String drivingLayer) {
+        this.drivingLayer = drivingLayer;
     }
 }
 

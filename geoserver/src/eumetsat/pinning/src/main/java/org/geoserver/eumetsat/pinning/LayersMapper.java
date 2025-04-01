@@ -5,9 +5,9 @@
 package org.geoserver.eumetsat.pinning;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,9 +28,10 @@ import org.geoserver.catalog.PublishedInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.config.GeoServerDataDirectory;
 import org.geoserver.config.impl.GeoServerLifecycleHandler;
-import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.platform.resource.Resource;
 import org.geoserver.util.NearestMatchFinder;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
@@ -68,14 +69,21 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         LOGGER.info("Loading layers mapping");
         layerMapping.clear();
 
-        // Get the GeoServer data directory path
-        GeoServerResourceLoader loader = GeoServerExtensions.bean(GeoServerResourceLoader.class);
-        String dataDirPath = loader.getBaseDirectory().getPath();
-
-        File csvFile = new File(dataDirPath, CSV_FILE_NAME);
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            LOGGER.config("Loading mapping from file: " + csvFile);
+        GeoServerResourceLoader loader = catalog.getResourceLoader();
+        GeoServerDataDirectory directory = new GeoServerDataDirectory(loader);
+        Resource resource = directory.get(CSV_FILE_NAME);
+        Resource.Type resourceType = resource.getType();
+        if (resourceType.equals(Resource.Type.UNDEFINED)) {
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Layers Mapping initialization failed due to no Resource found for "
+                            + resource.path()
+                            + "\nThe pinning service operations will potentially fail");
+            return;
+        }
+        try (InputStream stream = resource.in();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(stream))) {
+            LOGGER.config("Loading mapping from: " + resource.path());
             String line;
             while ((line = reader.readLine()) != null) {
 
@@ -83,11 +91,11 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     continue;
                 }
 
-                String[] parts = line.split(",");
+                String[] parts = line.split("\\s*,\\s*");
                 if (parts.length == 3) {
                     String layerId = parts[0].trim();
                     String workspace = parts[1].trim();
-                    String layerName = parts[2].trim(); // Layer Name, like layer11
+                    String layerName = parts[2].trim();
                     List<MappedLayer> layers = new ArrayList<>();
                     parseLayer(workspace, layerName, layers);
 
@@ -95,7 +103,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     layerMapping.put(layerId, layers);
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             LOGGER.log(
                     Level.SEVERE,
                     "Exception occurred while mapping the layers. "
@@ -139,7 +147,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         // Do not add layers that have no time dimension
         if (resourceInfo instanceof FeatureTypeInfo) {
             FeatureTypeInfo featureTypeInfo = (FeatureTypeInfo) resourceInfo;
-            if (setVectorLayer(layer, featureTypeInfo)) {
+            if (configureFromVector(layer, featureTypeInfo)) {
                 layers.add(layer);
             } else {
                 LOGGER.log(
@@ -150,7 +158,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
 
         } else if (resourceInfo instanceof CoverageInfo) {
             CoverageInfo cvInfo = (CoverageInfo) resourceInfo;
-            if (setMosaicLayer(layer, cvInfo)) {
+            if (configureFromMosaic(layer, cvInfo)) {
                 layers.add(layer);
             } else {
                 LOGGER.log(
@@ -161,7 +169,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         }
     }
 
-    private boolean setMosaicLayer(MappedLayer layer, CoverageInfo cvInfo) throws IOException {
+    private boolean configureFromMosaic(MappedLayer layer, CoverageInfo cvInfo) throws IOException {
         MetadataMap metadataMap = cvInfo.getMetadata();
         DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
         if (timeDimension != null) {
@@ -176,7 +184,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                 GranuleSource source = structuredReader.getGranules(nativeCoverageName, true);
                 SimpleFeatureType schema = source.getSchema();
                 String tableName = schema.getTypeName();
-                layer.setTableName(tableName);
+                layer.setFullTableName(escapeTableName(tableName));
                 List<DimensionDescriptor> descriptors =
                         structuredReader.getDimensionDescriptors(nativeCoverageName);
                 for (DimensionDescriptor desc : descriptors) {
@@ -196,7 +204,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         return false;
     }
 
-    private boolean setVectorLayer(MappedLayer layer, FeatureTypeInfo featureTypeInfo)
+    private boolean configureFromVector(MappedLayer layer, FeatureTypeInfo featureTypeInfo)
             throws IOException {
         MetadataMap metadataMap = featureTypeInfo.getMetadata();
         DimensionInfo timeDimension = metadataMap.get("time", DimensionInfo.class);
@@ -221,7 +229,7 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             }
 
             String schema = (String) params.get("schema");
-            layer.setTableName(schema + "." + tableName);
+            layer.setFullTableName(buildFullTableName(schema, tableName));
             NearestMatchFinder finder =
                     NearestMatchFinder.get(featureTypeInfo, timeDimension, "time");
             if (finder != null) {
@@ -230,6 +238,21 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             return true;
         }
         return false;
+    }
+
+    private String buildFullTableName(String schema, String tableName) {
+        String escapedTableName = escapeTableName(tableName);
+        return (schema != null && !schema.isBlank())
+                ? schema + "." + escapedTableName
+                : escapedTableName;
+    }
+
+    private String escapeTableName(String tableName) {
+        if (!tableName.equals(tableName.toLowerCase())) {
+            return "\"" + tableName + "\"";
+        } else {
+            return tableName;
+        }
     }
 
     public List<MappedLayer> getLayersById(String id) {

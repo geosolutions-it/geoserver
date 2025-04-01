@@ -2,25 +2,24 @@
   "_embedded": {
     "preferences": [
       {
-        "id": 1045,
+        "id": 1048,
         "ownerId": "licensed_user_e",
-        "name": "layergroup",
-        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:0201\",\"name\":\"LayerGroup\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"metopa_beaufort\"}}],\"drivingLayer\":\"EO:EUM:DAT:0201\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T19:30:25.588Z\"}}",
+        "name": "newlayer",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:MSG:AIRMASS\",\"name\":\"Airmass RGB - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:MSG:AIRMASS\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T19:12:42.343Z\"}}",
         "type": "mapView",
         "shared": false,
-        "creationTime": "2025-03-20T20:42:25.588",
-        "lastUpdate": "2025-03-20T17:42:25.588",
+        "creationTime": "2025-02-13T15:30:42.343",
+        "lastUpdate": "2025-02-20T20:30:42.343",
         "disabled": false,
         "_links": {
           "self": {
-            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1048"
           },
           "userPreference": {
-            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1042"
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1048"
           }
         }
-      }
-    ]
+      }]
   },
   "_links": {
     "first": {
@@ -40,6 +39,6 @@
     "size": 1,
     "totalElements": 1,
     "totalPages": 1,
-    "number": 1
+    "number": 0
   }
 }

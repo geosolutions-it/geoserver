@@ -4,6 +4,7 @@
  */
 package org.geoserver.eumetsat.pinning.rest;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import org.geoserver.eumetsat.pinning.views.TestContext;
 import org.geoserver.rest.RestBaseController;
 import org.geoserver.rest.catalog.AbstractCatalogController;
 import org.geotools.util.logging.Logging;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -74,16 +76,26 @@ public class PinningServiceController extends AbstractCatalogController {
     public ResponseEntity<Map<String, Object>> getStatus() {
         PinningService.PinningStatus pinningStatus = pinningService.getStatus();
         Map<String, Object> response = new HashMap<>();
-        response.put("Identifier", pinningStatus.getUuid());
         response.put("Status", pinningStatus.getStatus());
 
+        String uuid = pinningStatus.getUuid();
+        if (uuid != null) {
+            response.put("Identifier", uuid);
+        }
+        Instant startTime = pinningStatus.getStartTime();
+        if (startTime != null) {
+            response.put("Start Time", startTime);
+        }
+
         switch (pinningStatus.getStatus()) {
-            case "FAIlED":
-                response.put("Result", "failure. Please check the logs for further details");
+            case FAILED:
+                response.put("Result", "Failure. Please check the logs for further details");
                 break;
-            case "COMPLETED":
-                response.put("Result", "success");
+            case COMPLETED:
+                response.put("Result", "Success");
                 break;
+            case NOT_RUN_YET:
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
         return ResponseEntity.ok(response);
     }

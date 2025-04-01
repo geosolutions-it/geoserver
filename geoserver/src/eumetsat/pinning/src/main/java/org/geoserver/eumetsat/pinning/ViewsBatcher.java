@@ -6,6 +6,8 @@ package org.geoserver.eumetsat.pinning;
 
 import static org.geoserver.eumetsat.pinning.ViewsEvaluator.VIEWS_TABLE;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,7 +21,7 @@ import org.geoserver.eumetsat.pinning.views.ViewRecord;
  * Manages batch operations for database views, handling insert, update, and delete statements for a
  * specific views table with configurable batch processing.
  */
-class ViewsBatcher {
+class ViewsBatcher implements Closeable {
 
     private int batchSize;
     private Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -35,12 +37,12 @@ class ViewsBatcher {
     private static final String ADD_VIEW_QUERY =
             "INSERT INTO "
                     + VIEWS_TABLE
-                    + " (time_original, time_main, view_id, layers_list, last_update) VALUES (?, ?, ?, ?, ?)";
+                    + " (time_original, time_main, view_id, layers_list, last_update, driving_layer) VALUES (?, ?, ?, ?, ?, ?)";
 
     private static final String UPDATE_VIEW_QUERY =
             "UPDATE "
                     + VIEWS_TABLE
-                    + " SET time_main = ?, layers_list = ?, last_update = ? WHERE view_id = ?";
+                    + " SET time_original = ?, time_main = ?, layers_list = ?, last_update = ? WHERE view_id = ?";
 
     private static final String DELETE_VIEW_QUERY =
             "DELETE FROM " + VIEWS_TABLE + " WHERE view_id = ?";
@@ -62,7 +64,8 @@ class ViewsBatcher {
      *
      * @throws SQLException if an error occurs while closing any of the prepared statements
      */
-    public void release() throws SQLException {
+    @Override
+    public void close() throws IOException {
         SQLException firstException = null;
 
         try {
@@ -99,7 +102,7 @@ class ViewsBatcher {
 
         // If any exception occurred, throw the first one (with suppressed exceptions)
         if (firstException != null) {
-            throw firstException;
+            throw new IOException(firstException);
         }
     }
 
@@ -115,13 +118,15 @@ class ViewsBatcher {
      */
     public String updateView(ViewRecord view) throws SQLException {
         long id = view.getId();
+        Timestamp timeOriginal = Timestamp.from(view.getTimeOriginal());
         Timestamp timeMain = Timestamp.from(view.getTimeMain());
         Timestamp lastUpdate = Timestamp.from(view.getLastUpdate());
         Array layersArray = connection.createArrayOf("text", view.getLayers().toArray());
-        updateStatement.setTimestamp(1, timeMain, utcCalendar);
-        updateStatement.setArray(2, layersArray);
-        updateStatement.setTimestamp(3, lastUpdate, utcCalendar);
-        updateStatement.setLong(4, id);
+        updateStatement.setTimestamp(1, timeOriginal, utcCalendar);
+        updateStatement.setTimestamp(2, timeMain, utcCalendar);
+        updateStatement.setArray(3, layersArray);
+        updateStatement.setTimestamp(4, lastUpdate, utcCalendar);
+        updateStatement.setLong(5, id);
         updateStatement.addBatch();
         if (updateCount++ == batchSize) {
             updateStatement.executeBatch();
@@ -151,6 +156,7 @@ class ViewsBatcher {
         insertStatement.setLong(3, id);
         insertStatement.setArray(4, connection.createArrayOf("text", view.getLayers().toArray()));
         insertStatement.setTimestamp(5, lastUpdate, utcCalendar);
+        insertStatement.setString(6, view.getDrivingLayer());
         insertStatement.addBatch();
         if (insCount++ == batchSize) {
             insertStatement.executeBatch();

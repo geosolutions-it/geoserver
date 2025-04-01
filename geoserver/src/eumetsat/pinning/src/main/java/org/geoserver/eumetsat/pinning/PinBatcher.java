@@ -4,6 +4,8 @@
  */
 package org.geoserver.eumetsat.pinning;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -15,7 +17,7 @@ import java.time.Instant;
  * <p>This class provides methods to incrementally update or reset pin values for temporal data
  * within a specified range, using JDBC batch processing.
  */
-class PinBatcher {
+class PinBatcher implements Closeable {
     private Statement statement;
     private int count;
     private int batchSize;
@@ -30,19 +32,13 @@ class PinBatcher {
         this.statement = connection.createStatement();
     }
 
-    public void release() throws SQLException {
-        if (statement != null) {
-            statement.close();
-        }
-    }
-
     public String update(
-            String tableName, String temporalAttribute, Instant start, Instant end, boolean add)
+            String fullTableName, String temporalAttribute, Instant start, Instant end, boolean add)
             throws SQLException {
         String updateQuery =
                 String.format(
                         UPDATE_PINS_QUERY,
-                        tableName,
+                        fullTableName,
                         add ? "+" : "-",
                         temporalAttribute,
                         start,
@@ -52,8 +48,8 @@ class PinBatcher {
         return updateQuery;
     }
 
-    public String resetPins(String tableName) throws SQLException {
-        String resetSql = RESET_PINS_QUERY.replace("%s", tableName);
+    public String resetPins(String fullTableName) throws SQLException {
+        String resetSql = RESET_PINS_QUERY.replace("%s", fullTableName);
         addToBatch(resetSql);
         return resetSql;
     }
@@ -70,6 +66,17 @@ class PinBatcher {
         if (count > 0) {
             statement.executeBatch();
             count = 0;
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (statement != null) {
+            try {
+                statement.close();
+            } catch (SQLException e) {
+                throw new IOException(e);
+            }
         }
     }
 }

@@ -10,22 +10,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 import javax.naming.NamingException;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.eumetsat.pinning.config.PinningServiceConfig;
 import org.geoserver.eumetsat.pinning.views.ParsedView;
 import org.geoserver.eumetsat.pinning.views.TestContext;
-import org.geoserver.eumetsat.pinning.views.View;
 import org.geoserver.eumetsat.pinning.views.ViewRecord;
 import org.geoserver.eumetsat.pinning.views.ViewsClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,26 +33,41 @@ import org.springframework.stereotype.Service;
  */
 public class PinningService {
 
+    public static enum StatusValue {
+        NOT_RUN_YET,
+        RUNNING,
+        COMPLETED,
+        FAILED,
+    }
+
     public static class PinningStatus {
         String uuid;
-        String status;
+        StatusValue status;
+        Instant startTime;
 
-        public PinningStatus(String uuid, String status) {
+        public PinningStatus(String uuid, StatusValue status, Instant startTime) {
             this.uuid = uuid;
             this.status = status;
+            this.startTime = startTime;
         }
 
         public String getUuid() {
             return uuid;
         }
 
-        public String getStatus() {
+        public Instant getStartTime() {
+            return startTime;
+        }
+
+        public StatusValue getStatus() {
             return status;
         }
     }
 
     private final AtomicReference<UUID> currentTaskId = new AtomicReference<>(null);
-    private final AtomicReference<String> taskStatus = new AtomicReference<>("IDLE");
+    private final AtomicReference<Instant> startTime = new AtomicReference<>(null);
+    private final AtomicReference<StatusValue> taskStatus =
+            new AtomicReference<>(StatusValue.NOT_RUN_YET);
     private static final int PINNING_LOCK_ID = 9111119;
 
     @Autowired private PinningServiceLogger logger;
@@ -66,9 +76,9 @@ public class PinningService {
 
     @Autowired private PinningServiceConfig config;
 
-    @Autowired private ViewsClient viewsClient;
+    @Autowired private LayersMapper layersMapper;
 
-    @Autowired private ViewsEvaluator viewsEvaluator;
+    @Autowired private ViewsClient viewsClient;
 
     /**
      * Performs a global reset of pinning operations.
@@ -82,7 +92,9 @@ public class PinningService {
         UUID taskId = null;
         Connection conn = config.dataSource().getConnection();
         conn.setAutoCommit(false);
+
         try {
+            ViewsEvaluator viewsEvaluator = new ViewsEvaluator(conn, config, logger, layersMapper);
             if (!acquireLock(conn)) {
                 return Optional.empty();
             }
@@ -91,14 +103,14 @@ public class PinningService {
                     () -> {
                         try {
                             logger.log(Level.INFO, "Global RESET Started");
-                            viewsEvaluator.init(conn);
-                            resetPinning(conn);
+                            resetPinning(viewsEvaluator);
                             conn.commit();
-                            taskStatus.set("COMPLETED");
+                            taskStatus.set(StatusValue.COMPLETED);
                             logger.log(Level.INFO, "Global RESET Completed");
                         } catch (Exception e) {
                             processFailure("Global RESET", conn, e);
                         } finally {
+                            viewsEvaluator.release();
                             releaseResources(conn);
                         }
                     });
@@ -122,6 +134,7 @@ public class PinningService {
         Connection conn = config.dataSource().getConnection();
         conn.setAutoCommit(false);
         try {
+            ViewsEvaluator viewsEvaluator = new ViewsEvaluator(conn, config, logger, layersMapper);
             if (!acquireLock(conn)) {
                 return Optional.empty();
             }
@@ -130,10 +143,9 @@ public class PinningService {
                     () -> {
                         try {
                             logger.log(Level.INFO, "Incremental pinning Started");
-                            viewsEvaluator.init(conn);
-                            incrementalPinning(conn);
+                            incrementalPinning(viewsEvaluator);
                             conn.commit();
-                            taskStatus.set("COMPLETED");
+                            taskStatus.set(StatusValue.COMPLETED);
                             logger.log(Level.INFO, "Incremental pinning Completed");
                         } catch (Exception e) {
                             processFailure("Incremental Pinning", conn, e);
@@ -144,6 +156,7 @@ public class PinningService {
                     });
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "An exception occurred: " + e);
+            return Optional.empty();
         }
 
         return Optional.of(taskId);
@@ -153,12 +166,13 @@ public class PinningService {
         UUID taskId = UUID.randomUUID();
         logger.setTaskId(taskId);
         currentTaskId.set(taskId);
-        taskStatus.set("RUNNING");
+        startTime.set(Instant.now());
+        taskStatus.set(StatusValue.RUNNING);
         return taskId;
     }
 
     private void processFailure(String pinningType, Connection conn, Exception e) {
-        taskStatus.set("FAILED");
+        taskStatus.set(StatusValue.FAILED);
         String message = pinningType + " Aborted due to an Exception:" + e.getLocalizedMessage();
         logger.log(Level.SEVERE, message);
         if (conn != null) {
@@ -184,41 +198,29 @@ public class PinningService {
         }
     }
 
-    private void incrementalPinning(Connection conn) throws Exception {
+    private void incrementalPinning(ViewsEvaluator viewsEvaluator) throws Exception {
         logger.log(Level.FINE, "Retrieve last updated time");
-        Timestamp timestamp = null;
-        // TODO: This section is only for testing.
+        Instant instant = null;
         String timestampString = TestContext.getUpdateTime();
         if (timestampString != null) {
+            // This part allows testing using an imposed lastUpdate filter
             TestContext.clear();
+            instant = Instant.parse(timestampString);
         } else {
-            timestamp = viewsEvaluator.retrieveLastUpdate();
+            Timestamp timestamp = viewsEvaluator.retrieveLastUpdate();
             if (timestamp != null) {
-                timestampString =
-                        timestamp
-                                .toInstant()
-                                .atOffset(ZoneOffset.UTC)
-                                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                instant = timestamp.toInstant();
             }
         }
-        if (timestampString != null) {
-            logger.log(Level.FINE, "Fetching views with lastUpdated > " + timestampString);
+        if (instant != null) {
+            logger.log(Level.FINE, "Fetching views with lastUpdated > " + instant);
         } else {
             logger.log(Level.FINE, "Fetching views ");
         }
 
         Instant lastUpdate = Instant.now();
-        List<View> remoteViews = viewsClient.fetchViews(timestampString);
-        logger.log(
-                Level.INFO,
-                String.format(
-                        "Retrieved %d views from the preferences endpoint", remoteViews.size()));
-
-        List<ParsedView> sortedParsedViews = parseAndSort(remoteViews);
-        for (ParsedView view : sortedParsedViews) {
-            if (isLiveView(view)) {
-                continue;
-            }
+        List<ParsedView> remoteViews = viewsClient.fetchViews(instant);
+        for (ParsedView view : remoteViews) {
             Long viewId = view.getViewId();
             boolean disabled = view.getDisabled();
             if (disabled) {
@@ -235,6 +237,11 @@ public class PinningService {
 
                     viewRecord = viewsEvaluator.buildView(view);
                     viewsEvaluator.addViewAndPin(viewRecord);
+                } else if (!viewRecord.getDrivingLayer().equalsIgnoreCase(view.getDrivingLayer())) {
+                    // Let's recreate the view
+                    viewsEvaluator.deleteViewAndUnpin(viewRecord.getId());
+                    viewRecord = viewsEvaluator.buildView(view);
+                    viewsEvaluator.addViewAndPin(viewRecord);
                 } else {
                     // Need to proceed with the diffs.
                     logger.log(
@@ -248,37 +255,22 @@ public class PinningService {
         }
     }
 
-    private List<ParsedView> parseAndSort(List<View> remoteViews) throws IllegalArgumentException {
-        return remoteViews.stream()
-                .map(viewsClient::parseView) // Convert View -> ParsedView
-                .sorted(Comparator.comparing(ParsedView::getLastUpdate)) // Sort by lastUpdate
-                .collect(Collectors.toList());
-    }
-
-    private void resetPinning(Connection conn) throws Exception {
-
+    private void resetPinning(ViewsEvaluator viewsEvaluator) throws Exception {
         logger.log(Level.INFO, "Resetting the views");
         viewsEvaluator.truncateViews();
 
         Instant lastUpdate = Instant.now();
-        List<View> remoteViews = viewsClient.fetchViews(null);
-        logger.log(
-                Level.INFO,
-                String.format(
-                        "Retrieved %d views from the preferences endpoint", remoteViews.size()));
+        List<ParsedView> remoteViews = viewsClient.fetchViews(null);
 
         logger.log(Level.INFO, "Resetting the pins");
         viewsEvaluator.fullPinReset();
         logger.log(Level.INFO, "Inserting views");
 
-        for (View remoteView : remoteViews) {
-            ParsedView view = viewsClient.parseView(remoteView);
-            if (isLiveView(view)) {
-                continue;
+        for (ParsedView view : remoteViews) {
+            if (!view.getDisabled()) {
+                ViewRecord viewRecord = viewsEvaluator.buildView(view);
+                viewsEvaluator.addViewAndPin(viewRecord);
             }
-
-            ViewRecord viewRecord = viewsEvaluator.buildView(view);
-            viewsEvaluator.addViewAndPin(viewRecord);
         }
         viewsEvaluator.flushBatches();
         viewsEvaluator.updateLastUpdate(lastUpdate);
@@ -291,10 +283,11 @@ public class PinningService {
      */
     public PinningStatus getStatus() {
         UUID currentId = currentTaskId.get();
-        String status = taskStatus.get();
+        StatusValue status = taskStatus.get();
         return new PinningStatus(
                 currentId != null ? currentId.toString() : "No taskID available since last restart",
-                status);
+                status,
+                startTime.get());
     }
 
     /**
@@ -337,19 +330,5 @@ public class PinningService {
                     Level.SEVERE,
                     "Unable to release the Advisory Lock due to " + e.getLocalizedMessage());
         }
-    }
-
-    private boolean isLiveView(ParsedView parsed) {
-        boolean isLiveView = !"absolute".equalsIgnoreCase(parsed.getTimeMode());
-        if (isLiveView) {
-            // Only event views are pinned.
-            // Live views (with mode=latest) don't need that
-            logger.log(
-                    Level.FINE,
-                    String.format(
-                            "View with id=%s will be skipped since it's a live view",
-                            parsed.getViewId()));
-        }
-        return isLiveView;
     }
 }
