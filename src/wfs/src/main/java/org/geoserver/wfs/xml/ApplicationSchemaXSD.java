@@ -5,13 +5,13 @@
  */
 package org.geoserver.wfs.xml;
 
+import static java.util.Collections.emptyList;
 import static org.geoserver.ows.util.ResponseUtils.buildURL;
 import static org.geoserver.ows.util.ResponseUtils.params;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -53,6 +53,7 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.feature.type.Name;
 import org.opengis.feature.type.Schema;
+import org.xml.sax.EntityResolver;
 
 /**
  * XSD for an application schema of a geoserver feature type.
@@ -81,7 +82,7 @@ public class ApplicationSchemaXSD extends XSD {
     TypeMappingProfile typeMappingProfile;
 
     public ApplicationSchemaXSD(NamespaceInfo ns, Catalog catalog, String baseURL, WFS wfs) {
-        this(ns, catalog, baseURL, wfs, Collections.emptyList());
+        this(ns, catalog, baseURL, wfs, emptyList());
     }
 
     public ApplicationSchemaXSD(
@@ -97,7 +98,7 @@ public class ApplicationSchemaXSD extends XSD {
         this.types = types;
 
         if (this.types == null) {
-            types = Collections.emptyList();
+            types = emptyList();
         }
 
         if (this.ns == null) {
@@ -288,7 +289,14 @@ public class ApplicationSchemaXSD extends XSD {
             XSDSchema ftSchema = null;
 
             try {
-                ftSchema = Schemas.parse(schemaFile.file().getAbsolutePath(), locators, null);
+                EntityResolver entityResolver = catalog.getResourcePool().getEntityResolver();
+                ftSchema =
+                        Schemas.parse(
+                                schemaFile.file().getAbsolutePath(),
+                                locators,
+                                emptyList(),
+                                emptyList(),
+                                entityResolver);
             } catch (IOException e) {
                 LOGGER.log(
                         Level.WARNING,
