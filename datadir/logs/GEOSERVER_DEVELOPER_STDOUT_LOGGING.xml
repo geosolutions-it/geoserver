@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- This log4j configuration file needs to stay here, and is used as a default logging setup   -->
 <!-- during data_dir upgrades and in case the chosen logging config isn't available.            -->
-<Configuration name="VERBOSE_LOGGING" status="fatal" dest="out">
+<Configuration name="GEOSERVER_DEVELOPER_LOGGING" status="fatal" dest="out">
     <!-- As GeoTools uses java.util.logging levels instead of log4j, GeoServer makes the        -->
     <!-- following mappings to adjust the log4j levels specified in this file.                  -->
     <!--                                                                                        -->
@@ -24,10 +24,10 @@
     </Appenders>
     <Loggers>
 
-        <Logger name="org.geotools" level="trace" additivity="false">
+        <Logger name="org.geotools" level="warn" additivity="false">
             <AppenderRef ref="stdout"/>
         </Logger>
-        <Logger name="org.geotools.factory" level="trace" additivity="false">
+        <Logger name="org.geotools.factory" level="warn" additivity="false">
             <AppenderRef ref="stdout"/>
         </Logger>
 
@@ -39,10 +39,6 @@
         </Logger>
 
         <Logger name="org.springframework" level="warn" additivity="false">
-            <AppenderRef ref="stdout"/>
-        </Logger>
-
-        <Logger name="org.apache.wicket.util.tester" level="info" additivity="false">
             <AppenderRef ref="stdout"/>
         </Logger>
 
