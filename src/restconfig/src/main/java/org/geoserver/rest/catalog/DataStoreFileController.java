@@ -568,13 +568,9 @@ public class DataStoreFileController extends AbstractStoreUploadController {
         boolean postRequest =
                 request != null && HttpMethod.POST.name().equalsIgnoreCase(request.getMethod());
 
-        // Mapping of the input directory
-        if (method == UploadMethod.url) {
-            // For URL upload method, workspace and StoreName are not considered
-            directory = createFinalRoot(null, null, postRequest);
-        } else if (method == UploadMethod.file
+        // Prepare the directory only in case this is not an external upload
+        if (method == UploadMethod.file
                 || (method == UploadMethod.external && RESTUtils.isZipMediaType(request))) {
-            // Prepare the directory for file upload or external upload of a zip file
             directory = createFinalRoot(workspaceName, storeName, postRequest);
         }
         return handleFileUpload(
