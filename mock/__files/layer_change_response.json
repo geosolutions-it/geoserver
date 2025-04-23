@@ -1,0 +1,44 @@
+{
+  "_embedded": {
+    "preferences": [
+      {
+        "id" : 1073,
+        "ownerId" : "licensed_user_e",
+        "name" : "orbital_ascats",
+        "preference" : "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[10,50],\"zoom\":5},\"layers\":[{\"id\":\"EO:EUM:DAT:0198\",\"name\":\"Orbital Ground Tracks - Metop A\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:0198\",\"overlays\":{\"coastline\":false,\"borders\":false,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T15:45:00.000Z\"}}",
+        "type" : "mapView",
+        "shared" : false,
+        "creationTime" : "2025-03-20T14:02:52.438",
+        "lastUpdate" : "2025-03-20T16:02:52.438",
+        "disabled" : false,
+        "_links" : {
+          "self" : {
+            "href" : "https://internal.store.cgi-dev.de/userPreferences/preferences/1073"
+          },
+          "userPreference" : {
+            "href" : "https://internal.store.cgi-dev.de/userPreferences/preferences/1073"
+          }
+        }
+      }]
+  },
+  "_links": {
+    "first": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "self": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "next": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    },
+    "last": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    }
+  },
+  "page": {
+    "size": 1,
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0
+  }
+}

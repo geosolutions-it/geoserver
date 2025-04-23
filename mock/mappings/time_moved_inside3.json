@@ -1,0 +1,22 @@
+{
+    "priority": 1,
+    "request": {
+      "method": "GET",
+      "urlPath": "/userPreferences/preferences/search/findByType",
+      "queryParameters": {
+        "type": {
+          "equalTo": "mapView"
+        },
+        "lastUpdate": {
+          "equalTo": "2025-03-20T21:00:00Z"
+        }
+      }
+    },
+    "response": {
+      "status": 200,
+      "bodyFileName": "time_moved_inside3_response.json",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
