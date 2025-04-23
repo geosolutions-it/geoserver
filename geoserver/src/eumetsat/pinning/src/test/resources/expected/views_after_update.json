@@ -1,0 +1,15 @@
+[ {
+  "view_id" : 916,
+  "time_original" : "2025-03-12T17:45:00Z",
+  "time_main" : "2025-03-12T17:45:00Z",
+  "layers_list" : [ "EO:EUM:DAT:0023", "EO:EUM:DAT:0198" ],
+  "driving_layer" : "EO:EUM:DAT:0023",
+  "last_update" : "2025-03-20T17:30:41.539193Z"
+}, {
+  "view_id" : 918,
+  "time_original" : "2025-03-12T16:00:00Z",
+  "time_main" : "2025-03-12T16:00:00Z",
+  "layers_list" : [ "EO:EUM:DAT:0198" ],
+  "driving_layer" : "EO:EUM:DAT:0198",
+  "last_update" : "2025-03-20T17:32:41.539193Z"
+} ]

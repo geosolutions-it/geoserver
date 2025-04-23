@@ -1,0 +1,44 @@
+{
+  "_embedded": {
+    "preferences": [
+      {
+        "id": 1048,
+        "ownerId": "licensed_user_e",
+        "name": "newlayer",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-4.367234645937893,25.230183316296774],\"zoom\":3},\"layers\":[{\"id\":\"EO:EUM:DAT:MSG:AIRMASS\",\"name\":\"Airmass RGB - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"\"}}],\"drivingLayer\":\"EO:EUM:DAT:MSG:AIRMASS\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T17:42:42.343Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-13T15:30:42.343",
+        "lastUpdate": "2025-02-20T19:30:42.343",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1048"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/1048"
+          }
+        }
+      }]
+  },
+  "_links": {
+    "first": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "self": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=0&size=20"
+    },
+    "next": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    },
+    "last": {
+      "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/search/findByType?type=mapView&page=1&size=20"
+    }
+  },
+  "page": {
+    "size": 1,
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0
+  }
+}
