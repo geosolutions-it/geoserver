@@ -445,14 +445,7 @@ public class CoverageStoreFileController extends AbstractStoreUploadController {
 
         // Prepare the directory only in case this is not an external upload
         if (method.isInline()) {
-            // Mapping of the input directory
-            if (method == UploadMethod.url) {
-                // For URL upload method, workspace and StoreName are not considered
-                directory = RESTUtils.createUploadRoot(catalog, null, null, postRequest);
-            } else {
-                directory =
-                        RESTUtils.createUploadRoot(catalog, workspaceName, storeName, postRequest);
-            }
+            directory = RESTUtils.createUploadRoot(catalog, workspaceName, storeName, postRequest);
         }
         return handleFileUpload(
                 storeName, workspaceName, filename, method, format, directory, request);
