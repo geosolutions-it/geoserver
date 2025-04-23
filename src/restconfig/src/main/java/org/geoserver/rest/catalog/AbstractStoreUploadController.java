@@ -25,8 +25,8 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
     /** The ways a file upload can be achieved */
     protected enum UploadMethod {
         file(true),
-        external(false),
-        url(true);
+        external(false);
+        // url(true);
 
         boolean inline;
 
@@ -68,13 +68,6 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
                 uploadedFile =
                         RESTUtils.handleBinUpload(
                                 filename, directory, cleanPreviousContents, request, workspace);
-            } else if (method == UploadMethod.url) {
-                uploadedFile =
-                        RESTUtils.handleURLUpload(
-                                buildUploadedFilename(store, format),
-                                workspace,
-                                directory,
-                                request);
             } else if (method == UploadMethod.external) {
                 uploadedFile = RESTUtils.handleEXTERNALUpload(request);
                 external = true;
