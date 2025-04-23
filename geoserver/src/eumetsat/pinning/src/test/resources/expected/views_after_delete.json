@@ -1,0 +1,8 @@
+[ {
+  "view_id" : 916,
+  "time_original" : "2025-03-12T17:45:00Z",
+  "time_main" : "2025-03-12T17:45:00Z",
+  "layers_list" : [ "EO:EUM:DAT:0023" ],
+  "driving_layer" : "EO:EUM:DAT:0023",
+  "last_update" : "2025-03-20T15:30:41.539193Z"
+} ]
