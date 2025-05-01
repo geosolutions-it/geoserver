@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.attributes.AjaxRequestAttributes;
 import org.apache.wicket.ajax.markup.html.form.AjaxSubmitLink;
 import org.apache.wicket.extensions.ajax.markup.html.tabs.AjaxTabbedPanel;
 import org.apache.wicket.extensions.markup.html.tabs.AbstractTab;
@@ -161,32 +162,38 @@ public class TemplateConfigurationPage extends GeoServerSecuredPage {
     }
 
     private AjaxSubmitLink getSubmit() {
-        AjaxSubmitLink submitLink =
-                new AjaxSubmitLink("save", form) {
-                    @Override
-                    protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
-                        super.onSubmit(target, form);
-                        clearFeedbackMessages();
-                        TemplateInfo templateInfo = (TemplateInfo) form.getModelObject();
-                        target.add(topFeedbackPanel);
-                        target.add(bottomFeedbackPanel);
-                        if (!validateAndReport(templateInfo)) return;
-                        String rawTemplate = TemplateConfigurationPage.this.rawTemplate;
-                        saveTemplateInfo(templateInfo, rawTemplate);
-                    }
+       AjaxSubmitLink submitLink = new AjaxSubmitLink("save", form) {
+            @Override
+            protected void onSubmit(AjaxRequestTarget target) {
+                super.onSubmit(target);
+                clearFeedbackMessages();
+                TemplateInfo templateInfo = (TemplateInfo) form.getModelObject();
+                target.add(topFeedbackPanel);
+                target.add(bottomFeedbackPanel);
+                target.add(editor);
+                if (!validateAndReport(templateInfo)) return;
+                String rawTemplate = TemplateConfigurationPage.this.rawTemplate;
+                saveTemplateInfo(templateInfo, rawTemplate);
+            }
 
-                    @Override
-                    protected void onAfterSubmit(AjaxRequestTarget target, Form<?> form) {
-                        super.onAfterSubmit(target, form);
-                        doReturn(TemplateInfoPage.class);
-                    }
+            @Override
+            protected void onAfterSubmit(AjaxRequestTarget target, Form<?> form) {
+                super.onAfterSubmit(target, form);
+                doReturn(TemplateInfoPage.class);
+            }
 
-                    @Override
-                    protected void onError(AjaxRequestTarget target, Form<?> form) {
-                        super.onError(target, form);
-                        addFeedbackPanels(target);
-                    }
-                };
+           @Override
+            protected void onError(AjaxRequestTarget target) {
+                super.onError(target);
+                addFeedbackPanels(target);
+            }
+
+            @Override
+            protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+                super.updateAjaxAttributes(attributes);
+                attributes.getAjaxCallListeners().add(editor.getSaveDecorator());
+            }
+        };
         return submitLink;
     }
 
