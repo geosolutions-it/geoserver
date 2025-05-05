@@ -18,6 +18,7 @@ import org.geoserver.smartdataloader.domain.DomainModelConfig;
 import org.geoserver.smartdataloader.domain.entities.DomainModel;
 import org.geoserver.smartdataloader.metadata.DataStoreMetadata;
 import org.geoserver.smartdataloader.visitors.appschema.AppSchemaVisitor;
+import org.junit.Assert;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
@@ -177,11 +178,13 @@ public abstract class JDBCAppSchemaVisitorTest extends AbstractJDBCSmartDataLoad
         ExpressionOverridesDomainModelVisitor expressionOverridesDomainModelVisitor =
                 new ExpressionOverridesDomainModelVisitor(overrideExpressions);
         dm.accept(expressionOverridesDomainModelVisitor);
-        AppSchemaVisitor dmv = new AppSchemaVisitor(NAMESPACE_PREFIX, TARGET_NAMESPACE, "meteo-stations-gml.xsd");
+        AppSchemaVisitor dmv =
+                new AppSchemaVisitor(NAMESPACE_PREFIX, TARGET_NAMESPACE, "meteo-stations-gml.xsd");
         dm.accept(dmv);
 
         try (InputStream is =
-                JDBCAppSchemaVisitorTest.class.getResourceAsStream("meteo-stations-overridepk-appschema.xml")) {
+                JDBCAppSchemaVisitorTest.class.getResourceAsStream(
+                        "meteo-stations-overridepk-appschema.xml")) {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document control = dBuilder.parse(is);
@@ -195,7 +198,7 @@ public abstract class JDBCAppSchemaVisitorTest extends AbstractJDBCSmartDataLoad
 
             Diff d = XMLUnit.compareXML(control, dmv.getDocument());
 
-            assertTrue(d.similar());
+            Assert.assertTrue(d.similar());
         }
     }
 
@@ -216,11 +219,13 @@ public abstract class JDBCAppSchemaVisitorTest extends AbstractJDBCSmartDataLoad
         ExpressionOverridesDomainModelVisitor expressionOverridesDomainModelVisitor =
                 new ExpressionOverridesDomainModelVisitor(overrideExpressions);
         dm.accept(expressionOverridesDomainModelVisitor);
-        AppSchemaVisitor dmv = new AppSchemaVisitor(NAMESPACE_PREFIX, TARGET_NAMESPACE, "meteo-stations-gml.xsd");
+        AppSchemaVisitor dmv =
+                new AppSchemaVisitor(NAMESPACE_PREFIX, TARGET_NAMESPACE, "meteo-stations-gml.xsd");
         dm.accept(dmv);
 
         try (InputStream is =
-                JDBCAppSchemaVisitorTest.class.getResourceAsStream("meteo-stations-overridepkonly-appschema.xml")) {
+                JDBCAppSchemaVisitorTest.class.getResourceAsStream(
+                        "meteo-stations-overridepkonly-appschema.xml")) {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document control = dBuilder.parse(is);
@@ -234,7 +239,7 @@ public abstract class JDBCAppSchemaVisitorTest extends AbstractJDBCSmartDataLoad
 
             Diff d = XMLUnit.compareXML(control, dmv.getDocument());
 
-            assertTrue(d.similar());
+            Assert.assertTrue(d.similar());
         }
     }
 }

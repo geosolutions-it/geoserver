@@ -14,14 +14,15 @@ public class OverrideAddPanel extends Panel {
 
     private final SmartOverridesModel smartOverridesModel;
     private IModel<String> keyModel = Model.of("");
-    private IModel<String> expressionModel = Model.of("");
-    ;
+    private IModel<String> expressionModel = Model.of("");;
     private SmartOverridesRefreshingView smartOverridesRefreshingView;
     private final TextField<String> input1;
     private final TextField<String> input2;
 
     public OverrideAddPanel(
-            String id, SmartOverridesModel overridesModel, SmartOverridesRefreshingView smartOverridesRefreshingView) {
+            String id,
+            SmartOverridesModel overridesModel,
+            SmartOverridesRefreshingView smartOverridesRefreshingView) {
         super(id);
         this.smartOverridesModel = overridesModel;
         this.smartOverridesRefreshingView = smartOverridesRefreshingView;
@@ -31,28 +32,33 @@ public class OverrideAddPanel extends Panel {
         FeedbackPanel feedback = new FeedbackPanel("addOverrideFeedback");
         feedback.setOutputMarkupId(true);
 
-        AjaxButton submitButton = new AjaxButton("addOverrideSubmitButton") {
-            @Override
-            protected void onSubmit(AjaxRequestTarget target) {
-                super.onSubmit(target);
-                addOverride();
-                String result = "Data Added: " + keyModel.getObject() + " | " + expressionModel.getObject();
-                info(result);
+        AjaxButton submitButton =
+                new AjaxButton("addOverrideSubmitButton") {
+                    @Override
+                    protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
+                        super.onSubmit(target, form);
+                        addOverride();
+                        String result =
+                                "Data Added: "
+                                        + keyModel.getObject()
+                                        + " | "
+                                        + expressionModel.getObject();
+                        info(result);
 
-                keyModel.setObject("");
-                expressionModel.setObject("");
+                        keyModel.setObject("");
+                        expressionModel.setObject("");
 
-                target.add(feedback);
-                target.add(form);
-                target.add(smartOverridesRefreshingView.getParent());
-            }
+                        target.add(feedback);
+                        target.add(form);
+                        target.add(smartOverridesRefreshingView.getParent());
+                    }
 
-            @Override
-            protected void onError(AjaxRequestTarget target) {
-                super.onError(target);
-                target.add(feedback);
-            }
-        };
+                    @Override
+                    protected void onError(AjaxRequestTarget target, Form<?> form) {
+                        super.onError(target, form);
+                        target.add(feedback);
+                    }
+                };
         // Enable AJAX updates
         form.setOutputMarkupId(true);
         input1.setOutputMarkupId(true);

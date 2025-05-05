@@ -91,7 +91,11 @@ public class SmartDataLoaderDataAccessFactory implements DataAccessFactory {
     public static final Param DATASTORE_METADATA =
             new Param("datastore", String.class, "JDBC related DataStore", true);
     public static final Param DOMAIN_MODEL_EXCLUSIONS =
-           new Param("excluded objects", String.class, "Excluded comma separated domainmodel object list", false);
+            new Param(
+                    "excluded objects",
+                    String.class,
+                    "Excluded comma separated domainmodel object list",
+                    false);
     public static final Param SMART_OVERRIDE_PARAM =
             new Param("smart-override", String.class, "Smart override rules", false);
 
@@ -244,10 +248,12 @@ public class SmartDataLoaderDataAccessFactory implements DataAccessFactory {
         try {
             // TODO need to review (since it's forcing to get a JDBC datastore based on parameters.
             // Not sure what happen with JNDI)
-           Map<String, Serializable> connectionParameters = jdbcDataStoreInfo.getConnectionParameters();
+            Map<String, Serializable> connectionParameters =
+                    jdbcDataStoreInfo.getConnectionParameters();
             jdbcDataStore = factory.createDataStore(connectionParameters);
-            DataStoreMetadataConfig config = new JdbcDataStoreMetadataConfig(
-                    jdbcDataStore, connectionParameters.get("passwd").toString());
+            DataStoreMetadataConfig config =
+                    new JdbcDataStoreMetadataConfig(
+                            jdbcDataStore, connectionParameters.get("passwd").toString());
             dsm = (new DataStoreMetadataFactory()).getDataStoreMetadata(config);
         } catch (SQLException e) {
             LOGGER.log(
@@ -283,17 +289,21 @@ public class SmartDataLoaderDataAccessFactory implements DataAccessFactory {
         return newDomainModel;
     }
 
-   private Map<String, String> getOverrideExpressionsMap(Map<String, Serializable> params) {
+    private Map<String, String> getOverrideExpressionsMap(Map<String, Serializable> params) {
         try {
             String encodedOVerrideRules = lookup(SMART_OVERRIDE_PARAM, params, String.class);
-            Map<String, String> rulesMap = SmartOverrideRulesParser.INSTANCE.parse(encodedOVerrideRules);
+            Map<String, String> rulesMap =
+                    SmartOverrideRulesParser.INSTANCE.parse(encodedOVerrideRules);
             return rulesMap;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    /** Helper method that allows to save an xml document representing a mapping in smart-appschema folder. */
+    /**
+     * Helper method that allows to save an xml document representing a mapping in smart-appschema
+     * folder.
+     */
     private File saveMappingDocument(String pathname, String filename, Document mapping) {
         // create smart-appschema folder in workspace folder if it does not exists
         File directory = new File(pathname);

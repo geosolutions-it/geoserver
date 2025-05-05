@@ -326,8 +326,10 @@ public class TemplateRestController extends AbstractCatalogController {
         UriComponents uriComponents;
         builder = builder.cloneBuilder();
         if (featureType != null) {
-           uriComponents = builder.path("/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}")
-                    .buildAndExpand(workspace, featureType, name);
+            uriComponents =
+                    builder.path(
+                                    "/workspaces/{ws}/featuretypes/{featureType}/featurestemplates/{templateName}")
+                            .buildAndExpand(workspace, featureType, name);
         } else if (workspace != null) {
             uriComponents =
                     builder.path("/workspaces/{ws}/featurestemplates/{templateName}")
@@ -410,8 +412,9 @@ public class TemplateRestController extends AbstractCatalogController {
         TemplateInfo info = TemplateInfoDAO.get().findByFullName(fullName);
         Resource resource = TemplateFileManager.get().getTemplateResource(info);
         if (resource.getType() != Resource.Type.RESOURCE) {
-           throw new RestException(
-                    "Template with fullName " + info.getFullName() + " not found", HttpStatus.NOT_FOUND);
+            throw new RestException(
+                    "Template with fullName " + info.getFullName() + " not found",
+                    HttpStatus.NOT_FOUND);
         }
         byte[] bytes;
         try {

@@ -28,8 +28,10 @@ public class MeteoStationsPostGISTestSetUp extends PostGISTestSetUp {
     protected void setUpData() throws Exception {
         super.setUpData();
 
-        String sql = IOUtils.toString(
-                getClass().getResourceAsStream("./mockdata/" + meteoSqlScriptFileName), Charset.defaultCharset());
+        String sql =
+                IOUtils.toString(
+                        getClass().getResourceAsStream("./mockdata/" + meteoSqlScriptFileName),
+                        Charset.defaultCharset());
         run(sql);
     }
 

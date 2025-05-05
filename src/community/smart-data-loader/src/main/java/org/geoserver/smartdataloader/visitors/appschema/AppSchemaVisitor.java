@@ -137,11 +137,13 @@ public final class AppSchemaVisitor extends DomainModelVisitorImpl {
         }
         String targetAttributeValue = this.targetNamespacePrefix + ":" + attribute.getName();
         Node attributeMappingNode =
-               createAttributeMapping(appDocument, targetAttributeValue, idExpression.getOCQLDefinition());
+                createAttributeMapping(
+                        appDocument, targetAttributeValue, idExpression.getOCQLDefinition());
         attributeMappings.appendChild(attributeMappingNode);
     }
 
-    private void appendOrUpdateIdExpression(Node featureTypeMapping, IdExpression OCQLValue, Node attributeMappings) {
+    private void appendOrUpdateIdExpression(
+            Node featureTypeMapping, IdExpression OCQLValue, Node attributeMappings) {
         Node idExpression = getIdExpression(featureTypeMapping);
         if (idExpression != null) updateAttributeMappingIdExpression(idExpression, OCQLValue);
         else {

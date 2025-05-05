@@ -183,17 +183,18 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
                     + "  </topp:states>\n"
                     + "</gft:Template>";
 
-   private static final String GML_TEMPLATE_2 = "<gft:Template>\n"
-            + "<gft:Options>\n"
-            + "  <gft:Namespaces xmlns:topp=\"http://www.openplans.org/topp\"/>\n"
-            + "  <gft:SchemaLocation xsi:schemaLocation=\"http://www.opengis.net/wfs/2.0 http://brgm-dev.geo-solutions.it/geoserver/schemas/wfs/2.0/wfs.xsd http://www.opengis.net/gml/3.2 http://schemas.opengis.net/gml/3.2.1/gml.xsd\"/>\n"
-            + "</gft:Options>\n"
-            + "  <topp:states gml:id=\"${@id}\">\n"
-            + "  \t<topp:name code=\"${STATE_ABBR}\">${STATE_NAME}</topp:name>\n"
-            + "  \t<topp:region>${SUB_REGION}</topp:region>\n"
-            + "  \t<topp:wkt_geom>$${toWKT(the_geom)}</topp:wkt_geom>\n"
-            + "  </topp:states>\n"
-            + "</gft:Template>";
+    private static final String GML_TEMPLATE_2 =
+            "<gft:Template>\n"
+                    + "<gft:Options>\n"
+                    + "  <gft:Namespaces xmlns:topp=\"http://www.openplans.org/topp\"/>\n"
+                    + "  <gft:SchemaLocation xsi:schemaLocation=\"http://www.opengis.net/wfs/2.0 http://brgm-dev.geo-solutions.it/geoserver/schemas/wfs/2.0/wfs.xsd http://www.opengis.net/gml/3.2 http://schemas.opengis.net/gml/3.2.1/gml.xsd\"/>\n"
+                    + "</gft:Options>\n"
+                    + "  <topp:states gml:id=\"${@id}\">\n"
+                    + "  \t<topp:name code=\"${STATE_ABBR}\">${STATE_NAME}</topp:name>\n"
+                    + "  \t<topp:region>${SUB_REGION}</topp:region>\n"
+                    + "  \t<topp:wkt_geom>$${toWKT(the_geom)}</topp:wkt_geom>\n"
+                    + "  </topp:states>\n"
+                    + "</gft:Template>";
     public static final String XHTMLTEMPLATE_NAME = "xhtmltemplate";
 
     @Test
@@ -273,11 +274,12 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
     @Test
     public void testPostErrorMessage() throws Exception {
         try {
-            MockHttpServletResponse response = postAsServletResponse(
-                    RestBaseController.ROOT_PATH
-                            + "/workspaces/cdf/featuretypes/stations/featurestemplates?templateName=foo2",
-                    GML_TEMPLATE,
-                    MediaType.APPLICATION_XML_VALUE);
+            MockHttpServletResponse response =
+                    postAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/stations/featurestemplates?templateName=foo2",
+                            GML_TEMPLATE,
+                            MediaType.APPLICATION_XML_VALUE);
             assertEquals(404, response.getStatus());
             assertEquals("FeatureType stations not found", response.getContentAsString());
         } finally {
@@ -510,8 +512,12 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
             newTemplateInfo("jsontemplate", "json", null, null, JSON_TEMPLATE);
             newTemplateInfo("gmltemplate", "xml", "cdf", null, GML_TEMPLATE);
             newTemplateInfo(XHTMLTEMPLATE_NAME, "xhtml", "cdf", "Fifteen", XHTML_TEMPLATE);
-            MockHttpServletResponse response = getAsServletResponse(RestBaseController.ROOT_PATH
-                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates/" + XHTMLTEMPLATE_NAME + ".xml");
+            MockHttpServletResponse response =
+                    getAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates/"
+                                    + XHTMLTEMPLATE_NAME
+                                    + ".xml");
             assertEquals(200, response.getStatus());
             assertEquals(XHTML_TEMPLATE.trim(), response.getContentAsString());
         } finally {
@@ -522,11 +528,12 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
     @Test
     public void testPostByFeatureType() throws Exception {
         try {
-            MockHttpServletResponse response = postAsServletResponse(
-                    RestBaseController.ROOT_PATH
-                            + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates?templateName=foo2",
-                    GML_TEMPLATE,
-                    MediaType.APPLICATION_XML_VALUE);
+            MockHttpServletResponse response =
+                    postAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates?templateName=foo2",
+                            GML_TEMPLATE,
+                            MediaType.APPLICATION_XML_VALUE);
             assertEquals(201, response.getStatus());
             assertEquals("foo2", response.getContentAsString());
         } finally {
@@ -539,12 +546,15 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
         try {
             URL url = getClass().getResource("test-template.zip");
             byte[] bytes = FileUtils.readFileToByteArray(URLs.urlToFile(url));
-            MockHttpServletResponse response = postAsServletResponse(
-                    RestBaseController.ROOT_PATH + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates",
-                    bytes,
-                    MediaTypeExtensions.APPLICATION_ZIP_VALUE);
+            MockHttpServletResponse response =
+                    postAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates",
+                            bytes,
+                            MediaTypeExtensions.APPLICATION_ZIP_VALUE);
             assertEquals(201, response.getStatus());
-            TemplateInfo templateInfo = TemplateInfoDAO.get().findByFullName("cdf:Fifteen:test-template");
+            TemplateInfo templateInfo =
+                    TemplateInfoDAO.get().findByFullName("cdf:Fifteen:test-template");
             assertNotNull(templateInfo);
             assertEquals(
                     unzip("test-template.zip", getClass()).trim(),
@@ -558,17 +568,20 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
     public void testPutByFeatureType() throws Exception {
         TemplateInfoDAO.get().deleteAll();
         try {
-            MockHttpServletResponse response = postAsServletResponse(
-                    RestBaseController.ROOT_PATH
-                            + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates?templateName=foo3",
-                    XHTML_TEMPLATE,
-                    MediaType.APPLICATION_XHTML_XML_VALUE);
+            MockHttpServletResponse response =
+                    postAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates?templateName=foo3",
+                            XHTML_TEMPLATE,
+                            MediaType.APPLICATION_XHTML_XML_VALUE);
             assertEquals(201, response.getStatus());
 
-            response = putAsServletResponse(
-                    RestBaseController.ROOT_PATH + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates/foo3",
-                    XHTML_TEMPLATE_2,
-                    MediaType.APPLICATION_XHTML_XML_VALUE);
+            response =
+                    putAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates/foo3",
+                            XHTML_TEMPLATE_2,
+                            MediaType.APPLICATION_XHTML_XML_VALUE);
             assertEquals(201, response.getStatus());
             getTemplateContentByFullName("cdf:Fifteen:foo3")
                     .ifPresentOrElse(
@@ -584,20 +597,24 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
         try {
             URL url = getClass().getResource("test-template.zip");
             byte[] bytes = FileUtils.readFileToByteArray(URLs.urlToFile(url));
-            MockHttpServletResponse response = postAsServletResponse(
-                    RestBaseController.ROOT_PATH + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates",
-                    bytes,
-                    MediaTypeExtensions.APPLICATION_ZIP_VALUE);
+            MockHttpServletResponse response =
+                    postAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates",
+                            bytes,
+                            MediaTypeExtensions.APPLICATION_ZIP_VALUE);
             assertEquals(201, response.getStatus());
             url = getClass().getResource("test-template2.zip");
             bytes = FileUtils.readFileToByteArray(URLs.urlToFile(url));
-            response = putAsServletResponse(
-                    RestBaseController.ROOT_PATH
-                            + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates/test-template",
-                    bytes,
-                    MediaTypeExtensions.APPLICATION_ZIP_VALUE);
+            response =
+                    putAsServletResponse(
+                            RestBaseController.ROOT_PATH
+                                    + "/workspaces/cdf/featuretypes/Fifteen/featurestemplates/test-template",
+                            bytes,
+                            MediaTypeExtensions.APPLICATION_ZIP_VALUE);
             assertEquals(201, response.getStatus());
-            TemplateInfo templateInfo = TemplateInfoDAO.get().findByFullName("cdf:Fifteen:test-template");
+            TemplateInfo templateInfo =
+                    TemplateInfoDAO.get().findByFullName("cdf:Fifteen:test-template");
             assertNotNull(templateInfo);
             assertEquals(
                     unzip("test-template2.zip", getClass()).trim(),
@@ -614,10 +631,12 @@ public class TemplateRestControllerTest extends CatalogRESTTestSupport {
         }
         Resource resource = TemplateFileManager.get().getTemplateResource(templateInfo);
         if (resource.getType() != Resource.Type.RESOURCE) {
-            throw new IllegalArgumentException("Template with fullName " + templateInfo.getFullName() + " not found");
+            throw new IllegalArgumentException(
+                    "Template with fullName " + templateInfo.getFullName() + " not found");
         }
         try {
-            return Optional.of(StringUtils.toEncodedString(resource.getContents(), StandardCharsets.UTF_8));
+            return Optional.of(
+                    StringUtils.toEncodedString(resource.getContents(), StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

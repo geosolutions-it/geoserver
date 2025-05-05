@@ -23,11 +23,13 @@ public class PkOverrider {
             return;
         }
         if (attribute.isIdentifier()
-                && !StringUtils.equalsIgnoreCase(attribute.getName(), overridePks.get(currentEntityName))) {
+                && !StringUtils.equalsIgnoreCase(
+                        attribute.getName(), overridePks.get(currentEntityName))) {
             attribute.setIdentifier(false);
         }
         if (!attribute.isIdentifier()
-                && StringUtils.equalsIgnoreCase(attribute.getName(), overridePks.get(currentEntityName))) {
+                && StringUtils.equalsIgnoreCase(
+                        attribute.getName(), overridePks.get(currentEntityName))) {
             attribute.setIdentifier(true);
         }
     }

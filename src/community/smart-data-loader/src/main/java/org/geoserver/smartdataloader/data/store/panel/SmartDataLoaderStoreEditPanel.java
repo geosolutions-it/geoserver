@@ -518,10 +518,12 @@ public class SmartDataLoaderStoreEditPanel extends StoreEditPanel {
         container.setOutputMarkupId(true);
         add(container);
         IModel<DataStoreInfo> dsiModel = (IModel<DataStoreInfo>) this.model;
-        SmartOverridesRefreshingView overridesView = new SmartOverridesRefreshingView("overridesview", dsiModel);
+        SmartOverridesRefreshingView overridesView =
+                new SmartOverridesRefreshingView("overridesview", dsiModel);
         container.add(overridesView);
         OverrideAddPanel addOverridePanel =
-                new OverrideAddPanel("addOverridePanel", new SmartOverridesModel(dsiModel), overridesView);
+                new OverrideAddPanel(
+                        "addOverridePanel", new SmartOverridesModel(dsiModel), overridesView);
         container.add(addOverridePanel);
     }
 

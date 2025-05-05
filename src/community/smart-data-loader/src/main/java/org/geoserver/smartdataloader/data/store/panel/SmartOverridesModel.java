@@ -37,8 +37,10 @@ class SmartOverridesModel implements IModel<Set<SmartOverrideEntry>> {
     }
 
     private Set<SmartOverrideEntry> getSmartOverrides() {
-        Map<String, Serializable> connectionParameters = storeModel.getObject().getConnectionParameters();
-        Serializable serializable = connectionParameters.get(SmartDataLoaderDataAccessFactory.SMART_OVERRIDE_PARAM.key);
+        Map<String, Serializable> connectionParameters =
+                storeModel.getObject().getConnectionParameters();
+        Serializable serializable =
+                connectionParameters.get(SmartDataLoaderDataAccessFactory.SMART_OVERRIDE_PARAM.key);
         String smartOverrides = null;
         if (serializable instanceof String) {
             smartOverrides = (String) serializable;
@@ -52,12 +54,19 @@ class SmartOverridesModel implements IModel<Set<SmartOverrideEntry>> {
     }
 
     private void setSmartOverrides(Set<SmartOverrideEntry> smartOverrides) {
-        Map<String, String> smartOverridesMap = smartOverrides.stream()
-                .collect(Collectors.toMap(SmartOverrideEntry::getKey, SmartOverrideEntry::getExpression));
+        Map<String, String> smartOverridesMap =
+                smartOverrides.stream()
+                        .collect(
+                                Collectors.toMap(
+                                        SmartOverrideEntry::getKey,
+                                        SmartOverrideEntry::getExpression));
         String encodedOverrides = SmartOverrideRulesParser.INSTANCE.encode(smartOverridesMap);
         storeModel
                 .getObject()
                 .getConnectionParameters()
                 .put(SmartDataLoaderDataAccessFactory.SMART_OVERRIDE_PARAM.key, encodedOverrides);
     }
+
+    @Override
+    public void detach() {}
 }

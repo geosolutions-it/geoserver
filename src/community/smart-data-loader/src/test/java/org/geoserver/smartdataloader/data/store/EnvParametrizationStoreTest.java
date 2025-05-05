@@ -27,8 +27,8 @@ import org.junit.Test;
 import org.postgresql.jdbc.SslMode;
 
 /**
- * Test class for testing the environment parametrization of the SmartDataLoader store. This test class set up a JDBC
- * store with an env parametrized host, and use it from a SmartDataLoader store.
+ * Test class for testing the environment parametrization of the SmartDataLoader store. This test
+ * class set up a JDBC store with an env parametrized host, and use it from a SmartDataLoader store.
  */
 public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataLoaderTestSupport {
 
@@ -61,8 +61,8 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
     }
 
     /**
-     * Test that the env parametrization is enabled and the store creation is successful by resolving the host env
-     * variable.
+     * Test that the env parametrization is enabled and the store creation is successful by
+     * resolving the host env variable.
      *
      * @throws IOException
      */
@@ -73,7 +73,8 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
             setupSmartDataLoaderStore();
             Catalog catalog = getCatalog();
             DataStoreInfo storeInfo =
-                    catalog.getDataStoreByName(getCatalog().getDefaultWorkspace(), SMART_DATA_LOADER_STORE_NAME);
+                    catalog.getDataStoreByName(
+                            getCatalog().getDefaultWorkspace(), SMART_DATA_LOADER_STORE_NAME);
             Assert.assertNotNull(storeInfo);
             // create a layer from ths storeInfo
             // check that the layer has the correct connection parameters
@@ -85,7 +86,8 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
     }
 
     /**
-     * Test that the env parametrization is disabled and the store creation fails with an IOException.
+     * Test that the env parametrization is disabled and the store creation fails with an
+     * IOException.
      *
      * @throws IOException
      */
@@ -95,7 +97,8 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
         setupSmartDataLoaderStore();
         Catalog catalog = getCatalog();
         DataStoreInfo storeInfo =
-                catalog.getDataStoreByName(getCatalog().getDefaultWorkspace(), SMART_DATA_LOADER_STORE_NAME);
+                catalog.getDataStoreByName(
+                        getCatalog().getDefaultWorkspace(), SMART_DATA_LOADER_STORE_NAME);
         Assert.assertNotNull(storeInfo);
         List<Name> nameList = storeInfo.getDataStore(null).getNames();
     }
@@ -104,11 +107,13 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
         Catalog catalog = getCatalog();
         // use default workspace
         WorkspaceInfo workspace = catalog.getDefaultWorkspace();
-        DataStoreInfo storeInfo = catalog.getDataStoreByName(workspace, SMART_DATA_LOADER_STORE_NAME);
+        DataStoreInfo storeInfo =
+                catalog.getDataStoreByName(workspace, SMART_DATA_LOADER_STORE_NAME);
         if (storeInfo == null) {
             storeInfo = catalog.getFactory().createDataStore();
             storeInfo.setWorkspace(workspace);
-            SmartDataLoaderDataAccessFactory dataStoreFactory = new SmartDataLoaderDataAccessFactory();
+            SmartDataLoaderDataAccessFactory dataStoreFactory =
+                    new SmartDataLoaderDataAccessFactory();
             storeInfo.setName(SMART_DATA_LOADER_STORE_NAME);
             storeInfo.setType(dataStoreFactory.getDisplayName());
             storeInfo.setDescription(dataStoreFactory.getDescription());
@@ -121,9 +126,13 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
 
     protected Map<String, Serializable> setupSmartStoreParams(Map<String, Serializable> params) {
         params.put(SmartDataLoaderDataAccessFactory.ROOT_ENTITY.key, "meteo_stations");
-        params.put(SmartDataLoaderDataAccessFactory.DATASTORE_METADATA.key, this.jdbcDataStore.getId());
+        params.put(
+                SmartDataLoaderDataAccessFactory.DATASTORE_METADATA.key,
+                this.jdbcDataStore.getId());
         params.put(SmartDataLoaderDataAccessFactory.DATASTORE_NAME.key, SIMPLE_DATA_STORE_NAME);
-        params.put(SmartDataLoaderDataAccessFactory.DBTYPE.key, SmartDataLoaderDataAccessFactory.DBTYPE_STRING);
+        params.put(
+                SmartDataLoaderDataAccessFactory.DBTYPE.key,
+                SmartDataLoaderDataAccessFactory.DBTYPE_STRING);
         return params;
     }
 
@@ -148,7 +157,8 @@ public abstract class EnvParametrizationStoreTest extends AbstractJDBCSmartDataL
         }
     }
 
-    protected Map<String, Serializable> setUpSimpleStoreParameters(Map<String, Serializable> params) {
+    protected Map<String, Serializable> setUpSimpleStoreParameters(
+            Map<String, Serializable> params) {
         JdbcUrlSplitter jdbcUrl = new JdbcUrlSplitter(fixture.getProperty("url"));
         System.setProperty(HOST_ENV_NAME, jdbcUrl.host);
         params.put(HOST.key, "${" + HOST_ENV_NAME + "}");

@@ -354,7 +354,8 @@ public final class AppSchemaUtils {
         Node ocqlIdExpr = idExpressionNode.getFirstChild();
         String strIdExpr = ocqlIdExpr.getTextContent();
         if (OCQLValue.getExpression() == null) {
-            strIdExpr = "strConcat(strConcat(" + strIdExpr + "," + "'.')," + OCQLValue.getName() + ")";
+            strIdExpr =
+                    "strConcat(strConcat(" + strIdExpr + "," + "'.')," + OCQLValue.getName() + ")";
         } else {
             strIdExpr = OCQLValue.getExpression();
         }

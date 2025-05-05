@@ -7,7 +7,8 @@ public class JdbcUrlSplitterTest {
 
     @Test
     public void testJdbcUrlSplitter() {
-        JdbcUrlSplitter jdbcUrlSplitter = new JdbcUrlSplitter("jdbc:postgresql://localhost:5432/geoserver");
+        JdbcUrlSplitter jdbcUrlSplitter =
+                new JdbcUrlSplitter("jdbc:postgresql://localhost:5432/geoserver");
         Assert.assertEquals("postgresql", jdbcUrlSplitter.driverName);
         Assert.assertEquals("localhost", jdbcUrlSplitter.host);
         Assert.assertEquals("5432", jdbcUrlSplitter.port);
