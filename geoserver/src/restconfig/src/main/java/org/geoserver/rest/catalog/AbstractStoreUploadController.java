@@ -26,7 +26,7 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
     protected enum UploadMethod {
         file(true),
         external(false),
-        url(true),
+        // url(true),
         remote(false); // Remote upload being only supported by structuredGridCoverage2DReader
 
         boolean inline;
@@ -69,13 +69,6 @@ public abstract class AbstractStoreUploadController extends AbstractCatalogContr
                 uploadedFile =
                         RESTUtils.handleBinUpload(
                                 filename, directory, cleanPreviousContents, request, workspace);
-            } else if (method == UploadMethod.url) {
-                uploadedFile =
-                        RESTUtils.handleURLUpload(
-                                buildUploadedFilename(store, format),
-                                workspace,
-                                directory,
-                                request);
             } else if (method == UploadMethod.external) {
                 uploadedFile = RESTUtils.handleEXTERNALUpload(request);
                 external = true;

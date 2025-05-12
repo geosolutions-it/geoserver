@@ -85,7 +85,8 @@ ENV GEOSERVER_OPTS=" \
   -XX:HeapDumpPath=${OOM_DUMP_DIR}/geoserver-${DOCKER_HOST}-${MASTER_SLAVE}.dump \
   -Dorg.geoserver.wms.featureinfo.minBuffer=10 \
   -Dorg.geotools.coverage.io.netcdf.enhance.ScaleMissing=true \
-  -DDOWNLOAD_MAP_TRANSPARENT=true"
+  -DDOWNLOAD_MAP_TRANSPARENT=true \
+  -DENTITY_RESOLUTION_ALLOWLIST=www.w3.org|schemas.opengis.net|www.opengis.net|inspire.ec.europa.eu/schemas"
 
 ENV JAVA_OPTS="-Xms${INITIAL_MEMORY} -Xmx${MAXIMUM_MEMORY} \
   -Djava.awt.headless=true -server \
