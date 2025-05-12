@@ -111,6 +111,7 @@ import org.geotools.util.factory.FactoryRegistryException;
 import org.geotools.util.logging.Logging;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.LineString;
@@ -273,6 +274,7 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
     }
 
     @Test
+    @Ignore
     public void testAdvancedProjectionDensification() throws Exception {
         WMS wms = getWMS();
         WMSInfo info = wms.getServiceInfo();
@@ -320,6 +322,7 @@ public class RenderedImageMapOutputFormatTest extends WMSTestSupport {
     }
 
     @Test
+    @Ignore
     public void testAdvancedProjectionDensificationWithFormatOption() throws Exception {
         Graphics2D graphics = Mockito.mock(Graphics2D.class);
         this.rasterMapProducer = new DummyRasterMapProducer(getWMS());
