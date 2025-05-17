@@ -456,7 +456,7 @@ public class MapMLDocumentBuilder {
         mapMLLayerMetadata.setCqlFilter(cqlCommadDelimited);
         mapMLLayerMetadata.setTimeEnabled(false);
         mapMLLayerMetadata.setElevationEnabled(false);
-        mapMLLayerMetadata.setTransparent(transparent.orElse(false));
+        mapMLLayerMetadata.setTransparent(transparent.orElse(true));
         MapMLProjection projType = parseProjType();
         mapMLLayerMetadata.setBbbox(layersToBBBox(layers, projType));
         mapMLLayerMetadata.setQueryable(layersToQueryable(layers));

@@ -98,6 +98,7 @@ import org.junit.Test;
 import org.locationtech.jts.geom.Envelope;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.w3c.dom.NodeList;
 
 public class MapMLWMSTest extends MapMLTestSupport {
 
@@ -1636,6 +1637,284 @@ public class MapMLWMSTest extends MapMLTestSupport {
         Link licenseLink = licenseLinks.get(0);
         assertEquals("Apache-2.0", licenseLink.getTitle());
         assertEquals("https://opensource.org/license/apache-2-0", licenseLink.getHref());
+    }
+
+    @Test
+    public void testTransparentParameterInLinks() throws Exception {
+        Catalog catalog = getCatalog();
+        disableTileCaching(MockData.ROAD_SEGMENTS, catalog);
+
+        String multiExtTrue = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + "true";
+        String multiExtFalse = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + "false";
+        String useTilesTrue = MapMLConstants.MAPML_USE_TILES_REP + ":" + "true";
+        String useTilesFalse = MapMLConstants.MAPML_USE_TILES_REP + ":" + "false";
+        String useFeaturesTrue = MapMLConstants.MAPML_CREATE_FEATURE_LINKS + ":" + "true";
+        String useFeaturesFalse = MapMLConstants.MAPML_CREATE_FEATURE_LINKS + ":" + "false";
+
+        HashMap<String, String> params = new HashMap<>();
+        params.put("version", "1.3.0");
+        params.put("layers", MockData.ROAD_SEGMENTS.getLocalPart());
+        params.put("styles", "");
+        params.put("format", MapMLConstants.MAPML_MIME_TYPE);
+        params.put("request", "GetMap");
+        params.put("width", "150");
+        params.put("height", "150");
+        params.put("srs", "EPSG:3857");
+        params.put("bbox", "0,0,1,1");
+        // default format_options should be multiExtFalse+";"+useTilesFalse+";"+useFeaturesFalse
+        // Test default transparency (true)
+        MockRequestResponse requestResponse = getMockRequestResponse(
+                MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document doc = dom(
+                new ByteArrayInputStream(
+                        requestResponse.response.getContentAsString().getBytes()),
+                true);
+
+        // default format_options should be multiExtFalse+";"+useTilesFalse+";"+useFeaturesFalse
+        // SO the rel will be 'image'
+        assertXpathEvaluatesTo("1", "count(//html:map-link[@rel='image'][@tref])", doc);
+        URL url = new URL(xpath.evaluate("//html:map-link[@rel='image']/@tref", doc));
+        HashMap<String, String> vars = parseQuery(url);
+        assertEquals("The TRANSPARENT parameter should default to true", "true", vars.get("transparent"));
+
+        // Test with explicit transparency set to false
+        params.put("transparent", "false");
+
+        MockRequestResponse requestResponseFalse =
+                getMockRequestResponse(MockData.ROAD_SEGMENTS.getLocalPart(), params, null, null, null);
+
+        org.w3c.dom.Document docFalse = dom(
+                new ByteArrayInputStream(
+                        requestResponseFalse.response.getContentAsString().getBytes()),
+                true);
+
+        // default of unspecified format_options should be multiExtFalse+";"+useTilesFalse+";"+useFeaturesFalse
+        // SO the rel will be 'image'
+        assertXpathEvaluatesTo("1", "count(//html:map-link[@rel='image'][@tref])", docFalse);
+        URL urlFalse = new URL(xpath.evaluate("//html:map-link[@rel='image']/@tref", docFalse));
+        HashMap<String, String> varsFalse = parseQuery(urlFalse);
+        assertEquals("The TRANSPARENT parameter should be passed as false", "false", varsFalse.get("transparent"));
+
+        assertXpathExists(
+                "//html:map-link[@rel='alternate'][@projection][contains(@href,'transparent=false')]", docFalse);
+
+        // Test transparency in rel=tile links
+        params.put("format_options", useTilesTrue + ";" + useFeaturesTrue);
+        MockRequestResponse tileResponse = getMockRequestResponse(
+                MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document tileDoc = dom(
+                new ByteArrayInputStream(
+                        tileResponse.response.getContentAsString().getBytes()),
+                true);
+
+        // default/unspecified format_options should only be useMultiExtFalse
+        // SO the rel will be 'tile'  (because we specified useTilesTrue, useFeaturesTrue)
+        assertXpathEvaluatesTo("1", "count(//html:map-link[@rel='tile'][@tref])", tileDoc);
+        assertXpathEvaluatesTo("1", "count(//html:map-extent)", tileDoc);
+        // when useFeaturesTrue, the map-link@type attribute should be 'text/mapml'
+        assertXpathEvaluatesTo("1", "count(//html:map-link[@rel='tile'][@type='text/mapml'])", tileDoc);
+        URL tileUrl = new URL(xpath.evaluate("//html:map-link[@rel='tile']/@tref", tileDoc));
+        HashMap<String, String> tileVars = parseQuery(tileUrl);
+
+        // Verify this is a WMS tile-shaped request, not a WMTS GetTile request
+        assertEquals("Should be a WMS request", "GetMap", tileVars.get("request"));
+        assertEquals(
+                "The TRANSPARENT parameter should be passed to WMS tile links", "false", tileVars.get("transparent"));
+
+        // Test multiple layers with multi-extent and transparent=true
+        params.clear();
+        params.put("version", "1.3.0");
+        params.put("layers", MockData.ROAD_SEGMENTS.getLocalPart() + "," + MockData.BUILDINGS.getLocalPart());
+        params.put("styles", "");
+        params.put("format", MapMLConstants.MAPML_MIME_TYPE);
+        params.put("request", "GetMap");
+        params.put("width", "150");
+        params.put("height", "150");
+        params.put("srs", "EPSG:3857");
+        params.put("bbox", "0,0,1,1");
+        params.put("transparent", "true");
+
+        params.put("format_options", multiExtTrue);
+
+        // Get response for multiple layers with multi-extent
+        MockRequestResponse multiExtentResponse = getMockRequestResponse(
+                MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart() + ","
+                        + MockData.BUILDINGS.getPrefix() + ":" + MockData.BUILDINGS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document multiExtentDoc = dom(
+                new ByteArrayInputStream(
+                        multiExtentResponse.response.getContentAsString().getBytes()),
+                true);
+
+        // Count the number of image links - should be one per layer
+        // We specified two layers, so we should have at least 2 links
+        NodeList imageLinks = multiExtentDoc.getElementsByTagNameNS("*", "map-link");
+        int imageLinkCount = 0;
+        for (int i = 0; i < imageLinks.getLength(); i++) {
+            org.w3c.dom.Node node = imageLinks.item(i);
+            org.w3c.dom.NamedNodeMap attrs = node.getAttributes();
+            org.w3c.dom.Node relAttr = attrs.getNamedItem("rel");
+            if (relAttr != null && "image".equals(relAttr.getNodeValue())) {
+                imageLinkCount++;
+                org.w3c.dom.Node trefAttr = attrs.getNamedItem("tref");
+                URL trefUrl = new URL(trefAttr.getNodeValue());
+                HashMap<String, String> trefParams = parseQuery(trefUrl);
+                assertEquals(
+                        "Each extent should have TRANSPARENT=true when transparency is enabled",
+                        "true",
+                        trefParams.get("transparent"));
+            }
+        }
+        // Verify we have at least 2 image links (one for each layer)
+        assertTrue("Should have multiple image links with MULTIEXTENT:true", imageLinkCount >= 2);
+
+        // Test multiple layers with multi-extent and transparent=false
+        params.put("transparent", "false");
+
+        MockRequestResponse multiExtentResponseFalse = getMockRequestResponse(
+                MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart() + ","
+                        + MockData.BUILDINGS.getPrefix() + ":" + MockData.BUILDINGS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document multiExtentDocFalse = dom(
+                new ByteArrayInputStream(
+                        multiExtentResponseFalse.response.getContentAsString().getBytes()),
+                true);
+
+        // Check that each extent has transparent=false
+        NodeList imageLinksF = multiExtentDocFalse.getElementsByTagNameNS("*", "map-link");
+        int imageLinkCountF = 0;
+        for (int i = 0; i < imageLinksF.getLength(); i++) {
+            org.w3c.dom.Node node = imageLinksF.item(i);
+            org.w3c.dom.NamedNodeMap attrs = node.getAttributes();
+            org.w3c.dom.Node relAttr = attrs.getNamedItem("rel");
+            if (relAttr != null && "image".equals(relAttr.getNodeValue())) {
+                imageLinkCountF++;
+                org.w3c.dom.Node trefAttr = attrs.getNamedItem("tref");
+                URL trefUrl = new URL(trefAttr.getNodeValue());
+                HashMap<String, String> trefParams = parseQuery(trefUrl);
+                assertEquals(
+                        "Each extent should have TRANSPARENT=false when transparency is disabled",
+                        "false",
+                        trefParams.get("transparent"));
+            }
+        }
+        // Verify we have at least 2 image links (one for each layer)
+        assertTrue("Should have multiple image links with MULTIEXTENT:true", imageLinkCountF >= 2);
+
+        // Test WMS request for raster+vector layers with mapmlfeatures:true to check TRANSPARENT in map-tile src
+        params.clear();
+        params.put("version", "1.3.0");
+        params.put("layers", MockData.WORLD.getLocalPart() + "," + MockData.ROAD_SEGMENTS.getLocalPart());
+        params.put("styles", "");
+        params.put("format", MapMLConstants.MAPML_MIME_TYPE);
+        params.put("request", "GetMap");
+        params.put("width", "256");
+        params.put("height", "256");
+        params.put("srs", "EPSG:3857");
+        params.put("bbox", "-20037508,-20037508,20037508,20037508");
+        params.put("transparent", "true");
+        params.put("format_options", "mapmlfeatures:true;mapmlskipheadstyles:true;mapmlskipattributes:true");
+
+        // Get response for raster layer with features and tiles enabled
+        MockRequestResponse rasterFeaturesResponse = getMockRequestResponse(
+                MockData.WORLD.getPrefix() + ":" + MockData.WORLD.getLocalPart() + ","
+                        + MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document rasterFeaturesDoc = dom(
+                new ByteArrayInputStream(
+                        rasterFeaturesResponse.response.getContentAsString().getBytes()),
+                true);
+
+        // Verify we have a map-tile with a src attribute
+        assertXpathEvaluatesTo("1", "count(//html:map-tile[@src])", rasterFeaturesDoc);
+
+        // Get the  URL and check transparent parameter
+        URL rasterTileUrl = new URL(xpath.evaluate("//html:map-tile/@src", rasterFeaturesDoc));
+        HashMap<String, String> rasterTileParams = parseQuery(rasterTileUrl);
+        assertEquals(
+                "The TRANSPARENT parameter should be passed as true to the tile src for a raster layer rendered as map-tiles",
+                "true",
+                rasterTileParams.get("TRANSPARENT"));
+
+        // Now test with transparent=false
+        params.put("transparent", "false");
+
+        MockRequestResponse rasterFeaturesFalseResponse = getMockRequestResponse(
+                MockData.WORLD.getPrefix() + ":" + MockData.WORLD.getLocalPart() + ","
+                        + MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document rasterFeaturesFalseDoc = dom(
+                new ByteArrayInputStream(rasterFeaturesFalseResponse
+                        .response
+                        .getContentAsString()
+                        .getBytes()),
+                true);
+
+        // Verify we have a map-tile src
+        assertXpathEvaluatesTo("1", "count(//html:map-tile[@src])", rasterFeaturesFalseDoc);
+
+        // Get the src URL and check transparent parameter
+        URL rasterTileUrlFalse = new URL(xpath.evaluate("//html:map-tile/@src", rasterFeaturesFalseDoc));
+        HashMap<String, String> rasterTileParamsFalse = parseQuery(rasterTileUrlFalse);
+        assertEquals(
+                "The TRANSPARENT parameter should be passed as false to the tile src for a raster layer rendered as map-tiles",
+                "false",
+                rasterTileParamsFalse.get("TRANSPARENT"));
+
+        // Now test with default transparency
+        params.remove("transparent");
+
+        MockRequestResponse rasterFeaturesDefaultResponse = getMockRequestResponse(
+                MockData.WORLD.getPrefix() + ":" + MockData.WORLD.getLocalPart() + ","
+                        + MockData.ROAD_SEGMENTS.getPrefix() + ":" + MockData.ROAD_SEGMENTS.getLocalPart(),
+                params,
+                null,
+                null,
+                null);
+
+        org.w3c.dom.Document rasterFeaturesDefaultDoc = dom(
+                new ByteArrayInputStream(rasterFeaturesDefaultResponse
+                        .response
+                        .getContentAsString()
+                        .getBytes()),
+                true);
+
+        // Verify we have a map-tile src
+        assertXpathEvaluatesTo("1", "count(//html:map-tile[@src])", rasterFeaturesFalseDoc);
+
+        // Get the src URL and check transparent parameter
+        URL rasterTileUrlDefault = new URL(xpath.evaluate("//html:map-tile/@src", rasterFeaturesDefaultDoc));
+        HashMap<String, String> rasterTileParamsDefault = parseQuery(rasterTileUrlDefault);
+        assertEquals(
+                "The TRANSPARENT parameter should be set to true by default in the tile src for a raster layer rendered as map-tiles",
+                "false",
+                rasterTileParamsDefault.get("TRANSPARENT"));
     }
 
     private void testAlternateBounds(List<Link> alternateLinks, ProjType projType, Envelope bounds, double tolerance) {
