@@ -34,15 +34,20 @@ public class SchemaRulesTabPanel extends PublishedEditTabPanel<LayerInfo> {
             configurationPanel.setEnabled(false);
         }
         SchemaInfoDAO infoDao = SchemaInfoDAO.get();
-        SchemaTypeTemplateDAOListener listener = new SchemaTypeTemplateDAOListener((FeatureTypeInfo) ri);
+        SchemaTypeTemplateDAOListener listener =
+                new SchemaTypeTemplateDAOListener((FeatureTypeInfo) ri);
         infoDao.addTemplateListener(listener);
         PropertyModel<ResourceInfo> resource = new PropertyModel<>(model, "resource");
         PropertyModel<MetadataMap> metadata = new PropertyModel<>(resource, "metadata");
         SchemaRulesTablePanel tablePanel = new SchemaRulesTablePanel("schemaRules", metadata);
         tablePanel.setOutputMarkupId(true);
         add(tablePanel);
-        configurationPanel = new SchemaRuleConfigurationPanel(
-                "schemaRuleConfiguration", new CompoundPropertyModel<>(new SchemaRule()), false, li);
+        configurationPanel =
+                new SchemaRuleConfigurationPanel(
+                        "schemaRuleConfiguration",
+                        new CompoundPropertyModel<>(new SchemaRule()),
+                        false,
+                        li);
         configurationPanel.setTemplateRuleTablePanel(tablePanel);
         configurationPanel.setOutputMarkupId(true);
         tablePanel.setConfigurationPanel(configurationPanel);
@@ -57,8 +62,7 @@ public class SchemaRulesTabPanel extends PublishedEditTabPanel<LayerInfo> {
     @Override
     public void save() throws IOException {
         SchemaRule ruleModel = configurationPanel.schemaRuleModel.getObject();
-        Set<SchemaRule> rules =
-                new HashSet<>(configurationPanel.tablePanel.getModel().getObject());
+        Set<SchemaRule> rules = new HashSet<>(configurationPanel.tablePanel.getModel().getObject());
         rules.add(ruleModel);
         configurationPanel.tablePanel.getModel().setObject(rules);
 

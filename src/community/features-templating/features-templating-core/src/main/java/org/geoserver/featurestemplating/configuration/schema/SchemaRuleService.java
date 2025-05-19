@@ -78,7 +78,9 @@ public class SchemaRuleService {
     }
 
     private SchemaLayerConfig getSchemaLayerConfig() {
-        return featureTypeInfo.getMetadata().get(SchemaLayerConfig.METADATA_KEY, SchemaLayerConfig.class);
+        return featureTypeInfo
+                .getMetadata()
+                .get(SchemaLayerConfig.METADATA_KEY, SchemaLayerConfig.class);
     }
 
     public Set<SchemaRule> getRules() {
@@ -108,8 +110,9 @@ public class SchemaRuleService {
     }
 
     /**
-     * Update the priorities of the existing rules based on the priority of the new Rule. It shift by one position the
-     * priority value of the rules having it >= the priority value of the new Rule.
+     * Update the priorities of the existing rules based on the priority of the new Rule. It shift
+     * by one position the priority value of the rules having it >= the priority value of the new
+     * Rule.
      *
      * @param rules the already existing rule.
      * @param newRule the new Rule to be added.

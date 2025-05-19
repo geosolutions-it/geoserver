@@ -17,8 +17,8 @@ import org.geotools.api.filter.Filter;
 import org.geotools.filter.text.cql2.CQLException;
 
 /**
- * A template rule associated to a FeatureTypeInfo. Its evaluation determines if a specific template should be applied
- * for a Request.
+ * A template rule associated to a FeatureTypeInfo. Its evaluation determines if a specific template
+ * should be applied for a Request.
  */
 @XmlRootElement(name = "Rule")
 public class SchemaRule implements Serializable {
@@ -135,7 +135,8 @@ public class SchemaRule implements Serializable {
         TemplateIdentifier identifier = TemplateIdentifier.fromOutputFormat(outputFormat);
         if (identifier == null) return false;
         String nameIdentifier = identifier.name();
-        if (this.outputFormat.equals(SupportedFormat.GML.name())) return nameIdentifier.startsWith(this.outputFormat);
+        if (this.outputFormat.equals(SupportedFormat.GML.name()))
+            return nameIdentifier.startsWith(this.outputFormat);
         else if (this.outputFormat.equals(SupportedFormat.GEOJSON.name()))
             return nameIdentifier.equals(TemplateIdentifier.GEOJSON.name())
                     || nameIdentifier.equals(TemplateIdentifier.JSON.name());
@@ -178,7 +179,8 @@ public class SchemaRule implements Serializable {
         if (outputFormat == null)
             outputFormat = request.getKvp() != null ? (String) request.getKvp().get("f") : null;
         if (outputFormat == null)
-            outputFormat = request.getKvp() != null ? (String) request.getKvp().get("INFO_FORMAT") : null;
+            outputFormat =
+                    request.getKvp() != null ? (String) request.getKvp().get("INFO_FORMAT") : null;
         return outputFormat;
     }
 
@@ -234,7 +236,8 @@ public class SchemaRule implements Serializable {
     }
 
     /**
-     * Rule comparator to sort the TemplateRules in order to get the one with higher priority or the one that is forced.
+     * Rule comparator to sort the TemplateRules in order to get the one with higher priority or the
+     * one that is forced.
      */
     public static class SchemaRuleComparator implements Comparator<SchemaRule> {
 

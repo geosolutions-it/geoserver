@@ -56,19 +56,23 @@ public class SchemaConfigurationPage extends GeoServerSecuredPage {
     private void initUI(IModel<SchemaInfo> model) {
         form = new Form<>("schemaForm", model);
         List<ITab> tabs = new ArrayList<>();
-        //        PanelCachingTab previewTab = new PanelCachingTab(new AbstractTab(new Model<>("Preview")) {
+        //        PanelCachingTab previewTab = new PanelCachingTab(new AbstractTab(new
+        // Model<>("Preview")) {
         //            @Override
         //            public Panel getPanel(String id) {
         //                previewPanel = new TemplatePreviewPanel(id, SchemaConfigurationPage.this);
         //                return previewPanel;
         //            }
         //        });
-        PanelCachingTab dataTab = new PanelCachingTab(new AbstractTab(new Model<>("Data")) {
-            @Override
-            public Panel getPanel(String id) {
-                return dataPanel = new SchemaInfoDataPanel(id, SchemaConfigurationPage.this);
-            }
-        });
+        PanelCachingTab dataTab =
+                new PanelCachingTab(
+                        new AbstractTab(new Model<>("Data")) {
+                            @Override
+                            public Panel getPanel(String id) {
+                                return dataPanel =
+                                        new SchemaInfoDataPanel(id, SchemaConfigurationPage.this);
+                            }
+                        });
         tabs.add(dataTab);
         schemaPanel = newTabbedPanel(tabs);
         schemaPanel.setMarkupId("schema-info-tabbed-panel");
@@ -79,15 +83,17 @@ public class SchemaConfigurationPage extends GeoServerSecuredPage {
         String mode;
         if (!isNew && model.getObject().getExtension().equals("json")) mode = "javascript";
         else mode = "xml";
-        editor = new CodeMirrorEditor("schemaEditor", mode, new PropertyModel<>(this, "rawSchema")) {
-            @Override
-            public boolean isRequired() {
-                boolean result = false;
-                IFormSubmitter submitter = form.getRootForm().findSubmitter();
-                if (submitter != null) result = !submitter.equals(dataPanel.getUploadLink());
-                return result;
-            }
-        };
+        editor =
+                new CodeMirrorEditor("schemaEditor", mode, new PropertyModel<>(this, "rawSchema")) {
+                    @Override
+                    public boolean isRequired() {
+                        boolean result = false;
+                        IFormSubmitter submitter = form.getRootForm().findSubmittingButton();
+                        if (submitter != null)
+                            result = !submitter.equals(dataPanel.getUploadLink());
+                        return result;
+                    }
+                };
         form.add(editor);
         if (mode.equals("javascript")) {
             editor.setModeAndSubMode(mode, model.getObject().getExtension());
@@ -98,12 +104,13 @@ public class SchemaConfigurationPage extends GeoServerSecuredPage {
         form.setMultiPart(true);
         form.add(editor);
         form.add(getSubmit());
-        form.add(new Link<SchemaInfoPage>("cancel") {
-            @Override
-            public void onClick() {
-                doReturn(SchemaInfoPage.class);
-            }
-        });
+        form.add(
+                new Link<SchemaInfoPage>("cancel") {
+                    @Override
+                    public void onClick() {
+                        doReturn(SchemaInfoPage.class);
+                    }
+                });
         add(form);
     }
 
@@ -128,7 +135,8 @@ public class SchemaConfigurationPage extends GeoServerSecuredPage {
     }
 
     public void setRawSchema(Reader in) throws IOException {
-        try (BufferedReader bin = in instanceof BufferedReader ? (BufferedReader) in : new BufferedReader(in)) {
+        try (BufferedReader bin =
+                in instanceof BufferedReader ? (BufferedReader) in : new BufferedReader(in)) {
             StringBuilder builder = new StringBuilder();
             String line = null;
             while ((line = bin.readLine()) != null) {
@@ -141,36 +149,37 @@ public class SchemaConfigurationPage extends GeoServerSecuredPage {
     }
 
     private AjaxSubmitLink getSubmit() {
-        AjaxSubmitLink submitLink = new AjaxSubmitLink("save", form) {
-            @Override
-            protected void onSubmit(AjaxRequestTarget target) {
-                super.onSubmit(target);
-                clearFeedbackMessages();
-                SchemaInfo templateInfo = form.getModelObject();
-                target.add(topFeedbackPanel);
-                target.add(bottomFeedbackPanel);
-                String rawTemplate = SchemaConfigurationPage.this.rawSchema;
-                saveSchemaInfo(templateInfo, rawTemplate);
-            }
+        AjaxSubmitLink submitLink =
+                new AjaxSubmitLink("save", form) {
+                    @Override
+                    protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
+                        super.onSubmit(target, form);
+                        clearFeedbackMessages();
+                        SchemaInfo templateInfo = (SchemaInfo) form.getModelObject();
+                        target.add(topFeedbackPanel);
+                        target.add(bottomFeedbackPanel);
+                        String rawTemplate = SchemaConfigurationPage.this.rawSchema;
+                        saveSchemaInfo(templateInfo, rawTemplate);
+                    }
 
-            @Override
-            protected void onAfterSubmit(AjaxRequestTarget target) {
-                super.onAfterSubmit(target);
-                doReturn(SchemaInfoPage.class);
-            }
+                    @Override
+                    protected void onAfterSubmit(AjaxRequestTarget target, Form<?> form) {
+                        super.onAfterSubmit(target, form);
+                        doReturn(SchemaInfoPage.class);
+                    }
 
-            @Override
-            protected void onError(AjaxRequestTarget target) {
-                super.onError(target);
-                addFeedbackPanels(target);
-            }
+                    @Override
+                    protected void onError(AjaxRequestTarget target, Form<?> form) {
+                        super.onError(target, form);
+                        addFeedbackPanels(target);
+                    }
 
-            @Override
-            protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
-                super.updateAjaxAttributes(attributes);
-                attributes.getAjaxCallListeners().add(editor.getSaveDecorator());
-            }
-        };
+                    @Override
+                    protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
+                        super.updateAjaxAttributes(attributes);
+                        attributes.getAjaxCallListeners().add(editor.getSaveDecorator());
+                    }
+                };
         return submitLink;
     }
 
@@ -213,25 +222,28 @@ public class SchemaConfigurationPage extends GeoServerSecuredPage {
             @Override
             protected WebMarkupContainer newLink(String linkId, final int index) {
 
-                AjaxSubmitLink link = new AjaxSubmitLink(linkId) {
+                AjaxSubmitLink link =
+                        new AjaxSubmitLink(linkId) {
 
-                    private static final long serialVersionUID = 4599409150448651749L;
+                            private static final long serialVersionUID = 4599409150448651749L;
 
-                    @Override
-                    public void onSubmit(AjaxRequestTarget target) {
-                        SchemaInfo schemaInfo = SchemaConfigurationPage.this.form.getModelObject();
-                        //                        if (!validateAndReport(schemaInfo)) return;
-                        String rawSchema = getStringSchemaFromInput();
-                        saveSchemaInfo(schemaInfo, rawSchema);
-                        setSelectedTab(index);
-                        target.add(schemaPanel);
-                    }
+                            @Override
+                            public void onSubmit(AjaxRequestTarget target, Form<?> form) {
+                                SchemaInfo schemaInfo =
+                                        SchemaConfigurationPage.this.form.getModelObject();
+                                //                        if (!validateAndReport(schemaInfo))
+                                // return;
+                                String rawSchema = getStringSchemaFromInput();
+                                saveSchemaInfo(schemaInfo, rawSchema);
+                                setSelectedTab(index);
+                                target.add(schemaPanel);
+                            }
 
-                    @Override
-                    protected void onError(AjaxRequestTarget target) {
-                        addFeedbackPanels(target);
-                    }
-                };
+                            @Override
+                            protected void onError(AjaxRequestTarget target, Form<?> form) {
+                                addFeedbackPanels(target);
+                            }
+                        };
                 return link;
             }
         };

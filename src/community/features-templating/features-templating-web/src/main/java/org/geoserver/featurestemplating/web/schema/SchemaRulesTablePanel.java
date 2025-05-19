@@ -41,43 +41,50 @@ public class SchemaRulesTablePanel extends Panel {
     public SchemaRulesTablePanel(String id, IModel<MetadataMap> metadataModel) {
 
         super(id);
-        MapModel<SchemaLayerConfig> mapModelLayerConf = new MapModel<>(metadataModel, SchemaLayerConfig.METADATA_KEY);
+        MapModel<SchemaLayerConfig> mapModelLayerConf =
+                new MapModel<>(metadataModel, SchemaLayerConfig.METADATA_KEY);
         Object object = mapModelLayerConf.getObject();
         if (!(object instanceof SchemaLayerConfig)) {
             mapModelLayerConf.setObject(new SchemaLayerConfig());
         }
-        this.model = LiveCollectionModel.set(new PropertyModel<Set<SchemaRule>>(mapModelLayerConf, "schemaRules"));
+        this.model =
+                LiveCollectionModel.set(
+                        new PropertyModel<Set<SchemaRule>>(mapModelLayerConf, "schemaRules"));
         GeoServerDataProvider<SchemaRule> dataProvider = new SchemaRuleProvider(model);
         table = new SchemaRuleTable("table", dataProvider, true);
         table.setOutputMarkupId(true);
         add(
-                remove = new AjaxLink<Object>("removeSelected") {
-                    private static final long serialVersionUID = 2421854498051377608L;
+                remove =
+                        new AjaxLink<Object>("removeSelected") {
+                            private static final long serialVersionUID = 2421854498051377608L;
 
-                    @Override
-                    public void onClick(AjaxRequestTarget target) {
-                        Set<SchemaRule> rules =
-                                SchemaRulesTablePanel.this.getModel().getObject();
-                        Set<SchemaRule> updated = new HashSet<>(rules);
-                        updated.removeAll(table.getSelection());
-                        SchemaRulesTablePanel.this.getModel().setObject(updated);
-                        SchemaRulesTablePanel.this.modelChanged();
-                        table.modelChanged();
-                        target.add(table);
-                    }
-                });
+                            @Override
+                            public void onClick(AjaxRequestTarget target) {
+                                Set<SchemaRule> rules =
+                                        SchemaRulesTablePanel.this.getModel().getObject();
+                                Set<SchemaRule> updated = new HashSet<>(rules);
+                                updated.removeAll(table.getSelection());
+                                SchemaRulesTablePanel.this.getModel().setObject(updated);
+                                SchemaRulesTablePanel.this.modelChanged();
+                                table.modelChanged();
+                                target.add(table);
+                            }
+                        });
         add(table);
     }
 
     public class SchemaRuleTable extends GeoServerTablePanel<SchemaRule> {
 
-        public SchemaRuleTable(String id, GeoServerDataProvider<SchemaRule> dataProvider, boolean selectable) {
+        public SchemaRuleTable(
+                String id, GeoServerDataProvider<SchemaRule> dataProvider, boolean selectable) {
             super(id, dataProvider, selectable);
         }
 
         @Override
         protected Component getComponentForProperty(
-                String id, IModel<SchemaRule> itemModel, GeoServerDataProvider.Property<SchemaRule> property) {
+                String id,
+                IModel<SchemaRule> itemModel,
+                GeoServerDataProvider.Property<SchemaRule> property) {
             if (property.equals(PRIORITY)) {
                 return new Label(id, PRIORITY.getModel(itemModel));
             }
@@ -98,9 +105,12 @@ public class SchemaRulesTablePanel extends Panel {
                         target.add(configurationPanel.panelLabel);
                     }
                 };
-            else if (property.equals(OUTPUT_FORMAT)) return new Label(id, OUTPUT_FORMAT.getModel(itemModel));
-            else if (property.equals(CQL_FILTER)) return new Label(id, CQL_FILTER.getModel(itemModel));
-            else if (property.equals(PROFILE_FILTER)) return new Label(id, PROFILE_FILTER.getModel(itemModel));
+            else if (property.equals(OUTPUT_FORMAT))
+                return new Label(id, OUTPUT_FORMAT.getModel(itemModel));
+            else if (property.equals(CQL_FILTER))
+                return new Label(id, CQL_FILTER.getModel(itemModel));
+            else if (property.equals(PROFILE_FILTER))
+                return new Label(id, PROFILE_FILTER.getModel(itemModel));
             return null;
         }
     }

@@ -13,7 +13,10 @@ import org.geoserver.featurestemplating.builders.impl.RootBuilder;
 import org.geoserver.platform.FileWatcher;
 import org.geoserver.platform.resource.Resource;
 
-/** This class extends {@link FileWatcher} to provide functionalities to dynamically reload a template */
+/**
+ * This class extends {@link FileWatcher} to provide functionalities to dynamically reload a
+ * template
+ */
 public class SchemaWatcher extends FileWatcher<String> {
 
     public SchemaWatcher(Resource resource) {
@@ -23,7 +26,8 @@ public class SchemaWatcher extends FileWatcher<String> {
     /**
      * Reads the file updating the last check timestamp.
      *
-     * <p>Subclasses can override {@link #parseFileContents(InputStream)} to do something when the file is read.
+     * <p>Subclasses can override {@link #parseFileContents(InputStream)} to do something when the
+     * file is read.
      *
      * @return parsed file contents
      */

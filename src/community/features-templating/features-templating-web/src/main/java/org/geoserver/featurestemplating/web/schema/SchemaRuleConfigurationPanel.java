@@ -62,7 +62,10 @@ public class SchemaRuleConfigurationPanel extends Panel {
     }
 
     private void initUI(CompoundPropertyModel<SchemaRule> model, boolean isUpdate) {
-        panelLabel = new Label("schemaRuleConfigurationLabel", panelLabelModel = Model.of(getPanelLabelValue("add")));
+        panelLabel =
+                new Label(
+                        "schemaRuleConfigurationLabel",
+                        panelLabelModel = Model.of(getPanelLabelValue("add")));
         panelLabel.setOutputMarkupId(true);
         add(panelLabel);
         this.theForm = new Form<>("theForm", model);
@@ -73,9 +76,14 @@ public class SchemaRuleConfigurationPanel extends Panel {
 
         priorityField = new NumberTextField<Integer>("priority", model.bind("priority"));
         theForm.add(priorityField);
-        ChoiceRenderer<SchemaInfo> schemaInfoChoiceRenderer = new ChoiceRenderer<>("fullName", "identifier");
-        schemaInfoDropDownChoice = new DropDownChoice<SchemaInfo>(
-                "schemaIdentifier", model.bind("schemaInfo"), getSchemaInfoList(), schemaInfoChoiceRenderer);
+        ChoiceRenderer<SchemaInfo> schemaInfoChoiceRenderer =
+                new ChoiceRenderer<>("fullName", "identifier");
+        schemaInfoDropDownChoice =
+                new DropDownChoice<SchemaInfo>(
+                        "schemaIdentifier",
+                        model.bind("schemaInfo"),
+                        getSchemaInfoList(),
+                        schemaInfoChoiceRenderer);
         schemaInfoDropDownChoice.setOutputMarkupId(true);
         theForm.add(schemaInfoDropDownChoice);
 
@@ -93,41 +101,44 @@ public class SchemaRuleConfigurationPanel extends Panel {
         cqlFilterArea.add(getCqlValidator());
         theForm.add(cqlFilterArea);
 
-        AjaxSubmitLink submitLink = new AjaxSubmitLink("save") {
-            @Override
-            protected void onSubmit(AjaxRequestTarget target) {
-                super.onSubmit(target);
-                cleanFeedbackPanel();
-                SchemaRule rule = theForm.getModelObject();
-                //                if (!validateAndReport(rule)) return;
-                updateModelRules(rule);
-                target.add(tablePanel);
-                target.add(tablePanel.getTable());
-                clearForm(target);
-            }
+        AjaxSubmitLink submitLink =
+                new AjaxSubmitLink("save") {
+                    @Override
+                    protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
+                        super.onSubmit(target, form);
+                        cleanFeedbackPanel();
+                        SchemaRule rule = theForm.getModelObject();
+                        //                if (!validateAndReport(rule)) return;
+                        updateModelRules(rule);
+                        target.add(tablePanel);
+                        target.add(tablePanel.getTable());
+                        clearForm(target);
+                    }
 
-            @Override
-            protected void onAfterSubmit(AjaxRequestTarget target) {
-                if (theForm.hasError()) target.add(ruleFeedbackPanel);
-            }
+                    @Override
+                    protected void onAfterSubmit(AjaxRequestTarget target, Form<?> form) {
+                        if (theForm.hasError()) target.add(ruleFeedbackPanel);
+                    }
 
-            @Override
-            protected void onError(AjaxRequestTarget target) {
-                super.onError(target);
-                if (theForm.hasError()) target.add(ruleFeedbackPanel);
-            }
-        };
-        submitLabel = new Label("submitLabel", submitLabelModel = Model.of(getSubmitLabelValue("add")));
+                    @Override
+                    protected void onError(AjaxRequestTarget target, Form<?> form) {
+                        super.onError(target, form);
+                        if (theForm.hasError()) target.add(ruleFeedbackPanel);
+                    }
+                };
+        submitLabel =
+                new Label("submitLabel", submitLabelModel = Model.of(getSubmitLabelValue("add")));
         submitLabel.setOutputMarkupId(true);
         submitLink.add(submitLabel);
         theForm.add(submitLink);
-        theForm.add(new AjaxSubmitLink("cancel") {
+        theForm.add(
+                new AjaxSubmitLink("cancel") {
 
-            @Override
-            public void onSubmit(AjaxRequestTarget target) {
-                clearForm(target);
-            }
-        });
+                    @Override
+                    public void onSubmit(AjaxRequestTarget target, Form<?> form) {
+                        clearForm(target);
+                    }
+                });
     }
 
     protected List<SchemaInfo> getSchemaInfoList() {
@@ -195,7 +206,8 @@ public class SchemaRuleConfigurationPanel extends Panel {
                 } catch (CQLException e) {
                     ValidationError error = new ValidationError();
                     String message =
-                            new ParamResourceModel("invalidCQL", SchemaRuleConfigurationPanel.this).getObject();
+                            new ParamResourceModel("invalidCQL", SchemaRuleConfigurationPanel.this)
+                                    .getObject();
                     message += " " + e.getMessage();
                     error.setMessage(message);
                     iValidatable.error(error);

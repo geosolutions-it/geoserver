@@ -7,8 +7,8 @@ package org.geoserver.featurestemplating.configuration.schema;
 import org.geoserver.config.impl.GeoServerLifecycleHandler;
 
 /**
- * Cleans the cache whenever the reset/reload config is triggered. Mostly useful for tests and REST automation, as the
- * file watcher won't reload files checked less than a second ago.
+ * Cleans the cache whenever the reset/reload config is triggered. Mostly useful for tests and REST
+ * automation, as the file watcher won't reload files checked less than a second ago.
  */
 public class SchemaReloader implements GeoServerLifecycleHandler {
 

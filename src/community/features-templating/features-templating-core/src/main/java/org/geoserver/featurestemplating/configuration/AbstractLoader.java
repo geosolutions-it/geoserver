@@ -72,7 +72,8 @@ public abstract class AbstractLoader {
             CacheKey other = (CacheKey) o;
             if (!other.getIdentifier().equals(identifier)) return false;
             else if (!(other.getResource().getName().equals(resource.getName()))) return false;
-            else if (!(other.getResource().getNamespace().equals(resource.getNamespace()))) return false;
+            else if (!(other.getResource().getNamespace().equals(resource.getNamespace())))
+                return false;
             return true;
         }
 

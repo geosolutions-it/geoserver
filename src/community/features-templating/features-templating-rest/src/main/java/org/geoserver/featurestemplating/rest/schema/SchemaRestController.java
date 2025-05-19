@@ -116,7 +116,8 @@ public class SchemaRestController extends AbstractCatalogController {
         }
         SchemaInfoDAO dao = SchemaInfoDAO.get();
         if (dao.findByFullName(schemaName) != null) {
-            throw new RestException("Schema " + schemaName + " already exists.", HttpStatus.FORBIDDEN);
+            throw new RestException(
+                    "Schema " + schemaName + " already exists.", HttpStatus.FORBIDDEN);
         }
         SchemaInfo info = new SchemaInfo();
         info.setSchemaName(schemaName);
@@ -135,7 +136,8 @@ public class SchemaRestController extends AbstractCatalogController {
         String mediaType = getMimeTypeFromContentType(contentType);
         String extension = getExtensionByMediaType(mediaType);
         if (extension == null) {
-            throw new RestException("Unable to determine the schema file extension.", HttpStatus.BAD_REQUEST);
+            throw new RestException(
+                    "Unable to determine the schema file extension.", HttpStatus.BAD_REQUEST);
         }
         return extension;
     }
@@ -144,8 +146,8 @@ public class SchemaRestController extends AbstractCatalogController {
         if (mediaType != null) {
             if (mediaType.equals(MediaType.APPLICATION_JSON_VALUE)
                     || mediaType.equals(MediaTypeExtensions.TEXT_JSON_VALUE)) return "json";
-            else if (mediaType.equals(MediaType.APPLICATION_XML_VALUE) || mediaType.equals(MediaType.TEXT_XML_VALUE))
-                return "xml";
+            else if (mediaType.equals(MediaType.APPLICATION_XML_VALUE)
+                    || mediaType.equals(MediaType.TEXT_XML_VALUE)) return "xml";
             else if (mediaType.equals(MediaType.APPLICATION_XHTML_XML_VALUE)) return "xhtml";
         }
         return null;
@@ -189,18 +191,21 @@ public class SchemaRestController extends AbstractCatalogController {
         File directory = unzip(is);
         try {
             File schemaFile = getSchemaFileFromDirectory(directory);
-            if (schemaName == null) schemaName = FilenameUtils.removeExtension(schemaFile.getName());
+            if (schemaName == null)
+                schemaName = FilenameUtils.removeExtension(schemaFile.getName());
             String extension = FilenameUtils.getExtension(schemaFile.getName());
             SchemaInfoDAO dao = SchemaInfoDAO.get();
             if (dao.findByFullName(schemaName) != null) {
-                throw new RestException("Schema " + schemaName + " already exists.", HttpStatus.FORBIDDEN);
+                throw new RestException(
+                        "Schema " + schemaName + " already exists.", HttpStatus.FORBIDDEN);
             }
             info.setSchemaName(schemaName);
             info.setExtension(extension);
             try (InputStream inputStream = new FileInputStream(schemaFile)) {
                 saveOrUpdateSchema(info, inputStream);
             } catch (IOException e) {
-                throw new RestException("Error while processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
+                throw new RestException(
+                        "Error while processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
             }
         } finally {
             try {
@@ -292,7 +297,8 @@ public class SchemaRestController extends AbstractCatalogController {
             try (InputStream inputStream = new FileInputStream(schemaFile)) {
                 saveOrUpdateSchema(info, inputStream);
             } catch (IOException e) {
-                throw new RestException("Error while processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
+                throw new RestException(
+                        "Error while processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
             }
         } finally {
             try {
@@ -309,19 +315,24 @@ public class SchemaRestController extends AbstractCatalogController {
     private SchemaInfo checkSchemaInfo(String fullName) {
         SchemaInfoDAO dao = SchemaInfoDAO.get();
         SchemaInfo info = dao.findByFullName(fullName);
-        if (info == null) throw new RestException("Schema " + fullName + " doesn't exist.", HttpStatus.FORBIDDEN);
+        if (info == null)
+            throw new RestException("Schema " + fullName + " doesn't exist.", HttpStatus.FORBIDDEN);
         return info;
     }
 
-    private URI getUri(String name, String workspace, String featureType, UriComponentsBuilder builder) {
+    private URI getUri(
+            String name, String workspace, String featureType, UriComponentsBuilder builder) {
         UriComponents uriComponents;
         builder = builder.cloneBuilder();
         if (featureType != null) {
-            uriComponents = builder.path("/workspaces/{ws}/featuretypes/{featureType}/schemaoverrides/{schemaName}")
-                    .buildAndExpand(workspace, featureType, name);
+            uriComponents =
+                    builder.path(
+                                    "/workspaces/{ws}/featuretypes/{featureType}/schemaoverrides/{schemaName}")
+                            .buildAndExpand(workspace, featureType, name);
         } else if (workspace != null) {
-            uriComponents = builder.path("/workspaces/{ws}/schemaoverrides/{schemaName}")
-                    .buildAndExpand(workspace, name);
+            uriComponents =
+                    builder.path("/workspaces/{ws}/schemaoverrides/{schemaName}")
+                            .buildAndExpand(workspace, name);
         } else {
             uriComponents = builder.path("/schemaoverrides/{schemaName}").buildAndExpand(name);
         }
@@ -334,7 +345,8 @@ public class SchemaRestController extends AbstractCatalogController {
             String content = new String(rawData, Charset.defaultCharset());
             new SchemaService().saveOrUpdate(info, content);
         } catch (IOException e) {
-            throw new RestException("Error while writing the schema", HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new RestException(
+                    "Error while writing the schema", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -399,7 +411,9 @@ public class SchemaRestController extends AbstractCatalogController {
         SchemaInfo info = SchemaInfoDAO.get().findByFullName(fullName);
         Resource resource = SchemaFileManager.get().getSchemaResource(info);
         if (resource.getType() != Resource.Type.RESOURCE) {
-            throw new RestException("Schema with fullName " + info.getFullName() + " not found", HttpStatus.NOT_FOUND);
+            throw new RestException(
+                    "Schema with fullName " + info.getFullName() + " not found",
+                    HttpStatus.NOT_FOUND);
         }
         byte[] bytes;
         try {
@@ -443,9 +457,10 @@ public class SchemaRestController extends AbstractCatalogController {
             ws = ft.getStore().getWorkspace().getName();
             featureType = ft.getName();
         }
-        List<SchemaInfo> infos = SchemaInfoDAO.get().findAll().stream()
-                .filter(getPredicate(ws, featureType))
-                .collect(Collectors.toList());
+        List<SchemaInfo> infos =
+                SchemaInfoDAO.get().findAll().stream()
+                        .filter(getPredicate(ws, featureType))
+                        .collect(Collectors.toList());
         return wrapObject(new SchemaInfoList(infos, builder), SchemaInfoList.class);
     }
 
@@ -454,7 +469,11 @@ public class SchemaRestController extends AbstractCatalogController {
         if (featureType != null) {
             predicate = t -> t.getFeatureType() != null && t.getFeatureType().equals(featureType);
         } else if (ws != null) {
-            predicate = t -> t.getWorkspace() != null && t.getWorkspace().equals(ws) && t.getFeatureType() == null;
+            predicate =
+                    t ->
+                            t.getWorkspace() != null
+                                    && t.getWorkspace().equals(ws)
+                                    && t.getFeatureType() == null;
         } else {
             predicate = t -> t.getWorkspace() == null && t.getFeatureType() == null;
         }
@@ -470,32 +489,42 @@ public class SchemaRestController extends AbstractCatalogController {
             return tempDir;
         } catch (Exception e) {
             LOGGER.severe("Error processing the schema zip (PUT): " + e.getMessage());
-            throw new RestException("Error processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
+            throw new RestException(
+                    "Error processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
     private File getSchemaFileFromDirectory(File directory) throws RestException {
         try {
-            File[] matchingFiles = directory.listFiles(
-                    (dir, name) -> name.endsWith("json") || name.endsWith("xml") || name.endsWith("xhtml"));
+            File[] matchingFiles =
+                    directory.listFiles(
+                            (dir, name) ->
+                                    name.endsWith("json")
+                                            || name.endsWith("xml")
+                                            || name.endsWith("xhtml"));
 
             if (matchingFiles == null || matchingFiles.length == 0) {
                 throw new RestException("No schema file provided:", HttpStatus.FORBIDDEN);
             }
 
-            LOGGER.fine("getting schema file from directory: " + matchingFiles[0].getAbsolutePath());
+            LOGGER.fine(
+                    "getting schema file from directory: " + matchingFiles[0].getAbsolutePath());
 
             return matchingFiles[0];
         } catch (Exception e) {
-            LOGGER.severe("Error while searching the schema in unzipped directory (PUT): " + e.getMessage());
-            throw new RestException("Error processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
+            LOGGER.severe(
+                    "Error while searching the schema in unzipped directory (PUT): "
+                            + e.getMessage());
+            throw new RestException(
+                    "Error processing the schema", HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
     private String getMediaType(SchemaInfo info) {
         String result;
         if (info.getExtension().equals("json")) result = MediaType.APPLICATION_JSON_VALUE;
-        else if (info.getExtension().equals("xhtml")) result = MediaType.APPLICATION_XHTML_XML_VALUE;
+        else if (info.getExtension().equals("xhtml"))
+            result = MediaType.APPLICATION_XHTML_XML_VALUE;
         else result = MediaType.APPLICATION_XML_VALUE;
         return result;
     }
@@ -515,7 +544,8 @@ public class SchemaRestController extends AbstractCatalogController {
     }
 
     private FeatureTypeInfo checkFeatureType(String workspace, String featureTypeName) {
-        FeatureTypeInfo featureType = catalog.getFeatureTypeByName(new NameImpl(workspace, featureTypeName));
+        FeatureTypeInfo featureType =
+                catalog.getFeatureTypeByName(new NameImpl(workspace, featureTypeName));
         if (featureType == null) {
             throw new ResourceNotFoundException("FeatureType " + featureTypeName + " not found");
         }
@@ -526,7 +556,9 @@ public class SchemaRestController extends AbstractCatalogController {
 
         @Override
         public void marshal(
-                Object o, HierarchicalStreamWriter hierarchicalStreamWriter, MarshallingContext marshallingContext) {
+                Object o,
+                HierarchicalStreamWriter hierarchicalStreamWriter,
+                MarshallingContext marshallingContext) {
             if (o instanceof SchemaInfoList) {
                 SchemaInfoList list = (SchemaInfoList) o;
                 for (SchemaInfo info : list.getInfos()) {
@@ -538,12 +570,13 @@ public class SchemaRestController extends AbstractCatalogController {
                     hierarchicalStreamWriter.setValue(info.getExtension());
                     hierarchicalStreamWriter.endNode();
                     hierarchicalStreamWriter.startNode("location");
-                    String uri = getUri(
-                                    info.getSchemaName(),
-                                    info.getWorkspace(),
-                                    info.getFeatureType(),
-                                    list.getUriBuilder())
-                            .toString();
+                    String uri =
+                            getUri(
+                                            info.getSchemaName(),
+                                            info.getWorkspace(),
+                                            info.getFeatureType(),
+                                            list.getUriBuilder())
+                                    .toString();
                     hierarchicalStreamWriter.setValue(uri);
                     hierarchicalStreamWriter.endNode();
                     hierarchicalStreamWriter.endNode();
@@ -553,7 +586,8 @@ public class SchemaRestController extends AbstractCatalogController {
 
         @Override
         public Object unmarshal(
-                HierarchicalStreamReader hierarchicalStreamReader, UnmarshallingContext unmarshallingContext) {
+                HierarchicalStreamReader hierarchicalStreamReader,
+                UnmarshallingContext unmarshallingContext) {
             return null;
         }
 

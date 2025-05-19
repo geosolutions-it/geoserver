@@ -28,7 +28,14 @@ public class SchemasOverrideDescribeFeatureTypeTest extends SchemaComplexTestSup
         String templateMappedFeature = "MappedFeatureGML31.xml";
         // GML
         setUpSchemaOverride(
-                null, null, SupportedFormat.GML, SCHEMA_OVERRIDE_FILE, MF_GML3, ".xml", "gsml", mappedFeature);
+                null,
+                null,
+                SupportedFormat.GML,
+                SCHEMA_OVERRIDE_FILE,
+                MF_GML3,
+                ".xml",
+                "gsml",
+                mappedFeature);
         // JSON
         setUpSchemaOverride(
                 null,
@@ -44,17 +51,21 @@ public class SchemasOverrideDescribeFeatureTypeTest extends SchemaComplexTestSup
     @Test
     public void testGmlSchemaOverride() throws Exception {
         String schemaStr =
-                getAsString("wfs?service=WFS&request=DescribeFeatureType&version=1.1.0&typename=gsml:MappedFeature");
-        String expectedContent = IOUtils.toString(this.getClass().getResourceAsStream(SCHEMA_OVERRIDE_FILE));
+                getAsString(
+                        "wfs?service=WFS&request=DescribeFeatureType&version=1.1.0&typename=gsml:MappedFeature");
+        String expectedContent =
+                IOUtils.toString(this.getClass().getResourceAsStream(SCHEMA_OVERRIDE_FILE));
         Assert.assertEquals(expectedContent.trim(), schemaStr.trim());
     }
 
     @Test
     public void testJsonSchemaOverride() throws Exception {
         String schemaStr =
-                getAsString("wfs?service=WFS&request=DescribeFeatureType&version=2.0.0&typenames=gsml:MappedFeature"
-                        + "&outputformat=application/json");
-        String expectedContent = IOUtils.toString(this.getClass().getResourceAsStream(JSON_SCHEMA_OVERRIDE_FILE));
+                getAsString(
+                        "wfs?service=WFS&request=DescribeFeatureType&version=2.0.0&typenames=gsml:MappedFeature"
+                                + "&outputformat=application/json");
+        String expectedContent =
+                IOUtils.toString(this.getClass().getResourceAsStream(JSON_SCHEMA_OVERRIDE_FILE));
         Assert.assertEquals(expectedContent.trim(), schemaStr.trim());
     }
 }

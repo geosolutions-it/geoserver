@@ -13,8 +13,9 @@ import org.geoserver.platform.resource.Resource;
 import org.geotools.util.logging.Logging;
 
 /**
- * This class handles the management of a single template file, giving access to the ${@link RootBuilder} produced from
- * it and issuing the reloading of the file when needed through ${@link TemplateWatcher}
+ * This class handles the management of a single template file, giving access to the ${@link
+ * RootBuilder} produced from it and issuing the reloading of the file when needed through ${@link
+ * TemplateWatcher}
  */
 public class SchemaDefinition {
 
@@ -37,7 +38,10 @@ public class SchemaDefinition {
     /** Check if the template file has benn modified and eventually reload it. */
     public boolean checkSchema() {
         if (needsReload()) {
-            LOGGER.log(Level.INFO, "Reloading json-ld template for Feature Type {0}", schemaDefinitionFile.name());
+            LOGGER.log(
+                    Level.INFO,
+                    "Reloading json-ld template for Feature Type {0}",
+                    schemaDefinitionFile.name());
             synchronized (this) {
                 if (needsReload()) {
                     try {

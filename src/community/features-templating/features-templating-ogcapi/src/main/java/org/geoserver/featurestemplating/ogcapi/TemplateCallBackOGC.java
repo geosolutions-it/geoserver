@@ -146,8 +146,8 @@ public class TemplateCallBackOGC extends AbstractDispatcherCallback {
     }
 
     /**
-     * Get the template identifier from the accept header. The accept header can contain multiple comma separated
-     * values, so we need to check each one.
+     * Get the template identifier from the accept header. The accept header can contain multiple
+     * comma separated values, so we need to check each one.
      *
      * @param accept the accept header value
      * @return the template identifier or null if not found

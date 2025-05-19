@@ -33,7 +33,8 @@ public class SchemaFileManager {
     /**
      * Return a {@link Resource} from a template info.
      *
-     * @param templateInfo the template info for which we want to retrieve the corresponding resource.
+     * @param templateInfo the template info for which we want to retrieve the corresponding
+     *     resource.
      * @return the resource that corresponds to the template info.
      */
     public Resource getSchemaResource(SchemaInfo templateInfo) {
@@ -57,7 +58,8 @@ public class SchemaFileManager {
     /**
      * Delete the template file associated to the template info passed as an argument.
      *
-     * @param schemaInfo the templateInfo for which we want to delete the corresponding template file.
+     * @param schemaInfo the templateInfo for which we want to delete the corresponding template
+     *     file.
      * @return true if the delete process was successful false otherwise.
      */
     public boolean delete(SchemaInfo schemaInfo) {
@@ -99,7 +101,8 @@ public class SchemaFileManager {
     public void saveTemplateFile(SchemaInfo schemaInfo, String rawTemplate) {
         File destDir = getTemplateLocation(schemaInfo);
         try {
-            File file = new File(destDir, schemaInfo.getSchemaName() + "." + schemaInfo.getExtension());
+            File file =
+                    new File(destDir, schemaInfo.getSchemaName() + "." + schemaInfo.getExtension());
             if (!file.exists()) file.createNewFile();
             synchronized (this) {
                 try (FileOutputStream fos = new FileOutputStream(file, false)) {

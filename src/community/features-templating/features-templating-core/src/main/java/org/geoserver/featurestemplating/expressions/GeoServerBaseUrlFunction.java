@@ -1,20 +1,17 @@
 package org.geoserver.featurestemplating.expressions;
 
+import static org.geotools.filter.capability.FunctionNameImpl.parameter;
+
+import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.geoserver.ows.Request;
 import org.geotools.api.filter.capability.FunctionName;
 import org.geotools.filter.capability.FunctionNameImpl;
 
-import javax.servlet.http.HttpServletRequest;
-
-import static org.geotools.filter.capability.FunctionNameImpl.parameter;
-
-public class GeoServerBaseUrlFunction extends RequestFunction  {
+public class GeoServerBaseUrlFunction extends RequestFunction {
 
     public static FunctionName NAME =
-        new FunctionNameImpl(
-            "geoServerBaseUrl",
-            parameter("result", String.class));
+            new FunctionNameImpl("geoServerBaseUrl", parameter("result", String.class));
 
     public GeoServerBaseUrlFunction() {
         super(NAME);
@@ -31,7 +28,7 @@ public class GeoServerBaseUrlFunction extends RequestFunction  {
         } else {
             serviceUrl.append("http://");
         }
-        if (StringUtils.isNotBlank(hostHeader)){
+        if (StringUtils.isNotBlank(hostHeader)) {
             serviceUrl.append(hostHeader);
         } else {
             serviceUrl.append(req.getServerName());
@@ -43,5 +40,4 @@ public class GeoServerBaseUrlFunction extends RequestFunction  {
         serviceUrl.append(req.getContextPath());
         return serviceUrl.toString();
     }
-
 }

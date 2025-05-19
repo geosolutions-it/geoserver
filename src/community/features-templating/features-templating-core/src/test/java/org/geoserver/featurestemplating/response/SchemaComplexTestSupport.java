@@ -46,7 +46,8 @@ public abstract class SchemaComplexTestSupport extends AbstractAppSchemaTestSupp
             throws IOException {
         // setup the schema override
         String rawSchema =
-                org.apache.commons.io.IOUtils.toString(getClass().getResourceAsStream(schemaFileName), Charsets.UTF_8);
+                org.apache.commons.io.IOUtils.toString(
+                        getClass().getResourceAsStream(schemaFileName), Charsets.UTF_8);
         SchemaInfo info = new SchemaInfo();
         info.setExtension(schemaExtension);
         info.setSchemaName(schemaName);

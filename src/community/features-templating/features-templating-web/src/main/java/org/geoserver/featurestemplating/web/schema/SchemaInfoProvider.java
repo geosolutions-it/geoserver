@@ -13,9 +13,12 @@ import org.geoserver.web.wicket.GeoServerDataProvider;
 public class SchemaInfoProvider extends GeoServerDataProvider<SchemaInfo> {
 
     public static final Property<SchemaInfo> NAME = new BeanProperty<>("schemaName", "schemaName");
-    public static final Property<SchemaInfo> EXTENSION = new BeanProperty<>("extension", "extension");
-    public static final Property<SchemaInfo> WORKSPACE = new BeanProperty<>("workspace", "workspace");
-    public static final Property<SchemaInfo> FEATURE_TYPE_INFO = new BeanProperty<>("featureTypeInfo", "featureType");
+    public static final Property<SchemaInfo> EXTENSION =
+            new BeanProperty<>("extension", "extension");
+    public static final Property<SchemaInfo> WORKSPACE =
+            new BeanProperty<>("workspace", "workspace");
+    public static final Property<SchemaInfo> FEATURE_TYPE_INFO =
+            new BeanProperty<>("featureTypeInfo", "featureType");
 
     @Override
     protected List<Property<SchemaInfo>> getProperties() {

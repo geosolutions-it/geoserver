@@ -11,7 +11,10 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import org.geoserver.featurestemplating.configuration.TemplateRule;
 
-/** A class that holds a list of {@link TemplateRule}. Is meant to be stored in the FeatureTypeInfo metadata map. */
+/**
+ * A class that holds a list of {@link TemplateRule}. Is meant to be stored in the FeatureTypeInfo
+ * metadata map.
+ */
 @XmlRootElement(name = "SchemaLayerConfig")
 public class SchemaLayerConfig implements Serializable {
 

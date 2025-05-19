@@ -70,7 +70,8 @@ public class SchemaInfoDAOImpl implements SchemaInfoDAO {
     public SchemaInfo saveOrUpdate(SchemaInfo templateData) {
         reloadIfNeeded();
         boolean isUpdate =
-                schemaDataSet.stream().anyMatch(ti -> ti.getIdentifier().equals(templateData.getIdentifier()));
+                schemaDataSet.stream()
+                        .anyMatch(ti -> ti.getIdentifier().equals(templateData.getIdentifier()));
         if (isUpdate) {
             fireTemplateUpdateEvent(templateData);
             schemaDataSet.removeIf(ti -> ti.getIdentifier().equals(templateData.getIdentifier()));
@@ -109,9 +110,8 @@ public class SchemaInfoDAOImpl implements SchemaInfoDAO {
     @Override
     public SchemaInfo findById(String id) {
         reloadIfNeeded();
-        Optional<SchemaInfo> optional = schemaDataSet.stream()
-                .filter(ti -> ti.getIdentifier().equals(id))
-                .findFirst();
+        Optional<SchemaInfo> optional =
+                schemaDataSet.stream().filter(ti -> ti.getIdentifier().equals(id)).findFirst();
         if (optional.isPresent()) return optional.get();
         else return null;
     }
@@ -119,9 +119,8 @@ public class SchemaInfoDAOImpl implements SchemaInfoDAO {
     @Override
     public SchemaInfo findByFullName(String fullName) {
         reloadIfNeeded();
-        Optional<SchemaInfo> SchemaInfo = schemaDataSet.stream()
-                .filter(ti -> ti.getFullName().equals(fullName))
-                .findFirst();
+        Optional<SchemaInfo> SchemaInfo =
+                schemaDataSet.stream().filter(ti -> ti.getFullName().equals(fullName)).findFirst();
         if (SchemaInfo.isPresent()) return SchemaInfo.get();
         return null;
     }
@@ -132,10 +131,13 @@ public class SchemaInfoDAOImpl implements SchemaInfoDAO {
         String workspace = featureTypeInfo.getStore().getWorkspace().getName();
         String name = featureTypeInfo.getName();
         return schemaDataSet.stream()
-                .filter(ti -> (ti.getWorkspace() == null && ti.getFeatureType() == null)
-                        || ti.getFeatureType() == null && ti.getWorkspace().equals(workspace)
-                        || (ti.getWorkspace().equals(workspace)
-                                && ti.getFeatureType().equals(name)))
+                .filter(
+                        ti ->
+                                (ti.getWorkspace() == null && ti.getFeatureType() == null)
+                                        || ti.getFeatureType() == null
+                                                && ti.getWorkspace().equals(workspace)
+                                        || (ti.getWorkspace().equals(workspace)
+                                                && ti.getFeatureType().equals(name)))
                 .collect(Collectors.toList());
     }
 
@@ -242,16 +244,18 @@ public class SchemaInfoDAOImpl implements SchemaInfoDAO {
         private void removeFtTemplates(FeatureTypeInfo ft) {
             SchemaInfoDAO dao = SchemaInfoDAO.get();
             List<SchemaInfo> SchemaInfos = dao.findByFeatureTypeInfo(ft);
-            dao.delete(SchemaInfos.stream()
-                    .filter(ti -> ti.getFeatureType() != null)
-                    .collect(Collectors.toList()));
+            dao.delete(
+                    SchemaInfos.stream()
+                            .filter(ti -> ti.getFeatureType() != null)
+                            .collect(Collectors.toList()));
         }
 
         private void removeWSTemplates(WorkspaceInfo ws) {
             SchemaInfoDAO dao = SchemaInfoDAO.get();
-            List<SchemaInfo> SchemaInfos = dao.findAll().stream()
-                    .filter(ti -> ti.getWorkspace().equals(ws.getName()))
-                    .collect(Collectors.toList());
+            List<SchemaInfo> SchemaInfos =
+                    dao.findAll().stream()
+                            .filter(ti -> ti.getWorkspace().equals(ws.getName()))
+                            .collect(Collectors.toList());
             dao.delete(SchemaInfos);
         }
 
@@ -308,8 +312,7 @@ public class SchemaInfoDAOImpl implements SchemaInfoDAO {
                 FeatureTypeInfo info = (FeatureTypeInfo) source;
                 int wsIdx = event.getPropertyNames().indexOf("workspace");
                 if (wsIdx != -1) {
-                    WorkspaceInfo newWorkspace =
-                            (WorkspaceInfo) event.getNewValues().get(wsIdx);
+                    WorkspaceInfo newWorkspace = (WorkspaceInfo) event.getNewValues().get(wsIdx);
                     updateSchemaInfoWorkspace(newWorkspace, info);
                 }
             }

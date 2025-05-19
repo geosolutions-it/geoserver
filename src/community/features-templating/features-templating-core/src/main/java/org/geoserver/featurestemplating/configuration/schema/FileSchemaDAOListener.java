@@ -16,8 +16,9 @@ public class FileSchemaDAOListener implements SchemaDAOListener {
         try {
             SchemaFileManager.get().delete(deleteEvent.getSource());
         } catch (Exception e) {
-            LOGGER.warning("Exception while deleting template file in a TemplateInfo delete event scope. Execption is: "
-                    + e.getMessage());
+            LOGGER.warning(
+                    "Exception while deleting template file in a TemplateInfo delete event scope. Execption is: "
+                            + e.getMessage());
         }
     }
 

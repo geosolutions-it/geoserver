@@ -20,7 +20,8 @@ public class SchemaOverrideDescribeFeatureTypeResponse extends WFSDescribeFeatur
 
     private String content;
 
-    public SchemaOverrideDescribeFeatureTypeResponse(GeoServer gs, String outputFormat, String content) {
+    public SchemaOverrideDescribeFeatureTypeResponse(
+            GeoServer gs, String outputFormat, String content) {
         super(gs, outputFormat);
         this.outputFormat = outputFormat;
         this.content = content;
@@ -32,7 +33,8 @@ public class SchemaOverrideDescribeFeatureTypeResponse extends WFSDescribeFeatur
     }
 
     @Override
-    protected void write(FeatureTypeInfo[] featureTypeInfos, OutputStream output, Operation describeFeatureType)
+    protected void write(
+            FeatureTypeInfo[] featureTypeInfos, OutputStream output, Operation describeFeatureType)
             throws IOException {
         try {
             output.write(content.getBytes(StandardCharsets.UTF_8));

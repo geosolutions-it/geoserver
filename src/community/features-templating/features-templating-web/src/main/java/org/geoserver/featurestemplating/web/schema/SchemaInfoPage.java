@@ -40,46 +40,53 @@ public class SchemaInfoPage extends GeoServerSecuredPage {
     }
 
     private void addFeatureTeplateSection() {
-        add(new AjaxLink<Object>("addNew") {
+        add(
+                new AjaxLink<Object>("addNew") {
 
-            private static final long serialVersionUID = -4136656891019857299L;
+                    private static final long serialVersionUID = -4136656891019857299L;
 
-            @Override
-            public void onClick(AjaxRequestTarget target) {
-                setResponsePage(new SchemaConfigurationPage(new Model<>(new SchemaInfo()), true));
-            }
-        });
+                    @Override
+                    public void onClick(AjaxRequestTarget target) {
+                        setResponsePage(
+                                new SchemaConfigurationPage(new Model<>(new SchemaInfo()), true));
+                    }
+                });
 
         add(remove = newRemoveLink());
 
-        tablePanel = new GeoServerTablePanel<SchemaInfo>("tablePanel", new SchemaInfoProvider(), true) {
-            @Override
-            protected Component getComponentForProperty(
-                    String id, IModel<SchemaInfo> itemModel, GeoServerDataProvider.Property<SchemaInfo> property) {
-                if (property.equals(SchemaInfoProvider.NAME)) {
-                    return new SimpleAjaxLink<SchemaInfo>(id, itemModel, SchemaInfoProvider.NAME.getModel(itemModel)) {
+        tablePanel =
+                new GeoServerTablePanel<SchemaInfo>("tablePanel", new SchemaInfoProvider(), true) {
+                    @Override
+                    protected Component getComponentForProperty(
+                            String id,
+                            IModel<SchemaInfo> itemModel,
+                            GeoServerDataProvider.Property<SchemaInfo> property) {
+                        if (property.equals(SchemaInfoProvider.NAME)) {
+                            return new SimpleAjaxLink<SchemaInfo>(
+                                    id, itemModel, SchemaInfoProvider.NAME.getModel(itemModel)) {
 
-                        @Override
-                        protected void onClick(AjaxRequestTarget target) {
-                            setResponsePage(new SchemaConfigurationPage(getModel(), false));
+                                @Override
+                                protected void onClick(AjaxRequestTarget target) {
+                                    setResponsePage(new SchemaConfigurationPage(getModel(), false));
+                                }
+                            };
+                        } else if (property.equals(SchemaInfoProvider.EXTENSION))
+                            return new Label(id, SchemaInfoProvider.EXTENSION.getModel(itemModel));
+                        else if (property.equals(SchemaInfoProvider.WORKSPACE))
+                            return new Label(id, SchemaInfoProvider.WORKSPACE.getModel(itemModel));
+                        else if (property.equals(SchemaInfoProvider.FEATURE_TYPE_INFO)) {
+                            return new Label(
+                                    id, SchemaInfoProvider.FEATURE_TYPE_INFO.getModel(itemModel));
                         }
-                    };
-                } else if (property.equals(SchemaInfoProvider.EXTENSION))
-                    return new Label(id, SchemaInfoProvider.EXTENSION.getModel(itemModel));
-                else if (property.equals(SchemaInfoProvider.WORKSPACE))
-                    return new Label(id, SchemaInfoProvider.WORKSPACE.getModel(itemModel));
-                else if (property.equals(SchemaInfoProvider.FEATURE_TYPE_INFO)) {
-                    return new Label(id, SchemaInfoProvider.FEATURE_TYPE_INFO.getModel(itemModel));
-                }
-                return null;
-            }
+                        return null;
+                    }
 
-            @Override
-            protected void onSelectionUpdate(AjaxRequestTarget target) {
-                remove.setEnabled(tablePanel.getSelection().size() > 0);
-                target.add(remove);
-            }
-        };
+                    @Override
+                    protected void onSelectionUpdate(AjaxRequestTarget target) {
+                        remove.setEnabled(tablePanel.getSelection().size() > 0);
+                        target.add(remove);
+                    }
+                };
         tablePanel.setOutputMarkupId(true);
         tablePanel.setEnabled(true);
         add(tablePanel);
@@ -89,15 +96,17 @@ public class SchemaInfoPage extends GeoServerSecuredPage {
     }
 
     private void addSchemaDefinitionSection() {
-        add(new AjaxLink<Object>("addNewSchema") {
+        add(
+                new AjaxLink<Object>("addNewSchema") {
 
-            private static final long serialVersionUID = -4136656891019857299L;
+                    private static final long serialVersionUID = -4136656891019857299L;
 
-            @Override
-            public void onClick(AjaxRequestTarget target) {
-                setResponsePage(new SchemaConfigurationPage(new Model<>(new SchemaInfo()), true));
-            }
-        });
+                    @Override
+                    public void onClick(AjaxRequestTarget target) {
+                        setResponsePage(
+                                new SchemaConfigurationPage(new Model<>(new SchemaInfo()), true));
+                    }
+                });
     }
 
     private AjaxLink<Object> newRemoveSchemaLink() {
@@ -117,15 +126,18 @@ public class SchemaInfoPage extends GeoServerSecuredPage {
             @Override
             protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
                 super.updateAjaxAttributes(attributes);
-                AjaxCallListener ajaxCall = new AjaxCallListener() {
+                AjaxCallListener ajaxCall =
+                        new AjaxCallListener() {
 
-                    @Override
-                    public CharSequence getPrecondition(Component component) {
-                        CharSequence message = new ParamResourceModel("confirmRemove", SchemaInfoPage.this).getString();
-                        message = JavaScriptUtils.escapeQuotes(message);
-                        return "return confirm('" + message + "');";
-                    }
-                };
+                            @Override
+                            public CharSequence getPrecondition(Component component) {
+                                CharSequence message =
+                                        new ParamResourceModel("confirmRemove", SchemaInfoPage.this)
+                                                .getString();
+                                message = JavaScriptUtils.escapeQuotes(message);
+                                return "return confirm('" + message + "');";
+                            }
+                        };
                 attributes.getAjaxCallListeners().add(ajaxCall);
             }
         };
@@ -148,15 +160,18 @@ public class SchemaInfoPage extends GeoServerSecuredPage {
             @Override
             protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
                 super.updateAjaxAttributes(attributes);
-                AjaxCallListener ajaxCall = new AjaxCallListener() {
+                AjaxCallListener ajaxCall =
+                        new AjaxCallListener() {
 
-                    @Override
-                    public CharSequence getPrecondition(Component component) {
-                        CharSequence message = new ParamResourceModel("confirmRemove", SchemaInfoPage.this).getString();
-                        message = JavaScriptUtils.escapeQuotes(message);
-                        return "return confirm('" + message + "');";
-                    }
-                };
+                            @Override
+                            public CharSequence getPrecondition(Component component) {
+                                CharSequence message =
+                                        new ParamResourceModel("confirmRemove", SchemaInfoPage.this)
+                                                .getString();
+                                message = JavaScriptUtils.escapeQuotes(message);
+                                return "return confirm('" + message + "');";
+                            }
+                        };
                 attributes.getAjaxCallListeners().add(ajaxCall);
             }
         };

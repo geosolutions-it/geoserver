@@ -188,7 +188,8 @@ public class TemplateRule implements Serializable {
         if (outputFormat == null)
             outputFormat = request.getKvp() != null ? (String) request.getKvp().get("f") : null;
         if (outputFormat == null)
-            outputFormat = request.getKvp() != null ? (String) request.getKvp().get("INFO_FORMAT") : null;
+            outputFormat =
+                    request.getKvp() != null ? (String) request.getKvp().get("INFO_FORMAT") : null;
         if (outputFormat == null) outputFormat = request.getHttpRequest().getHeader("accept");
         return outputFormat;
     }

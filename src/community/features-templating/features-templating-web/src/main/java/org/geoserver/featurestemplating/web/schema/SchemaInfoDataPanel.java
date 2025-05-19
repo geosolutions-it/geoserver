@@ -74,39 +74,50 @@ public class SchemaInfoDataPanel extends Panel {
         schemaName.setOutputMarkupId(true);
         schemaName.setRequired(true);
         add(schemaName);
-        templateExtension = new DropDownChoice<>("extension", new PropertyModel<>(model, "extension"), getExtensions());
+        templateExtension =
+                new DropDownChoice<>(
+                        "extension", new PropertyModel<>(model, "extension"), getExtensions());
         CodeMirrorEditor editor = page.getEditor();
-        templateExtension.add(new OnChangeAjaxBehavior() {
-            @Override
-            protected void onUpdate(AjaxRequestTarget ajaxRequestTarget) {
-                String mode = templateExtension.getConvertedInput();
-                if (mode != null && (mode.equals("xml") || mode.equals("xhtml"))) editor.setMode("xml");
-                else if (isJsonLd(editor)) editor.setModeAndSubMode("javascript", "jsonld");
-                else editor.setModeAndSubMode("javascript", mode);
-                ajaxRequestTarget.add(editor);
-            }
-        });
+        templateExtension.add(
+                new OnChangeAjaxBehavior() {
+                    @Override
+                    protected void onUpdate(AjaxRequestTarget ajaxRequestTarget) {
+                        String mode = templateExtension.getConvertedInput();
+                        if (mode != null && (mode.equals("xml") || mode.equals("xhtml")))
+                            editor.setMode("xml");
+                        else if (isJsonLd(editor)) editor.setModeAndSubMode("javascript", "jsonld");
+                        else editor.setModeAndSubMode("javascript", mode);
+                        ajaxRequestTarget.add(editor);
+                    }
+                });
         templateExtension.setRequired(true);
         add(templateExtension);
-        wsDropDown = new DropDownChoice<>("workspace", new PropertyModel<>(model, "workspace"), getWorkspaces());
+        wsDropDown =
+                new DropDownChoice<>(
+                        "workspace", new PropertyModel<>(model, "workspace"), getWorkspaces());
         wsDropDown.setNullValid(true);
-        wsDropDown.add(new OnChangeAjaxBehavior() {
-            private static final long serialVersionUID = 732177308220189475L;
+        wsDropDown.add(
+                new OnChangeAjaxBehavior() {
+                    private static final long serialVersionUID = 732177308220189475L;
 
-            @Override
-            protected void onUpdate(AjaxRequestTarget target) {
-                String workspace = wsDropDown.getConvertedInput();
-                ftiDropDown.setChoices(getFeatureTypesInfo(workspace));
-                ftiDropDown.modelChanged();
-                target.add(ftiDropDown);
-                ftiDropDown.setEnabled(true);
-            }
-        });
+                    @Override
+                    protected void onUpdate(AjaxRequestTarget target) {
+                        String workspace = wsDropDown.getConvertedInput();
+                        ftiDropDown.setChoices(getFeatureTypesInfo(workspace));
+                        ftiDropDown.modelChanged();
+                        target.add(ftiDropDown);
+                        ftiDropDown.setEnabled(true);
+                    }
+                });
         add(wsDropDown);
 
-        ftiDropDown = new DropDownChoice<>(
-                "featureTypeInfo", new PropertyModel<>(model, "featureType"), Collections.emptyList());
-        if (wsDropDown.getValue() == null || wsDropDown.getValue() == "-1") ftiDropDown.setEnabled(false);
+        ftiDropDown =
+                new DropDownChoice<>(
+                        "featureTypeInfo",
+                        new PropertyModel<>(model, "featureType"),
+                        Collections.emptyList());
+        if (wsDropDown.getValue() == null || wsDropDown.getValue() == "-1")
+            ftiDropDown.setEnabled(false);
         else ftiDropDown.setChoices(getFeatureTypesInfo(wsDropDown.getModelObject()));
         ftiDropDown.setOutputMarkupId(true);
         ftiDropDown.setNullValid(true);
@@ -144,7 +155,7 @@ public class SchemaInfoDataPanel extends Panel {
             private static final long serialVersionUID = 658341311654601761L;
 
             @Override
-            protected void onSubmit(AjaxRequestTarget target) {
+            protected void onSubmit(AjaxRequestTarget target, Form<?> form) {
                 FileUpload upload = fileUploadField.getFileUpload();
                 if (upload == null) {
                     warn("No file selected.");
@@ -154,15 +165,22 @@ public class SchemaInfoDataPanel extends Panel {
                 try {
                     IOUtils.copy(upload.getInputStream(), bout);
                     page.getEditor().reset();
-                    page.setRawSchema(new InputStreamReader(new ByteArrayInputStream(bout.toByteArray()), "UTF-8"));
+                    page.setRawSchema(
+                            new InputStreamReader(
+                                    new ByteArrayInputStream(bout.toByteArray()), "UTF-8"));
                     upload.getContentType();
                 } catch (IOException e) {
                     throw new WicketRuntimeException(e);
                 } catch (Exception e) {
-                    page.error("Errors occurred uploading the '" + upload.getClientFileName() + "' template");
+                    page.error(
+                            "Errors occurred uploading the '"
+                                    + upload.getClientFileName()
+                                    + "' template");
                     LOGGER.log(
                             Level.WARNING,
-                            "Errors occurred uploading the '" + upload.getClientFileName() + "' template",
+                            "Errors occurred uploading the '"
+                                    + upload.getClientFileName()
+                                    + "' template",
                             e);
                 }
 
@@ -203,28 +221,34 @@ public class SchemaInfoDataPanel extends Panel {
         @Override
         protected void updateAjaxAttributes(AjaxRequestAttributes attributes) {
             super.updateAjaxAttributes(attributes);
-            attributes.getAjaxCallListeners().add(new AjaxCallListener() {
-                /** serialVersionUID */
-                private static final long serialVersionUID = 8637613472102572505L;
+            attributes
+                    .getAjaxCallListeners()
+                    .add(
+                            new AjaxCallListener() {
+                                /** serialVersionUID */
+                                private static final long serialVersionUID = 8637613472102572505L;
 
-                @Override
-                public CharSequence getPrecondition(Component component) {
-                    CharSequence message =
-                            new ParamResourceModel("confirmOverwrite", SchemaInfoDataPanel.this).getString();
-                    message = JavaScriptUtils.escapeQuotes(message);
-                    return "var val = attrs.event.view.document.gsEditors ? "
-                            + "attrs.event.view.document.gsEditors."
-                            + page.getEditor().getTextAreaMarkupId()
-                            + ".getValue() : "
-                            + "attrs.event.view.document.getElementById(\""
-                            + page.getEditor().getTextAreaMarkupId()
-                            + "\").value; "
-                            + "if(val != '' &&"
-                            + "!confirm('"
-                            + message
-                            + "')) return false;";
-                }
-            });
+                                @Override
+                                public CharSequence getPrecondition(Component component) {
+                                    CharSequence message =
+                                            new ParamResourceModel(
+                                                            "confirmOverwrite",
+                                                            SchemaInfoDataPanel.this)
+                                                    .getString();
+                                    message = JavaScriptUtils.escapeQuotes(message);
+                                    return "var val = attrs.event.view.document.gsEditors ? "
+                                            + "attrs.event.view.document.gsEditors."
+                                            + page.getEditor().getTextAreaMarkupId()
+                                            + ".getValue() : "
+                                            + "attrs.event.view.document.getElementById(\""
+                                            + page.getEditor().getTextAreaMarkupId()
+                                            + "\").value; "
+                                            + "if(val != '' &&"
+                                            + "!confirm('"
+                                            + message
+                                            + "')) return false;";
+                                }
+                            });
         }
 
         @Override

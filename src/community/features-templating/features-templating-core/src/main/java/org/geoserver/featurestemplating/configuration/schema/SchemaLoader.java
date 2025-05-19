@@ -40,16 +40,18 @@ public class SchemaLoader extends AbstractLoader {
 
     public SchemaLoader(GeoServerDataDirectory dd) {
         super(dd);
-        schemaCache = CacheBuilder.newBuilder()
-                .maximumSize(100)
-                .initialCapacity(1)
-                .expireAfterAccess(120, TimeUnit.MINUTES)
-                .build(new SchemaCacheLoader());
+        schemaCache =
+                CacheBuilder.newBuilder()
+                        .maximumSize(100)
+                        .initialCapacity(1)
+                        .expireAfterAccess(120, TimeUnit.MINUTES)
+                        .build(new SchemaCacheLoader());
     }
 
     /**
-     * Get the template related to the featureType. Searching for the highest priority rule. If not found will try to
-     * load it from the featureType directory as per legacy rule. If not found will return null.
+     * Get the template related to the featureType. Searching for the highest priority rule. If not
+     * found will try to load it from the featureType directory as per legacy rule. If not found
+     * will return null.
      *
      * @param typeInfo the FeatureTypeInfo for which retrieve the template.
      * @param outputFormat the output format for which retrieve the template.
@@ -57,24 +59,29 @@ public class SchemaLoader extends AbstractLoader {
      * @return the RootBuilder.
      * @throws ExecutionException
      */
-    public String getSchema(FeatureTypeInfo typeInfo, String outputFormat, Request request) throws ExecutionException {
+    public String getSchema(FeatureTypeInfo typeInfo, String outputFormat, Request request)
+            throws ExecutionException {
         String schemaIdentifier =
-                request == null ? evaluatesTemplateRule(typeInfo) : evaluatesTemplateRule(typeInfo, request);
+                request == null
+                        ? evaluatesTemplateRule(typeInfo)
+                        : evaluatesTemplateRule(typeInfo, request);
         if (schemaIdentifier == null)
             schemaIdentifier = TemplateIdentifier.fromOutputFormat(outputFormat).getFilename();
         return getSchemaByIdentifier(typeInfo, schemaIdentifier);
     }
 
     /**
-     * Get the template related to the featureType. Searching for the highest priority rule. If not found will try to
-     * load it from the featureType directory as per legacy rule. If not found will return null.
+     * Get the template related to the featureType. Searching for the highest priority rule. If not
+     * found will try to load it from the featureType directory as per legacy rule. If not found
+     * will return null.
      *
      * @param typeInfo the FeatureTypeInfo for which retrieve the template.
      * @param outputFormat the output format for which retrieve the template.
      * @return the RootBuilder.
      * @throws ExecutionException
      */
-    public String getSchema(FeatureTypeInfo typeInfo, String outputFormat) throws ExecutionException {
+    public String getSchema(FeatureTypeInfo typeInfo, String outputFormat)
+            throws ExecutionException {
         return getSchema(typeInfo, outputFormat, null);
     }
 
@@ -116,15 +123,18 @@ public class SchemaLoader extends AbstractLoader {
         return namespaceSupport;
     }
 
-    private void replaceSimplifiedPropertiesIfNeeded(FeatureTypeInfo featureTypeInfo, RootBuilder rootBuilder) {
+    private void replaceSimplifiedPropertiesIfNeeded(
+            FeatureTypeInfo featureTypeInfo, RootBuilder rootBuilder) {
         try {
-            if (featureTypeInfo.getFeatureType() instanceof ComplexFeatureTypeImpl && rootBuilder != null) {
+            if (featureTypeInfo.getFeatureType() instanceof ComplexFeatureTypeImpl
+                    && rootBuilder != null) {
 
                 DataAccessRegistry registry = AppSchemaDataAccessRegistry.getInstance();
                 FeatureTypeMapping featureTypeMapping =
                         registry.mappingByElement(featureTypeInfo.getQualifiedNativeName());
                 if (featureTypeMapping != null) {
-                    SimplifiedPropertyReplacer visitor = new SimplifiedPropertyReplacer(featureTypeMapping);
+                    SimplifiedPropertyReplacer visitor =
+                            new SimplifiedPropertyReplacer(featureTypeMapping);
                     rootBuilder.accept(visitor, null);
                 }
             }
@@ -176,7 +186,8 @@ public class SchemaLoader extends AbstractLoader {
     /**
      * Remove all the cached entries with the specified templateIdentifier.
      *
-     * @param templateIdentifier the templateIdentifier used to identify the cache entries to remove.
+     * @param templateIdentifier the templateIdentifier used to identify the cache entries to
+     *     remove.
      */
     public void removeAllWithIdentifier(String templateIdentifier) {
         Set<CacheKey> keys = schemaCache.asMap().keySet();
@@ -199,10 +210,11 @@ public class SchemaLoader extends AbstractLoader {
                 FeatureType type = key.getResource().getFeatureType();
                 namespaces = declareNamespaces(type);
             } catch (IOException e) {
-                throw new RuntimeException("Error retrieving FeatureType "
-                        + key.getResource().getName()
-                        + "Exception is: "
-                        + e.getMessage());
+                throw new RuntimeException(
+                        "Error retrieving FeatureType "
+                                + key.getResource().getName()
+                                + "Exception is: "
+                                + e.getMessage());
             }
             SchemaInfo schemaInfo = SchemaInfoDAO.get().findById(key.getIdentifier());
             Resource resource;

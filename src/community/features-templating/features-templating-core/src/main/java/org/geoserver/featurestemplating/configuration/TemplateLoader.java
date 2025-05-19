@@ -40,13 +40,14 @@ public class TemplateLoader extends AbstractLoader {
     private final LoadingCache<CacheKey, Template> templateCache;
 
     public TemplateLoader(GeoServerDataDirectory dd) {
-       super(dd);
-        templateCache = CacheBuilder.newBuilder()
-                .maximumSize(100)
-                .initialCapacity(1)
-                .expireAfterAccess(120, TimeUnit.MINUTES)
-                .build(new TemplateCacheLoader());
-   }
+        super(dd);
+        templateCache =
+                CacheBuilder.newBuilder()
+                        .maximumSize(100)
+                        .initialCapacity(1)
+                        .expireAfterAccess(120, TimeUnit.MINUTES)
+                        .build(new TemplateCacheLoader());
+    }
 
     /**
      * Get the template related to the featureType. Searching for the highest priority rule. If not
@@ -135,7 +136,8 @@ public class TemplateLoader extends AbstractLoader {
         return namespaceSupport;
     }
 
-   private void replaceSimplifiedPropertiesIfNeeded(FeatureTypeInfo featureTypeInfo, RootBuilder rootBuilder) {
+    private void replaceSimplifiedPropertiesIfNeeded(
+            FeatureTypeInfo featureTypeInfo, RootBuilder rootBuilder) {
         try {
             if (featureTypeInfo.getFeatureType() instanceof ComplexFeatureTypeImpl
                     && rootBuilder != null) {
@@ -230,7 +232,8 @@ public class TemplateLoader extends AbstractLoader {
             }
             TemplateInfo templateInfo = TemplateInfoDAO.get().findById(key.getIdentifier());
             Resource resource;
-            if (templateInfo != null) resource = getTemplateFileManager().getTemplateResource(templateInfo);
+            if (templateInfo != null)
+                resource = getTemplateFileManager().getTemplateResource(templateInfo);
             else resource = getDataDirectory().get(key.getResource(), key.getIdentifier());
             Template template = new Template(resource, new TemplateReaderConfiguration(namespaces));
             RootBuilder builder = template.getRootBuilder();

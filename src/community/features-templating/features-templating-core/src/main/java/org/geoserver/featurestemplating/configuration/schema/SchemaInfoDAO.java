@@ -21,9 +21,10 @@ public interface SchemaInfoDAO {
     public List<SchemaInfo> findAll();
 
     /**
-     * Find all the template info that can be used for the FeatureTypeInfo. It means that all the templates that are in
-     * the global directory plus all the templates in the workspace directory to which the FeatureTypeInfo belongs plus
-     * all the templates in the FeatureTypeInfo directory will be returned.
+     * Find all the template info that can be used for the FeatureTypeInfo. It means that all the
+     * templates that are in the global directory plus all the templates in the workspace directory
+     * to which the FeatureTypeInfo belongs plus all the templates in the FeatureTypeInfo directory
+     * will be returned.
      *
      * @param featureTypeInfo
      * @return
@@ -65,9 +66,10 @@ public interface SchemaInfoDAO {
     public void addTemplateListener(SchemaDAOListener listener);
 
     /**
-     * Find a TemplateInfo from full name. By full name is meant the name of the template file preceded by the workspace
-     * name and the feature type name if defined for the template. Format for a full name is like the following:
-     * templateName or workspaceName:templateName or workspaceName:featureTypeName:templateName
+     * Find a TemplateInfo from full name. By full name is meant the name of the template file
+     * preceded by the workspace name and the feature type name if defined for the template. Format
+     * for a full name is like the following: templateName or workspaceName:templateName or
+     * workspaceName:featureTypeName:templateName
      *
      * @param fullName the full name of the template.
      * @return the corresponding TemplateInfo.

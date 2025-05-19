@@ -75,7 +75,9 @@ public class SchemaRuleRestController extends AbstractCatalogController {
 
     @Override
     public boolean supports(
-            MethodParameter methodParameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
+            MethodParameter methodParameter,
+            Type targetType,
+            Class<? extends HttpMessageConverter<?>> converterType) {
         return SchemaRule.class.isAssignableFrom(methodParameter.getParameterType());
     }
 
@@ -114,11 +116,13 @@ public class SchemaRuleRestController extends AbstractCatalogController {
             @PathVariable String identifier) {
         FeatureTypeInfo info = checkFeatureType(workspace, featuretype);
         SchemaLayerConfig layerConfig = checkRules(info);
-        Optional<SchemaRule> rule = layerConfig.getSchemaRules().stream()
-                .filter(r -> r.getRuleId().equals(identifier))
-                .findFirst();
+        Optional<SchemaRule> rule =
+                layerConfig.getSchemaRules().stream()
+                        .filter(r -> r.getRuleId().equals(identifier))
+                        .findFirst();
         if (!rule.isPresent()) {
-            throw new RestException("Rule with id " + identifier + " not found", HttpStatus.NOT_FOUND);
+            throw new RestException(
+                    "Rule with id " + identifier + " not found", HttpStatus.NOT_FOUND);
         }
         return wrapObject(rule.get(), SchemaRule.class);
     }
@@ -201,7 +205,8 @@ public class SchemaRuleRestController extends AbstractCatalogController {
         return new ResponseEntity<>(rule.getRuleId(), headers, HttpStatus.CREATED);
     }
 
-    @DeleteMapping(value = "/workspaces/{workspace}/featuretypes/{featuretype}/schemarules/{identifier}")
+    @DeleteMapping(
+            value = "/workspaces/{workspace}/featuretypes/{featuretype}/schemarules/{identifier}")
     public ResponseEntity<String> deleteRule(
             @PathVariable(name = "workspace") String workspace,
             @PathVariable(name = "featuretype") String featuretype,
@@ -210,7 +215,8 @@ public class SchemaRuleRestController extends AbstractCatalogController {
         SchemaRuleService service = new SchemaRuleService(info);
         boolean removed = service.removeRule(identifier);
         if (!removed) {
-            throw new RestException("Rule with id " + identifier + "not found", HttpStatus.NOT_FOUND);
+            throw new RestException(
+                    "Rule with id " + identifier + "not found", HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(identifier, HttpStatus.NO_CONTENT);
     }
@@ -218,13 +224,15 @@ public class SchemaRuleRestController extends AbstractCatalogController {
     private void validateRule(SchemaRule rule) {
         if (rule.getSchemaName().equals(null) && rule.getSchemaIdentifier().equals(null)) {
             throw new RestException(
-                    "Either templateName or templateIdentifier needs to be specified", HttpStatus.BAD_REQUEST);
+                    "Either templateName or templateIdentifier needs to be specified",
+                    HttpStatus.BAD_REQUEST);
         } else if (rule.getOutputFormat() == null) {
             String cqlFilter = rule.getCqlFilter();
             boolean noMimeType = cqlFilter == null || !cqlFilter.contains("mimeType");
             if (noMimeType)
                 throw new RestException(
-                        "Template Rule must have an output format " + "or a CQLFilter using the mimeType function",
+                        "Template Rule must have an output format "
+                                + "or a CQLFilter using the mimeType function",
                         HttpStatus.BAD_REQUEST);
         }
         SchemaInfoDAO dao = SchemaInfoDAO.get();
@@ -236,22 +244,25 @@ public class SchemaRuleRestController extends AbstractCatalogController {
         }
         if (info == null) {
             throw new RestException(
-                    "The template with name " + rule.getSchemaName() + " does not exist", HttpStatus.BAD_REQUEST);
+                    "The template with name " + rule.getSchemaName() + " does not exist",
+                    HttpStatus.BAD_REQUEST);
         }
         rule.setSchemaIdentifier(info.getIdentifier());
         rule.setSchemaName(info.getFullName());
     }
 
-    private URI getUri(String ruleId, String workspace, String featureType, UriComponentsBuilder builder) {
+    private URI getUri(
+            String ruleId, String workspace, String featureType, UriComponentsBuilder builder) {
         builder = builder.cloneBuilder();
-        UriComponents uriComponents = builder.path(
-                        "/workspaces/{workspace}/featuretypes/{featuretype}/schemarules/{id}")
-                .buildAndExpand(workspace, featureType, ruleId);
+        UriComponents uriComponents =
+                builder.path("/workspaces/{workspace}/featuretypes/{featuretype}/schemarules/{id}")
+                        .buildAndExpand(workspace, featureType, ruleId);
         return uriComponents.toUri();
     }
 
     private FeatureTypeInfo checkFeatureType(String workspaceName, String featureTypeName) {
-        FeatureTypeInfo featureType = catalog.getFeatureTypeByName(new NameImpl(workspaceName, featureTypeName));
+        FeatureTypeInfo featureType =
+                catalog.getFeatureTypeByName(new NameImpl(workspaceName, featureTypeName));
         if (featureType == null) {
             throw new ResourceNotFoundException("Feature Type " + featureTypeName + " not found");
         }
@@ -259,15 +270,18 @@ public class SchemaRuleRestController extends AbstractCatalogController {
     }
 
     private SchemaLayerConfig checkRules(FeatureTypeInfo info) {
-        SchemaLayerConfig layerConfig = info.getMetadata().get(SchemaLayerConfig.METADATA_KEY, SchemaLayerConfig.class);
+        SchemaLayerConfig layerConfig =
+                info.getMetadata().get(SchemaLayerConfig.METADATA_KEY, SchemaLayerConfig.class);
         if (layerConfig == null)
-            throw new ResourceNotFoundException("There are no rules defined for Feature Type " + info.getName());
+            throw new ResourceNotFoundException(
+                    "There are no rules defined for Feature Type " + info.getName());
         return layerConfig;
     }
 
     private SchemaRule checkRule(String ruleId, SchemaRuleService service) {
         SchemaRule rule = service.getRule(ruleId);
-        if (rule == null) throw new ResourceNotFoundException("No rule with specified id " + ruleId);
+        if (rule == null)
+            throw new ResourceNotFoundException("No rule with specified id " + ruleId);
         return rule;
     }
 
@@ -275,7 +289,9 @@ public class SchemaRuleRestController extends AbstractCatalogController {
 
         @Override
         public void marshal(
-                Object o, HierarchicalStreamWriter hierarchicalStreamWriter, MarshallingContext marshallingContext) {
+                Object o,
+                HierarchicalStreamWriter hierarchicalStreamWriter,
+                MarshallingContext marshallingContext) {
             if (o instanceof SchemaRuleList) {
                 SchemaRuleList list = (SchemaRuleList) o;
                 for (SchemaRule rule : list.getRules()) {
@@ -314,7 +330,8 @@ public class SchemaRuleRestController extends AbstractCatalogController {
 
         @Override
         public Object unmarshal(
-                HierarchicalStreamReader hierarchicalStreamReader, UnmarshallingContext unmarshallingContext) {
+                HierarchicalStreamReader hierarchicalStreamReader,
+                UnmarshallingContext unmarshallingContext) {
             return null;
         }
 

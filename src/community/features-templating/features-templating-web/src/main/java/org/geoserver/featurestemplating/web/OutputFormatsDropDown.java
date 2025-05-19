@@ -20,7 +20,8 @@ public class OutputFormatsDropDown extends DropDownChoice<SupportedFormat> {
         this.setChoiceRenderer(getFormatChoiceRenderer());
     }
 
-    public OutputFormatsDropDown(String id, IModel<SupportedFormat> model, String templateExtension) {
+    public OutputFormatsDropDown(
+            String id, IModel<SupportedFormat> model, String templateExtension) {
         super(id);
         this.setChoices(SupportedFormat.getByExtension(templateExtension));
         this.setModel(model);

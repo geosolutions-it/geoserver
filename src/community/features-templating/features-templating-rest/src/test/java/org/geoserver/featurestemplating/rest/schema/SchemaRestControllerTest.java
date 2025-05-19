@@ -25,24 +25,27 @@ public class SchemaRestControllerTest extends CatalogRESTTestSupport {
     @Test
     public void testPostGetPutGetDeleteJSON() throws Exception {
         try {
-            MockHttpServletResponse response = postAsServletResponse(
-                    RestBaseController.ROOT_PATH + "/schemaoverrides?schemaName=foo",
-                    JSON_SCHEMA,
-                    MediaType.APPLICATION_JSON_VALUE);
+            MockHttpServletResponse response =
+                    postAsServletResponse(
+                            RestBaseController.ROOT_PATH + "/schemaoverrides?schemaName=foo",
+                            JSON_SCHEMA,
+                            MediaType.APPLICATION_JSON_VALUE);
             assertEquals(201, response.getStatus());
             response = getAsServletResponse(RestBaseController.ROOT_PATH + "/schemaoverrides/foo");
             assertEquals(200, response.getStatus());
             assertEquals(JSON_SCHEMA.trim(), response.getContentAsString());
-            response = putAsServletResponse(
-                    RestBaseController.ROOT_PATH + "/schemaoverrides/foo",
-                    JSON_SCHEMA2,
-                    MediaType.APPLICATION_JSON_VALUE);
+            response =
+                    putAsServletResponse(
+                            RestBaseController.ROOT_PATH + "/schemaoverrides/foo",
+                            JSON_SCHEMA2,
+                            MediaType.APPLICATION_JSON_VALUE);
             assertEquals(201, response.getStatus());
             response = getAsServletResponse(RestBaseController.ROOT_PATH + "/schemaoverrides/foo");
             assertEquals(200, response.getStatus());
             assertEquals(JSON_SCHEMA2.trim(), response.getContentAsString());
             // delete transaction validation
-            response = deleteAsServletResponse(RestBaseController.ROOT_PATH + "/schemaoverrides/foo");
+            response =
+                    deleteAsServletResponse(RestBaseController.ROOT_PATH + "/schemaoverrides/foo");
             assertEquals(HttpStatus.NO_CONTENT.value(), response.getStatus());
             assertNull(TemplateInfoDAO.get().findByFullName("cdf:foo"));
         } finally {
