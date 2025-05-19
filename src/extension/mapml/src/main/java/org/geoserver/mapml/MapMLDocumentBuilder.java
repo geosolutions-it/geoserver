@@ -332,9 +332,8 @@ public class MapMLDocumentBuilder {
     }
 
     private Optional<Boolean> getMultiExtent(GetMapRequest getMapRequest) {
-        return Optional.ofNullable(
-                        (String) getMapRequest.getFormatOptions().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT))
-                .map(Boolean::parseBoolean);
+        return Optional.ofNullable(Boolean.parseBoolean(
+                (String) getMapRequest.getFormatOptions().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT)));
     }
 
     /**
@@ -654,8 +653,10 @@ public class MapMLDocumentBuilder {
                 useRemote,
                 useFeatures,
                 cqlFilter,
-                defaultMimeType);
+                defaultMimeType,
+                legendURL);
     }
+
     /**
      * Calculates the legend URL for a layer or layer group.
      *
@@ -2595,7 +2596,6 @@ public class MapMLDocumentBuilder {
         private String layerLabel;
         private String defaultMimeType;
         private String legendURL;
-
         /**
          * get if the layer uses features
          *
@@ -2651,7 +2651,8 @@ public class MapMLDocumentBuilder {
                 boolean useRemote,
                 boolean useFeatures,
                 String cqFilter,
-                String defaultMimeType) {
+                String defaultMimeType,
+                String legendURL) {
             this.layerInfo = layerInfo;
             this.bbox = bbox;
             this.isLayerGroup = isLayerGroup;
@@ -2670,6 +2671,7 @@ public class MapMLDocumentBuilder {
             this.useFeatures = useFeatures;
             this.cqlFilter = cqFilter;
             this.defaultMimeType = defaultMimeType;
+            this.legendURL = legendURL;
         }
 
         /** Constructor */
