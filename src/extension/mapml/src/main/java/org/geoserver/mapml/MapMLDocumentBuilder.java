@@ -332,7 +332,7 @@ public class MapMLDocumentBuilder {
     }
 
     private Optional<Boolean> getMultiExtent(GetMapRequest getMapRequest) {
-        return Optional.ofNullable(Boolean.parseBoolean(
+        return Optional.of(Boolean.parseBoolean(
                 (String) getMapRequest.getFormatOptions().get(MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT)));
     }
 
@@ -2463,7 +2463,7 @@ public class MapMLDocumentBuilder {
         }
 
         /**
-         * get the layer group name
+         * get the layer group title
          *
          * @return String
          */
@@ -2475,9 +2475,9 @@ public class MapMLDocumentBuilder {
             this.layerGroupTitle = layerGroupTitle;
         }
         /**
-         * get the layer group name
+         * set the layergroup name
          *
-         * @return String
+         * @param layerGroupName String
          */
         public void setLayerGroupName(String layerGroupName) {
             this.layerGroupName = layerGroupName;

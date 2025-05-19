@@ -291,12 +291,9 @@ public class MapMLFeatureUtil {
                                         tileBbox.getMinX(), tileBbox.getMaxX(), tileBbox.getMinY(), tileBbox.getMaxY());
                                 String link = null;
                                 if (useTileLinks) {
-                                    String format = getMapRequest
-                                                            .getFormatOptions()
-                                                            .get(MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION)
-                                                    != null
-                                            ? getMapRequest
-                                                    .getFormatOptions()
+                                    Map<String, Object> formatOptions = getMapRequest.getFormatOptions();
+                                    String format = formatOptions.get(MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION) != null
+                                            ? formatOptions
                                                     .get(MapMLConstants.MAPML_WMS_MIME_TYPE_OPTION)
                                                     .toString()
                                             : "image/png";
