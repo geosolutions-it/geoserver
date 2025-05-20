@@ -628,8 +628,7 @@ public class MapMLDocumentBuilder {
         }
         MapMLProjection projType = parseProjType();
         cqlFilter = cql != null ? cql : "";
-        tileLayerExists = gwc.hasTileLayer(isLayerGroup ? layerGroupInfo : layerInfo)
-                && gwc.getTileLayer(isLayerGroup ? layerGroupInfo : layerInfo).getGridSubset(projType.value()) != null;
+        tileLayerExists = isTileLayerExists(layerGroupInfo, layerInfo, projType);
         boolean useRemote = Boolean.TRUE.equals(layerMeta.get(MAPML_USE_REMOTE, Boolean.class));
 
         String legendURL =
@@ -655,6 +654,13 @@ public class MapMLDocumentBuilder {
                 cqlFilter,
                 defaultMimeType,
                 legendURL);
+    }
+
+    private boolean isTileLayerExists(LayerGroupInfo layerGroupInfo, LayerInfo layerInfo, MapMLProjection projType) {
+        return gwc.hasTileLayer(layerInfo == null ? layerGroupInfo : layerInfo)
+                && gwc.getTileLayer(layerInfo == null ? layerGroupInfo : layerInfo)
+                                .getGridSubset(projType.value())
+                        != null;
     }
 
     /**
@@ -1348,6 +1354,8 @@ public class MapMLDocumentBuilder {
 
     private MapMLLayerMetadata layerInfoTomapMLLayerMetadata(LayerInfo layerInfo) {
         MapMLLayerMetadata metadata = new MapMLLayerMetadata();
+        metadata.setUseTiles(useTiles);
+        metadata.setTileLayerExists(isTileLayerExists(null, layerInfo, parseProjType()));
         metadata.setLayerInfo(layerInfo);
         metadata.setIsLayerGroup(false);
         metadata.setLayerName(layerInfo.getName());
@@ -1357,6 +1365,8 @@ public class MapMLDocumentBuilder {
 
     private MapMLLayerMetadata layerGroupInfoTomapMLLayerMetadata(LayerGroupInfo layerGroupInfo) {
         MapMLLayerMetadata metadata = new MapMLLayerMetadata();
+        metadata.setUseTiles(useTiles);
+        metadata.setTileLayerExists(isTileLayerExists(layerGroupInfo, null, parseProjType()));
         metadata.setLayerGroupInfo(layerGroupInfo);
         metadata.setIsLayerGroup(true);
         metadata.setLayerName(layerGroupInfo.getName());
