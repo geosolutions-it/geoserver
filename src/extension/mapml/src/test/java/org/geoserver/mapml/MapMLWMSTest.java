@@ -1645,11 +1645,11 @@ public class MapMLWMSTest extends MapMLTestSupport {
         disableTileCaching(MockData.ROAD_SEGMENTS, catalog);
 
         String multiExtTrue = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + "true";
-        String multiExtFalse = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + "false";
+        // String multiExtFalse = MapMLConstants.MAPML_MULTILAYER_AS_MULTIEXTENT + ":" + "false";
         String useTilesTrue = MapMLConstants.MAPML_USE_TILES_REP + ":" + "true";
-        String useTilesFalse = MapMLConstants.MAPML_USE_TILES_REP + ":" + "false";
+        // String useTilesFalse = MapMLConstants.MAPML_USE_TILES_REP + ":" + "false";
         String useFeaturesTrue = MapMLConstants.MAPML_CREATE_FEATURE_LINKS + ":" + "true";
-        String useFeaturesFalse = MapMLConstants.MAPML_CREATE_FEATURE_LINKS + ":" + "false";
+        // String useFeaturesFalse = MapMLConstants.MAPML_CREATE_FEATURE_LINKS + ":" + "false";
 
         HashMap<String, String> params = new HashMap<>();
         params.put("version", "1.3.0");
