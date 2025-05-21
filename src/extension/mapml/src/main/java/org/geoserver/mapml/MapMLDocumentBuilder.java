@@ -460,6 +460,7 @@ public class MapMLDocumentBuilder {
         MapMLProjection projType = parseProjType();
         mapMLLayerMetadata.setBbbox(layersToBBBox(layers, projType));
         mapMLLayerMetadata.setQueryable(layersToQueryable(layers));
+        mapMLLayerMetadata.setTransparent(transparent.orElse(true));
         mapMLLayerMetadata.setLayerLabel(layersToLabel(layers));
         mapMLLayerMetadata.setProjType(projType);
         mapMLLayerMetadata.setDefaultMimeType(imageFormat);
@@ -1358,6 +1359,8 @@ public class MapMLDocumentBuilder {
         metadata.setTileLayerExists(isTileLayerExists(null, layerInfo, parseProjType()));
         metadata.setLayerInfo(layerInfo);
         metadata.setIsLayerGroup(false);
+        metadata.setQueryable(layerInfo.isQueryable());
+        metadata.setTransparent(transparent.orElse(true));
         metadata.setLayerName(layerInfo.getName());
         metadata.setLayerTitle(getTitle(layerInfo, layerInfo.getName()));
         return metadata;
@@ -1369,6 +1372,8 @@ public class MapMLDocumentBuilder {
         metadata.setTileLayerExists(isTileLayerExists(layerGroupInfo, null, parseProjType()));
         metadata.setLayerGroupInfo(layerGroupInfo);
         metadata.setIsLayerGroup(true);
+        metadata.setQueryable(!layerGroupInfo.isQueryDisabled());
+        metadata.setTransparent(transparent.orElse(true));
         metadata.setLayerName(layerGroupInfo.getName());
         metadata.setLayerTitle(getTitle(layerGroupInfo, layerGroupInfo.getName()));
         return metadata;

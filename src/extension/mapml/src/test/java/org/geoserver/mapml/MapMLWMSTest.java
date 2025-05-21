@@ -595,13 +595,13 @@ public class MapMLWMSTest extends MapMLTestSupport {
                 selfStyleLinksForMulti.get(0).getHref().contains("layers=layerGroup%2CPolygons&"));
         assertTrue(
                 "Multi-layer multi-extent first map-extent should have a label",
-                mapmlMultiExtent.getBody().getExtents().get(0).getLabel().equalsIgnoreCase("layerGroup"));
+                mapmlMultiExtent.getBody().getExtents().get(0).getLabel().equalsIgnoreCase("Points"));
         assertTrue(
                 "Multi-layer multi-extent second map-extent should have a label",
-                mapmlMultiExtent.getBody().getExtents().get(1).getLabel().equalsIgnoreCase("Polygons"));
+                mapmlMultiExtent.getBody().getExtents().get(1).getLabel().equalsIgnoreCase("Lines"));
         assertEquals(
                 "There should be one extent object for every layer",
-                2,
+                4,
                 mapmlMultiExtent.getBody().getExtents().size());
 
         List<Link> extentLinks = getTypeFromInputOrDataListOrLink(
@@ -610,12 +610,12 @@ public class MapMLWMSTest extends MapMLTestSupport {
         assertEquals("There should be one query link for every layer", 1, queryLinks.size());
         assertTrue(
                 "The query link TREF should refer to only one layer name",
-                queryLinks.get(0).getTref().contains("query_layers=layerGroup&"));
+                queryLinks.get(0).getTref().contains("query_layers=Points&"));
         List<Link> tileLinks = getLinkByRelType(extentLinks, RelType.TILE);
         assertEquals("There should be one tile link for every layer", 1, tileLinks.size());
         assertTrue(
                 "The tile link TREF should refer to only one layer name",
-                tileLinks.get(0).getTref().contains("layers=layerGroup&"));
+                tileLinks.get(0).getTref().contains("layers=Points&"));
         List<Input> inputsMultiExtent = getTypeFromInputOrDataListOrLink(
                 mapmlMultiExtent.getBody().getExtents().get(0).getInputOrDatalistOrLink(), Input.class);
         List<String> inputNamesMultiExtent =
