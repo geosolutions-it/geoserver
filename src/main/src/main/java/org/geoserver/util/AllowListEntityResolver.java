@@ -125,6 +125,14 @@ public class AllowListEntityResolver implements EntityResolver2, Serializable {
         }
 
         try {
+            if (systemId == null) {
+                if (name != null) {
+                    LOGGER.finest("resolveEntity name: " + name);
+                    return null;
+                }
+                throw new SAXException("External entity systemId not provided");
+            }
+
             String uri;
             if (URI.create(systemId).isAbsolute()) {
                 uri = systemId;
