@@ -408,9 +408,6 @@ public class GeoServerSecurityManager implements ApplicationContextAware, Applic
             if (securityVersion.compareTo(VERSION_2_5) < 0) {
                 migrateFrom24();
             }
-            if (securityVersion.compareTo(VERSION_2_6) < 0) {
-                migrateFrom25();
-            }
             if (securityVersion.compareTo(CURR_VERSION) < 0) {
                 writeCurrentVersion();
             }
