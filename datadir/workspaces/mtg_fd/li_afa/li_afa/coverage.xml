@@ -1,15 +1,15 @@
 <coverage>
-  <id>CoverageInfoImpl--5c14494f:196f76f114d:-7fe0</id>
-  <name>mtg_fd_rgb_fog</name>
-  <nativeName>mtg_fd_rgb_fog</nativeName>
+  <id>CoverageInfoImpl--5c14494f:196f76f114d:-7ffb</id>
+  <name>li_afa</name>
+  <nativeName>mtg_fd_li_afa</nativeName>
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>Fog RGB - MTG - 0 degree</title>
+  <title>LI Accumulated Flash Area - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>Fog RGB - MTG - 0 degree</abstract>
+  <abstract>LI Level 2 Accumulated Flash Area (AFA) provides the user with data about flash mapping by using the area covered by the optical emission of each flash in LI Level 2 Lightning Flashes (LFL). It is important to keep in mind that each flash is treated as a flat (uniform) optical emission in this data. Accumulated Flash Area allows one to monitor the regions within a cloud top from which lightning-related optical emissions over 30 sec are emerging and accumulating and to know the number of flashes that were observed within the FCI grid pixels composing those regions. For example, from the Accumulated Flash Area, one can derive the flash rate for each pixel of the FCI 2km grid. This is a considerable improvement compared to the simple description of the flash using the variable flash_footprint available in Lightning Flashes.</abstract>
   <keywords>
-    <string>mtg_fd_rgb_fog</string>
+    <string>mtg_fd_li_afa</string>
     <string>WCS</string>
     <string>ImageMosaic</string>
   </keywords>
@@ -24,17 +24,17 @@
   AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
   <srs>EPSG:4326</srs>
   <nativeBoundingBox>
-    <minx>-81.27779388427734</minx>
-    <maxx>81.28072357177734</maxx>
-    <miny>-77.35063934326172</miny>
-    <maxy>77.35639190673828</maxy>
+    <minx>-70.0</minx>
+    <maxx>70.0</maxx>
+    <miny>-70.0</miny>
+    <maxy>70.0</maxy>
     <crs>EPSG:4326</crs>
   </nativeBoundingBox>
   <latLonBoundingBox>
-    <minx>-81.27779388427734</minx>
-    <maxx>81.28072357177734</maxx>
-    <miny>-77.35063934326172</miny>
-    <maxy>77.35639190673828</maxy>
+    <minx>-70.0</minx>
+    <maxx>70.0</maxx>
+    <miny>-70.0</miny>
+    <maxy>70.0</maxy>
     <crs>EPSG:4326</crs>
   </latLonBoundingBox>
   <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
@@ -50,14 +50,14 @@
       <dimensionInfo>
         <enabled>true</enabled>
         <presentation>DISCRETE_INTERVAL</presentation>
-        <resolution>600000</resolution>
+        <resolution>300000</resolution>
         <units>ISO8601</units>
         <defaultValue>
           <strategy>MAXIMUM</strategy>
         </defaultValue>
         <nearestMatchEnabled>true</nearestMatchEnabled>
         <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
-        <acceptableInterval>PT10M/PT0H</acceptableInterval>
+        <acceptableInterval>PT5M/PT0H</acceptableInterval>
         <startValue></startValue>
         <endValue></endValue>
       </dimensionInfo>
@@ -73,10 +73,10 @@
         <layerUOM>W.m-2.Sr-1</layerUOM>
       </netcdfLayerSettingsContainer>
     </entry>
-    <entry key="dirName">rgb_fog_mtg_fd_rgb_fog</entry>
+    <entry key="dirName">li_afa_mtg_fd_li_afa</entry>
   </metadata>
   <store class="coverageStore">
-    <id>CoverageStoreInfoImpl--5c14494f:196f76f114d:-7fe3</id>
+    <id>CoverageStoreInfoImpl--5c14494f:196f76f114d:-8000</id>
   </store>
   <serviceConfiguration>false</serviceConfiguration>
   <simpleConversionEnabled>false</simpleConversionEnabled>
@@ -86,15 +86,15 @@
   <grid dimension="2">
     <range>
       <low>0 0</low>
-      <high>11408 10857</high>
+      <high>14000 14000</high>
     </range>
     <transform>
-      <scaleX>0.014249518230806784</scaleX>
-      <scaleY>-0.014249518230806784</scaleY>
+      <scaleX>0.01</scaleX>
+      <scaleY>-0.01</scaleY>
       <shearX>0.0</shearX>
       <shearY>0.0</shearY>
-      <translateX>-81.27066912516194</translateX>
-      <translateY>77.34926714762288</translateY>
+      <translateX>-69.995</translateX>
+      <translateY>69.995</translateY>
     </transform>
     <crs>EPSG:4326</crs>
   </grid>
@@ -230,5 +230,5 @@
       <string>None</string>
     </entry>
   </parameters>
-  <nativeCoverageName>mtg_fd_rgb_fog</nativeCoverageName>
+  <nativeCoverageName>mtg_fd_li_afa</nativeCoverageName>
 </coverage>

@@ -4,10 +4,10 @@
   <inMemoryCached>true</inMemoryCached>
   <name>mtg_fd:li_afa</name>
   <mimeFormats>
-    <string>image/png8</string>
     <string>image/png</string>
     <string>image/vnd.jpeg-png</string>
     <string>image/jpeg</string>
+    <string>image/png8</string>
   </mimeFormats>
   <gridSubsets>
     <gridSubset>

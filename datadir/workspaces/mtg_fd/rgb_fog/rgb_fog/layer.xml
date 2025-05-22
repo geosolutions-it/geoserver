@@ -1,5 +1,5 @@
 <layer>
-  <name>mtg_fd_rgb_fog</name>
+  <name>rgb_fog</name>
   <id>LayerInfoImpl--5c14494f:196f76f114d:-7fdf</id>
   <type>RASTER</type>
   <defaultStyle>
@@ -13,4 +13,5 @@
     <logoHeight>0</logoHeight>
   </attribution>
   <dateCreated>2025-05-22 10:16:07.262 UTC</dateCreated>
+  <dateModified>2025-05-22 14:46:36.67 UTC</dateModified>
 </layer>
