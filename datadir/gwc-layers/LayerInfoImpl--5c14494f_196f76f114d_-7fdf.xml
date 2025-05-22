@@ -2,7 +2,7 @@
   <id>LayerInfoImpl--5c14494f:196f76f114d:-7fdf</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>mtg_fd:mtg_fd_rgb_fog</name>
+  <name>mtg_fd:rgb_fog</name>
   <mimeFormats>
     <string>image/png8</string>
     <string>image/png</string>
