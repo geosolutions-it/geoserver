@@ -2,7 +2,7 @@
   <id>LayerInfoImpl--5c14494f:196f76f114d:-7fe8</id>
   <enabled>true</enabled>
   <inMemoryCached>true</inMemoryCached>
-  <name>mtg_fd:mtg_fd_rgb_cloudtype</name>
+  <name>mtg_fd:rgb_cloudtype</name>
   <mimeFormats>
     <string>image/png8</string>
     <string>image/png</string>
