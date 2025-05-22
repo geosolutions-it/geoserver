@@ -1,5 +1,5 @@
 <layer>
-  <name>mtg_fd_li_afa</name>
+  <name>li_afa</name>
   <id>LayerInfoImpl--5c14494f:196f76f114d:-7ffa</id>
   <type>RASTER</type>
   <defaultStyle>
@@ -13,4 +13,5 @@
     <logoHeight>0</logoHeight>
   </attribution>
   <dateCreated>2025-05-22 10:04:11.389 UTC</dateCreated>
+  <dateModified>2025-05-22 14:45:47.748 UTC</dateModified>
 </layer>
