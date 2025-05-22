@@ -1,0 +1,234 @@
+<coverage>
+  <id>CoverageInfoImpl--5c14494f:196f76f114d:-7fe0</id>
+  <name>mtg_fd_rgb_fog</name>
+  <nativeName>mtg_fd_rgb_fog</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
+  </namespace>
+  <title>Fog RGB - MTG - 0 degree</title>
+  <description>Generated from ImageMosaic</description>
+  <abstract>Fog RGB - MTG - 0 degree</abstract>
+  <keywords>
+    <string>mtg_fd_rgb_fog</string>
+    <string>WCS</string>
+    <string>ImageMosaic</string>
+  </keywords>
+  <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
+  DATUM[&quot;World Geodetic System 1984&quot;, 
+    SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+  PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+  UNIT[&quot;degree&quot;, 0.017453292519943295], 
+  AXIS[&quot;Geodetic longitude&quot;, EAST], 
+  AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-81.27779388427734</minx>
+    <maxx>81.28072357177734</maxx>
+    <miny>-77.35063934326172</miny>
+    <maxy>77.35639190673828</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-81.27779388427734</minx>
+    <maxx>81.28072357177734</maxx>
+    <miny>-77.35063934326172</miny>
+    <maxy>77.35639190673828</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="cacheAgeMax">604800</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>true</enabled>
+        <presentation>DISCRETE_INTERVAL</presentation>
+        <resolution>600000</resolution>
+        <units>ISO8601</units>
+        <defaultValue>
+          <strategy>MAXIMUM</strategy>
+        </defaultValue>
+        <nearestMatchEnabled>true</nearestMatchEnabled>
+        <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
+        <acceptableInterval>PT10M/PT0H</acceptableInterval>
+        <startValue></startValue>
+        <endValue></endValue>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">true</entry>
+    <entry key="NetCDFOutput.Key">
+      <netcdfLayerSettingsContainer>
+        <compressionLevel>0</compressionLevel>
+        <shuffle>true</shuffle>
+        <copyAttributes>false</copyAttributes>
+        <copyGlobalAttributes>false</copyGlobalAttributes>
+        <dataPacking>NONE</dataPacking>
+        <layerUOM>W.m-2.Sr-1</layerUOM>
+      </netcdfLayerSettingsContainer>
+    </entry>
+    <entry key="dirName">rgb_fog_mtg_fd_rgb_fog</entry>
+  </metadata>
+  <store class="coverageStore">
+    <id>CoverageStoreInfoImpl--5c14494f:196f76f114d:-7fe3</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
+  <internationalTitle/>
+  <internationalAbstract/>
+  <nativeFormat>ImageMosaic</nativeFormat>
+  <grid dimension="2">
+    <range>
+      <low>0 0</low>
+      <high>11408 10857</high>
+    </range>
+    <transform>
+      <scaleX>0.014249518230806784</scaleX>
+      <scaleY>-0.014249518230806784</scaleY>
+      <shearX>0.0</shearX>
+      <shearY>0.0</shearY>
+      <translateX>-81.27066912516194</translateX>
+      <translateY>77.34926714762288</translateY>
+    </transform>
+    <crs>EPSG:4326</crs>
+  </grid>
+  <supportedFormats>
+    <string>GIF</string>
+    <string>PNG</string>
+    <string>JPEG</string>
+    <string>TIFF</string>
+    <string>GEOTIFF</string>
+  </supportedFormats>
+  <interpolationMethods>
+    <string>nearest neighbor</string>
+    <string>bilinear</string>
+    <string>bicubic</string>
+  </interpolationMethods>
+  <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
+  <dimensions>
+    <coverageDimension>
+      <name>RED_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+    <coverageDimension>
+      <name>GREEN_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+    <coverageDimension>
+      <name>BLUE_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+  </dimensions>
+  <requestSRS>
+    <string>EPSG:4326</string>
+  </requestSRS>
+  <responseSRS>
+    <string>EPSG:4326</string>
+  </responseSRS>
+  <parameters>
+    <entry>
+      <string>BackgroundValues</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>OVERVIEW_POLICY</string>
+      <string>QUALITY</string>
+    </entry>
+    <entry>
+      <string>MergeBehavior</string>
+      <string>FLAT</string>
+    </entry>
+    <entry>
+      <string>AllowMultithreading</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>MaxAllowedTiles</string>
+      <int>-1</int>
+    </entry>
+    <entry>
+      <string>ExcessGranuleRemoval</string>
+      <string>NONE</string>
+    </entry>
+    <entry>
+      <string>OutputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>USE_JAI_IMAGEREAD</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Bands</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>RescalePixels</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Filter</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>InputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>SUGGESTED_TILE_SIZE</string>
+      <string>512,512</string>
+    </entry>
+    <entry>
+      <string>Accurate resolution computation</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>SORTING</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>FootprintBehavior</string>
+      <string>None</string>
+    </entry>
+  </parameters>
+  <nativeCoverageName>mtg_fd_rgb_fog</nativeCoverageName>
+</coverage>
