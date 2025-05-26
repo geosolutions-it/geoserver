@@ -74,22 +74,52 @@ public class MapMLTestSupport extends WMSTestSupport {
         MapMLGridsets mgs = applicationContext.getBean(MapMLGridsets.class);
         GridSubset wgs84gridset = createGridSubSet(mgs.getGridSet("WGS84").get());
         GridSubset osmtilegridset = createGridSubSet(mgs.getGridSet("OSMTILE").get());
+
+        // Check if it's a LayerGroup first, then fallback to Layer
+        GeoServerTileLayer tileLayer = null;
         LayerInfo layerInfo = catalog.getLayerByName(layerName.getLocalPart());
-        GeoServerTileLayer layerInfoTileLayer = new GeoServerTileLayer(layerInfo, defaults, gwc.getGridSetBroker());
-        layerInfoTileLayer.addGridSubset(wgs84gridset);
-        layerInfoTileLayer.addGridSubset(osmtilegridset);
-        layerInfoTileLayer.getInfo().getMimeFormats().add(TextMime.txtMapml.getMimeType());
-        gwc.save(layerInfoTileLayer);
+        if (layerInfo != null) {
+            tileLayer = new GeoServerTileLayer(layerInfo, defaults, gwc.getGridSetBroker());
+        } else {
+            // Try LayerGroup
+            org.geoserver.catalog.LayerGroupInfo layerGroupInfo = catalog.getLayerGroupByName(layerName.getLocalPart());
+            if (layerGroupInfo != null) {
+                tileLayer = new GeoServerTileLayer(layerGroupInfo, defaults, gwc.getGridSetBroker());
+            } else {
+                throw new IllegalArgumentException(
+                        "No layer or layer group found with name: " + layerName.getLocalPart());
+            }
+        }
+
+        tileLayer.addGridSubset(wgs84gridset);
+        tileLayer.addGridSubset(osmtilegridset);
+        tileLayer.getInfo().getMimeFormats().add(TextMime.txtMapml.getMimeType());
+        gwc.save(tileLayer);
     }
 
     protected void disableTileCaching(QName layerName, Catalog catalog) {
         GWC gwc = applicationContext.getBean(GWC.class);
         GWCConfig defaults = GWCConfig.getOldDefaults();
+
+        // Check if it's a LayerGroup first, then fallback to Layer
+        GeoServerTileLayer tileLayer = null;
         LayerInfo layerInfo = catalog.getLayerByName(layerName.getLocalPart());
-        GeoServerTileLayer layerInfoTileLayer = new GeoServerTileLayer(layerInfo, defaults, gwc.getGridSetBroker());
-        layerInfoTileLayer.removeGridSubset("OSMTILE");
-        layerInfoTileLayer.removeGridSubset("WGS84");
-        gwc.save(layerInfoTileLayer);
+        if (layerInfo != null) {
+            tileLayer = new GeoServerTileLayer(layerInfo, defaults, gwc.getGridSetBroker());
+        } else {
+            // Try LayerGroup
+            org.geoserver.catalog.LayerGroupInfo layerGroupInfo = catalog.getLayerGroupByName(layerName.getLocalPart());
+            if (layerGroupInfo != null) {
+                tileLayer = new GeoServerTileLayer(layerGroupInfo, defaults, gwc.getGridSetBroker());
+            } else {
+                throw new IllegalArgumentException(
+                        "No layer or layer group found with name: " + layerName.getLocalPart());
+            }
+        }
+
+        tileLayer.removeGridSubset("OSMTILE");
+        tileLayer.removeGridSubset("WGS84");
+        gwc.save(tileLayer);
     }
 
     @Override
