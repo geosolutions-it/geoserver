@@ -77,11 +77,10 @@ public class GMLComplexFeatureResponseAPITest extends TemplateComplexTestSupport
 
     @Test
     public void getMappedFeatureIdFilter() throws Exception {
-        Document doc =
-                getAsDOM(
-                        "ogc/features/v1/collections/gsml:MappedFeature/items/mf1?f=application%2Fgml%2Bxml%3Bversion%3D3.2"
-                                + "&"
-                                + MF_GML32_PARAM);
+        Document doc = getAsDOM(
+                "ogc/features/v1/collections/gsml:MappedFeature/items/mf1?f=application%2Fgml%2Bxml%3Bversion%3D3.2"
+                        + "&"
+                        + MF_GML32_PARAM);
         assertXpathCount(1, "//gsml:MappedFeature", doc);
         assertXpathCount(1, "//gsml:MappedFeature[@gml:id='mf1']", doc);
     }

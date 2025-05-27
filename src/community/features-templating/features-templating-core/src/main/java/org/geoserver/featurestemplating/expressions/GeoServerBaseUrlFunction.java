@@ -13,8 +13,8 @@ import org.geotools.api.filter.capability.FunctionName;
 import org.geotools.filter.capability.FunctionNameImpl;
 
 /**
- * Builds a URL based on the base URL of the GeoServer instance. This is useful for generating links
- * to resources in the GeoServer instance.
+ * Builds a URL based on the base URL of the GeoServer instance. This is useful for generating links to resources in the
+ * GeoServer instance.
  *
  * <p>Example usage:
  *
@@ -24,10 +24,7 @@ import org.geotools.filter.capability.FunctionNameImpl;
  */
 public class GeoServerBaseUrlFunction extends RequestFunction {
 
-    public static FunctionName NAME =
-        new FunctionNameImpl(
-            "geoServerBaseUrl",
-            parameter("result", String.class));
+    public static FunctionName NAME = new FunctionNameImpl("geoServerBaseUrl", parameter("result", String.class));
 
     public GeoServerBaseUrlFunction() {
         super(NAME);
@@ -43,5 +40,4 @@ public class GeoServerBaseUrlFunction extends RequestFunction {
         }
         return url;
     }
-
 }
