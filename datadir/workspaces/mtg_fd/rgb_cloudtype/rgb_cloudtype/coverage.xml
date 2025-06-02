@@ -7,7 +7,7 @@
   </namespace>
   <title>Cloud Type RGB - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>Cloud Type RGB - MTG - 0 degree</abstract>
+  <abstract>The Cloud Type RGB combines information on cloud optical thickness, cloud height, and cloud phase into one product. Because of the colour assignment chosen and colour enhancements performed, the cloud types appear clearly separated from each other. There is limited information on ground features (it is better to use True Colour RGB for this purpose) and cloud microphysics (similarly, it is better to use Cloud Phase RGB). This RGB is composed by using three solar bands: VIS (0.64), NIR (1.38), and NIR (1.61). Therefore, it is available only during the daytime.</abstract>
   <keywords>
     <string>mtg_fd_rgb_cloudtype</string>
     <string>WCS</string>
