@@ -93,7 +93,7 @@
       <key>STYLES</key>
       <defaultValue></defaultValue>
       <availableStyles class="sorted-set"/>
-      <defaultStyle>raster</defaultStyle>
+      <defaultStyle>mtg_li_afa</defaultStyle>
     </styleParameterFilter>
   </parameterFilters>
   <gutter>0</gutter>

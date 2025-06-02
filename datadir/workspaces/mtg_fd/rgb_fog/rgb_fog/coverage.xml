@@ -5,9 +5,9 @@
   <namespace>
     <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
   </namespace>
-  <title>Fog RGB - MTG - 0 degree</title>
+  <title>Fog / Low Clouds RGB - MTG - 0 degree</title>
   <description>Generated from ImageMosaic</description>
-  <abstract>Fog RGB - MTG - 0 degree</abstract>
+  <abstract>Interpreting low clouds and fog in satellite imagery can be a challenge when using individual IR channels, due to the slight temperature difference between the cloud tops and adjacent cloud-free land. The Night Microphysics RGB solves this problem by using three different IR wavelengths. Low water clouds and fog emit less radiation at 3.8 µm than at 10.5 µm. This brightness temperature difference (BTD) field is used in the Green Channel to highlight regions of low clouds. The channel difference in the Red channel (12.3-10.5 µm) is used as a proxy for cloud thickness and serves a similar purpose to the 10.5 µm thermal channel, enhancing areas of warm, low clouds where fog is more likely. The Night Microphysics RGB is also an efficient tool for identifying other cloud types in the mid- and upper-atmosphere. This RGB is not designed for use during the day.</abstract>
   <keywords>
     <string>mtg_fd_rgb_fog</string>
     <string>WCS</string>
