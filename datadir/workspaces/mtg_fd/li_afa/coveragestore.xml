@@ -1,0 +1,14 @@
+<coverageStore>
+  <id>CoverageStoreInfoImpl--5c14494f:196f76f114d:-8000</id>
+  <name>li_afa</name>
+  <description>MTG LI L2 Accumulated Flash Area</description>
+  <type>ImageMosaic</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl--6acf4bb5:1888a571431:-8000</id>
+  </workspace>
+  <__default>false</__default>
+  <dateCreated>2025-05-22 09:59:33.453 UTC</dateCreated>
+  <disableOnConnFailure>false</disableOnConnFailure>
+  <url>file:data/LIC_FREE/mtg_fd_li_afa</url>
+</coverageStore>

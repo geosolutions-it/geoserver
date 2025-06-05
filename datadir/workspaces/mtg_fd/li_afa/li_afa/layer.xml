@@ -1,0 +1,17 @@
+<layer>
+  <name>li_afa</name>
+  <id>LayerInfoImpl--5c14494f:196f76f114d:-7ffa</id>
+  <type>RASTER</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-57e7505d:1972fb3dcc0:-8000</id>
+  </defaultStyle>
+  <resource class="coverage">
+    <id>CoverageInfoImpl--5c14494f:196f76f114d:-7ffb</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2025-05-22 10:04:11.389 UTC</dateCreated>
+  <dateModified>2025-06-02 08:14:14.230 UTC</dateModified>
+</layer>

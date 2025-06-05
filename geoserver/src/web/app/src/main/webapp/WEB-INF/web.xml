@@ -294,5 +294,47 @@
     <welcome-file-list>
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>
+
+    <security-constraint>
+      <web-resource-collection>
+          <web-resource-name>BlockDemoRequests</web-resource-name>
+          <url-pattern>/TestWfsPost/*</url-pattern>
+      </web-resource-collection>
+      <auth-constraint>
+          <role-name>BLOCKED</role-name>
+      </auth-constraint>
+    </security-constraint>
+
+    <security-constraint>
+      <web-resource-collection>
+          <web-resource-name>BlockGWC</web-resource-name>
+          <url-pattern>/gwc/*</url-pattern>
+      </web-resource-collection>
+      <auth-constraint>
+          <role-name>BLOCKED</role-name>
+      </auth-constraint>
+    </security-constraint>
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>AllowGWC_Demo</web-resource-name>
+            <url-pattern>/gwc/demo/*</url-pattern>
+        </web-resource-collection>
+    </security-constraint>
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>AllowGWC_Services</web-resource-name>
+            <url-pattern>/gwc/service/*</url-pattern>
+        </web-resource-collection>
+    </security-constraint>
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>AllowGWC_Rest</web-resource-name>
+            <url-pattern>/gwc/rest/*</url-pattern>
+        </web-resource-collection>
+    </security-constraint>
+
     
 </web-app>

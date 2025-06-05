@@ -1,0 +1,234 @@
+<coverage>
+  <id>CoverageInfoImpl--5c14494f:196f76f114d:-7ffb</id>
+  <name>li_afa</name>
+  <nativeName>mtg_fd_li_afa</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl--6acf4bb5:1888a571431:-7fff</id>
+  </namespace>
+  <title>LI Accumulated Flash Area - MTG - 0 degree</title>
+  <description>Generated from ImageMosaic</description>
+  <abstract>LI Level 2 Accumulated Flash Area (AFA) provides the user with data about flash mapping by using the area covered by the optical emission of each flash in LI Level 2 Lightning Flashes (LFL). It is important to keep in mind that each flash is treated as a flat (uniform) optical emission in this data. Accumulated Flash Area allows one to monitor the regions within a cloud top from which lightning-related optical emissions over 30 sec are emerging and accumulating and to know the number of flashes that were observed within the FCI grid pixels composing those regions. For example, from the Accumulated Flash Area, one can derive the flash rate for each pixel of the FCI 2km grid. This is a considerable improvement compared to the simple description of the flash using the variable flash_footprint available in Lightning Flashes.</abstract>
+  <keywords>
+    <string>mtg_fd_li_afa</string>
+    <string>WCS</string>
+    <string>ImageMosaic</string>
+  </keywords>
+  <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
+  DATUM[&quot;World Geodetic System 1984&quot;, 
+    SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+  PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+  UNIT[&quot;degree&quot;, 0.017453292519943295], 
+  AXIS[&quot;Geodetic longitude&quot;, EAST], 
+  AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-70.0</minx>
+    <maxx>70.0</maxx>
+    <miny>-70.0</miny>
+    <maxy>70.0</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-70.0</minx>
+    <maxx>70.0</maxx>
+    <miny>-70.0</miny>
+    <maxy>70.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>REPROJECT_TO_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="cacheAgeMax">604800</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>true</enabled>
+        <presentation>DISCRETE_INTERVAL</presentation>
+        <resolution>300000</resolution>
+        <units>ISO8601</units>
+        <defaultValue>
+          <strategy>MAXIMUM</strategy>
+        </defaultValue>
+        <nearestMatchEnabled>true</nearestMatchEnabled>
+        <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
+        <acceptableInterval>PT5M/PT0H</acceptableInterval>
+        <startValue></startValue>
+        <endValue></endValue>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">true</entry>
+    <entry key="NetCDFOutput.Key">
+      <netcdfLayerSettingsContainer>
+        <compressionLevel>0</compressionLevel>
+        <shuffle>true</shuffle>
+        <copyAttributes>false</copyAttributes>
+        <copyGlobalAttributes>false</copyGlobalAttributes>
+        <dataPacking>NONE</dataPacking>
+        <layerUOM>W.m-2.Sr-1</layerUOM>
+      </netcdfLayerSettingsContainer>
+    </entry>
+    <entry key="dirName">li_afa_mtg_fd_li_afa</entry>
+  </metadata>
+  <store class="coverageStore">
+    <id>CoverageStoreInfoImpl--5c14494f:196f76f114d:-8000</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
+  <internationalTitle/>
+  <internationalAbstract/>
+  <nativeFormat>ImageMosaic</nativeFormat>
+  <grid dimension="2">
+    <range>
+      <low>0 0</low>
+      <high>14000 14000</high>
+    </range>
+    <transform>
+      <scaleX>0.01</scaleX>
+      <scaleY>-0.01</scaleY>
+      <shearX>0.0</shearX>
+      <shearY>0.0</shearY>
+      <translateX>-69.995</translateX>
+      <translateY>69.995</translateY>
+    </transform>
+    <crs>EPSG:4326</crs>
+  </grid>
+  <supportedFormats>
+    <string>GIF</string>
+    <string>PNG</string>
+    <string>JPEG</string>
+    <string>TIFF</string>
+    <string>GEOTIFF</string>
+  </supportedFormats>
+  <interpolationMethods>
+    <string>nearest neighbor</string>
+    <string>bilinear</string>
+    <string>bicubic</string>
+  </interpolationMethods>
+  <defaultInterpolationMethod>nearest neighbor</defaultInterpolationMethod>
+  <dimensions>
+    <coverageDimension>
+      <name>RED_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+    <coverageDimension>
+      <name>GREEN_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+    <coverageDimension>
+      <name>BLUE_BAND</name>
+      <description>GridSampleDimension[-Infinity,Infinity]</description>
+      <range>
+        <min>-inf</min>
+        <max>inf</max>
+      </range>
+      <nullValues>
+        <double>0.0</double>
+      </nullValues>
+      <unit>W.m-2.Sr-1</unit>
+      <dimensionType>
+        <name>UNSIGNED_8BITS</name>
+      </dimensionType>
+    </coverageDimension>
+  </dimensions>
+  <requestSRS>
+    <string>EPSG:4326</string>
+  </requestSRS>
+  <responseSRS>
+    <string>EPSG:4326</string>
+  </responseSRS>
+  <parameters>
+    <entry>
+      <string>BackgroundValues</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>OVERVIEW_POLICY</string>
+      <string>QUALITY</string>
+    </entry>
+    <entry>
+      <string>MergeBehavior</string>
+      <string>FLAT</string>
+    </entry>
+    <entry>
+      <string>AllowMultithreading</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>MaxAllowedTiles</string>
+      <int>-1</int>
+    </entry>
+    <entry>
+      <string>ExcessGranuleRemoval</string>
+      <string>NONE</string>
+    </entry>
+    <entry>
+      <string>OutputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>USE_JAI_IMAGEREAD</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Bands</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>RescalePixels</string>
+      <boolean>true</boolean>
+    </entry>
+    <entry>
+      <string>Filter</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>InputTransparentColor</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>SUGGESTED_TILE_SIZE</string>
+      <string>512,512</string>
+    </entry>
+    <entry>
+      <string>Accurate resolution computation</string>
+      <boolean>false</boolean>
+    </entry>
+    <entry>
+      <string>SORTING</string>
+      <null/>
+    </entry>
+    <entry>
+      <string>FootprintBehavior</string>
+      <string>None</string>
+    </entry>
+  </parameters>
+  <nativeCoverageName>mtg_fd_li_afa</nativeCoverageName>
+</coverage>
