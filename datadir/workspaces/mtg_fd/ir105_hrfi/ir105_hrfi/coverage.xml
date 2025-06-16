@@ -124,20 +124,6 @@
         <name>UNSIGNED_8BITS</name>
       </dimensionType>
     </coverageDimension>
-    <coverageDimension>
-      <name>Band2</name>
-      <description>GridSampleDimension[-Infinity,Infinity]</description>
-      <range>
-        <min>-inf</min>
-        <max>inf</max>
-      </range>
-      <nullValues>
-        <double>0.0</double>
-      </nullValues>
-      <dimensionType>
-        <name>UNSIGNED_8BITS</name>
-      </dimensionType>
-    </coverageDimension>
   </dimensions>
   <requestSRS>
     <string>EPSG:4326</string>
