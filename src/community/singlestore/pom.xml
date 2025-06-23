@@ -20,7 +20,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.geotools.jdbc</groupId>
+      <groupId>org.geotools</groupId>
       <artifactId>gt-jdbc-singlestore</artifactId>
       <version>${gt.version}</version>
     </dependency>
