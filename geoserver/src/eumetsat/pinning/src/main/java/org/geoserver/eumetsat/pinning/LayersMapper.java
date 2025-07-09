@@ -60,6 +60,8 @@ public class LayersMapper implements GeoServerLifecycleHandler {
         this.layerMapping = new HashMap<>();
     }
 
+    private boolean loaded;
+
     public Map<String, List<MappedLayer>> getLayers() {
         return layerMapping;
     }
@@ -86,7 +88,6 @@ public class LayersMapper implements GeoServerLifecycleHandler {
             LOGGER.config("Loading mapping from: " + resource.path());
             String line;
             while ((line = reader.readLine()) != null) {
-
                 if (line.trim().isEmpty() || line.startsWith("#")) {
                     continue;
                 }
@@ -103,13 +104,15 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     layerMapping.put(layerId, layers);
                 }
             }
-        } catch (IOException | IllegalStateException e) {
+            loaded = true;
+        } catch (Exception e) {
             LOGGER.log(
                     Level.SEVERE,
                     "Exception occurred while mapping the layers. "
                             + "The pinning service operations will potentially fail. Check the logs for more details: "
                             + e.getLocalizedMessage(),
                     e);
+            loaded = false;
         }
     }
 
@@ -262,6 +265,10 @@ public class LayersMapper implements GeoServerLifecycleHandler {
                     "The following layer has no associated mapping. Aborting pinning " + id);
         }
         return mappedLayers;
+    }
+
+    public boolean isLoaded() {
+        return loaded;
     }
 
     @Override

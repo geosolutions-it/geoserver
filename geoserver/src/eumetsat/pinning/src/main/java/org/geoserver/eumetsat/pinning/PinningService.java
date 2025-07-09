@@ -103,6 +103,7 @@ public class PinningService {
                     () -> {
                         try {
                             logger.log(Level.INFO, "Global RESET Started");
+                            checkLoaded();
                             resetPinning(viewsEvaluator);
                             conn.commit();
                             taskStatus.set(StatusValue.COMPLETED);
@@ -143,6 +144,7 @@ public class PinningService {
                     () -> {
                         try {
                             logger.log(Level.INFO, "Incremental pinning Started");
+                            checkLoaded();
                             incrementalPinning(viewsEvaluator);
                             conn.commit();
                             taskStatus.set(StatusValue.COMPLETED);
@@ -220,34 +222,36 @@ public class PinningService {
 
         Instant lastUpdate = Instant.now();
         List<ParsedView> remoteViews = viewsClient.fetchViews(instant);
-        for (ParsedView view : remoteViews) {
-            Long viewId = view.getViewId();
-            boolean disabled = view.getDisabled();
+        for (ParsedView fetchedView : remoteViews) {
+            Long viewId = fetchedView.getViewId();
+            boolean disabled = fetchedView.getDisabled();
             if (disabled) {
                 logger.log(
                         Level.INFO,
                         "The following view has been disabled since last update: " + viewId);
                 viewsEvaluator.deleteViewAndUnpin(viewId);
             } else {
-                ViewRecord viewRecord = viewsEvaluator.fetchView(viewId);
-                if (viewRecord == null) {
+                ViewRecord storedView = viewsEvaluator.fetchView(viewId);
+                if (storedView == null) {
                     // That's a new view. Add it.
                     logger.log(
                             Level.INFO, "A new view has been added since last update: " + viewId);
 
-                    viewRecord = viewsEvaluator.buildView(view);
-                    viewsEvaluator.addViewAndPin(viewRecord);
-                } else if (!viewRecord.getDrivingLayer().equalsIgnoreCase(view.getDrivingLayer())) {
+                    storedView = viewsEvaluator.buildView(fetchedView);
+                    viewsEvaluator.addViewAndPin(storedView);
+                } else if (!storedView
+                        .getDrivingLayer()
+                        .equalsIgnoreCase(fetchedView.getDrivingLayer())) {
                     // Let's recreate the view
-                    viewsEvaluator.deleteViewAndUnpin(viewRecord.getId());
-                    viewRecord = viewsEvaluator.buildView(view);
-                    viewsEvaluator.addViewAndPin(viewRecord);
+                    viewsEvaluator.deleteViewAndUnpin(storedView.getId());
+                    storedView = viewsEvaluator.buildView(fetchedView);
+                    viewsEvaluator.addViewAndPin(storedView);
                 } else {
                     // Need to proceed with the diffs.
                     logger.log(
                             Level.INFO,
                             "The following view has been modified since last update: " + viewId);
-                    viewsEvaluator.syncView(viewRecord, view);
+                    viewsEvaluator.syncView(storedView, fetchedView);
                 }
             }
             viewsEvaluator.flushBatches();
@@ -274,6 +278,14 @@ public class PinningService {
         }
         viewsEvaluator.flushBatches();
         viewsEvaluator.updateLastUpdate(lastUpdate);
+    }
+
+    private void checkLoaded() {
+        if (!layersMapper.isLoaded()) {
+            throw new RuntimeException(
+                    "The layers mapping didn't properly loaded: Aborting pinning. "
+                            + "Check the LayersMapper initialization logs.");
+        }
     }
 
     /**

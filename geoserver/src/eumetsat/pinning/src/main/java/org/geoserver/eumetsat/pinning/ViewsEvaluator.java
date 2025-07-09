@@ -270,26 +270,27 @@ public class ViewsEvaluator {
     /**
      * Sync an existing view with the last updated version of it.
      *
-     * @param view
-     * @param parsed
+     * @param storedView
+     * @param parsedView
      * @throws SQLException
      * @throws IOException
      */
-    public void syncView(ViewRecord view, ParsedView parsed) throws SQLException, IOException {
-        Instant originalTime = view.getTimeOriginal();
-        Instant viewTime = parsed.getTime();
-        ViewRecord record = buildView(parsed);
-        if (viewTime.equals(view.getTimeMain())) {
+    public void syncView(ViewRecord storedView, ParsedView parsedView)
+            throws SQLException, IOException {
+        Instant originalTime = storedView.getTimeOriginal();
+        Instant viewTime = parsedView.getTime();
+        ViewRecord record = buildView(parsedView);
+        if (viewTime.equals(storedView.getTimeMain())) {
             logger.log(Level.FINE, "View time has not been modified");
             // Redo the view since the layers may have been changed.
             // Note that a redo may also result into a no-op
-            redoView(view, parsed);
-        } else if (!isExtendingWindow(view, originalTime, viewTime)) {
+            redoView(storedView, parsedView);
+        } else if (!isExtendingWindow(storedView, originalTime, viewTime)) {
             logger.log(Level.FINE, "View time has been updated outside the pinning window");
-            redoView(view, parsed);
+            redoView(storedView, parsedView);
         } else {
             logger.log(Level.FINE, "View time has been updated within the pinning window");
-            extendView(view, parsed);
+            extendView(storedView, parsedView);
             record.setTimeOriginal(originalTime);
         }
         updateView(record);
@@ -409,27 +410,35 @@ public class ViewsEvaluator {
      * Redo the view by unpinning the layers that are no longer in the view and pinning the layers
      * that get added
      */
-    private void redoView(ViewRecord view, ParsedView parsed) throws SQLException, IOException {
+    private void redoView(ViewRecord storedView, ParsedView parsedView)
+            throws SQLException, IOException {
         logger.log(
                 Level.FINE,
                 String.format(
                         "Updating the view %d: stored view originalTime: %s, updating view time: %s",
-                        view.getId(), view.getTimeOriginal(), parsed.getTime()));
-        LayersUpdate layersUpdate = new LayersUpdate(view.getLayers(), parsed.getLayers());
+                        storedView.getId(), storedView.getTimeOriginal(), parsedView.getTime()));
+        LayersUpdate layersUpdate =
+                new LayersUpdate(storedView.getLayers(), parsedView.getLayers());
 
         // Unpin removed layers
         updateLayersPins(
-                layersUpdate.getRemoved(), view.getTimeOriginal(), view.getTimeMain(), false);
+                layersUpdate.getRemoved(),
+                storedView.getTimeOriginal(),
+                storedView.getTimeMain(),
+                false);
 
         // Pin newly added layers
-        ViewRecord updatedView = buildView(parsed);
-        updateLayersPins(layersUpdate.getAdded(), parsed.getTime(), parsed.getTime(), true);
+        ViewRecord updatedView = buildView(parsedView);
+        updateLayersPins(layersUpdate.getAdded(), parsedView.getTime(), parsedView.getTime(), true);
 
         // recompute pinning for existing layers
-        if (!updatedView.getTimeMain().equals(view.getTimeMain())
-                && !updatedView.getTimeOriginal().equals(view.getTimeOriginal())) {
+        if (!updatedView.getTimeMain().equals(storedView.getTimeMain())
+                && !updatedView.getTimeOriginal().equals(storedView.getTimeOriginal())) {
             updateLayersPins(
-                    layersUpdate.getUnchanged(), view.getTimeOriginal(), view.getTimeMain(), false);
+                    layersUpdate.getUnchanged(),
+                    storedView.getTimeOriginal(),
+                    storedView.getTimeMain(),
+                    false);
             updateLayersPins(
                     layersUpdate.getUnchanged(),
                     updatedView.getTimeOriginal(),
