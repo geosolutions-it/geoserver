@@ -5,6 +5,7 @@
     <groupId>org.geoserver</groupId>
     <artifactId>geoserver</artifactId>
     <version>2.23-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
   <groupId>org.geoserver.eumetsat</groupId>
   <artifactId>gs-pinning</artifactId>
