@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.geoserver</groupId>
   <artifactId>geoserver</artifactId>
-  <version>2.27.2</version>
+  <version>C105.2.27.2.00</version>
   <packaging>pom</packaging>
   <name>GeoServer</name>
   <inceptionYear>2006</inceptionYear>
@@ -88,8 +88,8 @@
   </distributionManagement>
 
   <properties>
-    <gs.version>2.27.2</gs.version>
-    <gt.version>33.2</gt.version>
+    <gs.version>C105.2.27.2.00</gs.version>
+    <gt.version>C105.33.2.00</gt.version>
     <gwc.version>1.27.2</gwc.version>
     <jts.version>1.20.0</jts.version>
     <spring.version>5.3.39</spring.version>
@@ -1895,6 +1895,11 @@
         <artifactId>wagon-webdav</artifactId>
         <version>1.0-beta-2</version>
       </extension>
+      <extension>
+        <groupId>org.apache.maven.wagon</groupId>
+        <artifactId>wagon-ftp</artifactId>
+        <version>1.0-beta-2</version>
+      </extension>
     </extensions>
 
     <!-- TODO: the resources stuff hardcodes paths to source + test directories,
@@ -3008,6 +3013,16 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>deploygeosolutions</id>
+      <distributionManagement>
+        <repository>
+          <uniqueVersion>false</uniqueVersion>
+          <id>geosolutions</id>
+          <url>ftp://demo.geo-solutions.it</url>
+        </repository>
+      </distributionManagement>
     </profile>
   </profiles>
 
