@@ -1,0 +1,17 @@
+<layer>
+  <name>sentinel3b_slstr_level2_frp</name>
+  <id>LayerInfoImpl-1427b291:197f913fb3d:-7fea</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-1427b291:197f913fb3d:-7fe8</id>
+  </defaultStyle>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-1427b291:197f913fb3d:-7feb</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2025-07-11 10:59:58.495 UTC</dateCreated>
+  <dateModified>2025-07-11 12:18:34.132 UTC</dateModified>
+</layer>

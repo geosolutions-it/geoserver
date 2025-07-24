@@ -1,0 +1,17 @@
+<dataStore>
+  <id>DataStoreInfoImpl-1427b291:197f913fb3d:-7fef</id>
+  <name>frp_vector_mosaic</name>
+  <type>Vector Mosaic Data Store</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff7</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="preferredDataStoreSPI">org.geotools.data.flatgeobuf.FlatGeobufDataStoreFactory</entry>
+    <entry key="delegateStoreName">sentinel3_slstr_l2_frp</entry>
+    <entry key="namespace">http://www.eumetsat.int/copernicus</entry>
+  </connectionParameters>
+  <__default>false</__default>
+  <dateCreated>2025-07-11 10:59:16.328 UTC</dateCreated>
+  <disableOnConnFailure>false</disableOnConnFailure>
+</dataStore>
