@@ -1,0 +1,20 @@
+<style>
+  <id>StyleInfoImpl-1427b291:197f913fb3d:-7fe8</id>
+  <name>sentinel_slstr_frp</name>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff7</id>
+  </workspace>
+  <format>sld</format>
+  <languageVersion>
+    <version>1.0.0</version>
+  </languageVersion>
+  <filename>sentinel_slstr_frp.sld</filename>
+  <legend>
+    <width>640</width>
+    <height>80</height>
+    <format>image/png</format>
+    <onlineResource>copernicus_sentinel3_slstr_l2_frp-640x80.png</onlineResource>
+  </legend>
+  <dateCreated>2025-07-11 12:05:28.630 UTC</dateCreated>
+  <dateModified>2025-07-11 12:24:05.546 UTC</dateModified>
+</style>

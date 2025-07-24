@@ -1,0 +1,27 @@
+<dataStore>
+  <id>DataStoreInfoImpl-1427b291:197f913fb3d:-8000</id>
+  <name>sentinel3_slstr_l2_frp</name>
+  <type>PostGIS (JNDI)</type>
+  <enabled>true</enabled>
+  <workspace>
+    <id>WorkspaceInfoImpl-57ba435a:1705945f01f:-7ff7</id>
+  </workspace>
+  <connectionParameters>
+    <entry key="schema">frp</entry>
+    <entry key="Estimated extends">true</entry>
+    <entry key="fetch size">1000</entry>
+    <entry key="encode functions">true</entry>
+    <entry key="Expose primary keys">false</entry>
+    <entry key="Support on the fly geometry simplification">true</entry>
+    <entry key="Batch insert size">1</entry>
+    <entry key="preparedStatements">false</entry>
+    <entry key="Method used to simplify geometries">FAST</entry>
+    <entry key="jndiReferenceName">java:comp/env/jdbc/eumetsat</entry>
+    <entry key="dbtype">postgis</entry>
+    <entry key="namespace">http://www.eumetsat.int/copernicus</entry>
+    <entry key="Loose bbox">true</entry>
+  </connectionParameters>
+  <__default>false</__default>
+  <dateCreated>2025-07-11 10:42:05.757 UTC</dateCreated>
+  <disableOnConnFailure>false</disableOnConnFailure>
+</dataStore>

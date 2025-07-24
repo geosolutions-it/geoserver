@@ -1,0 +1,83 @@
+<featureType>
+  <id>FeatureTypeInfoImpl-1427b291:197f913fb3d:-7feb</id>
+  <name>sentinel3b_slstr_level2_frp</name>
+  <nativeName>sentinel3b_slstr_level2_frp_mosaic</nativeName>
+  <namespace>
+    <id>NamespaceInfoImpl-57ba435a:1705945f01f:-7ff6</id>
+  </namespace>
+  <title>SLSTR Level 2 Fire Radiative Power (FRP) - Sentinel-3B</title>
+  <abstract>The Copernicus Sea and Land Surface Temperature Radiometer (SLSTR), onboard the Sentinel-3A and -B satellites, detects and monitors potential threats of any ‘burning&apos;, &apos;active fire’ event over an area size of 1km2. These are not only fires over continents, but also flames from persistent land and ocean gas flares, and active erupting volcanoes. Such events are often referred to as hotspots.&#xd;
+The variable that is extracted from the satellite data, and commonly used, for satellite-based fire monitoring is Fire Radiative Power (FRP). FRP represents the rate of outgoing thermal energy coming from a burning landscape fire, integrated over all emitted wavelengths and over the hemisphere above the fire. The Fire Radiative Power parameter reports all fires within a 1km2 pixel and is expressed in megawatts (MW).</abstract>
+  <keywords>
+    <string>features</string>
+    <string>sentinel3b_slstr_level2_frp</string>
+  </keywords>
+  <nativeCRS>GEOGCS[&quot;WGS 84&quot;, 
+  DATUM[&quot;World Geodetic System 1984&quot;, 
+    SPHEROID[&quot;WGS 84&quot;, 6378137.0, 298.257223563, AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]], 
+    AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]], 
+  PRIMEM[&quot;Greenwich&quot;, 0.0, AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]], 
+  UNIT[&quot;degree&quot;, 0.017453292519943295], 
+  AXIS[&quot;Geodetic longitude&quot;, EAST], 
+  AXIS[&quot;Geodetic latitude&quot;, NORTH], 
+  AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</nativeCRS>
+  <srs>EPSG:4326</srs>
+  <nativeBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </nativeBoundingBox>
+  <latLonBoundingBox>
+    <minx>-180.0</minx>
+    <maxx>180.0</maxx>
+    <miny>-90.0</miny>
+    <maxy>90.0</maxy>
+    <crs>EPSG:4326</crs>
+  </latLonBoundingBox>
+  <projectionPolicy>FORCE_DECLARED</projectionPolicy>
+  <enabled>true</enabled>
+  <metadata>
+    <entry key="elevation">
+      <dimensionInfo>
+        <enabled>false</enabled>
+      </dimensionInfo>
+    </entry>
+    <entry key="MD_DOMAIN_EXPAND_LIMIT">50</entry>
+    <entry key="cacheAgeMax">604800</entry>
+    <entry key="MD_DOMAIN_EXPAND_LIMIT_MAX">100</entry>
+    <entry key="time">
+      <dimensionInfo>
+        <enabled>true</enabled>
+        <attribute>time</attribute>
+        <presentation>DISCRETE_INTERVAL</presentation>
+        <resolution>6000000</resolution>
+        <units>ISO8601</units>
+        <defaultValue>
+          <strategy>MAXIMUM</strategy>
+        </defaultValue>
+        <nearestMatchEnabled>true</nearestMatchEnabled>
+        <rawNearestMatchEnabled>false</rawNearestMatchEnabled>
+        <acceptableInterval>PT98M/PT0H</acceptableInterval>
+        <startValue></startValue>
+        <endValue></endValue>
+      </dimensionInfo>
+    </entry>
+    <entry key="cachingEnabled">true</entry>
+  </metadata>
+  <store class="dataStore">
+    <id>DataStoreInfoImpl-1427b291:197f913fb3d:-7fef</id>
+  </store>
+  <serviceConfiguration>false</serviceConfiguration>
+  <simpleConversionEnabled>false</simpleConversionEnabled>
+  <internationalTitle/>
+  <internationalAbstract/>
+  <maxFeatures>0</maxFeatures>
+  <numDecimals>0</numDecimals>
+  <padWithZeros>false</padWithZeros>
+  <forcedDecimal>false</forcedDecimal>
+  <overridingServiceSRS>false</overridingServiceSRS>
+  <skipNumberMatched>false</skipNumberMatched>
+  <circularArcPresent>false</circularArcPresent>
+</featureType>
