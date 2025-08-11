@@ -10,7 +10,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -221,7 +220,7 @@ public class PinningService {
         }
 
         Instant lastUpdate = Instant.now();
-        List<ParsedView> remoteViews = viewsClient.fetchViews(instant);
+        Iterable<ParsedView> remoteViews = viewsClient.fetchViews(instant);
         for (ParsedView fetchedView : remoteViews) {
             Long viewId = fetchedView.getViewId();
             boolean disabled = fetchedView.getDisabled();
@@ -264,7 +263,7 @@ public class PinningService {
         viewsEvaluator.truncateViews();
 
         Instant lastUpdate = Instant.now();
-        List<ParsedView> remoteViews = viewsClient.fetchViews(null);
+        Iterable<ParsedView> remoteViews = viewsClient.fetchViews(null);
 
         logger.log(Level.INFO, "Resetting the pins");
         viewsEvaluator.fullPinReset();

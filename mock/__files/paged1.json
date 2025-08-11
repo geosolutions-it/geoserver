@@ -1,0 +1,45 @@
+{
+  "_embedded": {
+    "preferences": [
+      {
+        "id": 921,
+        "ownerId": "licensed_user_e",
+        "name": "default1",
+        "preference": "{\"baseLayer\":\"ne\",\"proj\":\"EPSG:4326\",\"viewport\":{\"center\":[-6.944973468780518,35.65285593271258],\"zoom\":4},\"layers\":[{\"id\":\"EO:EUM:DAT:0023\",\"name\":\"Rapidly Developing Thunderstorms - MSG - 0 degree\",\"state\":{\"visible\":true,\"opacity\":1,\"style\":\"rdt_red\"}}],\"drivingLayer\":\"EO:EUM:DAT:0023\",\"overlays\":{\"coastline\":true,\"borders\":true,\"labels_dark\":false,\"labels_light\":false,\"graticules_dark\":false,\"graticules_light\":false},\"time\":{\"mode\":\"absolute\",\"value\":\"2025-03-12T17:45:00.000Z\"}}",
+        "type": "mapView",
+        "shared": false,
+        "creationTime": "2025-02-12T15:30:41.539193",
+        "lastUpdate": "2025-03-20T15:30:41.539193",
+        "disabled": false,
+        "_links": {
+          "self": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/921"
+          },
+          "userPreference": {
+            "href": "https://internal.store.cgi-dev.de/userPreferences/preferences/921"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "first": {
+      "href": "http://localhost:8080/userPreferences/preferences/search/findByType?type=mapView&page=0&size=5&sort=creationTime,asc"
+    },
+    "prev": {
+      "href": "http://localhost:8080/userPreferences/preferences/search/findByType?type=mapView&page=0&size=5&sort=creationTime,asc"
+    },
+    "self": {
+      "href": "http://localhost:8080/userPreferences/preferences/search/findByType?type=mapView&page=1&size=5&sort=creationTime,asc"
+    },
+    "last": {
+      "href": "http://localhost:8080/userPreferences/preferences/search/findByType?type=mapView&page=1&size=5&sort=creationTime,asc"
+    }
+  },
+  "page": {
+    "size": 5,
+    "totalElements": 7,
+    "totalPages": 2,
+    "number": 1
+  }
+}

@@ -1,0 +1,29 @@
+{
+    "priority": 1,
+    "request": {
+      "method": "GET",
+      "urlPath": "/userPreferences/preferences/search/findByType",
+      "queryParameters": {
+        "type": {
+          "equalTo": "mapView"
+        },
+        "page": {
+          "equalTo": "0"
+        },
+        "size": {
+          "equalTo": "5"
+        },
+        "sort": {
+          "equalTo": "creationTime,asc"
+        }
+      }
+    },
+    "response": {
+      "status": 200,
+      "bodyFileName": "paged0.json",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+  

@@ -9,10 +9,14 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.Request;
 import com.github.tomakehurst.wiremock.http.Response;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,6 +36,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import javax.xml.namespace.QName;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.DataStoreInfo;
@@ -44,6 +49,7 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.eumetsat.pinning.views.TestContext;
+import org.geoserver.eumetsat.pinning.views.ViewsClient;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.junit.AfterClass;
@@ -103,10 +109,10 @@ public class PinningServiceTest extends GeoServerSystemTestSupport {
         // Add request listener to log to System.out
         wireMockServer.addMockServiceRequestListener(
                 (Request request, Response response) -> {
-                    /*System.out.println("WireMock received request: " + request.getUrl());
+                    System.out.println("WireMock received request: " + request.getUrl());
                     System.out.println("RESPONSE status: " + response.getStatus());
                     String bodyString = new String(response.getBody(), StandardCharsets.UTF_8);
-                    System.out.println("RESPONSE body: " + bodyString);*/
+                    System.out.println("RESPONSE body: " + bodyString);
                 });
 
         wireMockServer.start();
@@ -287,6 +293,9 @@ public class PinningServiceTest extends GeoServerSystemTestSupport {
                 != PinningService.StatusValue.COMPLETED) {
             // System.out.println(status);
             try {
+                if (status == PinningService.StatusValue.FAILED) {
+                    throw new RuntimeException("PinningService failed");
+                }
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -369,6 +378,43 @@ public class PinningServiceTest extends GeoServerSystemTestSupport {
         assertSameResult(conn, GET_VIEWS_QUERY, "views_move_in.json", VIEW_ID);
         writeQueryResultToJsonFile(conn, TEMPLATE_PIN_REQUEST, M01_ORBITAL_TRACKS, "after_move_in");
         assertSameResult(conn, TEMPLATE_PIN_REQUEST, M01_ORBITAL_TRACKS, "after_move_in", FID);
+
+        // Enable paging
+        File dataDir = testData.getDataDirectoryRoot();
+        File pinningConfig = new File(dataDir, "pinning/service.properties");
+        Properties props = new Properties();
+        try (InputStream in = new FileInputStream(pinningConfig)) {
+            props.load(in);
+        }
+        props.setProperty("preferences.pages.size", "5");
+
+        // Save back to the same file
+        try (OutputStream out = new FileOutputStream(pinningConfig)) {
+            props.store(out, "Updated for test");
+        }
+
+        System.out.println("Resetting again, this time with paging, with pagesize 4");
+        ViewsClient client = GeoServerExtensions.bean(ViewsClient.class);
+        client.setPageSize(4);
+        pinningService.reset();
+        wait(pinningService);
+        writeQueryResultToJsonFile(conn, GET_VIEWS_QUERY, "paged_result.json");
+        List<Map<String, Object>> actualResult = runQueryAndMapToList(conn, GET_VIEWS_QUERY);
+
+        // Expected result from file
+        ObjectMapper mapper = new ObjectMapper();
+        Path expectedPath = Paths.get(EXPECTED_RESULTS_FOLDER + "paged_result.json");
+        List<Map<String, Object>> expectedResult =
+                mapper.readValue(Files.newInputStream(expectedPath), new TypeReference<>() {});
+
+        Comparator<Map<String, Object>> byId =
+                Comparator.comparing(row -> row.get(VIEW_ID).toString());
+        actualResult.sort(byId);
+
+        // check that we get 7 results with paging
+        assertEquals(6, expectedResult.size());
+        expectedResult.sort(byId);
+        assertEquals(expectedResult, actualResult);
     }
 
     private void assertSameResult(Connection conn, String query, String expectedJson, String id)

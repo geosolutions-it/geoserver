@@ -78,6 +78,10 @@ public class PinningServiceConfig implements Serializable, Cloneable {
         return Integer.parseInt(properties.getProperty("pinning.minutes", "60"));
     }
 
+    public Integer preferencesPagesSize() {
+        return Integer.parseInt(properties.getProperty("preferences.pages.size", "5"));
+    }
+
     public String jndiDatasourceName() {
         return properties.getProperty("jndi.datasource.name", "");
     }
