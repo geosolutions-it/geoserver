@@ -6,6 +6,7 @@
 package org.geoserver.inspire;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A collection of INSPIRE unique resource identifiers, from code to namespace
@@ -19,6 +20,12 @@ public class UniqueResourceIdentifiers extends ArrayList<UniqueResourceIdentifie
     public UniqueResourceIdentifiers() {}
 
     public UniqueResourceIdentifiers(UniqueResourceIdentifiers identifiers) {
+        for (UniqueResourceIdentifier identifier : identifiers) {
+            add(new UniqueResourceIdentifier(identifier));
+        }
+    }
+
+    public UniqueResourceIdentifiers(List<UniqueResourceIdentifier> identifiers) {
         for (UniqueResourceIdentifier identifier : identifiers) {
             add(new UniqueResourceIdentifier(identifier));
         }

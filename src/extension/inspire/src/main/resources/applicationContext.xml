@@ -66,4 +66,5 @@
   <bean id="inspireDirManager" class="org.geoserver.inspire.InspireDirectoryManager">
     <constructor-arg ref="dataDirectory"/>
   </bean>
+  <bean id="InspireXStreamPersisterInitializer" class="org.geoserver.inspire.InspireXStreamPersisterInitializer" />
 </beans>
