@@ -240,6 +240,13 @@
     </profile>
 
     <profile>
+      <id>kml</id>
+      <modules>
+        <module>kml</module>
+      </modules>
+    </profile>
+
+    <profile>
       <id>importer</id>
       <modules>
         <module>importer</module>
@@ -438,6 +445,7 @@
         <module>printing</module>
         <module>wcs2_0-eo</module>
         <module>libjpeg-turbo</module>
+        <module>kml</module>
         <module>importer</module>
         <module>grib</module>
         <module>netcdf</module>
@@ -514,6 +522,7 @@
         <module>metadata</module>
         <module>rat</module>
         <module>ogcapi</module>
+        <module>kml</module>
       </modules>
     </profile>
   </profiles>
