@@ -3,7 +3,7 @@
 Installing the WCS 1.0 extension
 =================================
 
-GeoServer includes WCS 2.0 support in its core installation. However, WCS 1.0 support has been moved to an optional extension and must be installed separately if you need WCS 1.0.
+GeoServer includes WCS 2.0 support in its core installation. However, WCS 1.0/WCS 1.1 support has been moved to an optional extension and must be installed separately if you need WCS 1.0/WCS 1.1.
 
 To install the WCS 1.0 extension:
 
@@ -13,7 +13,7 @@ To install the WCS 1.0 extension:
 
    .. warning::  Be sure to match the version of the extension with that of GeoServer, otherwise errors will occur.
 
-#. Download the WCS 1.0 extension:
+#. Download the WCS 1.0/WCS 1.1 extension:
 
    * |release| :download_extension:`wcs`
    * |version| :nightly_extension:`wcs`
