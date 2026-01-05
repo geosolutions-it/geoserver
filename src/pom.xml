@@ -464,7 +464,7 @@
       <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.3.1</version>
+        <version>2.13.2</version>
       </dependency>
       <dependency>
         <groupId>com.googlecode.genericdao</groupId>
@@ -744,11 +744,6 @@
         <artifactId>org.restlet</artifactId>
         <version>2.6.0</version>
         <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.restlet</groupId>
-        <artifactId>org.restlet.ext.fileupload</artifactId>
-        <version>1.0.8</version>
       </dependency>
       <dependency>
         <groupId>org.restlet</groupId>
