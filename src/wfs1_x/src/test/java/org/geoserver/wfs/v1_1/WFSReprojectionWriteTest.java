@@ -10,7 +10,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.StringTokenizer;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.wfs.WFSTestSupport;
+import org.geoserver.wfs.WFS1XTestSupport;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.referencing.CRS;
@@ -19,7 +19,7 @@ import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-public class WFSReprojectionWriteTest extends WFSTestSupport {
+public class WFSReprojectionWriteTest extends WFS1XTestSupport {
     private static final String TARGET_CRS_CODE = "EPSG:900913";
     MathTransform tx;
 

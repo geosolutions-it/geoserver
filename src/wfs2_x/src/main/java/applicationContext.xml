@@ -187,6 +187,5 @@
     <!-- WFS 2.0 GML Output Format -->
     <bean id="gml32OutputFormat" class="org.geoserver.wfs.xml.GML32OutputFormat">
         <constructor-arg ref="geoServer"/>
-        <constructor-arg ref="xmlConfiguration-1.1"/>
     </bean>
 </beans>

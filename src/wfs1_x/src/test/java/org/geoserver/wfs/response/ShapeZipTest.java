@@ -45,8 +45,8 @@ import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.resource.Resources;
+import org.geoserver.wfs.WFS1XTestSupport;
 import org.geoserver.wfs.WFSInfo;
-import org.geoserver.wfs.WFSTestSupport;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
 import org.geotools.api.data.FeatureSource;
 import org.geotools.api.data.SimpleFeatureSource;
@@ -75,7 +75,7 @@ import org.locationtech.jts.geom.Polygon;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 @SuppressWarnings("unchecked")
-public class ShapeZipTest extends WFSTestSupport {
+public class ShapeZipTest extends WFS1XTestSupport {
 
     private static final QName ALL_TYPES = new QName(SystemTestData.CITE_URI, "AllTypes", SystemTestData.CITE_PREFIX);
 

@@ -318,7 +318,7 @@ public class TransactionTest extends WFS20TestSupport {
         Element inserted = getFirstElementByTagName(dom, "wfs:totalInserted");
         assertEquals("1", inserted.getFirstChild().getNodeValue());
 
-        dom = getAsDOM("wfs?request=getfeature&service=wfs&version=1.1.0&typename=sf:WithGMLProperties");
+        dom = getAsDOM("wfs?request=getfeature&service=wfs&version=2.0.0&typename=sf:WithGMLProperties");
         NodeList features = dom.getElementsByTagName("sf:WithGMLProperties");
         assertEquals(2, features.getLength());
 

@@ -67,6 +67,7 @@ public class WFSConfiguration extends Configuration implements WFSXmlConfigurati
         }
     }
 
+    @Override
     public void setSrsSyntax(SrsSyntax srsSyntax) {
         WFSXmlUtils.setSrsSyntax(this, srsSyntax);
     }
@@ -176,6 +177,7 @@ public class WFSConfiguration extends Configuration implements WFSXmlConfigurati
         bindings.put(XS.QNAME, XSQNameBinding.class);
     }
 
+    @Override
     public FeatureTypeSchemaBuilder getSchemaBuilder() {
         return schemaBuilder;
     }

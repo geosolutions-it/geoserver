@@ -257,11 +257,7 @@
 		class="org.geoserver.wfs.xml.GML2OutputFormat" scope="prototype">
 		<constructor-arg ref="geoServer"/>
 	</bean>
-    
-	<bean id="hitsOutputFormat" class="org.geoserver.wfs.response.HitsOutputFormat">
-		<constructor-arg ref="geoServer"/>
-		<constructor-arg ref="xmlConfiguration-1.1"/>
-	</bean>
+
 	<bean id="shapezipOutputFormat" class="org.geoserver.wfs.response.ShapeZipOutputFormat" >
 		<constructor-arg ref="geoServer"/>
 		<constructor-arg ref="catalog"/>

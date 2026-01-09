@@ -15,7 +15,7 @@ import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-public class LockFeatureTest extends WFSTestSupport {
+public class LockFeatureTest extends WFS1XTestSupport {
 
     @Override
     protected void setUpInternal(SystemTestData systemTestData) throws Exception {

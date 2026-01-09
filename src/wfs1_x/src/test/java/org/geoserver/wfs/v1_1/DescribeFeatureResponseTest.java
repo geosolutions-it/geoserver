@@ -16,13 +16,13 @@ import org.geoserver.data.test.CiteTestData;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.Service;
 import org.geoserver.util.ReaderUtils;
-import org.geoserver.wfs.WFSTestSupport;
+import org.geoserver.wfs.WFS1XTestSupport;
 import org.geoserver.wfs.xml.XmlSchemaEncoder;
 import org.junit.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-public class DescribeFeatureResponseTest extends WFSTestSupport {
+public class DescribeFeatureResponseTest extends WFS1XTestSupport {
 
     Operation request() {
         Service service = getServiceDescriptor10();

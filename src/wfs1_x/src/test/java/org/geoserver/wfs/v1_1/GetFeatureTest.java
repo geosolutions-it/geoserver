@@ -575,11 +575,6 @@ public class GetFeatureTest extends WFSTestSupport {
     }
 
     @Test
-    public void testGML32OutputFormat() throws Exception {
-        testGetFifteenAll("wfs?request=getfeature&typename=cdf:Fifteen&version=1.1.0&service=wfs&outputFormat=gml32");
-    }
-
-    @Test
     public void testGMLAttributeMapping() throws Exception {
         WFSInfo wfs = getWFS();
         GMLInfo gml = wfs.getGML().get(WFSInfo.Version.V_11);

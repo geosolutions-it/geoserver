@@ -16,8 +16,6 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.data.test.CiteTestData;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.platform.GeoServerExtensions;
-import org.geoserver.platform.Service;
 import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.wfs.xml.WFSXmlConfiguration;
 import org.junit.After;
@@ -35,24 +33,9 @@ public abstract class WFSTestSupport extends GeoServerSystemTestSupport {
         return getGeoServer().getService(WFSInfo.class);
     }
 
-    /** @return The 1.0 service descriptor. */
-    protected Service getServiceDescriptor10() {
-        return (Service) GeoServerExtensions.bean("wfsService-1.0.0");
-    }
-
-    /** @return The 1.1 service descriptor. */
-    protected Service getServiceDescriptor11() {
-        return (Service) GeoServerExtensions.bean("wfsService-1.1.0");
-    }
-
     /** @return The 1.0 xml configuration. */
     protected WFSXmlConfiguration getXmlConfiguration10() {
         return (WFSXmlConfiguration) applicationContext.getBean("wfsXmlConfiguration-1.0");
-    }
-
-    /** @return The 1.1 xml configuration. */
-    protected WFSXmlConfiguration getXmlConfiguration11() {
-        return (WFSXmlConfiguration) applicationContext.getBean("wfsXmlConfiguration-1.1");
     }
 
     @Override

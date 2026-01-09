@@ -20,8 +20,9 @@ import org.eclipse.emf.common.util.EList;
 import org.geoserver.data.test.MockData;
 import org.geoserver.platform.Operation;
 import org.geoserver.platform.Service;
-import org.geoserver.wfs.WFSTestSupport;
+import org.geoserver.wfs.WFS1XTestSupport;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
+import org.geoserver.wfs.xml.v1_1_0.WFSConfiguration;
 import org.geotools.api.data.FeatureSource;
 import org.geotools.api.feature.Feature;
 import org.geotools.api.feature.type.FeatureType;
@@ -29,10 +30,10 @@ import org.geotools.feature.FeatureCollection;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
-public class GML3FeatureProducerTest extends WFSTestSupport {
+public class GML3FeatureProducerTest extends WFS1XTestSupport {
 
     GML3OutputFormat producer() {
-        WFSXmlConfiguration configuration = getXmlConfiguration11();
+        WFSConfiguration configuration = getXmlConfiguration11();
         return new GML3OutputFormat(getGeoServer(), configuration);
     }
 

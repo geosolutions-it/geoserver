@@ -26,7 +26,6 @@ import org.geoserver.wfs.WFSException;
 import org.geoserver.wfs.WFSInfo;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
 import org.geoserver.wfs.request.GetFeatureRequest;
-import org.geoserver.wfs.xml.v2_0.WFSConfiguration;
 import org.geotools.api.feature.Feature;
 import org.geotools.api.feature.type.FeatureType;
 import org.geotools.data.DataUtilities;
@@ -38,7 +37,7 @@ import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Encoder;
 import org.w3c.dom.Document;
 
-public class GML32OutputFormat extends GML3OutputFormat {
+public class GML32OutputFormat extends BaseGML3OutputFormat {
 
     public static final String[] MIME_TYPES = {"application/gml+xml; version=3.2", "text/xml; subtype=gml/3.2"};
 
@@ -60,7 +59,7 @@ public class GML32OutputFormat extends GML3OutputFormat {
         try {
             xsdDocument = docFactory
                     .newDocumentBuilder()
-                    .parse(GML3OutputFormat.class.getResourceAsStream("/ChangeNumberOfFeature32.xslt"));
+                    .parse(BaseGML3OutputFormat.class.getResourceAsStream("/ChangeNumberOfFeature32.xslt"));
             xslt = new DOMSource(xsdDocument);
         } catch (Exception e) {
             xslt = null;
@@ -68,13 +67,13 @@ public class GML32OutputFormat extends GML3OutputFormat {
         }
     }
 
-    public GML32OutputFormat(GeoServer geoServer, WFSConfiguration configuration) {
-        super(new HashSet<>(FORMATS), geoServer, configuration);
+    public GML32OutputFormat(GeoServer geoServer) {
+        super(new HashSet<>(FORMATS), geoServer);
         this.geoServer = geoServer;
     }
 
-    protected GML32OutputFormat(GeoServer geoServer, Set<String> formats, WFSConfiguration configuration) {
-        super(formats, geoServer, configuration);
+    protected GML32OutputFormat(GeoServer geoServer, Set<String> formats) {
+        super(formats, geoServer);
         this.geoServer = geoServer;
     }
 
@@ -84,9 +83,25 @@ public class GML32OutputFormat extends GML3OutputFormat {
     }
 
     @Override
-    protected Configuration customizeConfiguration(
-            Configuration configuration, Map<String, Set<ResourceInfo>> resources, Object request) {
+    protected void updateConfiguration(
+            Configuration configuration,
+            int numDecimals,
+            boolean padWithZeros,
+            boolean forcedDecimal,
+            boolean encodeMeasures) {
+        // GML 3.2 configuration
+        org.geotools.gml3.v3_2.GMLConfiguration gml32 =
+                configuration.getDependency(org.geotools.gml3.v3_2.GMLConfiguration.class);
+        if (gml32 != null) {
+            gml32.setNumDecimals(numDecimals);
+            gml32.setPadWithZeros(padWithZeros);
+            gml32.setForceDecimalEncoding(forcedDecimal);
+            gml32.setEncodeMeasures(encodeMeasures);
+        }
+    }
 
+    @Override
+    protected Configuration createConfiguration(Map<String, Set<ResourceInfo>> resources, Object request) {
         FeatureTypeSchemaBuilder schemaBuilder = new FeatureTypeSchemaBuilder.GML32(geoServer);
 
         ApplicationSchemaXSD2 xsd = new ApplicationSchemaXSD2(schemaBuilder);
@@ -101,9 +116,6 @@ public class GML32OutputFormat extends GML3OutputFormat {
                         .getSrsNameStyle()
                         .toSrsSyntax());
         ApplicationSchemaConfiguration2 config = new ApplicationSchemaConfiguration2(xsd, wfs);
-        // adding properties from original configuration to allow
-        // hints handling
-        config.getProperties().addAll(configuration.getProperties());
 
         return config;
     }

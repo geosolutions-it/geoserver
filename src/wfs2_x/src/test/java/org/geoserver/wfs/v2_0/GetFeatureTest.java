@@ -79,6 +79,11 @@ public class GetFeatureTest extends WFS20TestSupport {
     }
 
     @Test
+    public void testGML32OutputFormat() throws Exception {
+        testGetFifteenAll("wfs?request=getfeature&typename=cdf:Fifteen&version=1.1.0&service=wfs&outputFormat=gml32");
+    }
+
+    @Test
     public void testSkipNumberMatched() throws Exception {
         FeatureTypeInfo fti = this.getCatalog().getFeatureTypeByName("Fifteen");
 
@@ -859,42 +864,6 @@ public class GetFeatureTest extends WFS20TestSupport {
         assertEquals(0, dom.getElementsByTagName("cdf:Other").getLength());
     }
 
-    //
-    //    public void testWithGmlObjectId() throws Exception {
-    //        String xml = "<wfs:GetFeature xmlns:cdf=\"http://www.opengis.net/cite/data\"
-    // xmlns:wfs=\"http://www.opengis.net/wfs\" xmlns:gml=\"http://www.opengis.net/gml\"
-    // xmlns:ogc=\"http://www.opengis.net/ogc\" version=\"1.1.0\" service=\"WFS\">"
-    //                + "<wfs:Query  typeName=\"cdf:Seven\"
-    // srsName=\"urn:x-ogc:def:crs:EPSG:6.11.2:4326\">"
-    //                + "</wfs:Query>" + "</wfs:GetFeature>";
-    //
-    //        Document dom = postAsDOM("wfs", xml);
-    //        assertEquals("wfs:FeatureCollection", dom.getDocumentElement()
-    //                .getNodeName());
-    //        assertEquals(7, dom.getElementsByTagName("cdf:Seven")
-    //                .getLength());
-    //
-    //        NodeList others = dom.getElementsByTagName("cdf:Seven");
-    //        String id = ((Element) others.item(0)).getAttributeNS(GML.NAMESPACE,
-    //                "id");
-    //        assertNotNull(id);
-    //
-    //        xml = "<wfs:GetFeature xmlns:cdf=\"http://www.opengis.net/cite/data\"
-    // xmlns:wfs=\"http://www.opengis.net/wfs\" xmlns:gml=\"http://www.opengis.net/gml\"
-    // xmlns:ogc=\"http://www.opengis.net/ogc\" version=\"1.1.0\" service=\"WFS\">"
-    //                + "<wfs:Query  typeName=\"cdf:Seven\"
-    // srsName=\"urn:x-ogc:def:crs:EPSG:6.11.2:4326\">"
-    //                + "<ogc:Filter>"
-    //                + "<ogc:GmlObjectId gml:id=\""
-    //                + id
-    //                + "\"/>"
-    //                + "</ogc:Filter>" + "</wfs:Query>" + "</wfs:GetFeature>";
-    //        dom = postAsDOM("wfs", xml);
-    //
-    //        assertEquals(1, dom.getElementsByTagName("cdf:Seven")
-    //                .getLength());
-    //    }
-    //
     @Test
     public void testPostWithBoundsEnabled() throws Exception {
         // enable feature bounds computation
@@ -1044,11 +1013,6 @@ public class GetFeatureTest extends WFS20TestSupport {
                 + "namespace=xmlns("
                 + URLEncoder.encode(MockData.FIFTEEN.getNamespaceURI(), "UTF-8")
                 + ")");
-    }
-
-    @Test
-    public void testGML32OutputFormat() throws Exception {
-        testGetFifteenAll("wfs?request=getfeature&typename=cdf:Fifteen&version=2.0.0&service=wfs&outputFormat=gml32");
     }
 
     @Test

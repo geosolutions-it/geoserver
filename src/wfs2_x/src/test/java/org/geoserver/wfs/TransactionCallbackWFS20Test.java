@@ -153,7 +153,7 @@ public class TransactionCallbackWFS20Test extends WFS20TestSupport {
 
         // check the road name has been modified too
         Document roadSegments = getAsDOM(
-                "wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=cite:RoadSegments&CQL_FILTER=FID=102");
+                "wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=cite:RoadSegments&CQL_FILTER=FID=102");
         // print(roadSegments);
         assertXpathEvaluatesTo(TransactionCallbackTester.FOLSOM_STREET, "//cite:RoadSegments/cite:NAME", roadSegments);
     }
@@ -178,7 +178,7 @@ public class TransactionCallbackWFS20Test extends WFS20TestSupport {
         assertEquals(4, plugin.result.getTotalDeleted().intValue());
 
         // check the one surviving road segment has id 102
-        Document roadSegments = getAsDOM("wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=cite:RoadSegments");
+        Document roadSegments = getAsDOM("wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=cite:RoadSegments");
         // print(roadSegments);
         assertXpathEvaluatesTo("1", "count(//cite:RoadSegments)", roadSegments);
         assertXpathEvaluatesTo("102", "//cite:RoadSegments/cite:FID", roadSegments);
@@ -205,7 +205,7 @@ public class TransactionCallbackWFS20Test extends WFS20TestSupport {
         assertEquals(0, plugin.result.getTotalDeleted().intValue());
 
         // check the new feature is there
-        Document roadSegments = getAsDOM("wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=cite:RoadSegments");
+        Document roadSegments = getAsDOM("wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=cite:RoadSegments");
         // print(roadSegments);
         assertXpathEvaluatesTo("6", "count(//cite:RoadSegments)", roadSegments);
         assertXpathEvaluatesTo("New Road", "//cite:RoadSegments[cite:FID = 107]/cite:NAME", roadSegments);
@@ -231,7 +231,7 @@ public class TransactionCallbackWFS20Test extends WFS20TestSupport {
         assertEquals(0, plugin.result.getTotalDeleted().intValue());
 
         // check the new feature is there
-        Document roadSegments = getAsDOM("wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=cite:RoadSegments");
+        Document roadSegments = getAsDOM("wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=cite:RoadSegments");
         // print(roadSegments);
         assertXpathEvaluatesTo("5", "count(//cite:RoadSegments)", roadSegments);
         assertXpathEvaluatesTo("Clean Road", "//cite:RoadSegments[cite:FID = 106]/cite:NAME", roadSegments);
@@ -258,7 +258,7 @@ public class TransactionCallbackWFS20Test extends WFS20TestSupport {
         assertEquals(1, plugin.result.getTotalDeleted().intValue());
 
         // check the new feature is there
-        Document roadSegments = getAsDOM("wfs?service=WFS&version=1.1.0&request=GetFeature&typeName=cite:RoadSegments");
+        Document roadSegments = getAsDOM("wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=cite:RoadSegments");
         // print(roadSegments);
         assertXpathEvaluatesTo("4", "count(//cite:RoadSegments)", roadSegments);
         assertXpathEvaluatesTo("0", "count(//cite:RoadSegments[cite:FID = 106])", roadSegments);

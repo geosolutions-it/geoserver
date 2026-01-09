@@ -1,9 +1,8 @@
-/* (c) 2014 - 2016 Open Source Geospatial Foundation - all rights reserved
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
-
 package org.geoserver.wfs.json;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -39,8 +38,6 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 /** @author carlo cancellieri - GeoSolutions */
 public class GeoJSONTest extends WFSTestSupport {
-
-    //    TODO only v2.0 tests here -> move them
     public static QName LINE3D = new QName(SystemTestData.CITE_URI, "Line3D", SystemTestData.CITE_PREFIX);
     public static QName POINT_LATLON = new QName(SystemTestData.CITE_URI, "PointLatLon", SystemTestData.CITE_PREFIX);
     public static QName POINT_LONLAT = new QName(SystemTestData.CITE_URI, "PointLonLat", SystemTestData.CITE_PREFIX);

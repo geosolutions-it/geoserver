@@ -130,6 +130,10 @@
         <constructor-arg ref="geoServer"/>
         <constructor-arg ref="xmlConfiguration-1.1"/>
     </bean>
+    <bean id="hitsOutputFormat" class="org.geoserver.wfs.response.HitsOutputFormat">
+        <constructor-arg ref="geoServer"/>
+        <constructor-arg ref="xmlConfiguration-1.1"/>
+    </bean>
 
     <!-- WFS 1.0 XML Readers -->
     <bean id="xmlReader-1.0.0" class="org.geoserver.wfs.xml.v1_0_0.WfsXmlReader" abstract="true">

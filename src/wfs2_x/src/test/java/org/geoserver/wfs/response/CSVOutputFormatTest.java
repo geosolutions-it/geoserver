@@ -1,17 +1,16 @@
 package org.geoserver.wfs.response;
 
-import au.com.bytecode.opencsv.CSVReader;
-import org.geoserver.wfs.WFSTestSupport;
-import org.junit.Test;
-import org.springframework.mock.web.MockHttpServletResponse;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertEquals;
 
+import au.com.bytecode.opencsv.CSVReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertEquals;
+import org.geoserver.wfs.WFSTestSupport;
+import org.junit.Test;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 public class CSVOutputFormatTest extends WFSTestSupport {
 

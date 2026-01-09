@@ -1,6 +1,27 @@
 package org.geoserver.wfs.response;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
+import static org.geoserver.data.test.CiteTestData.ROAD_SEGMENTS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
+
 import au.com.bytecode.opencsv.CSVReader;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.StringReader;
+import java.security.InvalidParameterException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import net.opengis.wfs.GetFeatureType;
 import net.opengis.wfs.WfsFactory;
 import org.geoserver.catalog.FeatureTypeInfo;
@@ -8,8 +29,8 @@ import org.geoserver.config.GeoServer;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
 import org.geoserver.platform.Operation;
+import org.geoserver.wfs.WFS1XTestSupport;
 import org.geoserver.wfs.WFSInfo;
-import org.geoserver.wfs.WFSTestSupport;
 import org.geoserver.wfs.request.FeatureCollectionResponse;
 import org.geotools.api.data.FeatureSource;
 import org.geotools.api.data.Query;
@@ -40,29 +61,7 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.security.InvalidParameterException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.easymock.EasyMock.createNiceMock;
-import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.replay;
-import static org.geoserver.data.test.CiteTestData.ROAD_SEGMENTS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-
-public class CSVOutputFormatTest extends WFSTestSupport {
+public class CSVOutputFormatTest extends WFS1XTestSupport {
 
     private static final String CSV = "text/csv";
 
@@ -157,7 +156,7 @@ public class CSVOutputFormatTest extends WFSTestSupport {
         SimpleFeature f3 = SimpleFeatureBuilder.build(
                 type,
                 new Object[] {
-                        gf.createPoint(new Coordinate(5, 4)), "A long label\r\nwith windows\r\nnewlines", d, 10, 300.0
+                    gf.createPoint(new Coordinate(5, 4)), "A long label\r\nwith windows\r\nnewlines", d, 10, 300.0
                 },
                 null);
 

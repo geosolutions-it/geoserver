@@ -17,13 +17,14 @@ import net.opengis.wfs.PropertyType;
 import net.opengis.wfs.TransactionType;
 import net.opengis.wfs.UpdateElementType;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.wfs.WFSTestSupport;
+import org.geoserver.wfs.WFS1XTestSupport;
 import org.geoserver.wfs.xml.WFSXmlConfiguration;
+import org.geoserver.wfs.xml.v1_1_0.WFSConfiguration;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.xsd.Parser;
 import org.junit.Test;
 
-public class XMLParsingTest extends WFSTestSupport {
+public class XMLParsingTest extends WFS1XTestSupport {
 
     @Override
     protected void setUpTestData(SystemTestData testData) throws Exception {
@@ -33,7 +34,7 @@ public class XMLParsingTest extends WFSTestSupport {
 
     @Test
     public void testNativeType() throws Exception {
-        Parser p = new Parser((org.geotools.xsd.Configuration) getXmlConfiguration11());
+        Parser p = new Parser(getXmlConfiguration11());
         NativeType nativ = (NativeType) p.parse(new ByteArrayInputStream(
                 "<wfs:Native safeToIgnore='true' xmlns:wfs='http://www.opengis.net/wfs'>here is some text</wfs:Native>"
                         .getBytes()));
@@ -43,7 +44,7 @@ public class XMLParsingTest extends WFSTestSupport {
 
     @Test
     public void testGetFeatureWithLock() throws Exception {
-        Parser p = new Parser((org.geotools.xsd.Configuration) getXmlConfiguration11());
+        Parser p = new Parser(getXmlConfiguration11());
 
         String request =
                 """
@@ -67,8 +68,8 @@ public class XMLParsingTest extends WFSTestSupport {
 
     @Test
     public void testUpdate() throws Exception {
-        WFSXmlConfiguration xmlConfiguration11 = getXmlConfiguration11();
-        Parser p = new Parser((org.geotools.xsd.Configuration) xmlConfiguration11);
+        WFSConfiguration xmlConfiguration11 = getXmlConfiguration11();
+        Parser p = new Parser(xmlConfiguration11);
         p.setHandleMixedContent(true);
 
         String request =

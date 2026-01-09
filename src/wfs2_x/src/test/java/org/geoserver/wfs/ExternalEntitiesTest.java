@@ -1,10 +1,10 @@
 package org.geoserver.wfs;
 
+import static org.junit.Assert.assertTrue;
+
 import org.geoserver.util.EntityResolverProvider;
 import org.geotools.util.PreventLocalEntityResolver;
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
 
 public class ExternalEntitiesTest extends WFSTestSupport {
 

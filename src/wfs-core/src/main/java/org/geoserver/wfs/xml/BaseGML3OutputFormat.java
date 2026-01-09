@@ -1,5 +1,4 @@
-/* (c) 2014 -2015 Open Source Geospatial Foundation - all rights reserved
-import org.geoserver.wfs.WFSConstants;
+/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
  * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
@@ -21,7 +20,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,7 +37,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import net.opengis.wfs.FeatureCollectionType;
-import org.eclipse.xsd.XSDSchema;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.ResourceInfo;
@@ -67,7 +64,7 @@ import org.geotools.xsd.Configuration;
 import org.geotools.xsd.Encoder;
 import org.w3c.dom.Document;
 
-public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements ComplexFeatureAwareFormat {
+public abstract class BaseGML3OutputFormat extends WFSGetFeatureOutputFormat implements ComplexFeatureAwareFormat {
 
     /** Enables the optimized encoders */
     public static final boolean OPTIMIZED_ENCODING =
@@ -75,7 +72,6 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
 
     GeoServer geoServer;
     Catalog catalog;
-    WFSXmlConfiguration configuration;
     protected static DOMSource xslt;
 
     static {
@@ -85,7 +81,7 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
         try {
             xsdDocument = docFactory
                     .newDocumentBuilder()
-                    .parse(GML3OutputFormat.class.getResourceAsStream("/ChangeNumberOfFeature.xslt"));
+                    .parse(BaseGML3OutputFormat.class.getResourceAsStream("/ChangeNumberOfFeature.xslt"));
             xslt = new DOMSource(xsdDocument);
         } catch (Exception e) {
             xslt = null;
@@ -93,17 +89,11 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
         }
     }
 
-    public GML3OutputFormat(GeoServer geoServer, WFSXmlConfiguration configuration) {
-        this(new HashSet<>(Arrays.asList("gml3", "text/xml; subtype=gml/3.1.1")), geoServer, configuration);
-    }
-
-    public GML3OutputFormat(Set<String> outputFormats, GeoServer geoServer, WFSXmlConfiguration configuration) {
+    public BaseGML3OutputFormat(Set<String> outputFormats, GeoServer geoServer) {
         super(geoServer, outputFormats);
 
         this.geoServer = geoServer;
         this.catalog = geoServer.getCatalog();
-
-        this.configuration = configuration;
     }
 
     @Override
@@ -180,7 +170,9 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
         }
 
         WFSInfo wfs = getInfo();
-        Configuration config = (Configuration) configuration;
+        // declare wfs schema location
+        Object gft = getFeature.getParameters()[0];
+        Configuration config = createConfiguration(ns2metas, gft);
 
         // set feature bounding parameter
         // JD: this is quite bad as its not at all thread-safe, once we remove the configuration
@@ -204,10 +196,6 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
             config.getProperties().remove(GMLConfiguration.OPTIMIZED_ENCODING);
         }
 
-        // set up the srsname syntax (calls version-specific method if supported)
-        configuration.setSrsSyntax(
-                wfs.getGML().get(WFSInfo.Version.V_11).getSrsNameStyle().toSrsSyntax());
-
         /*
          * Set property encoding featureMemeber as opposed to featureMembers
          *
@@ -218,13 +206,9 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
             config.getProperties().remove(GMLConfiguration.ENCODE_FEATURE_MEMBER);
         }
 
-        // declare wfs schema location
-        Object gft = getFeature.getParameters()[0];
-
-        Configuration configuration = customizeConfiguration((Configuration) this.configuration, ns2metas, gft);
         boolean encodeMeasures = encodeMeasures(featureCollections, catalog);
-        updateConfiguration(configuration, numDecimals, padWithZeros, forcedDecimal, encodeMeasures);
-        Encoder encoder = createEncoder(configuration, ns2metas, gft);
+        updateConfiguration(config, numDecimals, padWithZeros, forcedDecimal, encodeMeasures);
+        Encoder encoder = createEncoder(config, ns2metas, gft);
 
         encoder.setEncoding(Charset.forName(geoServer.getSettings().getCharset()));
         if (wfs.isVerbose() || geoServer.getSettings().isVerbose()) {
@@ -298,65 +282,17 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
         }
     }
 
-    protected void updateConfiguration(
+    protected abstract void updateConfiguration(
             Configuration configuration,
             int numDecimals,
             boolean padWithZeros,
             boolean forcedDecimal,
-            boolean encodeMeasures) {
-        // GML 3.1. configuration
-        GMLConfiguration gml31 = configuration.getDependency(GMLConfiguration.class);
-        if (gml31 != null) {
-            gml31.setNumDecimals(numDecimals);
-            gml31.setPadWithZeros(padWithZeros);
-            gml31.setForceDecimalEncoding(forcedDecimal);
-            gml31.setEncodeMeasures(encodeMeasures);
-            return;
-        }
-        // GML 3.2 configuration
-        org.geotools.gml3.v3_2.GMLConfiguration gml32 =
-                configuration.getDependency(org.geotools.gml3.v3_2.GMLConfiguration.class);
-        if (gml32 != null) {
-            gml32.setNumDecimals(numDecimals);
-            gml32.setPadWithZeros(padWithZeros);
-            gml32.setForceDecimalEncoding(forcedDecimal);
-            gml32.setEncodeMeasures(encodeMeasures);
-        }
-    }
+            boolean encodeMeasures);
 
-    protected Configuration customizeConfiguration(
-            Configuration configuration, Map<String, Set<ResourceInfo>> resources, Object request) {
-        return configuration;
-    }
+    protected abstract Configuration createConfiguration(Map<String, Set<ResourceInfo>> resources, Object request);
 
-    protected Encoder createEncoder(
-            Configuration configuration, Map<String, Set<ResourceInfo>> resources, Object request) {
-        // reuse the WFS configuration feature builder, otherwise build a new one
-        FeatureTypeSchemaBuilder schemaBuilder = this.configuration.getSchemaBuilder();
-        if (schemaBuilder == null) {
-            schemaBuilder = new FeatureTypeSchemaBuilder.GML3(geoServer);
-        }
-        // create this request specific schema
-        ApplicationSchemaXSD1 schema = new ApplicationSchemaXSD1(schemaBuilder);
-        schema.setBaseURL(GetFeatureRequest.adapt(request).getBaseURL());
-        schema.setResources(resources);
-        if (schema.getFeatureTypes().isEmpty()) {
-            // no feature types so let's use the base WFS schema
-            XSDSchema result;
-            try {
-                result = configuration.getXSD().getSchema();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            return new Encoder(configuration, result);
-        }
-        try {
-            // let's just instantiate the encoder
-            return new Encoder(configuration, schema.getSchema());
-        } catch (IOException exception) {
-            throw new RuntimeException("Error generating the XSD schema during the encoder instantiation.", exception);
-        }
-    }
+    protected abstract Encoder createEncoder(
+            Configuration configuration, Map<String, Set<ResourceInfo>> resources, Object request);
 
     protected void setAdditionalSchemaLocations(Encoder encoder, GetFeatureRequest request, WFSInfo wfs) {
         // hook for subclasses
@@ -367,7 +303,7 @@ public class GML3OutputFormat extends WFSGetFeatureOutputFormat implements Compl
     }
 
     protected DOMSource getXSLT() {
-        return GML3OutputFormat.xslt;
+        return BaseGML3OutputFormat.xslt;
     }
 
     private void complexFeatureStreamIntercept(FeatureCollectionResponse results, OutputStream output, Encoder encoder)

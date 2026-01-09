@@ -1,5 +1,8 @@
 package org.geoserver.wfs;
 
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.custommonkey.xmlunit.XpathEngine;
@@ -8,10 +11,6 @@ import org.geoserver.util.EntityResolverProvider;
 import org.geotools.util.PreventLocalEntityResolver;
 import org.junit.Test;
 import org.w3c.dom.Document;
-
-import java.io.File;
-
-import static org.junit.Assert.assertTrue;
 
 public class ExternalEntitiesTest extends WFSTestSupport {
     private static final String WFS_1_0_0_REQUEST =

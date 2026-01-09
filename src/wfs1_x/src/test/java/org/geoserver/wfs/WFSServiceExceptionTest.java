@@ -1,6 +1,5 @@
 package org.geoserver.wfs;
 
-
 import org.geoserver.data.test.SystemTestData;
 import org.junit.Test;
 

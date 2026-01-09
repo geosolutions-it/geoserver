@@ -1,5 +1,26 @@
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.wfs.json;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.xml.namespace.QName;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONNull;
 import net.sf.json.JSONObject;
@@ -18,23 +39,6 @@ import org.hamcrest.Description;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import javax.xml.namespace.QName;
-import java.io.File;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class GeoJSONTest extends WFSTestSupport {
 
@@ -671,5 +675,4 @@ public class GeoJSONTest extends WFSTestSupport {
             throw new IllegalStateException(e);
         }
     }
-
 }
