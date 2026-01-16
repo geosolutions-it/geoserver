@@ -1,3 +1,7 @@
+/* (c) 2026 Open Source Geospatial Foundation - all rights reserved
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.wfs.response;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -16,7 +20,6 @@ public class CSVOutputFormatTest extends WFSTestSupport {
 
     private static final String CSV = "text/csv";
 
-    // TODO fix this
     @Test
     public void testCountZero() throws Exception {
         MockHttpServletResponse response = getAsServletResponse(

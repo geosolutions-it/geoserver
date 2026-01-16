@@ -79,8 +79,13 @@ public class GetFeatureTest extends WFS20TestSupport {
     }
 
     @Test
-    public void testGML32OutputFormat() throws Exception {
+    public void testGML32OutputFormatWithV110() throws Exception {
         testGetFifteenAll("wfs?request=getfeature&typename=cdf:Fifteen&version=1.1.0&service=wfs&outputFormat=gml32");
+    }
+
+    @Test
+    public void testGML32OutputFormatWithV200() throws Exception {
+        testGetFifteenAll("wfs?request=getfeature&typename=cdf:Fifteen&version=2.0.0&service=wfs&outputFormat=gml32");
     }
 
     @Test

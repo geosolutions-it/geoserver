@@ -61,6 +61,13 @@
     </dependency>
     <dependency>
       <groupId>org.geoserver</groupId>
+      <artifactId>gs-wfs-core</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.geoserver</groupId>
       <artifactId>gs-wfs2_x</artifactId>
       <version>${project.version}</version>
       <classifier>tests</classifier>
