@@ -376,5 +376,5 @@
   <bean id="geoserverTileCache" class="org.geoserver.jai.GeoServerTileCache"/>
 
 
-
+  <bean id="securityProbe" class="org.geoserver.SpringSecurityHeaderProbe"/>
 </beans>

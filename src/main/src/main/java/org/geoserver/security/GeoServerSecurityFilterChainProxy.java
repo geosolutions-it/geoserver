@@ -120,6 +120,7 @@ public class GeoServerSecurityFilterChainProxy
     public void init(FilterConfig filterConfig) throws ServletException {
         if (proxy != null) {
             proxy.init(filterConfig);
+            logFilterChains();
         } else {
             // FilterChainProxy doesn't to anything in it's init() method so i believe it's ok
             // if it doesn't get called
@@ -203,7 +204,21 @@ public class GeoServerSecurityFilterChainProxy
             proxy.setFirewall(new GeoServerHttpFirewall());
             proxy.afterPropertiesSet();
             chainsInitialized = true;
+
+            logFilterChains();
         }
+    }
+
+    private void logFilterChains() {
+        proxy.getFilterChains().forEach(chain -> {
+            System.out.println("Chain: " + chain);
+            chain.getFilters().forEach(f -> {
+                System.out.println("  " + f.getClass().getName());
+                if (f instanceof org.springframework.security.web.header.HeaderWriterFilter) {
+                    System.out.println("FOUND HeaderWriterFilter: " + f);
+                }
+            });
+        });
     }
 
     /** Creates a {@link GeoServerRequestMatcher} object for the specified {@link RequestFilterChain} */
