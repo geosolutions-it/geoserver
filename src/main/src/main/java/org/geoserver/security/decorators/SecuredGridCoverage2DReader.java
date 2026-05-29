@@ -5,16 +5,19 @@
  */
 package org.geoserver.security.decorators;
 
+import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
 import org.geoserver.catalog.Predicates;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.security.CoverageAccessLimits;
 import org.geoserver.security.WrapperPolicy;
 import org.geotools.api.coverage.grid.Format;
+import org.geotools.api.coverage.processing.Operation;
 import org.geotools.api.data.ResourceInfo;
 import org.geotools.api.data.ServiceInfo;
 import org.geotools.api.filter.Filter;
@@ -23,9 +26,12 @@ import org.geotools.api.parameter.GeneralParameterValue;
 import org.geotools.api.parameter.ParameterValue;
 import org.geotools.api.parameter.ParameterValueGroup;
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.GridGeometry2D;
+import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.processing.CoverageProcessor;
 import org.geotools.coverage.processing.operation.Crop;
+import org.geotools.coverage.processing.operation.Scale;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.util.factory.Hints;
@@ -45,6 +51,9 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
 
     /** Cached crop factory */
     private static final Crop coverageCropFactory = new Crop();
+
+    /** Cached scale factory */
+    private static final Scale coverageScaleFactory = new Scale();
 
     static {
         final CoverageProcessor processor = new CoverageProcessor(new Hints(Hints.LENIENT_DATUM_SHIFT, Boolean.TRUE));
@@ -142,15 +151,93 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
         if (rasterFilter != null && grid != null) {
             Geometry coverageBounds = JTS.toGeometry((Envelope) new ReferencedEnvelope(grid.getEnvelope2D()));
             if (coverageBounds.intersects(rasterFilter)) {
-                final ParameterValueGroup param = cropParams.clone();
-                param.parameter("source").setValue(grid);
-                param.parameter("ROI").setValue(rasterFilter);
-                grid = (GridCoverage2D) coverageCropFactory.doOperation(param, null);
+                // The underlying reader may have returned a coverage with a larger envelope than the one requested
+                grid = cropToEnvelope(
+                      grid,
+                        new ReferencedEnvelope(
+                                rasterFilter.getEnvelopeInternal(), grid.getCoordinateReferenceSystem2D()));
+                // The underlying reader may have returned a coverage with a different resolution than the one requested,
+                // scale it to the requested one. This happens for example when the data resolution is bad and the map
+                // is oversampled. We want to scale it to the requested resolution before cropping to the geometry
+                grid = scaleToRequestedResolution(grid, getRequestedGridGeometry(parameters));
+                if (grid != null) {
+                    grid = cropToGeometry(grid, rasterFilter);
+                }
             } else {
                 return null;
             }
         }
         return grid;
+    }
+
+    private static GridGeometry2D getRequestedGridGeometry(GeneralParameterValue[] parameters) {
+        if (parameters == null) {
+            return null;
+        }
+        String readGeometryName =
+                AbstractGridFormat.READ_GRIDGEOMETRY2D.getName().toString();
+        for (GeneralParameterValue parameter : parameters) {
+            if (parameter instanceof ParameterValue
+                    && readGeometryName.equals(
+                            parameter.getDescriptor().getName().toString())) {
+                Object value = ((ParameterValue) parameter).getValue();
+                if (value instanceof GridGeometry2D) {
+                    return (GridGeometry2D) value;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static GridCoverage2D scaleToRequestedResolution(
+            GridCoverage2D grid, GridGeometry2D requestedGridGeometry) {
+        if (requestedGridGeometry == null) {
+            return grid;
+        }
+
+        RenderedImage image = grid.getRenderedImage();
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int requestedWidth = requestedGridGeometry.getGridRange().getSpan(0);
+        int requestedHeight = requestedGridGeometry.getGridRange().getSpan(1);
+        if (width <= 0 || height <= 0 || requestedWidth <= 0 || requestedHeight <= 0) {
+            return grid;
+        }
+
+        double xScale = requestedWidth / (double) width;
+        double yScale = requestedHeight / (double) height;
+        if (xScale == 1d && yScale == 1d) {
+            return grid;
+        }
+
+        Operation scaleOperation = CoverageProcessor.getInstance().getOperation("Scale");
+        ParameterValueGroup param = scaleOperation.getParameters();
+        param.parameter("Source").setValue(grid);
+        param.parameter("xScale").setValue(xScale);
+        param.parameter("yScale").setValue(yScale);
+        param.parameter("xTrans").setValue(0.0);
+        param.parameter("yTrans").setValue(0.0);
+        return (GridCoverage2D) coverageScaleFactory.doOperation(param, null);
+    }
+
+    private static GridCoverage2D cropToEnvelope(GridCoverage2D grid, ReferencedEnvelope envelope) {
+        ReferencedEnvelope coverageBounds = new ReferencedEnvelope(grid.getEnvelope2D());
+        ReferencedEnvelope intersection = envelope.intersection(coverageBounds);
+        if (intersection.isEmpty()) {
+            return null;
+        }
+
+        final ParameterValueGroup param = cropParams.clone();
+        param.parameter("Source").setValue(grid);
+        param.parameter("Envelope").setValue(intersection);
+        return (GridCoverage2D) coverageCropFactory.doOperation(param, null);
+    }
+
+    private static GridCoverage2D cropToGeometry(GridCoverage2D grid, Geometry rasterFilter) {
+        final ParameterValueGroup param = cropParams.clone();
+        param.parameter("Source").setValue(grid);
+        param.parameter("ROI").setValue(rasterFilter);
+        return (GridCoverage2D) coverageCropFactory.doOperation(param, null);
     }
 
     @Override
