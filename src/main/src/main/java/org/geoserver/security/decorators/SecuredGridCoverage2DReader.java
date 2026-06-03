@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
+import javax.media.jai.Interpolation;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.security.CoverageAccessLimits;
@@ -23,6 +23,7 @@ import org.geotools.api.data.ServiceInfo;
 import org.geotools.api.filter.Filter;
 import org.geotools.api.parameter.GeneralParameterDescriptor;
 import org.geotools.api.parameter.GeneralParameterValue;
+import org.geotools.api.parameter.ParameterNotFoundException;
 import org.geotools.api.parameter.ParameterValue;
 import org.geotools.api.parameter.ParameterValueGroup;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -153,13 +154,24 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
             if (coverageBounds.intersects(rasterFilter)) {
                 // The underlying reader may have returned a coverage with a larger envelope than the one requested
                 grid = cropToEnvelope(
-                      grid,
+                        grid,
                         new ReferencedEnvelope(
                                 rasterFilter.getEnvelopeInternal(), grid.getCoordinateReferenceSystem2D()));
-                // The underlying reader may have returned a coverage with a different resolution than the one requested,
+                // The underlying reader may have returned a coverage with a different resolution than the one
+                // requested,
                 // scale it to the requested one. This happens for example when the data resolution is bad and the map
                 // is oversampled. We want to scale it to the requested resolution before cropping to the geometry
-                grid = scaleToRequestedResolution(grid, getRequestedGridGeometry(parameters));
+                Interpolation interpolation = null;
+                for (GeneralParameterValue pv : parameters) {
+                    String pdCode = pv.getDescriptor().getName().getCode();
+                    if ("Interpolation".equals(pdCode)) {
+                        ParameterValue pvalue = (ParameterValue) pv;
+                        interpolation  = (Interpolation) pvalue.getValue();
+                        break;
+                    }
+                }
+
+                grid = scaleToRequestedResolution(grid, getRequestedGridGeometry(parameters), interpolation);
                 if (grid != null) {
                     grid = cropToGeometry(grid, rasterFilter);
                 }
@@ -190,7 +202,7 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
     }
 
     private static GridCoverage2D scaleToRequestedResolution(
-            GridCoverage2D grid, GridGeometry2D requestedGridGeometry) {
+            GridCoverage2D grid, GridGeometry2D requestedGridGeometry, Interpolation interpolation) {
         if (requestedGridGeometry == null) {
             return grid;
         }
@@ -217,7 +229,19 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
         param.parameter("yScale").setValue(yScale);
         param.parameter("xTrans").setValue(0.0);
         param.parameter("yTrans").setValue(0.0);
+        setScaleInterpolation(param, interpolation);
         return (GridCoverage2D) coverageScaleFactory.doOperation(param, null);
+    }
+
+    private static void setScaleInterpolation(ParameterValueGroup param, Interpolation interpolation) {
+        if (interpolation == null) {
+            return;
+        }
+        try {
+            param.parameter("Interpolation").setValue(interpolation);
+        } catch (ParameterNotFoundException e) {
+            param.parameter("InterpolationType").setValue(interpolation);
+        }
     }
 
     private static GridCoverage2D cropToEnvelope(GridCoverage2D grid, ReferencedEnvelope envelope) {
