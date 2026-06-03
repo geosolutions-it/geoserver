@@ -112,7 +112,7 @@ public interface GeoServerInfo extends Info {
      *
      * @deprecated use the {@code ENTITY_RESOLUTION_UNRESTRICTED} system property
      */
-    @Deprecated(since = "2.26.4, 2.27.2, 2.28.0")
+    @Deprecated(since = "2.26.4-C321, 2.27.2, 2.28.0")
     void setXmlExternalEntitiesEnabled(Boolean xmlExternalEntitiesEnabled);
 
     /**
@@ -121,7 +121,7 @@ public interface GeoServerInfo extends Info {
      *
      * @deprecated use the {@code ENTITY_RESOLUTION_UNRESTRICTED} system property
      */
-    @Deprecated(since = "2.26.4, 2.27.2, 2.28.0")
+    @Deprecated(since = "2.26.4-C321, 2.27.2, 2.28.0")
     Boolean isXmlExternalEntitiesEnabled();
 
     /**
