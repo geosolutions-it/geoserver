@@ -5,6 +5,7 @@
  */
 package org.geoserver.security.decorators;
 
+import java.awt.Rectangle;
 import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -14,6 +15,9 @@ import java.util.List;
 import javax.media.jai.Interpolation;
 import org.geoserver.catalog.Predicates;
 import org.geoserver.data.util.CoverageUtils;
+import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.Request;
+import org.geoserver.ows.util.OwsUtils;
 import org.geoserver.security.CoverageAccessLimits;
 import org.geoserver.security.WrapperPolicy;
 import org.geotools.api.coverage.grid.Format;
@@ -27,8 +31,6 @@ import org.geotools.api.parameter.ParameterNotFoundException;
 import org.geotools.api.parameter.ParameterValue;
 import org.geotools.api.parameter.ParameterValueGroup;
 import org.geotools.coverage.grid.GridCoverage2D;
-import org.geotools.coverage.grid.GridGeometry2D;
-import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.processing.CoverageProcessor;
 import org.geotools.coverage.processing.operation.Crop;
@@ -152,26 +154,31 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
         if (rasterFilter != null && grid != null) {
             Geometry coverageBounds = JTS.toGeometry((Envelope) new ReferencedEnvelope(grid.getEnvelope2D()));
             if (coverageBounds.intersects(rasterFilter)) {
-                // The underlying reader may have returned a coverage with a larger envelope than the one requested
-                grid = cropToEnvelope(
-                        grid,
-                        new ReferencedEnvelope(
-                                rasterFilter.getEnvelopeInternal(), grid.getCoordinateReferenceSystem2D()));
-                // The underlying reader may have returned a coverage with a different resolution than the one
-                // requested,
-                // scale it to the requested one. This happens for example when the data resolution is bad and the map
-                // is oversampled. We want to scale it to the requested resolution before cropping to the geometry
                 Interpolation interpolation = null;
                 for (GeneralParameterValue pv : parameters) {
                     String pdCode = pv.getDescriptor().getName().getCode();
                     if ("Interpolation".equals(pdCode)) {
                         ParameterValue pvalue = (ParameterValue) pv;
-                        interpolation  = (Interpolation) pvalue.getValue();
+                        interpolation = (Interpolation) pvalue.getValue();
                         break;
                     }
                 }
 
-                grid = scaleToRequestedResolution(grid, getRequestedGridGeometry(parameters), interpolation);
+                // The underlying reader may have returned a coverage with a larger envelope than the one requested
+                grid = cropToEnvelope(
+                        grid,
+                        new ReferencedEnvelope(
+                                rasterFilter.getEnvelopeInternal(), grid.getCoordinateReferenceSystem2D()));
+
+
+                // The underlying reader may have returned a coverage with a different resolution than the one
+                // requested. The requested gridGeometry may have been limited too, due to reaching the
+                // Max Oversampling Factor.
+                //
+                // This happens for example when the data resolution is bad and the map is heavily oversampled.
+                // We want to scale it to the requested map raster extent before cropping to the geometry.
+
+                grid = scaleToRequestedSize(grid, getRequestedMapRasterArea(), interpolation);
                 if (grid != null) {
                     grid = cropToGeometry(grid, rasterFilter);
                 }
@@ -182,36 +189,54 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
         return grid;
     }
 
-    private static GridGeometry2D getRequestedGridGeometry(GeneralParameterValue[] parameters) {
-        if (parameters == null) {
+    private static Rectangle getRequestedMapRasterArea() {
+        Request request = Dispatcher.REQUEST.get();
+        if (request == null
+                || request.getOperation() == null
+                || request.getOperation().getParameters() == null) {
             return null;
         }
-        String readGeometryName =
-                AbstractGridFormat.READ_GRIDGEOMETRY2D.getName().toString();
-        for (GeneralParameterValue parameter : parameters) {
-            if (parameter instanceof ParameterValue
-                    && readGeometryName.equals(
-                            parameter.getDescriptor().getName().toString())) {
-                Object value = ((ParameterValue) parameter).getValue();
-                if (value instanceof GridGeometry2D) {
-                    return (GridGeometry2D) value;
-                }
+
+        for (Object parameter : request.getOperation().getParameters()) {
+            Rectangle mapExtent = getRequestedMapRasterArea(parameter);
+            if (mapExtent != null) {
+                return mapExtent;
             }
         }
         return null;
     }
 
-    private static GridCoverage2D scaleToRequestedResolution(
-            GridCoverage2D grid, GridGeometry2D requestedGridGeometry, Interpolation interpolation) {
-        if (requestedGridGeometry == null) {
+    private static Rectangle getRequestedMapRasterArea(Object parameter) {
+        if (parameter == null) {
+            return null;
+        }
+
+        Integer width = getProperty(parameter, "width", Integer.class);
+        Integer height = getProperty(parameter, "height", Integer.class);
+        if (width == null || height == null) {
+            return null;
+        }
+        return new Rectangle(width, height);
+    }
+
+    private static <T> T getProperty(Object object, String property, Class<T> type) {
+        if (!OwsUtils.has(object, property)) {
+            return null;
+        }
+        return OwsUtils.property(object, property, type);
+    }
+
+    private static GridCoverage2D scaleToRequestedSize(
+            GridCoverage2D grid, Rectangle requestedGridRange, Interpolation interpolation) {
+        if (requestedGridRange == null) {
             return grid;
         }
 
         RenderedImage image = grid.getRenderedImage();
         int width = image.getWidth();
         int height = image.getHeight();
-        int requestedWidth = requestedGridGeometry.getGridRange().getSpan(0);
-        int requestedHeight = requestedGridGeometry.getGridRange().getSpan(1);
+        int requestedWidth = (int) requestedGridRange.getWidth();
+        int requestedHeight = (int) requestedGridRange.getHeight();
         if (width <= 0 || height <= 0 || requestedWidth <= 0 || requestedHeight <= 0) {
             return grid;
         }
