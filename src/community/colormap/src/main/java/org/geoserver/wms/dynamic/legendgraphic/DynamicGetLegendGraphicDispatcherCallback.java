@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -227,8 +228,9 @@ public class DynamicGetLegendGraphicDispatcherCallback extends AbstractDispatche
                 gridGeometry,
                 AbstractGridFormat.READ_GRIDGEOMETRY2D.getName().toString());
 
-        // Parse Time
-        Map<String, Object> map = Dispatcher.REQUEST.get().getKvp();
+        // Dimension KVP parsers may replace strings with typed values. Prefer the raw request
+        // values and fall back to parsed KVPs for internal/test requests.
+        Map<String, Object> map = getDimensionKvp();
         readParameters = parseTimeParameter(metadata, readParameters, parameterDescriptors, map);
 
         // Parse Elevation
@@ -237,6 +239,15 @@ public class DynamicGetLegendGraphicDispatcherCallback extends AbstractDispatche
         // Parse custom domains
         readParameters = parseCustomDomains(dimensions, metadata, readParameters, parameterDescriptors, map);
         return readParameters;
+    }
+
+    private Map<String, Object> getDimensionKvp() {
+        Request request = Dispatcher.REQUEST.get();
+        Map<String, Object> map = request.getRawKvp();
+        if (map == null) {
+            map = request.getKvp();
+        }
+        return map != null ? map : Collections.emptyMap();
     }
 
     /** Parse custom dimension values if present */
@@ -261,7 +272,7 @@ public class DynamicGetLegendGraphicDispatcherCallback extends AbstractDispatche
                                 metadata.get(ResourceInfo.CUSTOM_DIMENSION_PREFIX + name, DimensionInfo.class);
                         if (dimensions.hasDomain(name) && customInfo != null && customInfo.isEnabled()) {
                             final ArrayList<String> val = new ArrayList<String>(1);
-                            String value = (String) map.get(paramName);
+                            String value = stringValue(map.get(paramName));
                             if (value.indexOf(",") > 0) {
                                 String[] elements = value.split(",");
                                 val.addAll(Arrays.asList(elements));
@@ -301,7 +312,7 @@ public class DynamicGetLegendGraphicDispatcherCallback extends AbstractDispatche
                     readParameters = CoverageUtils.mergeParameter(
                             parameterDescriptors,
                             readParameters,
-                            Double.valueOf((String) map.get(param)),
+                            parseElevationValue(map.get(param)),
                             "ELEVATION",
                             "Elevation");
                     break;
@@ -333,16 +344,33 @@ public class DynamicGetLegendGraphicDispatcherCallback extends AbstractDispatche
                 if (param.equalsIgnoreCase("time")) {
                     // pass down the parameters
                     readParameters = CoverageUtils.mergeParameter(
-                            parameterDescriptors,
-                            readParameters,
-                            parser.parse((String) map.get(param)),
-                            "TIME",
-                            "Time");
+                            parameterDescriptors, readParameters, parseTimeValue(map.get(param)), "TIME", "Time");
                     break;
                 }
             }
         }
         return readParameters;
+    }
+
+    Object parseTimeValue(Object value) throws ParseException {
+        if (value instanceof String) {
+            return parser.parse((String) value);
+        }
+        return value;
+    }
+
+    Object parseElevationValue(Object value) {
+        if (value instanceof String) {
+            return Double.valueOf((String) value);
+        }
+        return value;
+    }
+
+    private String stringValue(Object value) {
+        if (value instanceof String) {
+            return (String) value;
+        }
+        return String.valueOf(value);
     }
 
     private String caseInsensitiveLookup(List<String> names, String name) {

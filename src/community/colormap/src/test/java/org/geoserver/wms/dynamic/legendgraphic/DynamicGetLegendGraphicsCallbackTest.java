@@ -6,8 +6,13 @@ package org.geoserver.wms.dynamic.legendgraphic;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import javax.xml.namespace.QName;
@@ -29,6 +34,7 @@ import org.geotools.api.style.FeatureTypeStyle;
 import org.geotools.api.style.RasterSymbolizer;
 import org.geotools.api.style.Style;
 import org.geotools.process.raster.DynamicColorMapTest;
+import org.geotools.util.DateRange;
 import org.geotools.xml.styling.SLDTransformer;
 import org.junit.Test;
 
@@ -83,6 +89,34 @@ public class DynamicGetLegendGraphicsCallbackTest extends GeoServerSystemTestSup
         RasterSymbolizer rs =
                 (RasterSymbolizer) fts.rules().get(0).symbolizers().get(0);
         assertNotNull(rs.getColorMap());
+    }
+
+    @Test
+    public void testTypedTimeValueIsAccepted() throws Exception {
+        DynamicGetLegendGraphicDispatcherCallback callback = new DynamicGetLegendGraphicDispatcherCallback(null);
+        List<Object> parsedTime = new ArrayList<>();
+        parsedTime.add(new DateRange(new Date(0), new Date(1)));
+
+        assertSame(parsedTime, callback.parseTimeValue(parsedTime));
+    }
+
+    @Test
+    public void testStringTimeValueIsParsed() throws Exception {
+        DynamicGetLegendGraphicDispatcherCallback callback = new DynamicGetLegendGraphicDispatcherCallback(null);
+
+        Object parsedTime = callback.parseTimeValue("2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z");
+
+        assertTrue(parsedTime instanceof List);
+        assertTrue(((List) parsedTime).get(0) instanceof DateRange);
+    }
+
+    @Test
+    public void testTypedElevationValueIsAccepted() {
+        DynamicGetLegendGraphicDispatcherCallback callback = new DynamicGetLegendGraphicDispatcherCallback(null);
+        List<Object> parsedElevation = new ArrayList<>();
+        parsedElevation.add(10.0);
+
+        assertSame(parsedElevation, callback.parseElevationValue(parsedElevation));
     }
 
     void logStyle(Style style) {
