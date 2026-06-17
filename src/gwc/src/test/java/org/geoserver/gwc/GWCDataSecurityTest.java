@@ -9,10 +9,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.equalToIgnoringCase;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +23,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.xml.namespace.QName;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
@@ -44,6 +48,7 @@ import org.geoserver.wms.WMSTestSupport;
 import org.geotools.api.filter.Filter;
 import org.geotools.api.filter.FilterFactory;
 import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.image.ImageWorker;
 import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.service.ve.VEConverter;
@@ -282,13 +287,9 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         }
     }
 
-    protected void doPermissionCropTileTest(
-            BiFunction<String, long[], String> pathForLayer, String failFormat, TestGridset grid) throws Exception {
+    protected void doPermissionCropTileTest(BiFunction<String, long[], String> pathForLayer, TestGridset grid)
+            throws Exception {
         final String tileFormat = "image/png";
-        //      final String pathInBounds = pathForLayer.apply("sf:mosaic", new
-        // long[]{4073,4118,13});
-        //      final String pathOutOfBounds = pathForLayer.apply("sf:mosaic", new
-        // long[]{4073,4117,13});
         final String pathInBounds = pathForLayer.apply("sf:mosaic", grid.tileInBounds);
         final String pathOutOfBounds = pathForLayer.apply("sf:mosaic", grid.tileOutOfBounds);
         GWC.get().getConfig().setSecurityEnabled(true);
@@ -299,20 +300,15 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         MockHttpServletResponse response = getAsServletResponse(pathOutOfBounds);
         assertThat(
                 response,
-                addBodyOnFail(hasProperty("contentType", equalTo(tileFormat)))); // If this was unsuccessful the test is
-        // invalid
+                addBodyOnFail(hasProperty("contentType", equalTo(tileFormat)))); // If this fails the test is invalid
 
         setRequestAuth("cite_cropmosaic", "cite");
 
-        // Request out of bounds should fail
+        // Out-of-clip tile returns empty PNG; rendering pipeline handles it (no data inside clip)
         response = getAsServletResponse(pathOutOfBounds);
-        assertThat(
-                response,
-                allOf(
-                        hasProperty("contentType", equalTo(failFormat)),
-                        hasBody(Matchers.containsString("Not Authorized"))));
+        assertThat(response, addBodyOnFail(hasProperty("contentType", equalTo(tileFormat))));
 
-        // Request within bounds should work
+        // Request within bounds returns clipped tile
         response = getAsServletResponse(pathInBounds);
         assertThat(response, addBodyOnFail(hasProperty("contentType", equalTo(tileFormat))));
     }
@@ -398,7 +394,6 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         doPermissionCropTileTest(
                 (layer, index) -> String.format(
                         "gwc/service/tms/1.0.0/%s@EPSG:900913@png/%d/%d/%d.png", layer, index[2], index[0], index[1]),
-                SECURITY_ERROR_TYPE,
                 TestGridset.GoogleMapsCompatible);
     }
 
@@ -431,7 +426,6 @@ public class GWCDataSecurityTest extends WMSTestSupport {
                         "gwc/service/wmts?LAYER=%s&FORMAT=image/png&SERVICE=WMTS&VERSION=1.0.0"
                                 + "&REQUEST=GetTile&TILEMATRIXSET=EPSG:900913&TILEMATRIX=EPSG:900913:%d&TILECOL=%d&TILEROW=%d",
                         layer, index[2], index[0], (1 << index[2]) - index[1] - 1),
-                SECURITY_ERROR_TYPE,
                 TestGridset.GoogleMapsCompatible);
     }
 
@@ -441,7 +435,6 @@ public class GWCDataSecurityTest extends WMSTestSupport {
                 (layer, index) -> String.format(
                         "gwc/service/gmaps?LAYERS=%s&FORMAT=image/png&ZOOM=%d&X=%d&Y=%d",
                         layer, index[2], index[0], (1 << index[2]) - index[1] - 1),
-                SECURITY_ERROR_TYPE,
                 TestGridset.GoogleMapsCompatible);
     }
 
@@ -451,7 +444,6 @@ public class GWCDataSecurityTest extends WMSTestSupport {
                 (layer, index) -> String.format(
                         "gwc/service/mgmaps?LAYERS=%s&FORMAT=image/png&ZOOM=%d&X=%d&Y=%d",
                         layer, 17 - index[2], index[0], (1 << index[2]) - index[1] - 1),
-                SECURITY_ERROR_TYPE,
                 TestGridset.GoogleMapsCompatible);
     }
 
@@ -460,7 +452,6 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         doPermissionCropTileTest(
                 (layer, index) ->
                         String.format("gwc/service/kml/%s/x%dy%dz%d.png", layer, index[0], index[1], index[2]),
-                SECURITY_ERROR_TYPE,
                 TestGridset.GlobalCRS84Geometric);
     }
 
@@ -483,7 +474,6 @@ public class GWCDataSecurityTest extends WMSTestSupport {
                     // the test is broken
                     return String.format("gwc/service/ve?layers=%s&format=image/png&quadKey=%s", layer, quadKey);
                 },
-                SECURITY_ERROR_TYPE,
                 TestGridset.GoogleMapsCompatible);
     }
 
@@ -540,21 +530,47 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         MockHttpServletResponse response = getAsServletResponse(path);
         assertEquals("image/png", response.getContentType());
 
-        // this should fail
         setRequestAuth("cite_cropmosaic", "cite");
 
-        path = "gwc/service/wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
-                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,-90,180,90&WIDTH=256&HEIGHT=256&transparent=false";
+        // tile in western hemisphere: no overlap with the Australia clip, so rendered as empty transparent PNG
+        path = "gwc/service/wms?LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=-180,-90,0,90&WIDTH=256&HEIGHT=256&transparent=true";
         response = getAsServletResponse(path);
-        assertEquals(SECURITY_ERROR_TYPE, response.getContentType());
-        String str = string(getBinaryInputStream(response));
-        assertTrue(str.contains("Not Authorized"));
+        assertEquals("image/png", response.getContentType());
+        BufferedImage img = ImageIO.read(new ByteArrayInputStream(response.getContentAsByteArray()));
+        // forceComponentColorModel puts alpha as the last band; max alpha = 0 means fully transparent
+        double[] maxima = new ImageWorker(img).forceComponentColorModel().getMaximums();
+        assertEquals("tile outside clip must be fully transparent", 0.0, maxima[maxima.length - 1], 0.0);
 
         // but this should be fine
         path = "gwc/service/wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
                 + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=143.4375,-42.1875,146.25,-39.375&WIDTH=256&HEIGHT=256&transparent=false";
         response = getAsServletResponse(path);
         assertEquals("image/png", response.getContentType());
+    }
+
+    @Test
+    public void testCroppedMosaicDirectWms() throws Exception {
+        // direct WMS integration path: /wms with tiled=true and tile-aligned bbox goes through GWC
+        GWC.get().truncate("sf:mosaic");
+        GWC.get().getConfig().setDirectWMSIntegrationEnabled(true);
+        setRequestAuth("cite_cropmosaic", "cite");
+        // zoom-0 left tile (-180,-90,0,90): outside Australia clip - mosaic data here does not intersect Australia
+        String path = "wms?LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=-180,-90,0,90&WIDTH=256&HEIGHT=256&transparent=true&tiled=true";
+        MockHttpServletResponse response = getAsServletResponse(path);
+        assertEquals("image/png", response.getContentType());
+        assertThat(
+                "GWC must handle tile-aligned request via direct integration",
+                response.getHeader("geowebcache-tile-index"),
+                Matchers.notNullValue());
+        assertThat(
+                "first request must be a MISS",
+                response.getHeader("geowebcache-cache-result"),
+                equalToIgnoringCase("MISS"));
+        BufferedImage img = ImageIO.read(new ByteArrayInputStream(response.getContentAsByteArray()));
+        double[] maxima = new ImageWorker(img).forceComponentColorModel().getMaximums();
+        assertEquals("area outside Australia clip must be fully transparent", 0.0, maxima[maxima.length - 1], 0.0);
     }
 
     @Test
@@ -567,17 +583,15 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         MockHttpServletResponse response = getAsServletResponse(path);
         assertEquals("image/png", response.getContentType());
 
-        // this should fail
+        // readFilter-only (no rasterFilter): no bbox check, tile renders normally (filter applied by reader)
         setRequestAuth("cite_filtermosaic", "cite");
 
         path = "gwc/service/wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
                 + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,-90,180,90&WIDTH=256&HEIGHT=256&transparent=false";
         response = getAsServletResponse(path);
-        assertEquals(SECURITY_ERROR_TYPE, response.getContentType());
-        String str = string(getBinaryInputStream(response));
-        assertThat(str, containsString("Not Authorized"));
+        assertEquals("image/png", response.getContentType());
 
-        // but this should be fine
+        // this too
         path = "gwc/service/wms?bgcolor=0x000000&LAYERS=sf:mosaic&STYLES=&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
                 + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=143.4375,-42.1875,146.25,-39.375&WIDTH=256&HEIGHT=256&transparent=false";
         response = getAsServletResponse(path);
@@ -618,6 +632,48 @@ public class GWCDataSecurityTest extends WMSTestSupport {
         setRequestAuth("cite", "cite");
         response = getAsServletResponse(path);
         assertEquals("image/png", response.getContentType());
+    }
+
+    @Test
+    public void testWmscCacheIsolation() throws Exception {
+        // gwc/service/wms (WMS-C) goes through a different dispatcher path than WMTS/TMS.
+        // Verify that SecurityParameterFilter still isolates tiles per user access profile.
+        GWC.get().truncate("sf:mosaic");
+        // cite_cropmosaic has a raster clip to Australia, giving it a different ACCESS_LIMITS_KEY
+        String wmscPath = "gwc/service/wms?LAYERS=sf:mosaic&FORMAT=image/png&SERVICE=WMS&VERSION=1.1.1"
+                + "&REQUEST=GetMap&SRS=EPSG:4326&BBOX=0,-90,180,90&WIDTH=256&HEIGHT=256";
+
+        setRequestAuth("cite", "cite");
+        MockHttpServletResponse response = getAsServletResponse(wmscPath);
+        assertEquals("image/png", response.getContentType());
+        assertThat(
+                "first cite request must be a MISS",
+                response.getHeader("geowebcache-cache-result"),
+                equalToIgnoringCase("MISS"));
+
+        setRequestAuth("cite", "cite");
+        response = getAsServletResponse(wmscPath);
+        assertEquals("image/png", response.getContentType());
+        assertThat(
+                "second cite request must HIT the cache",
+                response.getHeader("geowebcache-cache-result"),
+                equalToIgnoringCase("HIT"));
+
+        setRequestAuth("cite_cropmosaic", "cite");
+        response = getAsServletResponse(wmscPath);
+        assertEquals("image/png", response.getContentType());
+        assertThat(
+                "restricted user must MISS (different ACCESS_LIMITS_KEY)",
+                response.getHeader("geowebcache-cache-result"),
+                equalToIgnoringCase("MISS"));
+
+        setRequestAuth("cite_cropmosaic", "cite");
+        response = getAsServletResponse(wmscPath);
+        assertEquals("image/png", response.getContentType());
+        assertThat(
+                "restricted user must HIT own cache entry",
+                response.getHeader("geowebcache-cache-result"),
+                equalToIgnoringCase("HIT"));
     }
 
     @Test

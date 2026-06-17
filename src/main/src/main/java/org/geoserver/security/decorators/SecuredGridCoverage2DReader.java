@@ -170,7 +170,6 @@ public class SecuredGridCoverage2DReader extends DecoratingGridCoverage2DReader 
                         new ReferencedEnvelope(
                                 rasterFilter.getEnvelopeInternal(), grid.getCoordinateReferenceSystem2D()));
 
-
                 // The underlying reader may have returned a coverage with a different resolution than the one
                 // requested. The requested gridGeometry may have been limited too, due to reaching the
                 // Max Oversampling Factor.
