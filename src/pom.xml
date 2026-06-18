@@ -90,7 +90,7 @@
   <properties>
     <gs.version>2.26.4-C321</gs.version>
     <gt.version>32.4</gt.version>
-    <gwc.version>1.26.4</gwc.version>
+    <gwc.version>1.26.4-C321</gwc.version>
     <jts.version>1.20.0</jts.version>
     <spring.version>5.3.39</spring.version>
     <spring.security.version>5.8.16</spring.security.version>
