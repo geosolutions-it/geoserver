@@ -5,11 +5,19 @@
 package org.geoserver.gwc.security;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 
 import org.junit.Test;
 
 public class SecurityParameterFilterTest {
+
+    @Test
+    public void testNotUserVisible() {
+        // keeps the synthetic filter out of preview, seed form and WMS/WMTS capabilities
+        SecurityParameterFilter filter = new SecurityParameterFilter(SecurityParameterFilter.ACCESS_LIMITS_KEY);
+        assertFalse(filter.isUserVisible());
+    }
 
     @Test
     public void testApplyPassesThrough() {

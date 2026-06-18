@@ -4,9 +4,13 @@
  */
 package org.geoserver.gwc;
 
+import static org.geoserver.gwc.security.SecurityParameterFilter.ACCESS_LIMITS_KEY;
+import static org.geoserver.gwc.security.SecurityParameterFilter.SECURITY_TAGS_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalToIgnoringCase;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
@@ -230,6 +234,19 @@ public class GWCSecurityParameterFilterTest extends GeoServerSystemTestSupport {
 
         login("user_b", "test");
         assertTileResult(MockData.BASIC_POLYGONS, "HIT");
+    }
+
+    @Test
+    public void testCapabilitiesOmitsSecurityFilters() throws Exception {
+        // synthetic security filters partition the cache but must never surface in WMTS capabilities
+        GWC.get().getConfig().setSecurityEnabled(true);
+        LayerInfo layer = getCatalog().getLayerByName(getLayerId(MockData.BASIC_POLYGONS));
+        getRAM().putLimits("user_a", layer.getResource(), vectorFilter("FID = 'BasicPolygons.1107531493630'"));
+        login("user_a", "test");
+
+        String caps = getAsString("gwc/service/wmts?request=GetCapabilities");
+        assertThat(caps, not(containsString(ACCESS_LIMITS_KEY)));
+        assertThat(caps, not(containsString(SECURITY_TAGS_KEY)));
     }
 
     @Test

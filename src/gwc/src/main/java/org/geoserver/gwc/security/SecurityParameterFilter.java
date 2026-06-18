@@ -39,6 +39,12 @@ public class SecurityParameterFilter extends ParameterFilter {
                 "SecurityParameterFilter must not be persisted; it is added only at runtime");
     }
 
+    /** Synthetic cache-partitioning filter: never advertised in preview, seed form or WMS/WMTS capabilities. */
+    @Override
+    public boolean isUserVisible() {
+        return false;
+    }
+
     /**
      * Returns the value unchanged. The security key is computed upstream; this filter exists only to register the
      * parameter as a GWC cache dimension.
