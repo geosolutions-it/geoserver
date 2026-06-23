@@ -75,16 +75,9 @@
   <distributionManagement>
     <repository>
       <uniqueVersion>false</uniqueVersion>
-      <id>nexus</id>
-      <name>OSGeo Release Repository</name>
-      <url>https://repo.osgeo.org/repository/Geoserver-releases/</url>
+      <id>geosolutions</id>
+      <url>sftp://maven.geo-solutions.it</url>
     </repository>
-    <snapshotRepository>
-      <uniqueVersion>false</uniqueVersion>
-      <id>nexus</id>
-      <name>OSGeo Snapshot Repository</name>
-      <url>https://repo.osgeo.org/repository/geoserver-snapshots/</url>
-    </snapshotRepository>
   </distributionManagement>
 
   <properties>
@@ -1059,8 +1052,8 @@
     <extensions>
       <extension>
         <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-webdav</artifactId>
-        <version>1.0-beta-2</version>
+        <artifactId>wagon-ssh</artifactId>
+        <version>3.5.3</version>
       </extension>
     </extensions>
 
