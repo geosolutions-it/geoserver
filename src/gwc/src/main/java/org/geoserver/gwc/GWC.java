@@ -75,6 +75,7 @@ import org.geoserver.ows.HttpErrorCodeException;
 import org.geoserver.ows.Request;
 import org.geoserver.ows.Response;
 import org.geoserver.ows.kvp.BBoxKvpParser;
+import org.geoserver.ows.util.CaseInsensitiveMap;
 import org.geoserver.platform.GeoServerEnvironment;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.Operation;
@@ -85,7 +86,9 @@ import org.geoserver.threadlocals.ThreadLocalsTransfer;
 import org.geoserver.util.HTTPWarningAppender;
 import org.geoserver.wms.GetMapOutputFormat;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMS;
+import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.map.MetaTilingOutputFormat;
 import org.geoserver.wms.map.RenderedImageMap;
 import org.geoserver.wms.map.RenderedImageMapResponse;
@@ -98,6 +101,11 @@ import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.NoSuchAuthorityCodeException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.style.FeatureTypeStyle;
+import org.geotools.api.style.Rule;
+import org.geotools.api.style.Style;
+import org.geotools.api.style.Symbolizer;
+import org.geotools.api.style.TextSymbolizer;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.geometry.GeneralBounds;
 import org.geotools.geometry.jts.JTS;
@@ -105,6 +113,7 @@ import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.ows.ServiceException;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.geotools.util.logging.Logging;
 import org.geowebcache.GeoWebCacheEnvironment;
 import org.geowebcache.GeoWebCacheException;
@@ -131,6 +140,8 @@ import org.geowebcache.grid.OutsideCoverageException;
 import org.geowebcache.grid.SRS;
 import org.geowebcache.io.ByteArrayResource;
 import org.geowebcache.io.Resource;
+import org.geowebcache.io.codec.ImageDecoderContainer;
+import org.geowebcache.io.codec.ImageEncoderContainer;
 import org.geowebcache.layer.TileLayer;
 import org.geowebcache.layer.TileLayerDispatcher;
 import org.geowebcache.locks.LockProvider;
@@ -743,8 +754,11 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
          * parser turned it into a list of actual Layers
          */
         if (layerName.indexOf(',') != -1) {
-            requestMistmatchTarget.append("more than one layer requested");
-            return null;
+            if (!getConfig().isMultiLayerCachingEnabled()) {
+                requestMistmatchTarget.append("more than one layer requested");
+                return null;
+            }
+            return dispatchCoalesced(request, requestMistmatchTarget);
         }
 
         // GEOS-9431 acquire prefixed name if not prefixed already
@@ -804,6 +818,183 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             log.log(Level.INFO, "Error dispatching tile request to GeoServer", e);
         }
         return tileResp;
+    }
+
+    /**
+     * Splits and assembles a coalesced multi-layer tile request. Cache headers are borrowed from the first member until
+     * a combined-policy header rule is built; {@code geowebcache-cache-result} is not yet computed per member, so it
+     * reports {@code UNKNOWN}.
+     */
+    private ConveyorTile dispatchCoalesced(GetMapRequest request, StringBuilder requestMismatchTarget) {
+        List<TileLayerMember> members = splitCoalescedRequest(request, requestMismatchTarget);
+        if (members == null) {
+            return null;
+        }
+
+        byte[] assembled;
+        try {
+            TileStackAssembler assembler = new TileStackAssembler(
+                    GeoServerExtensions.bean(ImageDecoderContainer.class),
+                    GeoServerExtensions.bean(ImageEncoderContainer.class));
+            assembled = assembler.assemble(members, members.get(0).tile().getMimeType());
+        } catch (Exception e) {
+            log.log(Level.INFO, "Error assembling coalesced tile", e);
+            requestMismatchTarget.append("error assembling coalesced tile: ").append(e.getMessage());
+            return null;
+        }
+
+        ConveyorTile firstMemberTile = members.get(0).tile();
+        // never persisted itself: only the per-member tiles it stacks are cached
+        ConveyorTile assembledTile = new ConveyorTile(
+                null,
+                request.getRawKvp().get("LAYERS"),
+                firstMemberTile.getGridSetId(),
+                firstMemberTile.getTileIndex(),
+                firstMemberTile.getMimeType(),
+                Collections.emptyMap(),
+                null,
+                null);
+        assembledTile.setBlob(new ByteArrayResource(assembled));
+        assembledTile.setTileLayer(members.get(0).tileLayer());
+        return assembledTile;
+    }
+
+    /**
+     * KVP params that are positional per {@code LAYERS} member but whose per-member raw-KVP slice this split does not
+     * yet reconstruct; their presence makes a coalesced request ineligible for multi-layer tile caching.
+     */
+    private static final List<String> UNSUPPORTED_POSITIONAL_PARAMS =
+            Arrays.asList("CQL_FILTER", "FILTER", "SORTBY", "VIEWPARAMS");
+
+    /** A {@code LAYERS} member of a coalesced request, split into its own single-layer prepared tile request. */
+    record TileLayerMember(TileLayer tileLayer, ConveyorTile tile) {}
+
+    /**
+     * Splits a tiled, transparent-PNG multi-layer {@code GetMap} request into one single-layer view per {@code LAYERS}
+     * member and runs each through the same eligibility checks as an ordinary single-layer tile request.
+     *
+     * @return the per-member tile layer and prepared tile request, in {@code LAYERS} order, or {@code null} if the
+     *     request or any member is not eligible, with the reason appended to {@code requestMismatchTarget}
+     */
+    List<TileLayerMember> splitCoalescedRequest(GetMapRequest request, StringBuilder requestMismatchTarget) {
+        if (!getConfig().isMultiLayerCachingEnabled()) {
+            requestMismatchTarget.append("multi-layer tile caching disabled");
+            return null;
+        }
+        if (!"image/png".equals(request.getFormat()) || !request.isTransparent()) {
+            requestMismatchTarget.append("multi-layer tile caching requires transparent image/png");
+            return null;
+        }
+        final Map<String, String> rawKvp = request.getRawKvp();
+        for (String unsupported : UNSUPPORTED_POSITIONAL_PARAMS) {
+            if (rawKvp.get(unsupported) != null) {
+                requestMismatchTarget.append(unsupported).append(" not yet supported for multi-layer tile caching");
+                return null;
+            }
+        }
+
+        final List<MapLayerInfo> layers = request.getLayers();
+        final List<Style> styles = request.getStyles();
+        final double scaleDenominator = computeScaleDenominator(request);
+        final List<TileLayerMember> members = new ArrayList<>(layers.size());
+        for (int i = 0; i < layers.size(); i++) {
+            String layerName = layers.get(i).getName();
+            if (!tld.layerExists(layerName)) {
+                requestMismatchTarget.append('\'').append(layerName).append("' is not a tile layer");
+                return null;
+            }
+            final TileLayer tileLayer;
+            try {
+                tileLayer = tld.getTileLayer(layerName);
+            } catch (GeoWebCacheException e) {
+                throw new RuntimeException(e);
+            }
+            if (!tileLayer.isEnabled()) {
+                requestMismatchTarget.append('\'').append(layerName).append("' tile layer disabled");
+                return null;
+            }
+            if (isIneligibleAtScale(styles.get(i), scaleDenominator)) {
+                requestMismatchTarget
+                        .append('\'')
+                        .append(layerName)
+                        .append("' draws labels or composites with layers beneath it at this scale");
+                return null;
+            }
+
+            GetMapRequest memberRequest = (GetMapRequest) request.clone();
+            memberRequest.setLayers(Collections.singletonList(layers.get(i)));
+            memberRequest.setStyles(Collections.singletonList(styles.get(i)));
+            Map<String, String> memberKvp = new CaseInsensitiveMap<>(new HashMap<>(rawKvp));
+            memberKvp.put("LAYERS", layerName);
+            if (rawKvp.get("STYLES") != null) {
+                memberKvp.put("STYLES", styles.get(i).getName());
+            }
+            memberRequest.setRawKvp(memberKvp);
+
+            ConveyorTile memberTile = prepareRequest(tileLayer, memberRequest, requestMismatchTarget);
+            if (memberTile == null) {
+                requestMismatchTarget.insert(0, "'" + layerName + "': ");
+                return null;
+            }
+            members.add(new TileLayerMember(tileLayer, memberTile));
+        }
+        return members;
+    }
+
+    /**
+     * Computes the request's scale denominator the way a live render would; mirrors
+     * {@link org.geoserver.wms.FeatureInfoRequestParameters}'s equivalent computation.
+     */
+    private static double computeScaleDenominator(GetMapRequest request) {
+        CoordinateReferenceSystem crs = request.getCrs() != null ? request.getCrs() : DefaultGeographicCRS.WGS84;
+        WMSMapContent mapContent = new WMSMapContent(request);
+        mapContent.getViewport().setBounds(new ReferencedEnvelope(request.getBbox(), crs));
+        mapContent.setMapWidth(request.getWidth());
+        mapContent.setMapHeight(request.getHeight());
+        mapContent.setAngle(request.getAngle());
+        return mapContent.getScaleDenominator(true);
+    }
+
+    /** Mirrors the private rule scale-range check in {@code org.geotools.renderer.lite.StreamingRenderer}. */
+    private static final double SCALE_TOLERANCE = 1e-6;
+
+    private static boolean isWithinScale(Rule rule, double scaleDenominator) {
+        return rule.getMinScaleDenominator() - SCALE_TOLERANCE <= scaleDenominator
+                && rule.getMaxScaleDenominator() + SCALE_TOLERANCE > scaleDenominator;
+    }
+
+    /**
+     * Whether {@code style} draws labels, or blends with the layers beneath it, in any {@code FeatureTypeStyle} active
+     * at {@code scaleDenominator}: a per-layer cached tile bakes either in without the rest of the stack, so it can't
+     * reproduce what a live render of the whole stack would draw.
+     */
+    private static boolean isIneligibleAtScale(Style style, double scaleDenominator) {
+        for (FeatureTypeStyle fts : style.featureTypeStyles()) {
+            boolean active = false;
+            boolean labels = false;
+            for (Rule rule : fts.rules()) {
+                if (!isWithinScale(rule, scaleDenominator)) {
+                    continue;
+                }
+                active = true;
+                for (Symbolizer symbolizer : rule.symbolizers()) {
+                    if (symbolizer instanceof TextSymbolizer) {
+                        labels = true;
+                    }
+                }
+            }
+            if (!active) {
+                continue;
+            }
+            if (fts.getOptions().containsKey(FeatureTypeStyle.COMPOSITE)
+                    || fts.getOptions().containsKey(FeatureTypeStyle.COMPOSITE_BASE)) {
+                return true; // ineligible: composites with the layers beneath it at this scale
+            }
+            if (labels) {
+                return true; // ineligible: draws labels at this scale
+            }
+        }
+        return false;
     }
 
     private String getPrefixedName(String layerName) {

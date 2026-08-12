@@ -96,6 +96,7 @@ import org.geoserver.platform.resource.Resource;
 import org.geoserver.platform.resource.Resources;
 import org.geoserver.wms.DefaultWebMapService;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMSMapContent;
 import org.geoserver.wms.WebMap;
 import org.geoserver.wms.WebMapService;
@@ -103,11 +104,15 @@ import org.geoserver.wms.kvp.PaletteManager;
 import org.geoserver.wms.map.MetaTilingOutputFormat;
 import org.geoserver.wms.map.RawMap;
 import org.geotools.api.filter.Filter;
+import org.geotools.api.style.FeatureTypeStyle;
+import org.geotools.api.style.Style;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.filter.identity.FeatureIdImpl;
 import org.geotools.filter.text.cql2.CQL;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.styling.StyleBuilder;
 import org.geowebcache.GeoWebCacheEnvironment;
 import org.geowebcache.GeoWebCacheException;
 import org.geowebcache.GeoWebCacheExtensions;
@@ -1589,6 +1594,215 @@ public class GWCTest {
         newConfig.setMetaTilingThreads(0);
         mediator.saveConfig(newConfig);
         assertNull(mediator.getMetaTilingExecutor());
+    }
+
+    @Test
+    public void testSplitCoalescedRequestDisabled() throws Exception {
+        GetMapRequest request = coalescedRequest(new Envelope(0, 1, 0, 1), layer, layer);
+        StringBuilder mismatch = new StringBuilder();
+
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains("multi-layer tile caching disabled"));
+    }
+
+    @Test
+    public void testSplitCoalescedRequestRequiresTransparentPng() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        GetMapRequest request = coalescedRequest(new Envelope(0, 1, 0, 1), layer, layer);
+        request.setFormat("image/jpeg");
+        StringBuilder mismatch = new StringBuilder();
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains("requires transparent image/png"));
+
+        request.setFormat("image/png");
+        request.setTransparent(false);
+        mismatch = new StringBuilder();
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains("requires transparent image/png"));
+    }
+
+    @Test
+    public void testSplitCoalescedRequestRejectsPositionalFilterParams() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        GetMapRequest request = coalescedRequest(new Envelope(0, 1, 0, 1), layer, layer);
+        request.getRawKvp().put("CQL_FILTER", "include;include");
+        StringBuilder mismatch = new StringBuilder();
+
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains("CQL_FILTER not yet supported"));
+    }
+
+    @Test
+    public void testSplitCoalescedRequestAllMembersCacheable() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.RASTER);
+        LayerInfo layer2 = mockLayer("member2", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+        GeoServerTileLayer tl2 = mockTileLayer(new MapLayerInfo(layer2).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1, layer2);
+        StringBuilder mismatch = new StringBuilder();
+
+        List<GWC.TileLayerMember> members = mediator.splitCoalescedRequest(request, mismatch);
+
+        assertEquals(0, mismatch.length());
+        assertNotNull(members);
+        assertEquals(2, members.size());
+        assertSame(tl1, members.get(0).tileLayer());
+        assertSame(tl2, members.get(1).tileLayer());
+        assertEquals("EPSG:4326", members.get(0).tile().getGridSetId());
+        assertEquals("EPSG:4326", members.get(1).tile().getGridSetId());
+    }
+
+    @Test
+    public void testSplitRejectsOnLabeling() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.VECTOR);
+        LayerInfo layer2 = mockLayer("member2", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+        mockTileLayer(new MapLayerInfo(layer2).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1, layer2);
+
+        StyleBuilder sb = new StyleBuilder();
+        request.getStyles().set(1, sb.createStyle(sb.createTextSymbolizer()));
+        StringBuilder mismatch = new StringBuilder();
+
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains(new MapLayerInfo(layer2).getName()));
+        assertTrue(mismatch.toString().contains("draws labels or composites"));
+    }
+
+    @Test
+    public void testSplitRejectsOnCompositing() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1);
+
+        StyleBuilder sb = new StyleBuilder();
+        FeatureTypeStyle fts = sb.createFeatureTypeStyle(sb.createPolygonSymbolizer());
+        fts.getOptions().put(FeatureTypeStyle.COMPOSITE, "multiply");
+        Style compositingStyle = sb.createStyle();
+        compositingStyle.featureTypeStyles().add(fts);
+        request.getStyles().set(0, compositingStyle);
+        StringBuilder mismatch = new StringBuilder();
+
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains(new MapLayerInfo(layer1).getName()));
+        assertTrue(mismatch.toString().contains("draws labels or composites"));
+    }
+
+    @Test
+    public void testSplitAllowsOutOfScaleLabels() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.VECTOR);
+        LayerInfo layer2 = mockLayer("member2", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+        mockTileLayer(new MapLayerInfo(layer2).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1, layer2);
+
+        StyleBuilder sb = new StyleBuilder();
+        // labels only active between scale denominators 1 and 2, nowhere near a zoom-0 world tile's scale
+        request.getStyles().set(1, sb.createStyle(sb.createTextSymbolizer(), 1, 2));
+        StringBuilder mismatch = new StringBuilder();
+
+        List<GWC.TileLayerMember> members = mediator.splitCoalescedRequest(request, mismatch);
+
+        assertEquals(0, mismatch.length());
+        assertNotNull(members);
+        assertEquals(2, members.size());
+    }
+
+    @Test
+    public void testSplitAllowsOutOfScaleCompositing() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1);
+
+        StyleBuilder sb = new StyleBuilder();
+        // composite only active between scale denominators 1 and 2, nowhere near a zoom-0 world tile's scale
+        FeatureTypeStyle fts = sb.createFeatureTypeStyle(sb.createPolygonSymbolizer(), 1, 2);
+        fts.getOptions().put(FeatureTypeStyle.COMPOSITE, "multiply");
+        Style compositingStyle = sb.createStyle();
+        compositingStyle.featureTypeStyles().add(fts);
+        request.getStyles().set(0, compositingStyle);
+        StringBuilder mismatch = new StringBuilder();
+
+        List<GWC.TileLayerMember> members = mediator.splitCoalescedRequest(request, mismatch);
+
+        assertEquals(0, mismatch.length());
+        assertNotNull(members);
+        assertEquals(1, members.size());
+    }
+
+    @Test
+    public void testSplitOnNotCacheable() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.RASTER);
+        LayerInfo notCached = mockLayer("notCached", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1, notCached);
+        StringBuilder mismatch = new StringBuilder();
+
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains(new MapLayerInfo(notCached).getName()));
+        assertTrue(mismatch.toString().contains("is not a tile layer"));
+    }
+
+    /** A tiled, transparent-PNG multi-layer {@code GetMap} request over the given {@code LAYERS} members. */
+    private GetMapRequest coalescedRequest(Envelope bbox, LayerInfo... members) throws Exception {
+        GetMapRequest request = new GetMapRequest();
+        Map<String, String> rawKvp = new CaseInsensitiveMap<>(new HashMap<>());
+        request.setRawKvp(rawKvp);
+        request.setFormat("image/png");
+        request.setTransparent(true);
+        request.setTiled(true);
+        request.setSRS("EPSG:4326");
+        request.setCrs(CRS.decode("EPSG:4326"));
+        request.setWidth(256);
+        request.setHeight(256);
+        request.setBbox(bbox);
+
+        List<MapLayerInfo> layers = new ArrayList<>();
+        List<Style> styles = new ArrayList<>();
+        StringBuilder layersKvp = new StringBuilder();
+        for (LayerInfo member : members) {
+            MapLayerInfo mapLayerInfo = new MapLayerInfo(member);
+            layers.add(mapLayerInfo);
+            styles.add(CommonFactoryFinder.getStyleFactory().createStyle());
+            if (layersKvp.length() > 0) layersKvp.append(',');
+            layersKvp.append(mapLayerInfo.getName());
+        }
+        request.setLayers(layers);
+        request.setStyles(styles);
+        rawKvp.put("layers", layersKvp.toString());
+        return request;
     }
 
     @AfterClass
