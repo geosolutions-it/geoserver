@@ -781,23 +781,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         }
 
         if (getConfig().isSecurityEnabled()) {
-            String bboxstr = request.getRawKvp().get("BBOX");
-            String srs = request.getRawKvp().get("SRS");
-            ReferencedEnvelope bbox = null;
             try {
-                bbox = (ReferencedEnvelope) new BBoxKvpParser().parse(bboxstr);
-            } catch (Exception e) {
-                throw new RuntimeException("Invalid bbox for layer '" + layerName + "': " + bboxstr);
-            }
-            if (srs != null) {
-                try {
-                    bbox = new ReferencedEnvelope(bbox, CRS.decode(srs));
-                } catch (Exception e) {
-                    throw new RuntimeException("Can't decode SRS for layer '" + layerName + "': " + srs);
-                }
-            }
-            try {
-                verifyAccessLayer(layerName, bbox);
+                verifyAccessLayer(layerName, parseRequestBbox(request, layerName));
             } catch (ServiceException | SecurityException e) {
                 return null;
             }
@@ -818,6 +803,29 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             log.log(Level.INFO, "Error dispatching tile request to GeoServer", e);
         }
         return tileResp;
+    }
+
+    /**
+     * Parses the request-wide {@code BBOX}/{@code SRS} KVP into a {@link ReferencedEnvelope} for
+     * {@link #verifyAccessLayer}.
+     */
+    private ReferencedEnvelope parseRequestBbox(GetMapRequest request, String layerNameForErrors) {
+        String bboxstr = request.getRawKvp().get("BBOX");
+        String srs = request.getRawKvp().get("SRS");
+        ReferencedEnvelope bbox;
+        try {
+            bbox = (ReferencedEnvelope) new BBoxKvpParser().parse(bboxstr);
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid bbox for layer '" + layerNameForErrors + "': " + bboxstr);
+        }
+        if (srs != null) {
+            try {
+                bbox = new ReferencedEnvelope(bbox, CRS.decode(srs));
+            } catch (Exception e) {
+                throw new RuntimeException("Can't decode SRS for layer '" + layerNameForErrors + "': " + srs);
+            }
+        }
+        return bbox;
     }
 
     /**
@@ -877,6 +885,7 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
      *     request or any member is not eligible, with the reason appended to {@code requestMismatchTarget}
      */
     List<TileLayerMember> splitCoalescedRequest(GetMapRequest request, StringBuilder requestMismatchTarget) {
+        // re-checked here (dispatch() already checked it): this method is also called directly, e.g. from tests
         if (!getConfig().isMultiLayerCachingEnabled()) {
             requestMismatchTarget.append("multi-layer tile caching disabled");
             return null;
@@ -896,6 +905,9 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         final List<MapLayerInfo> layers = request.getLayers();
         final List<Style> styles = request.getStyles();
         final double scaleDenominator = computeScaleDenominator(request);
+        // the raw multi-layer request is authorized nowhere else, so each member needs its own coarse gate
+        final ReferencedEnvelope securityBbox =
+                getConfig().isSecurityEnabled() ? parseRequestBbox(request, rawKvp.get("LAYERS")) : null;
         final List<TileLayerMember> members = new ArrayList<>(layers.size());
         for (int i = 0; i < layers.size(); i++) {
             String layerName = layers.get(i).getName();
@@ -912,6 +924,14 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             if (!tileLayer.isEnabled()) {
                 requestMismatchTarget.append('\'').append(layerName).append("' tile layer disabled");
                 return null;
+            }
+            if (getConfig().isSecurityEnabled()) {
+                try {
+                    verifyAccessLayer(layerName, securityBbox);
+                } catch (ServiceException | SecurityException e) {
+                    requestMismatchTarget.append('\'').append(layerName).append("' access denied");
+                    return null;
+                }
             }
             if (isIneligibleAtScale(styles.get(i), scaleDenominator)) {
                 requestMismatchTarget
@@ -948,11 +968,15 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
     private static double computeScaleDenominator(GetMapRequest request) {
         CoordinateReferenceSystem crs = request.getCrs() != null ? request.getCrs() : DefaultGeographicCRS.WGS84;
         WMSMapContent mapContent = new WMSMapContent(request);
-        mapContent.getViewport().setBounds(new ReferencedEnvelope(request.getBbox(), crs));
-        mapContent.setMapWidth(request.getWidth());
-        mapContent.setMapHeight(request.getHeight());
-        mapContent.setAngle(request.getAngle());
-        return mapContent.getScaleDenominator(true);
+        try {
+            mapContent.getViewport().setBounds(new ReferencedEnvelope(request.getBbox(), crs));
+            mapContent.setMapWidth(request.getWidth());
+            mapContent.setMapHeight(request.getHeight());
+            mapContent.setAngle(request.getAngle());
+            return mapContent.getScaleDenominator(true);
+        } finally {
+            mapContent.dispose();
+        }
     }
 
     /** Mirrors the private rule scale-range check in {@code org.geotools.renderer.lite.StreamingRenderer}. */

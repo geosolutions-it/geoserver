@@ -1775,6 +1775,52 @@ public class GWCTest {
         assertTrue(mismatch.toString().contains("is not a tile layer"));
     }
 
+    @Test
+    public void testSplitVerifiesAccessPerMember() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+        defaults.setSecurityEnabled(true);
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.RASTER);
+        LayerInfo layer2 = mockLayer("member2", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+        mockTileLayer(new MapLayerInfo(layer2).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1, layer2);
+
+        String name1 = new MapLayerInfo(layer1).getName();
+        String name2 = new MapLayerInfo(layer2).getName();
+        doNothing().when(mediator).verifyAccessLayer(eq(name1), any());
+        doThrow(new SecurityException("denied")).when(mediator).verifyAccessLayer(eq(name2), any());
+        StringBuilder mismatch = new StringBuilder();
+
+        assertNull(mediator.splitCoalescedRequest(request, mismatch));
+        assertTrue(mismatch.toString().contains(name2));
+        assertTrue(mismatch.toString().contains("access denied"));
+        verify(mediator).verifyAccessLayer(eq(name1), any());
+        verify(mediator).verifyAccessLayer(eq(name2), any());
+    }
+
+    @Test
+    public void testSplitSkipsAccessCheckWhenSecurityDisabled() throws Exception {
+        defaults.setMultiLayerCachingEnabled(true);
+        // securityEnabled left at its default: false
+
+        LayerInfo layer1 = mockLayer("member1", new String[] {}, PublishedType.RASTER);
+        GeoServerTileLayer tl1 = mockTileLayer(new MapLayerInfo(layer1).getName(), Arrays.asList("EPSG:4326"));
+
+        BoundingBox bounds = tl1.getGridSubset("EPSG:4326").boundsFromIndex(new long[] {0, 0, 0});
+        Envelope bbox = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
+        GetMapRequest request = coalescedRequest(bbox, layer1);
+        StringBuilder mismatch = new StringBuilder();
+
+        List<GWC.TileLayerMember> members = mediator.splitCoalescedRequest(request, mismatch);
+
+        assertNotNull(members);
+        verify(mediator, never()).verifyAccessLayer(any(), any());
+    }
+
     /** A tiled, transparent-PNG multi-layer {@code GetMap} request over the given {@code LAYERS} members. */
     private GetMapRequest coalescedRequest(Envelope bbox, LayerInfo... members) throws Exception {
         GetMapRequest request = new GetMapRequest();
@@ -1788,6 +1834,7 @@ public class GWCTest {
         request.setWidth(256);
         request.setHeight(256);
         request.setBbox(bbox);
+        rawKvp.put("BBOX", bbox.getMinX() + "," + bbox.getMinY() + "," + bbox.getMaxX() + "," + bbox.getMaxY());
 
         List<MapLayerInfo> layers = new ArrayList<>();
         List<Style> styles = new ArrayList<>();
