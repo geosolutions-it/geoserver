@@ -25,6 +25,7 @@ import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.ows.HttpErrorCodeException;
 import org.geoserver.wms.GetMapRequest;
+import org.geoserver.wms.WMS;
 import org.geoserver.wms.WebMap;
 import org.geoserver.wms.WebMapService;
 import org.geoserver.wms.map.RawMap;
@@ -117,9 +118,24 @@ public class CachingWebMapService implements MethodInterceptor {
         map.setContentDispositionHeader(null, "." + cachedTile.getMimeType().getFileExtension(), false);
 
         LinkedHashMap<String, String> headers = new LinkedHashMap<>();
-        GWC.setCacheControlHeaders(headers, layer, (int) cachedTile.getTileIndex()[2]);
+        boolean coalesced = request.getRawKvp().get("LAYERS").indexOf(',') != -1;
+        if (coalesced) {
+            // GWC.setCacheControlHeaders is per-single-layer (driven by the GWC layer's getExpireClients); match
+            // exactly what a live multi-layer GetMap produces instead, so a cached and uncached response agree
+            WMS.cacheMaxAge(request.isGet(), request.getLayers())
+                    .ifPresent(maxAge -> headers.putAll(WMS.cacheControlHeaders(maxAge)));
+        } else {
+            GWC.setCacheControlHeaders(headers, layer, (int) cachedTile.getTileIndex()[2]);
+        }
         GWC.setConditionalGetHeaders(headers, cachedTile, etag, request.getHttpRequestHeader("If-Modified-Since"));
         GWC.setCacheMetadataHeaders(headers, cachedTile, layer);
+        // a coalesced multi-layer tile's real per-member cache result (HIT/MISS/PARTIAL n/N) can't be expressed as
+        // a single Conveyor.CacheResult, so GWC.dispatchCoalesced smuggles it through the tile's own filtering
+        // parameters (never used for anything else on a tile that is never itself persisted or looked up)
+        String coalescedCacheResult = cachedTile.getFilteringParameters().get(GWC.COALESCED_CACHE_RESULT_KEY);
+        if (coalescedCacheResult != null) {
+            headers.put("geowebcache-cache-result", coalescedCacheResult);
+        }
         headers.forEach((k, v) -> map.setResponseHeader(k, v));
 
         return map;

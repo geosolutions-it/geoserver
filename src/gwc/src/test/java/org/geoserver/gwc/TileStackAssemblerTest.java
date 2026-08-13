@@ -6,6 +6,7 @@
 package org.geoserver.gwc;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -19,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
+import org.geoserver.platform.ServiceException;
 import org.geowebcache.conveyor.ConveyorTile;
 import org.geowebcache.io.ByteArrayResource;
 import org.geowebcache.io.codec.ImageDecoder;
@@ -64,7 +66,7 @@ public class TileStackAssemblerTest {
         GWC.TileLayerMember bottom = member(solidTile(Color.RED));
         GWC.TileLayerMember top = member(solidTile(Color.BLUE));
 
-        BufferedImage result = decode(assembler.assemble(List.of(bottom, top), png));
+        BufferedImage result = decode(assembler.assemble(List.of(bottom, top), png, -1));
 
         assertEquals(Color.BLUE.getRGB(), result.getRGB(0, 0));
     }
@@ -74,9 +76,17 @@ public class TileStackAssemblerTest {
         GWC.TileLayerMember bottom = member(solidTile(Color.RED));
         GWC.TileLayerMember transparentTop = member(solidTile(new Color(0, 0, 255, 0)));
 
-        BufferedImage result = decode(assembler.assemble(List.of(bottom, transparentTop), png));
+        BufferedImage result = decode(assembler.assemble(List.of(bottom, transparentTop), png, -1));
 
         assertEquals(Color.RED.getRGB(), result.getRGB(0, 0));
+    }
+
+    @Test
+    public void testAssembleFailsWhenDeadlineHasPassed() throws Exception {
+        GWC.TileLayerMember member = member(solidTile(Color.RED));
+        long deadlineAlreadyPassed = System.currentTimeMillis() - 1000;
+
+        assertThrows(ServiceException.class, () -> assembler.assemble(List.of(member), png, deadlineAlreadyPassed));
     }
 
     private byte[] solidTile(Color color) throws Exception {
