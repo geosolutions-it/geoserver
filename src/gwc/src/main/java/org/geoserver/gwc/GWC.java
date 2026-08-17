@@ -840,8 +840,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
     public static final String COALESCED_CACHE_RESULT_KEY = "gwc.coalesced.cacheResult";
 
     /**
-     * Splits and assembles a coalesced multi-layer tile request. {@code Cache-Control}/{@code Expires} are computed
-     * by {@link org.geoserver.gwc.wms.CachingWebMapService} via {@link WMS#cacheMaxAge} over every member's
+     * Splits and assembles a coalesced multi-layer tile request. {@code Cache-Control}/{@code Expires} are computed by
+     * {@link org.geoserver.gwc.wms.CachingWebMapService} via {@link WMS#cacheMaxAge} over every member's
      * {@code MapLayerInfo}, matching the live multi-layer path exactly; see {@link #COALESCED_CACHE_RESULT_KEY} for
      * {@code geowebcache-cache-result}. The secondary {@code geowebcache-layer}/{@code -gridset}/{@code -tile-bounds}
      * headers still describe only the first member (unchanged, minor, not addressed here).

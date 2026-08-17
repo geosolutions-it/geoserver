@@ -2019,9 +2019,9 @@ public class WMS implements ApplicationContextAware {
 
     /**
      * The combined {@code Cache-Control} max-age for a GetMap response covering {@code layers}: present iff
-     * {@code isGet} and every layer has caching enabled, in which case it is the smallest of each layer's own max
-     * age. Shared by the live multi-layer GetMap path and GWC's coalesced tile-caching path so both apply the exact
-     * same rule.
+     * {@code isGet} and every layer has caching enabled, in which case it is the smallest of each layer's own max age.
+     * Shared by the live multi-layer GetMap path and GWC's coalesced tile-caching path so both apply the exact same
+     * rule.
      */
     public static OptionalInt cacheMaxAge(boolean isGet, List<MapLayerInfo> layers) {
         if (!isGet) {
