@@ -23,6 +23,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.awt.image.BufferedImage;
+import java.awt.image.RenderedImage;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URL;
@@ -39,6 +41,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
@@ -50,6 +53,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.XMLConstants;
 import org.apache.hc.client5.http.utils.DateUtils;
+import org.eclipse.imagen.PlanarImage;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogInfo;
 import org.geoserver.catalog.FeatureTypeInfo;
@@ -84,11 +88,13 @@ import org.geoserver.security.DataAccessLimits;
 import org.geoserver.security.decorators.SecuredLayerInfo;
 import org.geoserver.threadlocals.ThreadLocalsTransfer;
 import org.geoserver.util.HTTPWarningAppender;
+import org.geoserver.wms.GetMap;
 import org.geoserver.wms.GetMapOutputFormat;
 import org.geoserver.wms.GetMapRequest;
 import org.geoserver.wms.MapLayerInfo;
 import org.geoserver.wms.WMS;
 import org.geoserver.wms.WMSMapContent;
+import org.geoserver.wms.WebMap;
 import org.geoserver.wms.map.MetaTilingOutputFormat;
 import org.geoserver.wms.map.RenderedImageMap;
 import org.geoserver.wms.map.RenderedImageMapResponse;
@@ -842,19 +848,31 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
     /**
      * Splits and assembles a coalesced multi-layer tile request. {@code Cache-Control}/{@code Expires} are computed by
      * {@link org.geoserver.gwc.wms.CachingWebMapService} via {@link WMS#cacheMaxAge} over every member's
-     * {@code MapLayerInfo}, matching the live multi-layer path exactly; see {@link #COALESCED_CACHE_RESULT_KEY} for
-     * {@code geowebcache-cache-result}. The secondary {@code geowebcache-layer}/{@code -gridset}/{@code -tile-bounds}
-     * headers still describe only the first member (unchanged, minor, not addressed here).
+     * {@code MapLayerInfo}, matching the live multi-layer path exactly, deliberately not
+     * {@link #setCacheControlHeaders}, which is per-single-layer and driven by the GWC layer's
+     * {@code getExpireClients}; see {@link #COALESCED_CACHE_RESULT_KEY} for {@code geowebcache-cache-result}. The
+     * secondary {@code geowebcache-layer}/ {@code -gridset}/{@code -tile-bounds} headers still describe only the first
+     * member (unchanged, minor, not addressed here).
      */
     private ConveyorTile dispatchCoalesced(GetMapRequest request, StringBuilder requestMismatchTarget) {
         long deadline = computeRenderingDeadline();
 
-        List<TileLayerMember> members = splitCoalescedRequest(request, requestMismatchTarget);
-        if (members == null) {
+        List<Segment> segments = classifyCoalescedMembers(request, requestMismatchTarget);
+        if (segments == null) {
+            return null;
+        }
+        Optional<CachedSegment> firstCached = segments.stream()
+                .filter(CachedSegment.class::isInstance)
+                .map(CachedSegment.class::cast)
+                .findFirst();
+        if (firstCached.isEmpty()) {
+            // nothing in the request is actually cacheable: no per-member tile to key the assembled result on,
+            // and nothing gained over just falling all the way back to a plain live render
+            requestMismatchTarget.append("no member of the coalesced request is cacheable");
             return null;
         }
 
-        if (exceedsMaxRequestMemory(members.size(), request)) {
+        if (exceedsMaxRequestMemory(segments.size(), request)) {
             requestMismatchTarget.append("coalesced tile would exceed max request memory");
             return null;
         }
@@ -864,7 +882,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             TileStackAssembler assembler = new TileStackAssembler(
                     GeoServerExtensions.bean(ImageDecoderContainer.class),
                     GeoServerExtensions.bean(ImageEncoderContainer.class));
-            assembled = assembler.assemble(members, members.get(0).tile().getMimeType(), deadline);
+            assembled = assembler.assemble(
+                    this, request, segments, firstCached.get().member().tile().getMimeType(), deadline);
         } catch (RuntimeException e) {
             // e.g. the assembler's own deadline check: fail hard, a live re-render would just hit the same wall
             throw e;
@@ -880,9 +899,9 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             return null;
         }
 
-        ConveyorTile firstMemberTile = members.get(0).tile();
+        ConveyorTile firstMemberTile = firstCached.get().member().tile();
         Map<String, String> signaling =
-                Collections.singletonMap(COALESCED_CACHE_RESULT_KEY, coalescedCacheResultHeader(members));
+                Collections.singletonMap(COALESCED_CACHE_RESULT_KEY, coalescedCacheResultHeader(segments));
         // never persisted itself: only the per-member tiles it stacks are cached
         ConveyorTile assembledTile = new ConveyorTile(
                 null,
@@ -894,7 +913,7 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
                 null,
                 null);
         assembledTile.setBlob(new ByteArrayResource(assembled));
-        assembledTile.setTileLayer(members.get(0).tileLayer());
+        assembledTile.setTileLayer(firstCached.get().member().tileLayer());
         return assembledTile;
     }
 
@@ -910,48 +929,151 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
     }
 
     /**
-     * Whether assembling {@code memberCount} members at {@code request}'s tile size would exceed WMS's configured
+     * Whether assembling {@code segmentCount} segments at {@code request}'s tile size would exceed WMS's configured
      * {@code maxRequestMemory}; always {@code false} when unlimited.
      */
-    boolean exceedsMaxRequestMemory(int memberCount, GetMapRequest request) {
+    boolean exceedsMaxRequestMemory(int segmentCount, GetMapRequest request) {
         int maxRequestMemoryKB = WMS.get().getServiceInfo().getMaxRequestMemory();
         if (maxRequestMemoryKB <= 0) {
             return false;
         }
-        // peak residency: every member's decoded input plus the output tile, all ARGB
-        long peakBytes = (long) (memberCount + 1) * request.getWidth() * request.getHeight() * 4;
+        // peak residency: every segment's decoded raster (one buffer per segment, live or cached) plus the output
+        // tile, all ARGB
+        long peakBytes = (long) (segmentCount + 1) * request.getWidth() * request.getHeight() * 4;
         return peakBytes > (long) maxRequestMemoryKB * 1024;
     }
 
-    /** {@code HIT} if every member was cached, {@code MISS} if none was, else {@code PARTIAL n/N}. */
-    private static String coalescedCacheResultHeader(List<TileLayerMember> members) {
+    /**
+     * {@code HIT} if every original {@code LAYERS} member is a cache hit, {@code MISS} if none is, else {@code PARTIAL
+     * n/N}; every member of a {@link LiveSegment} run counts as a miss, since none of them was served from its own
+     * cache.
+     */
+    private static String coalescedCacheResultHeader(List<Segment> segments) {
         int hits = 0;
-        for (TileLayerMember member : members) {
-            if (member.tile().getCacheResult() == Conveyor.CacheResult.HIT) {
-                hits++;
+        int total = 0;
+        for (Segment segment : segments) {
+            if (segment instanceof CachedSegment cached) {
+                total++;
+                if (cached.member().tile().getCacheResult() == Conveyor.CacheResult.HIT) {
+                    hits++;
+                }
+            } else {
+                total += ((LiveSegment) segment).memberIndices().size();
             }
         }
-        if (hits == members.size()) {
+        if (hits == total) {
             return Conveyor.CacheResult.HIT.toString();
         }
         if (hits == 0) {
             return Conveyor.CacheResult.MISS.toString();
         }
-        return "PARTIAL " + hits + "/" + members.size();
+        return "PARTIAL " + hits + "/" + total;
     }
 
     /** A {@code LAYERS} member of a coalesced request, split into its own single-layer prepared tile request. */
     record TileLayerMember(TileLayer tileLayer, ConveyorTile tile) {}
 
     /**
-     * Splits a tiled, transparent-PNG multi-layer {@code GetMap} request into one single-layer view per {@code LAYERS}
-     * member and runs each through the same eligibility checks as an ordinary single-layer tile request.
-     *
-     * @return the per-member tile layer and prepared tile request, in {@code LAYERS} order, or {@code null} if the
-     *     request or any member is not eligible, with the reason appended to {@code requestMismatchTarget}
+     * One drawing-order segment of a coalesced request: either a single cacheable member ({@link CachedSegment}), or a
+     * maximal run of consecutive members that must be rendered live ({@link LiveSegment}) because none of them can be
+     * served from their own cache for this request (see {@link #classifyCoalescedMembers}).
      */
-    List<TileLayerMember> splitCoalescedRequest(GetMapRequest request, StringBuilder requestMismatchTarget) {
-        // re-checked here (dispatch() already checked it): this method is also called directly, e.g. from tests
+    interface Segment {}
+
+    record CachedSegment(TileLayerMember member) implements Segment {}
+
+    /**
+     * @param memberIndices positions (into the original {@code LAYERS} list) of this run's members, in order
+     * @param reason why the run's first member could not be served from cache; representative of the whole run
+     */
+    record LiveSegment(List<Integer> memberIndices, String reason) implements Segment {}
+
+    /**
+     * Renders a {@link LiveSegment}'s members as a single in-process {@code GetMap}, bypassing GWC's own
+     * {@code WebMapService} interceptor so a live segment cannot recurse back into tile caching.
+     *
+     * @param deadline the coalesced request's own deadline (see {@link #computeRenderingDeadline}), shared with this
+     *     live render via the {@code timeout} format option so a slow segment can't each get its own full
+     *     {@code maxRenderingTime} budget
+     * @throws org.geoserver.platform.ServiceException if {@code deadline} has already passed before this segment's
+     *     render could even start
+     */
+    BufferedImage renderLiveSegment(GetMapRequest request, LiveSegment segment, long deadline) throws Exception {
+        long remainingMillis = 0;
+        if (deadline > 0) {
+            remainingMillis = deadline - System.currentTimeMillis();
+            if (remainingMillis <= 0) {
+                throw new org.geoserver.platform.ServiceException(
+                        "This request used more time than allowed and has been forcefully stopped.");
+            }
+        }
+        GetMapRequest subRequest = sliceLiveSegment(request, segment.memberIndices(), remainingMillis);
+        WebMap webMap = GeoServerExtensions.bean(GetMap.class).run(subRequest);
+        if (!(webMap instanceof RenderedImageMap renderedImageMap)) {
+            throw new IllegalStateException("Live render of a coalesced segment did not produce a raster: " + webMap);
+        }
+        RenderedImage image = renderedImageMap.getImage();
+        if (image instanceof BufferedImage bufferedImage) {
+            return bufferedImage;
+        }
+        return PlanarImage.wrapRenderedImage(image).getAsBufferedImage();
+    }
+
+    /**
+     * @param remainingMillis this segment's share of the coalesced request's own deadline, or {@code <= 0} for no
+     *     deadline; passed through as the {@code timeout} format option, the only way to shrink a single in-process
+     *     {@code GetMap}'s own {@code maxRenderingTime} below the server-wide setting
+     */
+    private static GetMapRequest sliceLiveSegment(
+            GetMapRequest request, List<Integer> memberIndices, long remainingMillis) {
+        GetMapRequest subRequest = (GetMapRequest) request.clone();
+        subRequest.setLayers(pickByIndex(request.getLayers(), memberIndices));
+        subRequest.setStyles(pickByIndex(request.getStyles(), memberIndices));
+        List<Filter> cqlFilters = request.getCQLFilter();
+        if (cqlFilters != null) {
+            subRequest.setCQLFilter(pickByIndex(cqlFilters, memberIndices));
+        }
+        List<Filter> filters = request.getFilter();
+        if (filters != null) {
+            subRequest.setFilter(pickByIndex(filters, memberIndices));
+        }
+        List<List<SortBy>> sortBys = request.getSortBy();
+        if (sortBys != null) {
+            subRequest.setSortBy(pickByIndex(sortBys, memberIndices));
+        }
+        List<Map<String, String>> viewParams = request.getViewParams();
+        if (viewParams != null) {
+            subRequest.setViewParams(pickByIndex(viewParams, memberIndices));
+        }
+        if (remainingMillis > 0) {
+            // GetMapRequest.clone() shares the formatOptions map with the original request; copy it before writing
+            Map<String, Object> formatOptions = new CaseInsensitiveMap<>(new HashMap<>(request.getFormatOptions()));
+            formatOptions.put("timeout", remainingMillis);
+            subRequest.setFormatOptions(formatOptions);
+        }
+        return subRequest;
+    }
+
+    private static <T> List<T> pickByIndex(List<T> list, List<Integer> indices) {
+        List<T> picked = new ArrayList<>(indices.size());
+        for (int index : indices) {
+            picked.add(list.get(index));
+        }
+        return picked;
+    }
+
+    /**
+     * Classifies each {@code LAYERS} member as cacheable or as needing a live render, grouping consecutive
+     * non-cacheable members into one {@link LiveSegment} per member run. A member is non-cacheable when it has no GWC
+     * tile layer, that layer is disabled, its {@link #prepareRequest} fails (e.g. no matching gridset, or a declared
+     * {@code ParameterFilter} rejects the request), or it resolves to a different gridset/tile than the rest of the
+     * stack. Label/compositing and data-security denials are cross-stack correctness concerns batching can't fix, so
+     * they still abort the whole request (return {@code null}) rather than becoming a live segment.
+     *
+     * @return the ordered segments, or {@code null} if the whole request is ineligible, with the reason appended to
+     *     {@code requestMismatchTarget}
+     */
+    List<Segment> classifyCoalescedMembers(GetMapRequest request, StringBuilder requestMismatchTarget) {
         if (!getConfig().isMultiLayerCachingEnabled()) {
             requestMismatchTarget.append("multi-layer tile caching disabled");
             return null;
@@ -960,8 +1082,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             requestMismatchTarget.append("multi-layer tile caching requires transparent image/png");
             return null;
         }
-        final Map<String, String> rawKvp = request.getRawKvp();
 
+        final Map<String, String> rawKvp = request.getRawKvp();
         final List<MapLayerInfo> layers = request.getLayers();
         final List<Style> styles = request.getStyles();
         final List<Filter> cqlFilters = request.getCQLFilter();
@@ -977,25 +1099,19 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             requestMismatchTarget.append("invalid request for access check: ").append(e.getMessage());
             return null;
         }
-        final List<TileLayerMember> members = new ArrayList<>(layers.size());
+
+        final List<Segment> segments = new ArrayList<>();
+        List<Integer> liveRunIndices = null;
+        String liveRunReason = null;
         String gridSetId = null;
         long[] tileIndex = null;
+
         for (int i = 0; i < layers.size(); i++) {
             String layerName = layers.get(i).getName();
-            if (!tld.layerExists(layerName)) {
-                requestMismatchTarget.append('\'').append(layerName).append("' is not a tile layer");
-                return null;
-            }
-            final TileLayer tileLayer;
-            try {
-                tileLayer = tld.getTileLayer(layerName);
-            } catch (GeoWebCacheException e) {
-                throw new RuntimeException(e);
-            }
-            if (!tileLayer.isEnabled()) {
-                requestMismatchTarget.append('\'').append(layerName).append("' tile layer disabled");
-                return null;
-            }
+
+            // cross-stack correctness gates: apply regardless of this member's own cacheability, and abort the
+            // whole request, since a live-rendered member can't be composited to fix a label/compositing conflict
+            // with a DIFFERENT, already-cached member
             if (getConfig().isSecurityEnabled()) {
                 try {
                     verifyAccessLayer(layerName, securityBbox);
@@ -1012,65 +1128,98 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
                 return null;
             }
 
-            GetMapRequest memberRequest = (GetMapRequest) request.clone();
-            memberRequest.setLayers(Collections.singletonList(layers.get(i)));
-            memberRequest.setStyles(Collections.singletonList(styles.get(i)));
-            Map<String, String> memberKvp = new CaseInsensitiveMap<>(new HashMap<>(rawKvp));
-            memberKvp.put("LAYERS", layerName);
-            if (rawKvp.get("STYLES") != null) {
-                memberKvp.put("STYLES", styles.get(i).getName());
-            }
-            if (cqlFilters != null && i < cqlFilters.size()) {
-                Filter memberCqlFilter = cqlFilters.get(i);
-                memberRequest.setCQLFilter(Collections.singletonList(memberCqlFilter));
-                if (rawKvp.get("CQL_FILTER") != null) {
-                    memberKvp.put("CQL_FILTER", ECQL.toCQL(memberCqlFilter));
+            String liveReason = null;
+            TileLayer tileLayer = null;
+            if (!tld.layerExists(layerName)) {
+                liveReason = "'" + layerName + "' is not a tile layer";
+            } else {
+                try {
+                    tileLayer = tld.getTileLayer(layerName);
+                } catch (GeoWebCacheException e) {
+                    throw new RuntimeException(e);
+                }
+                if (!tileLayer.isEnabled()) {
+                    liveReason = "'" + layerName + "' tile layer disabled";
+                    tileLayer = null;
                 }
             }
-            if (filters != null && i < filters.size()) {
-                Filter memberFilter = filters.get(i);
-                memberRequest.setFilter(Collections.singletonList(memberFilter));
-                if (rawKvp.get("FILTER") != null) {
-                    memberKvp.put("FILTER", ECQL.toCQL(memberFilter));
-                }
-            }
-            if (sortBys != null && i < sortBys.size()) {
-                List<SortBy> memberSortBy = sortBys.get(i);
-                memberRequest.setSortBy(Collections.singletonList(memberSortBy));
-                if (rawKvp.get("SORTBY") != null) {
-                    memberKvp.put("SORTBY", encodeSortBy(memberSortBy));
-                }
-            }
-            if (viewParams != null && i < viewParams.size()) {
-                Map<String, String> memberViewParams = viewParams.get(i);
-                memberRequest.setViewParams(Collections.singletonList(memberViewParams));
-                if (rawKvp.get("VIEWPARAMS") != null) {
-                    memberKvp.put("VIEWPARAMS", encodeViewParams(memberViewParams));
-                }
-            }
-            memberRequest.setRawKvp(memberKvp);
 
-            ConveyorTile memberTile = prepareRequest(tileLayer, memberRequest, requestMismatchTarget);
-            if (memberTile == null) {
-                requestMismatchTarget.insert(0, "'" + layerName + "': ");
-                return null;
+            ConveyorTile memberTile = null;
+            if (tileLayer != null) {
+                GetMapRequest memberRequest = (GetMapRequest) request.clone();
+                memberRequest.setLayers(Collections.singletonList(layers.get(i)));
+                memberRequest.setStyles(Collections.singletonList(styles.get(i)));
+                Map<String, String> memberKvp = new CaseInsensitiveMap<>(new HashMap<>(rawKvp));
+                memberKvp.put("LAYERS", layerName);
+                if (rawKvp.get("STYLES") != null) {
+                    memberKvp.put("STYLES", styles.get(i).getName());
+                }
+                if (cqlFilters != null && i < cqlFilters.size()) {
+                    Filter memberCqlFilter = cqlFilters.get(i);
+                    memberRequest.setCQLFilter(Collections.singletonList(memberCqlFilter));
+                    if (rawKvp.get("CQL_FILTER") != null) {
+                        memberKvp.put("CQL_FILTER", ECQL.toCQL(memberCqlFilter));
+                    }
+                }
+                if (filters != null && i < filters.size()) {
+                    Filter memberFilter = filters.get(i);
+                    memberRequest.setFilter(Collections.singletonList(memberFilter));
+                    if (rawKvp.get("FILTER") != null) {
+                        memberKvp.put("FILTER", ECQL.toCQL(memberFilter));
+                    }
+                }
+                if (sortBys != null && i < sortBys.size()) {
+                    List<SortBy> memberSortBy = sortBys.get(i);
+                    memberRequest.setSortBy(Collections.singletonList(memberSortBy));
+                    if (rawKvp.get("SORTBY") != null) {
+                        memberKvp.put("SORTBY", encodeSortBy(memberSortBy));
+                    }
+                }
+                if (viewParams != null && i < viewParams.size()) {
+                    Map<String, String> memberViewParams = viewParams.get(i);
+                    memberRequest.setViewParams(Collections.singletonList(memberViewParams));
+                    if (rawKvp.get("VIEWPARAMS") != null) {
+                        memberKvp.put("VIEWPARAMS", encodeViewParams(memberViewParams));
+                    }
+                }
+                memberRequest.setRawKvp(memberKvp);
+
+                // isolated: a failure here must not leak into requestMismatchTarget unless this run ends up being
+                // the one reported, since this member may simply join a live segment rather than abort anything
+                StringBuilder memberMismatch = new StringBuilder();
+                memberTile = prepareRequest(tileLayer, memberRequest, memberMismatch);
+                if (memberTile == null) {
+                    liveReason = "'" + layerName + "': " + memberMismatch;
+                } else if (gridSetId == null) {
+                    gridSetId = memberTile.getGridSetId();
+                    tileIndex = memberTile.getTileIndex();
+                } else if (!gridSetId.equals(memberTile.getGridSetId())
+                        || !Arrays.equals(tileIndex, memberTile.getTileIndex())) {
+                    // members share one footprint, gridloc and zoom: TileStackAssembler stacks raw pixels with no
+                    // knowledge of gridset identity, so a mismatch here would silently misalign the assembled tile
+                    liveReason = "'" + layerName + "' resolved to a different gridset/tile than the other members";
+                    memberTile = null;
+                }
             }
-            if (members.isEmpty()) {
-                gridSetId = memberTile.getGridSetId();
-                tileIndex = memberTile.getTileIndex();
-            } else if (!gridSetId.equals(memberTile.getGridSetId())
-                    || !Arrays.equals(tileIndex, memberTile.getTileIndex())) {
-                // members share one footprint, gridloc and zoom: TileStackAssembler stacks raw pixels with no
-                // knowledge of gridset identity, so a mismatch here would silently misalign the assembled tile
-                requestMismatchTarget
-                        .append('\'')
-                        .append(layerName)
-                        .append("' resolved to a different gridset/tile than the other members");
-                return null;
+
+            if (memberTile != null) {
+                if (liveRunIndices != null) {
+                    segments.add(new LiveSegment(liveRunIndices, liveRunReason));
+                    liveRunIndices = null;
+                }
+                segments.add(new CachedSegment(new TileLayerMember(tileLayer, memberTile)));
+            } else {
+                if (liveRunIndices == null) {
+                    liveRunIndices = new ArrayList<>();
+                    liveRunReason = liveReason;
+                }
+                liveRunIndices.add(i);
             }
-            members.add(new TileLayerMember(tileLayer, memberTile));
         }
-        return members;
+        if (liveRunIndices != null) {
+            segments.add(new LiveSegment(liveRunIndices, liveRunReason));
+        }
+        return segments;
     }
 
     /**
