@@ -278,6 +278,31 @@ public class MultiLayerCoalescingIntegrationTest extends GeoServerSystemTestSupp
     }
 
     @Test
+    public void testAllMembersLiveFallsBackWithoutAssembling() throws Exception {
+        GWC gwc = GWC.get();
+        TileLayer layer1TileLayer = gwc.getTileLayerByName(layer1);
+        TileLayer forestsTileLayer = gwc.getTileLayerByName(getLayerId(FORESTS));
+        layer1TileLayer.setEnabled(false);
+        forestsTileLayer.setEnabled(false);
+        try {
+            MockHttpServletResponse response =
+                    getAsServletResponse(coalescedGetMap(layer1 + "," + getLayerId(FORESTS)));
+
+            assertEquals(200, response.getStatus());
+            assertEquals("image/png", response.getContentType());
+            assertEquals("MISS", response.getHeader("geowebcache-cache-result"));
+            assertTrue(response.getHeader("geowebcache-miss-reason")
+                    .contains("no member of the coalesced request is cacheable"));
+
+            // no per-member tile was ever assembled or cached
+            assertEquals(StorageObject.Status.MISS, sampleTile(layer1).getStatus());
+        } finally {
+            layer1TileLayer.setEnabled(true);
+            forestsTileLayer.setEnabled(true);
+        }
+    }
+
+    @Test
     public void testMemoryLimits() throws Exception {
         // GWC's projected peak is (members + 1) * tileWidth * tileHeight * 4 bytes ARGB = 3 * 256 * 256 * 4 = 768 KB
         // for this 2-member request. The live fallback render's own memory check (RenderedImageMapOutputFormat)

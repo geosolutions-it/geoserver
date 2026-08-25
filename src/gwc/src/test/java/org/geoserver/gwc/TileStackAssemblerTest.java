@@ -6,6 +6,7 @@
 package org.geoserver.gwc;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -95,6 +96,23 @@ public class TileStackAssemblerTest {
         assertThrows(
                 ServiceException.class,
                 () -> assembler.assemble(null, null, List.of(segment), png, deadlineAlreadyPassed));
+    }
+
+    @Test
+    public void testAssemblePropagatesPlainRuntimeExceptionFromRender() throws Exception {
+        // a getTile() failure (e.g. a storage backend hiccup) must surface as a plain RuntimeException, distinct
+        // from the ServiceException the deadline check throws: GWC.dispatchCoalesced relies on that distinction to
+        // fall back to a live render instead of failing the whole request outright
+        TileLayer tileLayer = mock(TileLayer.class);
+        RuntimeException renderFailure = new RuntimeException("cannot access file, used by another process");
+        when(tileLayer.getTile(any())).thenThrow(renderFailure);
+        ConveyorTile tile = new ConveyorTile(null, "member", "TEST", new long[] {0, 0, 0}, png, Map.of(), null, null);
+        GWC.Segment segment = new GWC.CachedSegment(new GWC.TileLayerMember(tileLayer, tile));
+
+        RuntimeException thrown =
+                assertThrows(RuntimeException.class, () -> assembler.assemble(null, null, List.of(segment), png, -1));
+
+        assertSame(renderFailure, thrown);
     }
 
     @Test

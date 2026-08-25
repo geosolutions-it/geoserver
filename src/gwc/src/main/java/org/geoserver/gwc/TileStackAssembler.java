@@ -11,10 +11,13 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.geoserver.gwc.layer.GeoServerTileLayer;
 import org.geoserver.ows.Dispatcher;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMapRequest;
+import org.geotools.util.logging.Logging;
 import org.geowebcache.conveyor.ConveyorTile;
 import org.geowebcache.io.codec.ImageDecoderContainer;
 import org.geowebcache.io.codec.ImageEncoderContainer;
@@ -27,6 +30,8 @@ import org.geowebcache.mime.MimeType;
  * member shares the same grid location and zoom.
  */
 class TileStackAssembler {
+
+    private static final Logger LOGGER = Logging.getLogger(TileStackAssembler.class);
 
     private final ImageDecoderContainer decoders;
 
@@ -98,7 +103,13 @@ class TileStackAssembler {
         if (tile.getBlob() == null) {
             // a peek miss, or a member whose layer doesn't support the cache-only peek: render like a single-layer
             // request, on this thread, exactly as before the peek phase existed
+            if (LOGGER.isLoggable(Level.FINER)) {
+                LOGGER.finer(GWC.MULTI_LAYER_LOG_PREFIX + "Rendering cached segment " + tile
+                        + ", peek missed or was skipped");
+            }
             cached.member().tileLayer().getTile(tile);
+        } else if (LOGGER.isLoggable(Level.FINER)) {
+            LOGGER.finer(GWC.MULTI_LAYER_LOG_PREFIX + "Cached segment " + tile + " already served by the peek");
         }
         String mimeType = tile.getMimeType().getMimeType();
         return decoders.decode(mimeType, tile.getBlob(), decoders.isAggressiveInputStreamSupported(mimeType), null);
@@ -129,12 +140,29 @@ class TileStackAssembler {
         }
         // each peek runs concurrently and populates its own tile's blob on a hit; allOf().join() blocks this
         // (request) thread until every peek is done, so no render below can start while one is still in flight
-        CompletableFuture<?>[] peeks = peekable.stream()
-                .map(cached -> CompletableFuture.runAsync(
-                        () -> ((GeoServerTileLayer) cached.member().tileLayer())
-                                .tryCacheFetch(cached.member().tile()),
-                        executor))
-                .toArray(CompletableFuture[]::new);
-        CompletableFuture.allOf(peeks).join();
+        List<CompletableFuture<Void>> peeks = peekable.stream()
+                .map(cached -> CompletableFuture.runAsync(() -> peekOne(cached), executor))
+                .toList();
+        CompletableFuture.allOf(peeks.toArray(new CompletableFuture[0])).join();
+    }
+
+    /**
+     * A peek is a best-effort optimization: any failure (e.g. a storage backend that isn't safe against a concurrent
+     * read racing a save) must fall back to treating the member as a miss, exactly like it would without the peek
+     * phase, never abort the whole coalesced tile over one member's read hiccup.
+     */
+    private void peekOne(GWC.CachedSegment cached) {
+        ConveyorTile tile = cached.member().tile();
+        try {
+            boolean hit = ((GeoServerTileLayer) cached.member().tileLayer()).tryCacheFetch(tile);
+            if (LOGGER.isLoggable(Level.FINER)) {
+                LOGGER.finer(GWC.MULTI_LAYER_LOG_PREFIX + "Cache peek " + (hit ? "hit" : "miss") + " for " + tile);
+            }
+        } catch (RuntimeException e) {
+            LOGGER.log(
+                    Level.FINE,
+                    e,
+                    () -> GWC.MULTI_LAYER_LOG_PREFIX + "Cache peek failed for " + tile + ", will render it");
+        }
     }
 }

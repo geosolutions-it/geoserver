@@ -199,6 +199,9 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
 
     static final Logger log = Logging.getLogger(GWC.class);
 
+    /** Log message prefix for multi-layer tile coalescing, so these lines are easy to grep out on their own. */
+    static final String MULTI_LAYER_LOG_PREFIX = "GWC MultiLayer >> ";
+
     /** @see #getResponseEncoder(MimeType, RenderedImageMap) */
     private Map<String, Response> cachedTileEncoders = new HashMap<>();
 
@@ -872,7 +875,7 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
             return null;
         }
 
-        if (exceedsMaxRequestMemory(segments.size(), request)) {
+        if (exceedsMaxRequestMemory(segments, request)) {
             requestMismatchTarget.append("coalesced tile would exceed max request memory");
             return null;
         }
@@ -884,8 +887,8 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
                     GeoServerExtensions.bean(ImageEncoderContainer.class));
             assembled = assembler.assemble(
                     this, request, segments, firstCached.get().member().tile().getMimeType(), deadline);
-        } catch (RuntimeException e) {
-            // e.g. the assembler's own deadline check: fail hard, a live re-render would just hit the same wall
+        } catch (org.geoserver.platform.ServiceException e) {
+            // the assembler's own deadline check: fail hard, a live re-render would just hit the same wall
             throw e;
         } catch (OutsideCoverageException e) {
             // routine for a sparse member layer, not an error: same handling as the single-layer path
@@ -929,17 +932,23 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
     }
 
     /**
-     * Whether assembling {@code segmentCount} segments at {@code request}'s tile size would exceed WMS's configured
+     * Whether assembling {@code segments} at {@code request}'s tile size would exceed WMS's configured
      * {@code maxRequestMemory}; always {@code false} when unlimited.
      */
-    boolean exceedsMaxRequestMemory(int segmentCount, GetMapRequest request) {
+    boolean exceedsMaxRequestMemory(List<Segment> segments, GetMapRequest request) {
         int maxRequestMemoryKB = WMS.get().getServiceInfo().getMaxRequestMemory();
         if (maxRequestMemoryKB <= 0) {
             return false;
         }
-        // peak residency: every segment's decoded raster (one buffer per segment, live or cached) plus the output
+        // peak residency: one decoded raster per cached segment, one raster per member of a live segment (its
+        // GetMap renders and composites each layer before producing the segment's final image), plus the output
         // tile, all ARGB
-        long peakBytes = (long) (segmentCount + 1) * request.getWidth() * request.getHeight() * 4;
+        long bufferUnits = 1;
+        for (Segment segment : segments) {
+            bufferUnits +=
+                    segment instanceof LiveSegment live ? live.memberIndices().size() : 1;
+        }
+        long peakBytes = bufferUnits * request.getWidth() * request.getHeight() * 4;
         return peakBytes > (long) maxRequestMemoryKB * 1024;
     }
 
@@ -999,6 +1008,10 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
      *     render could even start
      */
     BufferedImage renderLiveSegment(GetMapRequest request, LiveSegment segment, long deadline) throws Exception {
+        if (log.isLoggable(Level.FINER)) {
+            log.finer(MULTI_LAYER_LOG_PREFIX + "Live-rendering coalesced segment members " + segment.memberIndices()
+                    + ": " + segment.reason());
+        }
         long remainingMillis = 0;
         if (deadline > 0) {
             remainingMillis = deadline - System.currentTimeMillis();
@@ -1009,14 +1022,19 @@ public class GWC implements DisposableBean, InitializingBean, ApplicationContext
         }
         GetMapRequest subRequest = sliceLiveSegment(request, segment.memberIndices(), remainingMillis);
         WebMap webMap = GeoServerExtensions.bean(GetMap.class).run(subRequest);
-        if (!(webMap instanceof RenderedImageMap renderedImageMap)) {
-            throw new IllegalStateException("Live render of a coalesced segment did not produce a raster: " + webMap);
+        try {
+            if (!(webMap instanceof RenderedImageMap renderedImageMap)) {
+                throw new IllegalStateException(
+                        "Live render of a coalesced segment did not produce a raster: " + webMap);
+            }
+            RenderedImage image = renderedImageMap.getImage();
+            if (image instanceof BufferedImage bufferedImage) {
+                return bufferedImage;
+            }
+            return PlanarImage.wrapRenderedImage(image).getAsBufferedImage();
+        } finally {
+            webMap.dispose();
         }
-        RenderedImage image = renderedImageMap.getImage();
-        if (image instanceof BufferedImage bufferedImage) {
-            return bufferedImage;
-        }
-        return PlanarImage.wrapRenderedImage(image).getAsBufferedImage();
     }
 
     /**

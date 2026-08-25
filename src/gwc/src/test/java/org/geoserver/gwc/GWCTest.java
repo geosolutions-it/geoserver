@@ -1959,33 +1959,50 @@ public class GWCTest {
     }
 
     @Test
-    public void testExceedsMaxRequestMemoryNeverWhenUnlimited() {
-        when(wmsInfo.getMaxRequestMemory()).thenReturn(0);
-        GetMapRequest request = new GetMapRequest();
-        request.setWidth(256);
-        request.setHeight(256);
-
-        assertFalse(mediator.exceedsMaxRequestMemory(10, request));
-    }
-
-    @Test
-    public void testExceedsMaxRequestMemoryOverBudget() {
-        when(wmsInfo.getMaxRequestMemory()).thenReturn(1); // 1 KB, way under a 256x256 ARGB tile stack
-        GetMapRequest request = new GetMapRequest();
-        request.setWidth(256);
-        request.setHeight(256);
-
-        assertTrue(mediator.exceedsMaxRequestMemory(2, request));
-    }
-
-    @Test
-    public void testExceedsMaxRequestMemoryWithinBudget() {
+    public void testMemoryLimits() {
         when(wmsInfo.getMaxRequestMemory()).thenReturn(10_000); // 10 MB, comfortably over a 3-member 256x256 stack
         GetMapRequest request = new GetMapRequest();
         request.setWidth(256);
         request.setHeight(256);
 
-        assertFalse(mediator.exceedsMaxRequestMemory(2, request));
+        assertFalse(mediator.exceedsMaxRequestMemory(cachedSegments(2), request));
+    }
+
+    @Test
+    public void testUnlimitedMemoryLimits() {
+        when(wmsInfo.getMaxRequestMemory()).thenReturn(0);
+        GetMapRequest request = new GetMapRequest();
+        request.setWidth(256);
+        request.setHeight(256);
+
+        assertFalse(mediator.exceedsMaxRequestMemory(cachedSegments(10), request));
+    }
+
+    @Test
+    public void testMemoryLimitsExceeded() {
+        when(wmsInfo.getMaxRequestMemory()).thenReturn(1); // 1 KB, way under a 256x256 ARGB tile stack
+        GetMapRequest request = new GetMapRequest();
+        request.setWidth(256);
+        request.setHeight(256);
+
+        assertTrue(mediator.exceedsMaxRequestMemory(cachedSegments(2), request));
+    }
+
+    @Test
+    public void testMemoryLimitsOnLiveSegments() {
+        // a single live segment batching 3 layers costs as much as 3 individually cached segments, not 1
+        when(wmsInfo.getMaxRequestMemory()).thenReturn(1); // 1 KB, way under a 256x256 ARGB tile stack
+        GetMapRequest request = new GetMapRequest();
+        request.setWidth(256);
+        request.setHeight(256);
+
+        List<GWC.Segment> segments = List.of(new GWC.LiveSegment(List.of(0, 1, 2), "disabled"));
+        assertTrue(mediator.exceedsMaxRequestMemory(segments, request));
+    }
+
+    /** {@code n} {@link GWC.CachedSegment}s, enough to size {@link GWC#exceedsMaxRequestMemory}'s estimate. */
+    private static List<GWC.Segment> cachedSegments(int n) {
+        return Collections.nCopies(n, new GWC.CachedSegment(null));
     }
 
     /** A tiled, transparent-PNG multi-layer {@code GetMap} request over the given {@code LAYERS} members. */
