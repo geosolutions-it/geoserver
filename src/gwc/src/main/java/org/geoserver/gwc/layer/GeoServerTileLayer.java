@@ -1168,7 +1168,14 @@ public class GeoServerTileLayer extends TileLayer implements ProxyLayer, TileJSO
         return params;
     }
 
-    private boolean tryCacheFetch(ConveyorTile tile) {
+    /**
+     * Cache-only read for {@code tile}: same key and security derivation as {@link #getTile}, but never renders on a
+     * miss and never takes the per-tile lock, so it is safe to call concurrently across members from a shared pool. On
+     * a hit, {@code tile}'s blob is populated exactly as {@link #getTile} would leave it.
+     *
+     * @return {@code true} if the tile was found in cache, {@code false} on a cache miss
+     */
+    public boolean tryCacheFetch(ConveyorTile tile) {
         int expireCache = this.getExpireCache((int) tile.getTileIndex()[2]);
         if (expireCache != GWCVars.CACHE_DISABLE_CACHE) {
             try {

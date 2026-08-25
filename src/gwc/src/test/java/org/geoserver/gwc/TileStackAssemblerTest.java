@@ -10,6 +10,9 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.awt.Color;
@@ -20,6 +23,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
+import org.geoserver.gwc.layer.GeoServerTileLayer;
+import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.Request;
 import org.geoserver.platform.ServiceException;
 import org.geowebcache.conveyor.ConveyorTile;
 import org.geowebcache.io.ByteArrayResource;
@@ -99,6 +105,73 @@ public class TileStackAssemblerTest {
         assertThrows(
                 IllegalStateException.class,
                 () -> assembler.assemble(null, null, List.of(bottom, mismatched), png, -1));
+    }
+
+    @Test
+    public void testAssemblePeekHitSkipsRender() throws Exception {
+        GWC gwc = mock(GWC.class);
+        when(gwc.getMetaTilingExecutor()).thenReturn(Runnable::run);
+        Dispatcher.REQUEST.set(new Request());
+        try {
+            GWC.CachedSegment bottom = peekHitSegment(solidTile(Color.RED));
+            GWC.CachedSegment top = peekHitSegment(solidTile(Color.BLUE));
+
+            BufferedImage result = decode(assembler.assemble(gwc, null, List.of(bottom, top), png, -1));
+
+            assertEquals(Color.BLUE.getRGB(), result.getRGB(0, 0));
+            // the peek already populated both blobs, so the render loop must never fall back to getTile()
+            verify(bottom.member().tileLayer(), never()).getTile(any());
+            verify(top.member().tileLayer(), never()).getTile(any());
+        } finally {
+            Dispatcher.REQUEST.remove();
+        }
+    }
+
+    @Test
+    public void testAssembleRendersOnPeekMiss() throws Exception {
+        GWC gwc = mock(GWC.class);
+        when(gwc.getMetaTilingExecutor()).thenReturn(Runnable::run);
+        Dispatcher.REQUEST.set(new Request());
+        try {
+            GWC.CachedSegment bottom = peekMissSegment(solidTile(Color.RED));
+            GWC.CachedSegment top = peekMissSegment(solidTile(Color.BLUE));
+
+            BufferedImage result = decode(assembler.assemble(gwc, null, List.of(bottom, top), png, -1));
+
+            assertEquals(Color.BLUE.getRGB(), result.getRGB(0, 0));
+            // both peeks missed, so each member must still get rendered exactly once, like before the peek phase
+            verify(bottom.member().tileLayer(), times(1)).getTile(any());
+            verify(top.member().tileLayer(), times(1)).getTile(any());
+        } finally {
+            Dispatcher.REQUEST.remove();
+        }
+    }
+
+    /** A cached segment whose peek is a hit: {@code tryCacheFetch} stamps the blob and returns {@code true}. */
+    private GWC.CachedSegment peekHitSegment(byte[] pngBytes) throws Exception {
+        ConveyorTile tile = new ConveyorTile(null, "member", "TEST", new long[] {0, 0, 0}, png, Map.of(), null, null);
+        GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
+        when(tileLayer.tryCacheFetch(any())).thenAnswer(invocation -> {
+            ConveyorTile t = invocation.getArgument(0);
+            t.setBlob(new ByteArrayResource(pngBytes));
+            return true;
+        });
+        return new GWC.CachedSegment(new GWC.TileLayerMember(tileLayer, tile));
+    }
+
+    /** A cached segment whose peek always misses; {@code getTile} is the only thing that stamps the blob. */
+    private GWC.CachedSegment peekMissSegment(byte[] pngBytes) throws Exception {
+        ConveyorTile tile = new ConveyorTile(null, "member", "TEST", new long[] {0, 0, 0}, png, Map.of(), null, null);
+        GeoServerTileLayer tileLayer = mock(GeoServerTileLayer.class);
+        when(tileLayer.tryCacheFetch(any())).thenReturn(false);
+        doAnswer(invocation -> {
+                    ConveyorTile t = invocation.getArgument(0);
+                    t.setBlob(new ByteArrayResource(pngBytes));
+                    return t;
+                })
+                .when(tileLayer)
+                .getTile(any(ConveyorTile.class));
+        return new GWC.CachedSegment(new GWC.TileLayerMember(tileLayer, tile));
     }
 
     private byte[] solidTile(Color color) throws Exception {

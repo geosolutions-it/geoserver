@@ -9,6 +9,10 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import org.geoserver.gwc.layer.GeoServerTileLayer;
+import org.geoserver.ows.Dispatcher;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wms.GetMapRequest;
 import org.geowebcache.conveyor.ConveyorTile;
@@ -46,6 +50,8 @@ class TileStackAssembler {
      */
     byte[] assemble(GWC gwc, GetMapRequest request, List<GWC.Segment> segments, MimeType outputFormat, long deadline)
             throws Exception {
+        peekCachedSegments(gwc, segments);
+
         BufferedImage canvas = null;
         Graphics2D graphics = null;
         try {
@@ -89,8 +95,46 @@ class TileStackAssembler {
 
     private BufferedImage decodeCachedSegment(GWC.CachedSegment cached) throws Exception {
         ConveyorTile tile = cached.member().tile();
-        cached.member().tileLayer().getTile(tile);
+        if (tile.getBlob() == null) {
+            // a peek miss, or a member whose layer doesn't support the cache-only peek: render like a single-layer
+            // request, on this thread, exactly as before the peek phase existed
+            cached.member().tileLayer().getTile(tile);
+        }
         String mimeType = tile.getMimeType().getMimeType();
         return decoders.decode(mimeType, tile.getBlob(), decoders.isAggressiveInputStreamSupported(mimeType), null);
+    }
+
+    /**
+     * Cache-only peek for every cached segment's tile, in parallel on {@link GWC#getMetaTilingExecutor()}; a hit leaves
+     * the tile's blob populated so {@link #decodeCachedSegment} skips rendering it. Reads are lock-free (see
+     * {@link GeoServerTileLayer#tryCacheFetch}), so this never contends with the serial render loop that follows it;
+     * skipped entirely outside an interactive request (seeding) or with fewer than two cacheable segments, where the
+     * parallel round trip can't pay for itself.
+     */
+    private void peekCachedSegments(GWC gwc, List<GWC.Segment> segments) {
+        // live segments have nothing to peek; a member on a plain TileLayer (no GeoServerTileLayer) can't either,
+        // since tryCacheFetch isn't part of that interface
+        List<GWC.CachedSegment> peekable = segments.stream()
+                .filter(GWC.CachedSegment.class::isInstance)
+                .map(GWC.CachedSegment.class::cast)
+                .filter(cached -> cached.member().tileLayer() instanceof GeoServerTileLayer)
+                .toList();
+        if (peekable.size() < 2) {
+            // 0 or 1 segment: nothing to parallelize, a sequential getTile() in the draw loop is just as fast
+            return;
+        }
+        Executor executor = gwc.getMetaTilingExecutor();
+        if (executor == null || Dispatcher.REQUEST.get() == null) {
+            return;
+        }
+        // each peek runs concurrently and populates its own tile's blob on a hit; allOf().join() blocks this
+        // (request) thread until every peek is done, so no render below can start while one is still in flight
+        CompletableFuture<?>[] peeks = peekable.stream()
+                .map(cached -> CompletableFuture.runAsync(
+                        () -> ((GeoServerTileLayer) cached.member().tileLayer())
+                                .tryCacheFetch(cached.member().tile()),
+                        executor))
+                .toArray(CompletableFuture[]::new);
+        CompletableFuture.allOf(peeks).join();
     }
 }
