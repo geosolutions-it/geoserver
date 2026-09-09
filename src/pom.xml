@@ -85,7 +85,7 @@
     <!-- Project version management       -->
     <!-- ================================ -->
     <gs.version>2.28.5-C321</gs.version>
-    <gt.version>34.5</gt.version>
+    <gt.version>34.5-C321</gt.version>
     <gwc.version>1.28.5</gwc.version>
     <spring.version>5.3.39</spring.version>
     <spring.security.version>5.8.16</spring.security.version>
