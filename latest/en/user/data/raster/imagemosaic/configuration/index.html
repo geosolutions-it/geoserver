@@ -18385,6 +18385,8 @@
       
         
       
+        
+      
     
     
     
@@ -18521,6 +18523,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../extensions/geofence/migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrating GeoFence configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -18578,7 +18608,7 @@
   <span class="md-ellipsis">
     
   
-    Geofence Internal Server
+    Geofence Embedded Server
   
 
     
@@ -18600,7 +18630,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Geofence Internal Server
+    Geofence Embedded Server
   
 
           </label>
@@ -18622,7 +18652,7 @@
   <span class="md-ellipsis">
     
   
-    Installing the GeoServer GeoFence Server extension
+    Install the plugin
   
 
     
@@ -18678,7 +18708,7 @@
   <span class="md-ellipsis">
     
   
-    GeoFence Rest API
+    GeoFence REST API
   
 
     
@@ -18706,7 +18736,7 @@
   <span class="md-ellipsis">
     
   
-    AdminRules Rest API
+    REST API: AdminRules
   
 
     
@@ -18734,7 +18764,7 @@
   <span class="md-ellipsis">
     
   
-    Batch Rest API
+    REST API: Batch
   
 
     
@@ -18762,7 +18792,7 @@
   <span class="md-ellipsis">
     
   
-    Using the Internal GeoFence server (Tutorial)
+    Using the Embedded GeoFence server (Tutorial)
   
 
     
@@ -24731,8 +24761,6 @@
       
         
       
-        
-      
     
     
     
@@ -24912,34 +24940,6 @@
     
   
     OGC API - Styles
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../../community/ogc-api/tiled-features/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OGC API - Tiled features demonstration
   
 
     
@@ -30710,6 +30710,16 @@
 <td>SkipExternalOverviews</td>
 <td>Optional</td>
 <td>Boolean value to specify whether to skip checks for external overviews. Default is <code>false</code>. When enabled, the ImageMosaic will not look for external overview files.</td>
+</tr>
+<tr>
+<td>CollectAttributeTables</td>
+<td>Optional</td>
+<td>Boolean value to enable collection of the <a href="../../../../extensions/rat/">raster attribute tables</a> of the granules into a single table for the mosaic. Default is <code>false</code>. The granule tables must agree: rows sharing the same key must carry the same values, or the collection stops with an error.</td>
+</tr>
+<tr>
+<td>AttributeTableGeometries</td>
+<td>Optional</td>
+<td>How a geometry column of the attribute table is handled when the granules disagree on its value, which happens when the source clips the geometry to each granule. <code>off</code>, the default, leaves the cell empty, <code>merge</code> unions the granule geometries, <code>collect</code> compares the column like any other one, so disagreeing granules stop the collection. Only read when <code>CollectAttributeTables</code> is <code>true</code>. <code>merge</code> is not the default because unioning extents that follow the data coverage can build very large geometries, which can trigger an OOM or a very long harvest, when dealing with many granules.</td>
 </tr>
 </tbody>
 </table>
