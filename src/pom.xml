@@ -9,7 +9,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.geoserver</groupId>
   <artifactId>geoserver</artifactId>
-  <version>2.28.6</version>
+  <version>2.28.6_c308</version>
   <packaging>pom</packaging>
   <name>GeoServer</name>
   <inceptionYear>2006</inceptionYear>
@@ -91,9 +91,10 @@
     <!-- ================================ -->
     <!-- Project version management       -->
     <!-- ================================ -->
-    <gs.version>2.28.6</gs.version>
+    <gs.version>2.28.6_c308</gs.version>
     <gt.version>34.6</gt.version>
     <gwc.version>1.28.6</gwc.version>
+    <netcdf.version>5.6.0</netcdf.version>
     <spring.version>5.3.39</spring.version>
     <spring.security.version>5.8.16</spring.security.version>
     <spring.security.oauth2.version>2.5.2.RELEASE</spring.security.oauth2.version>
@@ -177,6 +178,37 @@
 
   <dependencyManagement>
     <dependencies>
+      <!-- Override the NetCDF 5.5.3 of the GeoTools BOM: 5.6.0 has the fix for netcdf-java issue 1331 -->
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>cdm-core</artifactId>
+        <version>${netcdf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>netcdf4</artifactId>
+        <version>${netcdf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>grib</artifactId>
+        <version>${netcdf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>bufr</artifactId>
+        <version>${netcdf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>httpservices</artifactId>
+        <version>${netcdf.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>udunits</artifactId>
+        <version>${netcdf.version}</version>
+      </dependency>
       <!--
         Import the GeoTools platform-dependencies BOM to get consistent third-party dependency versions
         Provides managed versions for several libraries across projects, such as jackson, commons-logging/pool/lang3/cli/text/dbcp,
